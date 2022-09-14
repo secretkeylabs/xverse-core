@@ -1,0 +1,44 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "plugin:react/recommended",
+    "airbnb",
+    "airbnb-typescript",
+    "airbnb/hooks",
+    "prettier"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["react", "react-native", "@calm/react-intl", "eslint-plugin-no-inline-styles"],
+  "rules": {
+    "no-inline-styles/no-inline-styles": 2,
+    "@calm/react-intl/missing-formatted-message": [
+      2,
+      {
+        "noTrailingWhitespace": true,
+        "ignoreLinks": true,
+        "enforceLabels": false,
+        "enforceImageAlts": false,
+        "enforceInputProps": false
+      }
+    ]
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"],
+        "moduleDirectory": ["node_modules", "src/"]
+      }
+    }
+  }
+}

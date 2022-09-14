@@ -1,0 +1,83 @@
+import BigNumber from 'bignumber.js';
+import {
+  TokenType,
+  TransactionType,
+  TransactionStatus,
+  ContractCall,
+  PostCondition,
+} from '../shared/transaction';
+
+export type TransactionData = {
+  txid: string;
+  amount: BigNumber;
+  seenTime: Date;
+  incoming: boolean;
+  txType: TransactionType;
+  txStatus: TransactionStatus;
+  contractCall?: ContractCall;
+  post_conditions: Array<PostCondition>;
+  tokenType?: TokenType;
+  tokenName?: string;
+  recipientAddress?: string;
+  memo?: string;
+  cycles?: string;
+  rewardAddress?: string;
+  poolPoxAddress?: string;
+  untilBurnHt?: string;
+  poolContractAddress?: string;
+  poolContractName?: string;
+  assetId?: string;
+};
+
+export type StxTransactionListData = {
+  transactionsList: Array<StxTransactionData>;
+  totalCount: number;
+};
+
+export interface StxTransactionData extends TransactionData {
+  blockHash: string;
+  blockHeight: number;
+  burnBlockTime: number;
+  burnBlockTimeIso: Date;
+  canonical: boolean;
+  fee: BigNumber;
+  nonce: number;
+  postConditionMode: string;
+  senderAddress: string;
+  tokenTransfer?: {
+    recipientAddress: string;
+    amount: BigNumber;
+    memo: string;
+  };
+  sponsored: boolean;
+  txid: string;
+  txIndex: number;
+  txResults: string;
+  txStatus: TransactionStatus;
+  txType: TransactionType;
+  seenTime: Date;
+}
+
+export interface StxMempoolTransactionData extends TransactionData {
+  receiptTime: number;
+  receiptTimeIso: Date;
+  fee: BigNumber;
+  nonce: number;
+  postConditionMode: string;
+  senderAddress: string;
+  tokenTransfer?: {
+    recipientAddress: string;
+    amount: BigNumber;
+    memo: string;
+  };
+  sponsored: boolean;
+  txid: string;
+  txStatus: TransactionStatus;
+  txType: TransactionType;
+  seenTime: Date;
+}
+
+export type StxMempoolTransactionListData = {
+  transactionsList: Array<StxMempoolTransactionData>;
+  totalCount: number;
+};
