@@ -15,8 +15,8 @@ import {
   StxPendingTxData,
   FungibleToken,
   TokensResponse,
-} from '../types';
-import { API_TIMEOUT_MILLI } from '../constant';
+} from '../../types';
+import { API_TIMEOUT_MILLI } from '../../constant';
 import {
   deDuplicatePendingTx,
   mapTransferTransactionData,
@@ -219,3 +219,85 @@ async function getTransferTransactions(
       return transactions;
     });
 }
+
+
+/**
+ * get NFTs data from api
+ * @param stxAddress
+ * @param network
+ * @param offset
+ * @returns
+ */
+export async function getAccountAssets(
+  stxAddress: string,
+  network: SettingsNetwork,
+  offset: number,
+): Promise<AccountAssetsListData> {
+  let apiUrl = `${network.name}/extended/v1/address/${stxAddress}/balances`;
+
+  return axios
+    .get<TokensResponse>(apiUrl, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      const assets: NonFungibleToken[] = [];
+      for (let key in response.data.non_fungible_tokens) {
+        var nft: NonFungibleToken = response.data.non_fungible_tokens[key];
+        nft.name = key;
+        assets.push(nft);
+      }
+
+      return {
+        assetsList: assets,
+        totalCount: assets.length,
+      };
+    });
+}
+
+export async function getFtData(stxAddress: string, network: SettingsNetwork): Promise<FtData> {
+  let apiUrl = `${network.address}/extended/v1/address/${stxAddress}/balances`;
+
+  return axios
+    .get<TokensResponse>(apiUrl, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      const tokens: FungibleToken[] = [];
+      var total = new BigNumber(0);
+      for (let key in response.data.fungible_tokens) {
+        var fungibleToken: FungibleToken = response.data.fungible_tokens[key];
+        const index = key.indexOf('::');
+        fungibleToken.assetName = key.substring(index + 2);
+        fungibleToken.principal = key.substring(0, index);
+        tokens.push(fungibleToken);
+      }
+
+      return {
+        coinsList: tokens,
+      };
+    });
+}
+
+export async function getNftsData(
+    stxAddress: string,
+    network: SettingsNetwork,
+    offset: number,
+  ): Promise<NftsListData> {
+    let apiUrl = `${network.address}/extended/v1/tokens/nft/holdings`;
+  
+    return axios
+      .get<NftEventsResponse>(apiUrl, {
+        timeout: 30000,
+        params: {
+          principal: stxAddress,
+          limit: PAGINATION_LIMIT,
+          offset: offset,
+        },
+      })
+      .then((response) => {
+        return {
+          nftsList: response.data.results,
+          total: response.data.total,
+        };
+      });
+  }

@@ -1,7 +1,6 @@
-export type StacksNetworkType = 'Mainnet' | 'Testnet';
+export type NetworkType = 'Mainnet' | 'Testnet';
 
 export type SettingsNetwork = {
-  name: StacksNetworkType;
+  type: NetworkType;
   address: string;
 };
-

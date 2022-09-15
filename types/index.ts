@@ -1,4 +1,5 @@
-import { SettingsNetwork } from './network';
+import { SettingsNetwork, NetworkType } from './network';
+
 import {
   StxAddressData,
   StxAddressDataResponse,
@@ -6,6 +7,7 @@ import {
   StxTransactionDataResponse,
   StxPendingTxData,
 } from './api/xverse/wallet';
+
 import {
   StxTransactionListData,
   StxMempoolTransactionData,
@@ -13,6 +15,7 @@ import {
   StxTransactionData,
   TransactionData,
 } from './api/xverse/transaction';
+
 import {
   FungibleToken,
   StxMempoolResponse,
@@ -21,7 +24,12 @@ import {
   TransferTransaction,
   TransferTransactionsData,
 } from './api/stacks/transaction';
+
+import { BtcAddressDataResponse, BtcUtxoDataResponse } from './api/blockcypher/wallet';
+import { NftDetailResponse } from './api/stxnft/currency';
+
 export {
+  NetworkType,
   SettingsNetwork,
   StxAddressData,
   StxAddressDataResponse,
@@ -39,4 +47,7 @@ export {
   StxPendingTxData,
   FungibleToken,
   TokensResponse,
+  BtcUtxoDataResponse,
+  BtcAddressDataResponse,
+  NftDetailResponse,
 };
