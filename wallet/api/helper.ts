@@ -5,7 +5,7 @@ import {
   StxMempoolTransactionDataResponse,
   StxMempoolTransactionData,
   TransferTransaction,
-} from '../../types';
+} from 'types';
 
 export function parseStxTransactionData({
   responseTx,

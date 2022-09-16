@@ -15,8 +15,8 @@ import {
   StxPendingTxData,
   FungibleToken,
   TokensResponse,
-} from '../../types';
-import { API_TIMEOUT_MILLI } from '../../constant';
+} from 'types';
+import { API_TIMEOUT_MILLI } from 'constant';
 import {
   deDuplicatePendingTx,
   mapTransferTransactionData,
@@ -220,7 +220,6 @@ async function getTransferTransactions(
     });
 }
 
-
 /**
  * get NFTs data from api
  * @param stxAddress
@@ -231,7 +230,7 @@ async function getTransferTransactions(
 export async function getAccountAssets(
   stxAddress: string,
   network: SettingsNetwork,
-  offset: number,
+  offset: number
 ): Promise<AccountAssetsListData> {
   let apiUrl = `${network.name}/extended/v1/address/${stxAddress}/balances`;
 
@@ -279,25 +278,25 @@ export async function getFtData(stxAddress: string, network: SettingsNetwork): P
 }
 
 export async function getNftsData(
-    stxAddress: string,
-    network: SettingsNetwork,
-    offset: number,
-  ): Promise<NftsListData> {
-    let apiUrl = `${network.address}/extended/v1/tokens/nft/holdings`;
-  
-    return axios
-      .get<NftEventsResponse>(apiUrl, {
-        timeout: 30000,
-        params: {
-          principal: stxAddress,
-          limit: PAGINATION_LIMIT,
-          offset: offset,
-        },
-      })
-      .then((response) => {
-        return {
-          nftsList: response.data.results,
-          total: response.data.total,
-        };
-      });
-  }
+  stxAddress: string,
+  network: SettingsNetwork,
+  offset: number
+): Promise<NftsListData> {
+  let apiUrl = `${network.address}/extended/v1/tokens/nft/holdings`;
+
+  return axios
+    .get<NftEventsResponse>(apiUrl, {
+      timeout: 30000,
+      params: {
+        principal: stxAddress,
+        limit: PAGINATION_LIMIT,
+        offset: offset,
+      },
+    })
+    .then((response) => {
+      return {
+        nftsList: response.data.results,
+        total: response.data.total,
+      };
+    });
+}

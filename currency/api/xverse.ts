@@ -1,6 +1,6 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../../constant';
+import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from 'constant';
 
 export async function fetchBtcFeeRate(): Promise<BigNumber> {
   return axios

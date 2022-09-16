@@ -17,7 +17,6 @@ import {
   TransactionVersion,
 } from '@stacks/transactions';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { StacksNetworkType } from '../types';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
