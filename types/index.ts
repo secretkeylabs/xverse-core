@@ -27,6 +27,7 @@ import {
 
 import { BtcAddressDataResponse, BtcUtxoDataResponse } from './api/blockcypher/wallet';
 import { NftDetailResponse } from './api/stxnft/currency';
+import { SupportedCurrency } from './currency';
 
 export {
   NetworkType,
@@ -50,4 +51,5 @@ export {
   BtcUtxoDataResponse,
   BtcAddressDataResponse,
   NftDetailResponse,
+  SupportedCurrency,
 };

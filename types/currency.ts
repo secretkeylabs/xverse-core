@@ -11,7 +11,21 @@ export type BtcUsdCurrencyRate = {
   };
 };
 
-export const currencySymbolMap: Record<string, string> = {
+export type SupportedCurrency =
+  | 'USD'
+  | 'EUR'
+  | 'CAD'
+  | 'CNY'
+  | 'ARS'
+  | 'KRW'
+  | 'HKD'
+  | 'JPY'
+  | 'SGD'
+  | 'GBP'
+  | 'BRL'
+  | 'RUB';
+
+export const currencySymbolMap: Record<SupportedCurrency, string> = {
   USD: '$',
   EUR: '€',
   CAD: '$',

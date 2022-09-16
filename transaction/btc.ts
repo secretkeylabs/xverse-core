@@ -1,7 +1,7 @@
 import { ECPair, payments, networks, Psbt, Payment, Network } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
 import BN from 'bn.js';
-import { BtcUtxoDataResponse, NetworkType } from '../types';
+import { BtcUtxoDataResponse, NetworkType } from 'types';
 
 export interface UnspentOutput extends BtcUtxoDataResponse {}
 

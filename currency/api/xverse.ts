@@ -1,40 +1,40 @@
+import axios from 'axios';
+import BigNumber from 'bignumber.js';
+import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../../constant';
+
 export async function fetchBtcFeeRate(): Promise<BigNumber> {
-  return fetch(`${XVERSE_API_BASE_URL}/v1/fees/btc`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
+  return axios
+    .get(`${XVERSE_API_BASE_URL}/v1/fees/btc`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
       return new BigNumber(response.regular.toString());
     });
 }
 
 export async function fetchStxToBtcRate(): Promise<BigNumber> {
-  return fetch(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
+  return axios
+    .get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
       return new BigNumber(response.stxBtcRate.toString());
     });
 }
 
-export async function fetchBtcToCurrencyRate(): Promise<BigNumber> {
-  const fiatCurrency = await getFiatCurrency();
-  return fetch(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
+export async function fetchBtcToCurrencyRate({
+  fiatCurrency,
+}: {
+  fiatCurrency: SupportedCurrency;
+}): Promise<BigNumber> {
+  return axios
+    .get(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
       return new BigNumber(response.btcFiatRate.toString());
     });
 }
 
 export async function fetchTokenFiateRate(ft: string): Promise<BigNumber> {
-  const fiatCurrency = await getFiatCurrency();
   const url = `${XVERSE_API_BASE_URL}/v1/prices/${ft}/${fiatCurrency}`;
 
   return axios
-    .get<TokenFiatRateResponse>(url, { timeout: 45000 })
+    .get<TokenFiatRateResponse>(url, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
       return new BigNumber(response.data.tokenFiatRate);
     })
@@ -43,23 +43,21 @@ export async function fetchTokenFiateRate(ft: string): Promise<BigNumber> {
     });
 }
 
-export async function getCoinsInfo(
-    contractids: string[],
-  ): Promise<CoinsResponse | null> {
-    const fiatCurrency: string = await getFiatCurrency();
-    const url = `${XVERSE_API_BASE_URL}/v1/coins`;
-  
-    const requestBody = {
-      currency: fiatCurrency,
-      coins: JSON.stringify(contractids),
-    };
-  
-    return axios
-      .post<CoinsResponse>(url, requestBody)
-      .then((response) => {
-        return response.data;
-      })
-      .catch((error) => {
-        return null;
-      });
-  }
+export async function getCoinsInfo(contractids: string[]): Promise<CoinsResponse | null> {
+  const fiatCurrency: string = await getFiatCurrency();
+  const url = `${XVERSE_API_BASE_URL}/v1/coins`;
+
+  const requestBody = {
+    currency: fiatCurrency,
+    coins: JSON.stringify(contractids),
+  };
+
+  return axios
+    .post<CoinsResponse>(url, requestBody)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      return null;
+    });
+}
