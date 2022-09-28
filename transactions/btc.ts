@@ -1,7 +1,9 @@
-import { ECPair, payments, networks, Psbt, Payment, Network } from 'bitcoinjs-lib';
+import { ECPair, payments, networks, Psbt, Payment } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
-import BN from 'bn.js';
 import { BtcUtxoDataResponse, NetworkType } from 'types';
+import { fetchBtcFeeRate } from 'currency';
+import { getBtcPrivateKey } from 'wallet';
+import { fetchBtcAddressUnspent } from './api/btc';
 
 export interface UnspentOutput extends BtcUtxoDataResponse {}
 
@@ -26,7 +28,7 @@ export async function estimateBtcTransaction(
   const changeSats = sumValue.minus(amountSats);
 
   if (sumValue.isLessThan(amountSats)) {
-    throw new Error(getLocalizedString('send.errors.insufficient_balance'));
+    throw new Error('send.errors.insufficient_balance');
   }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
@@ -48,7 +50,7 @@ export async function generateSignedBtcTransaction(
   recipientAddress: string,
   amountSats: BigNumber,
   fee: BigNumber,
-  selectedNetwork: Network
+  selectedNetwork: NetworkType
 ): Promise<string> {
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
   const network = networks.bitcoin;
@@ -63,9 +65,9 @@ export async function generateSignedBtcTransaction(
   const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
   const changeSats = sumValue.minus(amountSats).minus(fee);
 
-  if (sumValue.isLessThan(amountSats.plus(fee))) {
-    throw new Error(getLocalizedString('send.errors.insufficient_balance_fees'));
-  }
+  // if (sumValue.isLessThan(amountSats.plus(fee))) {
+  //   throw new Error('send.errors.insufficient_balance_fees');
+  // }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
   addOutputs(psbt, senderAddress, recipientAddress, amountSats, changeSats);
@@ -137,24 +139,24 @@ export interface SignedBtcTxResponse {
   total: BigNumber;
 }
 
-export async function signBtcTransaction(
-  recipientAddress: string,
-  btcAddress: string,
-  amount: string,
-  index: number,
-  seed?: string,
-  network: Network = 'Mainnet'
-): Promise<SignedBtcTxResponse> {
+export async function signBtcTransaction({
+  recipientAddress,
+  btcAddress,
+  amount,
+  index,
+  seedPhrase,
+  network,
+}: {
+  recipientAddress: string;
+  btcAddress: string;
+  amount: string;
+  index: number;
+  seedPhrase: string;
+  network: NetworkType;
+}): Promise<SignedBtcTxResponse> {
   const parsedAmountSats = btcToSats(new BigNumber(amount));
-  var seedPhrase = '';
-  if (seed) {
-    seedPhrase = seed;
-  } else {
-    const keychainHelper = new WalletKeychainHelper();
-    seedPhrase = await keychainHelper.retrieveSeedPhraseFromKeystore();
-  }
 
-  const privateKey = await getBtcPrivateKey(seedPhrase, new BN(index), network);
+  const privateKey = await getBtcPrivateKey(seedPhrase, BigInt(index), network);
 
   try {
     const fee = await estimateBtcTransaction(

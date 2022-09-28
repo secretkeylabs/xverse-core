@@ -26,7 +26,7 @@ import {
 } from './api/stacks/transaction';
 
 import { BtcAddressDataResponse, BtcUtxoDataResponse } from './api/blockcypher/wallet';
-import { NftDetailResponse } from './api/stxnft/currency';
+import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 
 export {
