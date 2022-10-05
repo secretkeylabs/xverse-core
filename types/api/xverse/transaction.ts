@@ -81,3 +81,12 @@ export type StxMempoolTransactionListData = {
   transactionsList: Array<StxMempoolTransactionData>;
   totalCount: number;
 };
+
+export type BtcFeeResponse = {
+  limits: {
+    min: number;
+    max: number;
+  };
+  regular: number;
+  priority: number;
+};

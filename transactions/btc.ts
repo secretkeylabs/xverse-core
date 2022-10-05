@@ -3,7 +3,7 @@ import BigNumber from 'bignumber.js';
 import { BtcUtxoDataResponse, NetworkType } from 'types';
 import { fetchBtcFeeRate } from 'currency';
 import { getBtcPrivateKey } from 'wallet';
-import { fetchBtcAddressUnspent } from './api/btc';
+import { fetchBtcAddressUnspent } from '../api/btc';
 
 export interface UnspentOutput extends BtcUtxoDataResponse {}
 
@@ -12,7 +12,8 @@ export async function estimateBtcTransaction(
   senderAddress: string,
   recipientAddress: string,
   amountSats: BigNumber,
-  selectedNetwork: NetworkType
+  selectedNetwork: NetworkType,
+  feeMode: 'high' | 'low'
 ): Promise<BigNumber> {
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
   const network = networks.bitcoin;
@@ -39,9 +40,18 @@ export async function estimateBtcTransaction(
   const tx = psbt.extractTransaction();
   const txSize = tx.virtualSize();
   const feeRate = await fetchBtcFeeRate();
-  const fee = feeRate.multipliedBy(txSize);
+
+  const fee =
+    feeMode === 'high'
+      ? new BigNumber(feeRate?.priority).multipliedBy(txSize)
+      : new BigNumber(feeRate?.regular).multipliedBy(txSize);
 
   return fee;
+}
+
+export async function isCustomFeesAllowed(customFees: string) {
+  const feeRate = await fetchBtcFeeRate();
+  return Number(customFees) >= feeRate?.limits?.min ? true : false;
 }
 
 export async function generateSignedBtcTransaction(
@@ -144,6 +154,7 @@ export async function signBtcTransaction({
   btcAddress,
   amount,
   index,
+  fee,
   seedPhrase,
   network,
 }: {
@@ -151,6 +162,7 @@ export async function signBtcTransaction({
   btcAddress: string;
   amount: string;
   index: number;
+  fee: BigNumber;
   seedPhrase: string;
   network: NetworkType;
 }): Promise<SignedBtcTxResponse> {
@@ -159,14 +171,6 @@ export async function signBtcTransaction({
   const privateKey = await getBtcPrivateKey(seedPhrase, BigInt(index), network);
 
   try {
-    const fee = await estimateBtcTransaction(
-      privateKey,
-      btcAddress,
-      recipientAddress,
-      parsedAmountSats,
-      network
-    );
-
     const signedTx = await generateSignedBtcTransaction(
       privateKey,
       btcAddress,
@@ -184,6 +188,35 @@ export async function signBtcTransaction({
       total: total,
     };
     return Promise.resolve(signedBtcTx);
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+}
+
+export async function getBtcFees(
+  recipientAddress: string,
+  btcAddress: string,
+  amount: string,
+  index: number,
+  feeMode?: string
+): Promise<BigNumber> {
+  const selectedNetwork = await getSelectedNetwork();
+  const networkType = selectedNetwork?.name ?? 'Mainnet';
+  const parsedAmountSats = btcToSats(new BigNumber(amount));
+  const keychainHelper = new WalletKeychainHelper();
+  const seedPhrase = await keychainHelper.retrieveSeedPhraseFromKeystore();
+  const privateKey = await getBtcPrivateKey(seedPhrase, new BN(index), networkType);
+
+  try {
+    const fee = await estimateBtcTransaction(
+      privateKey,
+      btcAddress,
+      recipientAddress,
+      parsedAmountSats,
+      networkType,
+      feeMode
+    );
+    return fee;
   } catch (error) {
     return Promise.reject(error.toString());
   }

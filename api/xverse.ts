@@ -1,12 +1,15 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from 'constant';
+import { BtcFeeResponse } from 'types';
 
-export async function fetchBtcFeeRate(): Promise<BigNumber> {
+export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
-    .get(`${XVERSE_API_BASE_URL}/v1/fees/btc`, { timeout: API_TIMEOUT_MILLI })
+    .get(`${XVERSE_API_BASE_URL}/v1/fees/btc`, {
+      method: 'GET',
+    })
     .then((response) => {
-      return new BigNumber(response.regular.toString());
+      return response.data;
     });
 }
 

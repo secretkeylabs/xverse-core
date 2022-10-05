@@ -14,6 +14,7 @@ import {
   StxMempoolTransactionListData,
   StxTransactionData,
   TransactionData,
+  BtcFeeResponse,
 } from './api/xverse/transaction';
 
 import {
@@ -52,4 +53,5 @@ export {
   BtcAddressDataResponse,
   NftDetailResponse,
   SupportedCurrency,
+  BtcFeeResponse,
 };

@@ -1,5 +1,5 @@
 {
-  "name": "xverse-core",
+  "name": "@secretkeylabs/xverse-core",
   "version": "0.0.1",
   "description": "",
   "main": "build/index.js",
