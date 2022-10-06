@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { fetchBtcFeeRate } from './api/xverse';
+import { fetchBtcFeeRate } from '../api/xverse';
 
 const satsToBtc = (sats: BigNumber) => sats.multipliedBy(0.00000001);
 

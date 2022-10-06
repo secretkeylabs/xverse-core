@@ -7,7 +7,7 @@ import {
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
+import { deriveRootKeychainFromMnemonic } from '@stacks/keychain/dist/esm';
 import {
   ChainID,
   publicKeyToString,
@@ -16,9 +16,9 @@ import {
   getAddressFromPrivateKey,
   TransactionVersion,
   AddressVersion,
-} from '@stacks/transactions';
+} from '@stacks/transactions/dist/esm';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { ecPrivateKeyToHexString } from '@stacks/encryption';
+import { ecPrivateKeyToHexString } from '@stacks/encryption/dist/esm';
 import { NetworkType } from 'types';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
@@ -80,14 +80,10 @@ export async function walletFromSeedPhrase({
 }> {
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(
-    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet
-    // index
+    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
+    index,
   );
-  const { address, privateKey } = deriveStxAddressKeychain(
-    rootNode.derivePath(
-      getDerivationPath(network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet, index)
-    )
-  );
+  const {childKey, address, privateKey} = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
