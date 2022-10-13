@@ -10,7 +10,7 @@
     "@stacks/transactions": "4.3.5",
     "axios": "0.27.2",
     "bignumber.js": "9.1.0",
-    "bip39": "3.0.4",
+    "bip39": "3.0.3",
     "bip32": "^2.0.6",
     "bitcoinjs-lib": "5.2.0",
     "buffer": "6.0.3",

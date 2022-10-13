@@ -18,10 +18,10 @@ import {
   AddressVersion,
 } from '@stacks/transactions/dist/esm';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { ecPrivateKeyToHexString } from '@stacks/encryption/dist/esm';
 import { NetworkType } from 'types';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
+import { ecPairToHexString } from './helper';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -38,7 +38,8 @@ function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0)) {
     if (!childKey.privateKey) {
       throw new Error('Unable to derive private key from `rootNode`, bip32 master keychain');
     }
-    const privateKey = ecPrivateKeyToHexString(childKey.privateKey);
+    const ecPair = ECPair.fromPrivateKey(childKey.privateKey);
+    const privateKey = ecPairToHexString(ecPair);
     const txVersion =
       chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
     return {
