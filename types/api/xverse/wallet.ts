@@ -58,3 +58,7 @@ export type StxTransactionDataResponse = {
   events?: Array<Event>;
   post_conditions?: PostCondition[];
 };
+
+export interface TokenFiatRateResponse {
+  tokenFiatRate: number;
+}

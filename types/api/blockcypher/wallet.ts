@@ -24,3 +24,21 @@ export type BtcAddressDataResponse = {
   final_n_tx: number;
   txrefs: Array<BtcUtxoDataResponse>;
 };
+
+
+export interface BtcTransactionBroadcastResponse {
+  tx: {
+    hash: string;
+    addresses: Array<string>;
+    total: number;
+    fees: number;
+    size: number;
+    vsize: number;
+    preference: string;
+    received: string;
+  };
+}
+
+export interface BtcBalance {
+  balance: number;
+}
