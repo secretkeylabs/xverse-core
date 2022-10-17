@@ -16,7 +16,7 @@ import {
   FungibleToken,
   TokensResponse,
 } from 'types';
-import { API_TIMEOUT_MILLI } from 'constant';
+import { API_TIMEOUT_MILLI } from '../constant';
 import {
   deDuplicatePendingTx,
   mapTransferTransactionData,

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from 'constant';
-import { BtcFeeResponse } from 'types';
+import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../constant';
+import { BtcFeeResponse, TokenFiatRateResponse, SupportedCurrency, CoinsResponse } from 'types';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -17,7 +17,7 @@ export async function fetchStxToBtcRate(): Promise<BigNumber> {
   return axios
     .get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
-      return new BigNumber(response.stxBtcRate.toString());
+      return new BigNumber(response.data.stxBtcRate.toString());
     });
 }
 
@@ -29,11 +29,11 @@ export async function fetchBtcToCurrencyRate({
   return axios
     .get(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
-      return new BigNumber(response.btcFiatRate.toString());
+     return new BigNumber(response.data.btcFiatRate.toString());
     });
 }
 
-export async function fetchTokenFiateRate(ft: string): Promise<BigNumber> {
+export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
   const url = `${XVERSE_API_BASE_URL}/v1/prices/${ft}/${fiatCurrency}`;
 
   return axios
@@ -46,8 +46,7 @@ export async function fetchTokenFiateRate(ft: string): Promise<BigNumber> {
     });
 }
 
-export async function getCoinsInfo(contractids: string[]): Promise<CoinsResponse | null> {
-  const fiatCurrency: string = await getFiatCurrency();
+export async function getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/coins`;
 
   const requestBody = {

@@ -16,6 +16,7 @@ export type StxAddressDataResponse = {
 
 export type StxAddressData = {
   balance: BigNumber;
+  availableBalance: BigNumber;
   locked: BigNumber;
   nonce: number;
   transactions: Array<TransactionData>;
@@ -58,3 +59,7 @@ export type StxTransactionDataResponse = {
   events?: Array<Event>;
   post_conditions?: PostCondition[];
 };
+
+export interface TokenFiatRateResponse {
+  tokenFiatRate: number;
+}

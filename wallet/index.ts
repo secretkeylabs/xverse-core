@@ -7,7 +7,7 @@ import {
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
+import { deriveRootKeychainFromMnemonic } from '@stacks/keychain/dist/esm';
 import {
   ChainID,
   publicKeyToString,
@@ -16,12 +16,12 @@ import {
   getAddressFromPrivateKey,
   TransactionVersion,
   AddressVersion,
-} from '@stacks/transactions';
+} from '@stacks/transactions/dist/esm';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { ecPrivateKeyToHexString } from '@stacks/encryption';
 import { NetworkType } from 'types';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
+import { ecPairToHexString } from './helper';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -38,7 +38,8 @@ function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0)) {
     if (!childKey.privateKey) {
       throw new Error('Unable to derive private key from `rootNode`, bip32 master keychain');
     }
-    const privateKey = ecPrivateKeyToHexString(childKey.privateKey);
+    const ecPair = ECPair.fromPrivateKey(childKey.privateKey);
+    const privateKey = ecPairToHexString(ecPair);
     const txVersion =
       chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
     return {
@@ -80,14 +81,10 @@ export async function walletFromSeedPhrase({
 }> {
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(
-    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet
-    // index
+    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
+    index,
   );
-  const { address, privateKey } = deriveStxAddressKeychain(
-    rootNode.derivePath(
-      getDerivationPath(network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet, index)
-    )
-  );
+  const {childKey, address, privateKey} = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -192,5 +189,57 @@ export function validateBtcAddress({
     return true;
   } catch (error) {
     return false;
+  }
+}
+interface EncryptMnemonicArgs {
+  password: string,
+  seed: string,
+  passwordHashGenerator: (password: string) => Promise<{
+    salt: string,
+    hash: string,
+  }>
+  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>
+}
+
+interface DecryptMnemonicArgs {
+  password: string,
+  encryptedSeed: string,
+  passwordHashGenerator: (password: string) => Promise<{
+    salt: string,
+    hash: string,
+  }>
+  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>
+}
+
+export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
+  const {
+    mnemonicEncryptionHandler,
+    passwordHashGenerator,
+    password,
+    seed,
+  } = cb;
+  try {
+    const { hash } = await passwordHashGenerator(password);
+    const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
+    return encryptedSeedBuffer.toString('hex');
+  } catch(err) {
+    return Promise.reject(err)
+  }
+}
+
+
+export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
+  const {
+    mnemonicDecryptionHandler,
+    passwordHashGenerator,
+    password,
+    encryptedSeed,
+  } = cb;
+  try {
+    const { hash } = await passwordHashGenerator(password);
+    const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
+    return seedPhrase;
+  } catch(err) {
+    return Promise.reject(err)
   }
 }
