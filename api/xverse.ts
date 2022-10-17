@@ -17,7 +17,7 @@ export async function fetchStxToBtcRate(): Promise<BigNumber> {
   return axios
     .get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
-      return new BigNumber(response.stxBtcRate.toString());
+      return new BigNumber(response.data.stxBtcRate.toString());
     });
 }
 
@@ -29,7 +29,7 @@ export async function fetchBtcToCurrencyRate({
   return axios
     .get(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
-      return new BigNumber(response.btcFiatRate.toString());
+     return new BigNumber(response.data.btcFiatRate.toString());
     });
 }
 
