@@ -29,7 +29,7 @@ import {
   TransferTransactionsData,
 } from './api/stacks/transaction';
 
-import { BtcAddressDataResponse, BtcUtxoDataResponse, BtcTransactionBroadcastResponse, BtcBalance } from './api/blockcypher/wallet';
+import { BtcAddressDataResponse, BtcUtxoDataResponse, BtcTransactionBroadcastResponse, BtcBalance, Input, Output, BtcTransactionData, BtcTransactionDataResponse, BtcAddressData, BtcTransactionsDataResponse } from './api/blockcypher/wallet';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 
@@ -62,4 +62,10 @@ export {
   TokenFiatRateResponse,
   Coin,
   CoinsResponse,
+  Input,
+  Output,
+  BtcTransactionData,
+  BtcTransactionDataResponse,
+  BtcAddressData,
+  BtcTransactionsDataResponse
 };
