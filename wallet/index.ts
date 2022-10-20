@@ -84,7 +84,7 @@ export async function walletFromSeedPhrase({
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
     index,
   );
-  const {childKey, address, privateKey} = deriveStxAddressKeychain(rootNode);
+  const {address, privateKey} = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
