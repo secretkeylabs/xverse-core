@@ -12,10 +12,10 @@ module.exports = {
   output: {
     library: {
       name: 'xverse-core',
-      type: 'esm',
+      type: 'umd',
     },
     filename: 'index.js',
-    path: path.resolve(process.cwd(), 'dist/esm'),
+    path: path.resolve(process.cwd(), 'dist/umd'),
     globalObject: 'this',
   },
   plugins: [
@@ -29,7 +29,20 @@ module.exports = {
   },
   devtool: 'source-map',
   module: {
-    rules: [],
+    rules: [
+      {
+        test: /\.[jt]sx?$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: require.resolve('ts-loader'),
+            options: {
+              transpileOnly: true,
+            },
+          },
+        ],
+      },
+    ],
   },
   resolve: {
     extensions: ['.ts', '.js'],
@@ -48,6 +61,8 @@ module.exports = {
     },
     fallback: {
       util: require.resolve('util/'),
+      crypto: false,
+      stream: false,
     },
   },
 };
