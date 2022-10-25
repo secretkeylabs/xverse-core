@@ -15,17 +15,17 @@ export async function fetchBtcAddressUnspent(
   btcAddress: string,
   network: NetworkType
 ): Promise<Array<BtcUtxoDataResponse>> {
-  const btcApiBaseUrl = 'https://api.blockcypher.com/v1/btc/main/addrs/';
-  const btcApiBaseUrlTestnet = 'https://api.blockcypher.com/v1/btc/test3/addrs/';
-  let apiUrl = `${btcApiBaseUrl}${btcAddress}/?unspentOnly=true&limit=50`;
+  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=50`;
+  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=50`;
+  let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
-    apiUrl = `${btcApiBaseUrlTestnet}${btcAddress}/?unspentOnly=true&limit=50`;
+    apiUrl = btcApiBaseUrlTestnet;
   }
   return axios.get<BtcAddressDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
     const confirmed = response.data.txrefs
       ? (response.data.txrefs as Array<BtcUtxoDataResponse>)
       : [];
-    const unconfirmed = response.data.unconfirmed_txrefs
+    const unconfirmed = response.data.unconfirmed_n_tx
       ? (response.data.unconfirmed_txrefs as Array<BtcUtxoDataResponse>)
       : [];
     const combined = [...confirmed, ...unconfirmed];
@@ -43,7 +43,7 @@ export async function fetchPoolBtcAddressBalance(
   if (network === 'Testnet') {
     apiUrl = `${btcApiBaseUrlTestnet}${btcAddress}`;
   }
-  return axios.get<BtcAddressDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
+  return axios.get<BtcAddressDataResponse>(apiUrl,{headers:{ 'Access-Control-Allow-Origin': '*'}}).then((response) => {
     const btcPoolData: BtcBalance = {
       balance: response.data.final_balance,
     };
@@ -61,11 +61,9 @@ export async function broadcastRawBtcTransaction(
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
   }
-
   const data = {
     tx: rawTx,
   };
-
   return axios
     .post<BtcTransactionBroadcastResponse>(apiUrl, data, { timeout: 45000 })
     .then((response) => {
@@ -77,7 +75,7 @@ export async function fetchBtcTransactionsData(
   btcAddress: string,
   network: NetworkType,
 ): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
+  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=500`;
   const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {

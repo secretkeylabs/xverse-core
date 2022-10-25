@@ -1,9 +1,10 @@
 import { ECPair, payments, networks, Psbt, Payment } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
 import { BtcUtxoDataResponse, NetworkType } from 'types';
-import { fetchBtcFeeRate } from 'currency';
-import { getBtcPrivateKey } from 'wallet';
+import { fetchBtcFeeRate } from '../api/xverse';
+import { getBtcPrivateKey  } from '../wallet';
 import { fetchBtcAddressUnspent } from '../api/btc';
+import { btcToSats } from '../currency';
 
 export interface UnspentOutput extends BtcUtxoDataResponse {}
 
@@ -13,7 +14,7 @@ export async function estimateBtcTransaction(
   recipientAddress: string,
   amountSats: BigNumber,
   selectedNetwork: NetworkType,
-  feeMode: 'high' | 'low'
+  feeMode?: string
 ): Promise<BigNumber> {
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
   const network = networks.bitcoin;
@@ -67,17 +68,15 @@ export async function generateSignedBtcTransaction(
 
   const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey, network });
   const p2sh = payments.p2sh({ redeem: p2wpkh, network });
-
   const utxos = await fetchBtcAddressUnspent(senderAddress, selectedNetwork);
-
   const psbt = new Psbt({ network });
   const selectedUnspentOutputs = selectUnspentOutputs(amountSats, utxos);
   const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
   const changeSats = sumValue.minus(amountSats).minus(fee);
 
-  // if (sumValue.isLessThan(amountSats.plus(fee))) {
-  //   throw new Error('send.errors.insufficient_balance_fees');
-  // }
+  if (sumValue.isLessThan(amountSats.plus(fee))) {
+     throw new Error('send.errors.insufficient_balance_fees');
+   }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
   addOutputs(psbt, senderAddress, recipientAddress, amountSats, changeSats);
@@ -85,7 +84,6 @@ export async function generateSignedBtcTransaction(
   psbt.signAllInputs(keyPair);
   psbt.finalizeAllInputs();
   const txHex = psbt.extractTransaction().toHex();
-
   return txHex;
 }
 
@@ -104,13 +102,13 @@ export function selectUnspentOutputs(
   return inputs;
 }
 
-export function addInputs(psbt: Psbt, unspentOutputs: Array<UnspentOutput>, p2sh: Payment) {
+export function addInputs(psbt: Psbt, unspentOutputs: Array<UnspentOutput> , p2sh: Payment) {
   unspentOutputs.forEach((output) => {
     psbt.addInput({
       hash: output.tx_hash,
       index: output.tx_output_n,
       witnessUtxo: {
-        script: p2sh.output!,
+        script: p2sh.output,
         value: output.value,
       },
       redeemScript: p2sh.redeem!.output,
@@ -162,33 +160,44 @@ export async function signBtcTransaction({
   btcAddress: string;
   amount: string;
   index: number;
-  fee: BigNumber;
+  fee?: BigNumber;
   seedPhrase: string;
   network: NetworkType;
 }): Promise<SignedBtcTxResponse> {
   const parsedAmountSats = btcToSats(new BigNumber(amount));
-
-  const privateKey = await getBtcPrivateKey(seedPhrase, BigInt(index), network);
-
+  const privateKey = await getBtcPrivateKey({seedPhrase,index: BigInt(index), network});
+  let btcFee: BigNumber;
+  if (!fee) {
+    btcFee = await getBtcFees(
+      recipientAddress,
+      btcAddress,
+      amount,
+      index,
+      network,
+      seedPhrase,
+    );
+  } else {
+    btcFee = fee;
+  }
   try {
     const signedTx = await generateSignedBtcTransaction(
       privateKey,
       btcAddress,
       recipientAddress,
       parsedAmountSats,
-      fee,
+      btcFee,
       network
     );
 
-    const total = parsedAmountSats.plus(fee);
+    const total = parsedAmountSats.plus(btcFee);
 
     const signedBtcTx: SignedBtcTxResponse = {
       signedTx: signedTx,
-      fee: fee,
+      fee: btcFee,
       total: total,
     };
     return Promise.resolve(signedBtcTx);
-  } catch (error) {
+  } catch (error : any) {
     return Promise.reject(error.toString());
   }
 }
@@ -198,14 +207,12 @@ export async function getBtcFees(
   btcAddress: string,
   amount: string,
   index: number,
-  feeMode?: string
+  network: NetworkType,
+  seedPhrase: string,
+  feeMode?: string,
 ): Promise<BigNumber> {
-  const selectedNetwork = await getSelectedNetwork();
-  const networkType = selectedNetwork?.name ?? 'Mainnet';
   const parsedAmountSats = btcToSats(new BigNumber(amount));
-  const keychainHelper = new WalletKeychainHelper();
-  const seedPhrase = await keychainHelper.retrieveSeedPhraseFromKeystore();
-  const privateKey = await getBtcPrivateKey(seedPhrase, new BN(index), networkType);
+  const privateKey = await getBtcPrivateKey({seedPhrase, index: BigInt(index), network});
 
   try {
     const fee = await estimateBtcTransaction(
@@ -213,11 +220,11 @@ export async function getBtcFees(
       btcAddress,
       recipientAddress,
       parsedAmountSats,
-      networkType,
+      network,
       feeMode
     );
     return fee;
-  } catch (error) {
+  } catch (error : any) {
     return Promise.reject(error.toString());
   }
 }
