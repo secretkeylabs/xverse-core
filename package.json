@@ -19,10 +19,10 @@
     "util": "^0.12.4"
   },
   "scripts": {
-    "prepare": "npm run build:esm",
     "build": "webpack --mode production",
     "clean": "rimraf dist",
-    "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist"
+    "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist",
+    "postinstall": "npm run build:esm"
   },
   "repository": {
     "type": "git",
