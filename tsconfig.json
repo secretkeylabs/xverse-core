@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
-    /* Projects */
     "incremental": true,
-    /* Language and Environment */
     "target": "es2020",
-
-    /* Modules */
     "module": "commonjs",
     "moduleResolution": "node",
     "baseUrl": ".",
@@ -13,38 +9,16 @@
       "types/*": ["./types"],
       "currency/*": ["./currency"],
       "transactions/*": ["./transactions"],
-      "wallet/*": ["./wallet"],
+      "wallet/*": ["./wallet"]
     },
-    /* Emit */
-    "declaration": true /* Generate .d.ts files from TypeScript and JavaScript files in your project. */,
-    "sourceMap": true /* Create source map files for emitted JavaScript files. */,
-    // "outFile": "./",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
+    "declaration": true,
+    "sourceMap": true,
     "outDir": "lib",
-    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
-    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
-
-    /* Type Checking */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "allowUnusedLabels": true,
-    "allowUnreachableCode": true,
-
-    /* Completeness */
-    "skipLibCheck": true,
+    "allowUnreachableCode": false,
+    "skipLibCheck": true
   }
 }

@@ -22,7 +22,7 @@
     "prepare": "npm run build:esm",
     "build": "webpack --mode production",
     "clean": "rimraf dist",
-    "build:esm": "tsc --module ES6 --outDir ./dist/esm"
+    "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist"
   },
   "repository": {
     "type": "git",
