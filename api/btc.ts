@@ -43,12 +43,14 @@ export async function fetchPoolBtcAddressBalance(
   if (network === 'Testnet') {
     apiUrl = `${btcApiBaseUrlTestnet}${btcAddress}`;
   }
-  return axios.get<BtcAddressDataResponse>(apiUrl,{headers:{ 'Access-Control-Allow-Origin': '*'}}).then((response) => {
-    const btcPoolData: BtcBalance = {
-      balance: response.data.final_balance,
-    };
-    return btcPoolData;
-  });
+  return axios
+    .get<BtcAddressDataResponse>(apiUrl, { headers: { 'Access-Control-Allow-Origin': '*' } })
+    .then((response) => {
+      const btcPoolData: BtcBalance = {
+        balance: response.data.final_balance,
+      };
+      return btcPoolData;
+    });
 }
 
 export async function broadcastRawBtcTransaction(
@@ -73,35 +75,33 @@ export async function broadcastRawBtcTransaction(
 
 export async function fetchBtcTransactionsData(
   btcAddress: string,
-  network: NetworkType,
+  network: NetworkType
 ): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=500`;
+  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
   const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
   }
 
-  return axios
-    .get<BtcTransactionsDataResponse>(apiUrl, {timeout: 45000})
-    .then((response) => {
-      const transactions: BtcTransactionData[] = [];
-      response.data.txs.forEach((tx) => {
-        transactions.push(parseBtcTransactionData(tx, btcAddress));
-      });
-
-      const addressData: BtcAddressData = {
-        address: response.data.address,
-        totalReceived: response.data.total_received,
-        totalSent: response.data.total_sent,
-        balance: response.data.balance,
-        unconfirmedBalance: response.data.unconfirmed_balance,
-        finalBalance: response.data.final_balance,
-        nTx: response.data.n_tx,
-        unconfirmedTx: response.data.unconfirmed_tx,
-        finalNTx: response.data.final_n_tx,
-        transactions: transactions,
-      };
-      return addressData;
+  return axios.get<BtcTransactionsDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
+    const transactions: BtcTransactionData[] = [];
+    response.data.txs.forEach((tx) => {
+      transactions.push(parseBtcTransactionData(tx, btcAddress));
     });
+
+    const addressData: BtcAddressData = {
+      address: response.data.address,
+      totalReceived: response.data.total_received,
+      totalSent: response.data.total_sent,
+      balance: response.data.balance,
+      unconfirmedBalance: response.data.unconfirmed_balance,
+      finalBalance: response.data.final_balance,
+      nTx: response.data.n_tx,
+      unconfirmedTx: response.data.unconfirmed_tx,
+      finalNTx: response.data.final_n_tx,
+      transactions: transactions,
+    };
+    return addressData;
+  });
 }
