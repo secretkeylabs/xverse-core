@@ -1,3 +1,3 @@
-import { fetchBtcAddressUnspent } from '../api/btc';
+import { signBtcTransaction } from './btc';
 
-export { fetchBtcAddressUnspent };
+export { signBtcTransaction };
