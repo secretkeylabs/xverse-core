@@ -8,7 +8,7 @@ import {
   Input,
   Output,
   BtcTransactionData,
-  BtcTransactionDataResponse
+  BtcTransactionDataResponse,
 } from 'types';
 
 export function parseStxTransactionData({
@@ -279,3 +279,22 @@ export function parseBtcTransactionData(
 
   return parsedTx;
 }
+
+export function getNewNonce(
+  pendingTransactions: StxMempoolTransactionData[],
+  currentNonce: bigint,
+): bigint {
+  if ((pendingTransactions ?? []).length === 0) {
+    // handle case where account nonce is 0 and no pending transactions
+    return currentNonce;
+  }
+  const maxPendingNonce = Math.max(
+    ...(pendingTransactions ?? []).map((transaction) => transaction?.nonce),
+  );
+  if (maxPendingNonce >= currentNonce) {
+    return BigInt(maxPendingNonce + 1);
+  } else {
+    return currentNonce;
+  }
+}
+

@@ -15,14 +15,20 @@ import {
   StxPendingTxData,
   FungibleToken,
   TokensResponse,
+  StacksTransaction,
+  NetworkType,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
 import {
   deDuplicatePendingTx,
+  getNewNonce,
   mapTransferTransactionData,
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
 } from './helper';
+import {StacksMainnet, StacksTestnet} from '@stacks/network';
+import { AnchorMode, estimateTransfer, makeUnsignedSTXTokenTransfer, UnsignedTokenTransferOptions, } from '@stacks/transactions';
+import { getNonce, setNonce } from '../transactions';
 
 export async function getTransaction(txid: string, network: SettingsNetwork): Promise<Transaction> {
   return fetch(`${network.address}/extended/v1/tx/${txid}`, {
@@ -229,6 +235,87 @@ async function getTransferTransactions(
       return transactions;
     });
 }
+
+/**
+ * Constructs an unsigned token transfer transaction
+ */
+ export async function generateUnsignedSTXTokenTransfer(
+  publicKey: string,
+  recipientAddress: string,
+  amount: string,
+  network: NetworkType,
+  memo?: string,
+  sponsored?: boolean,
+): Promise<StacksTransaction> {
+  const amountBN = BigInt(amount);
+  if(!sponsored)
+      sponsored=false;
+  const txNetwork =
+    network=== 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
+  const txOptions: UnsignedTokenTransferOptions = {
+    publicKey: publicKey,
+    recipient: recipientAddress,
+    amount: amountBN,
+    memo: memo ?? '',
+    network: txNetwork,
+    fee: 0,
+    sponsored: sponsored,
+    anchorMode: AnchorMode.Any,
+  };
+
+  return makeUnsignedSTXTokenTransfer(txOptions);
+}
+
+/**
+ * Estimates the fee for given transaction
+ * @param transaction StacksTransaction object
+ */
+ export async function estimateFees(
+  transaction: StacksTransaction,
+  network: NetworkType,
+): Promise<bigint> {
+  const txNetwork =
+    network === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
+  return estimateTransfer(transaction, txNetwork).then((fee) => {
+    return BigInt(fee.toString());
+  });
+}
+
+export async function generateUnsignedStxTokenTransferTransaction(
+  recipientAddress: string,
+  amount: string,
+  memo: string,
+  pendingTxs: StxMempoolTransactionData[],
+  publicKey: string,
+  network: NetworkType,
+  sponsored?: boolean,
+): Promise<StacksTransaction> {
+  try {
+    var unsignedTx: StacksTransaction | null = null;
+    var fee: bigint = BigInt(0);
+    var total: bigint = BigInt(0);
+    const amountBigint = BigInt(amount);
+    unsignedTx = await generateUnsignedSTXTokenTransfer(
+      publicKey,
+      recipientAddress,
+      amount,
+      network,
+      memo,
+      sponsored,
+    );
+    fee = await estimateFees(unsignedTx, network);
+
+    total = amountBigint + fee;
+    unsignedTx.setFee(fee);
+
+    const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+    setNonce(unsignedTx, nonce);
+    return Promise.resolve(unsignedTx);
+  } catch (err: any) {
+    return Promise.reject(err.toString());
+  }
+}
+
 
 /**
  * get NFTs data from api

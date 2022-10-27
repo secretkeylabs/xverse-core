@@ -1,7 +1,13 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../constant';
-import { BtcFeeResponse, TokenFiatRateResponse, SupportedCurrency, CoinsResponse } from 'types';
+import {
+  BtcFeeResponse,
+  TokenFiatRateResponse,
+  SupportedCurrency,
+  CoinsResponse,
+  FeesMultipliers,
+} from 'types';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -56,6 +62,19 @@ export async function getCoinsInfo(contractids: string[], fiatCurrency: string):
 
   return axios
     .post<CoinsResponse>(url, requestBody)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      return null;
+    });
+}
+
+export async function fetchAppInfo(): Promise<FeesMultipliers | null> {
+  const url = `${XVERSE_API_BASE_URL}/v1/info`;
+
+  return axios
+    .get<FeesMultipliers>(url)
     .then((response) => {
       return response.data;
     })
