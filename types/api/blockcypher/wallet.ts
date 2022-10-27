@@ -24,6 +24,7 @@ export type BtcAddressDataResponse = {
   n_tx: number;
   unconfirmed_n_tx: number;
   final_n_tx: number;
+  unconfirmed_txrefs: Array<BtcUtxoDataResponse>;
   txrefs: Array<BtcUtxoDataResponse>;
 };
 

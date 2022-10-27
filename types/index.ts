@@ -27,7 +27,15 @@ import {
   TokensResponse,
   TransferTransaction,
   TransferTransactionsData,
+  Transaction,
 } from './api/stacks/transaction';
+
+import {
+  AccountAssetsListData,
+  NftsListData,
+  NonFungibleToken,
+  NftEventsResponse,
+} from './api/stacks/assets';
 
 import { BtcAddressDataResponse, BtcUtxoDataResponse, BtcTransactionBroadcastResponse, BtcBalance, Input, Output, BtcTransactionData, BtcTransactionDataResponse, BtcAddressData, BtcTransactionsDataResponse } from './api/blockcypher/wallet';
 import { NftDetailResponse } from './api/gamma/currency';
@@ -67,5 +75,10 @@ export {
   BtcTransactionData,
   BtcTransactionDataResponse,
   BtcAddressData,
-  BtcTransactionsDataResponse
+  BtcTransactionsDataResponse,
+  Transaction,
+  AccountAssetsListData,
+  NftsListData,
+  NonFungibleToken,
+  NftEventsResponse,
 };

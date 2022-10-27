@@ -41,7 +41,7 @@ export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Pro
     .then((response) => {
       return new BigNumber(response.data.tokenFiatRate);
     })
-    .catch((error) => {
+    .catch(() => {
       return new BigNumber(0);
     });
 }
@@ -59,7 +59,7 @@ export async function getCoinsInfo(contractids: string[], fiatCurrency: string):
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }

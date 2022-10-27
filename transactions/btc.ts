@@ -108,10 +108,10 @@ export function addInputs(psbt: Psbt, unspentOutputs: Array<UnspentOutput> , p2s
       hash: output.tx_hash,
       index: output.tx_output_n,
       witnessUtxo: {
-        script: p2sh.output,
+        script: p2sh.output ? p2sh.output :  Buffer.alloc(0),
         value: output.value,
       },
-      redeemScript: p2sh.redeem!.output,
+      redeemScript: p2sh.redeem!.output ? p2sh.redeem!.output : Buffer.alloc(0) ,
     });
   });
 }
