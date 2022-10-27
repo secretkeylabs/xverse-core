@@ -6,6 +6,8 @@ import {
 } from '../shared/transaction';
 import { StacksTransaction, TokenTransferPayload } from '@stacks/transactions';
 
+export { StacksTransaction, TokenTransferPayload };
+
 export type StxMempoolResponse = {
   limit: number;
   offset: number;
@@ -125,5 +127,27 @@ export type TokensResponse = {
   fungible_tokens: any;
   non_fungible_tokens: any;
 };
-
-export { StacksTransaction, TokenTransferPayload };
+export interface Transaction {
+  block_hash: string;
+  block_height: number;
+  burn_block_time: number;
+  burn_block_time_iso: string;
+  canonical: boolean;
+  fee_rate: string;
+  nonce: number;
+  post_condition_mode: string;
+  sender_address: string;
+  token_transfer: {
+    recipient_address: string;
+    amount: string;
+    memo: string;
+  };
+  sponsored: boolean;
+  tx_id: string;
+  tx_index: number;
+  tx_results: string;
+  tx_status: TransactionStatus;
+  tx_type: TransactionType;
+  contract_call?: ContractCall;
+  error?: string;
+}

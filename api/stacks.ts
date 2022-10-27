@@ -17,6 +17,11 @@ import {
   TokensResponse,
   StacksTransaction,
   NetworkType,
+  Transaction,
+  AccountAssetsListData,
+  NonFungibleToken,
+  NftsListData,
+  NftEventsResponse,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
 import {
@@ -329,7 +334,7 @@ export async function getAccountAssets(
   network: SettingsNetwork,
   offset: number
 ): Promise<AccountAssetsListData> {
-  let apiUrl = `${network.name}/extended/v1/address/${stxAddress}/balances`;
+  let apiUrl = `${network.address}/extended/v1/address/${stxAddress}/balances`;
 
   return axios
     .get<TokensResponse>(apiUrl, {
@@ -362,7 +367,7 @@ export async function getNftsData(
       timeout: 30000,
       params: {
         principal: stxAddress,
-        limit: PAGINATION_LIMIT,
+        limit: 20,
         offset: offset,
       },
     })

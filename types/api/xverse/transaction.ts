@@ -15,7 +15,7 @@ export type TransactionData = {
   txType: TransactionType;
   txStatus: TransactionStatus;
   contractCall?: ContractCall;
-  post_conditions: Array<PostCondition>;
+  post_conditions?: Array<PostCondition>;
   tokenType?: TokenType;
   tokenName?: string;
   recipientAddress?: string;
