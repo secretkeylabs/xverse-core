@@ -16,28 +16,42 @@ import {
   StxTransactionData,
   TransactionData,
   BtcFeeResponse,
+  FeesMultipliers,
 } from './api/xverse/transaction';
 
-import {Coin, CoinsResponse} from './api/xverse/coins';
+import { Coin, CoinsResponse } from './api/xverse/coins';
 
 import {
   FungibleToken,
+  StacksTransaction,
   StxMempoolResponse,
   StxMempoolTransactionDataResponse,
   TokensResponse,
+  TokenTransferPayload,
   TransferTransaction,
   TransferTransactionsData,
   Transaction,
 } from './api/stacks/transaction';
 
 import {
-  AccountAssetsListData,
-  NftsListData,
-  NonFungibleToken,
-  NftEventsResponse,
-} from './api/stacks/assets';
+  BtcAddressDataResponse,
+  BtcUtxoDataResponse,
+  BtcTransactionBroadcastResponse,
+  BtcBalance,
+  Input,
+  Output,
+  BtcTransactionData,
+  BtcTransactionDataResponse,
+  BtcAddressData,
+  BtcTransactionsDataResponse,
+} from './api/blockcypher/wallet';
 
-import { BtcAddressDataResponse, BtcUtxoDataResponse, BtcTransactionBroadcastResponse, BtcBalance, Input, Output, BtcTransactionData, BtcTransactionDataResponse, BtcAddressData, BtcTransactionsDataResponse } from './api/blockcypher/wallet';
+import {
+    AccountAssetsListData,
+    NftsListData,
+    NonFungibleToken,
+    NftEventsResponse,
+  } from './api/stacks/assets';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 
@@ -60,11 +74,14 @@ export {
   StxPendingTxData,
   FungibleToken,
   TokensResponse,
+  StacksTransaction,
+  TokenTransferPayload,
   BtcUtxoDataResponse,
   BtcAddressDataResponse,
   NftDetailResponse,
   SupportedCurrency,
   BtcFeeResponse,
+  FeesMultipliers,
   BtcTransactionBroadcastResponse,
   BtcBalance,
   TokenFiatRateResponse,

@@ -90,3 +90,8 @@ export type BtcFeeResponse = {
   regular: number;
   priority: number;
 };
+export interface FeesMultipliers {
+  stxSendTxMultiplier: number;
+  poolStackingTxMultiplier: number;
+  otherTxMultiplier: number;
+}

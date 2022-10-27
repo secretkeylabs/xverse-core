@@ -4,6 +4,9 @@ import {
   PostCondition,
   ContractCall,
 } from '../shared/transaction';
+import { StacksTransaction, TokenTransferPayload } from '@stacks/transactions';
+
+export { StacksTransaction, TokenTransferPayload };
 
 export type StxMempoolResponse = {
   limit: number;
@@ -124,7 +127,6 @@ export type TokensResponse = {
   fungible_tokens: any;
   non_fungible_tokens: any;
 };
-
 export interface Transaction {
   block_hash: string;
   block_height: number;

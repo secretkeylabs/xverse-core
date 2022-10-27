@@ -22,6 +22,7 @@ import { NetworkType } from 'types';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
 import { ecPairToHexString } from './helper';
+import { Keychain } from '../types/api/xverse/wallet';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -242,4 +243,14 @@ export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
   } catch(err) {
     return Promise.reject(err)
   }
+}
+
+export async function getStxAddressKeyChain(
+  mnemonic: string,
+  chainID: ChainID,
+  accountIndex: number,
+): Promise<Keychain> {
+  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
+  return deriveStxAddressKeychain(rootNode);
 }

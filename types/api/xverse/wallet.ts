@@ -5,6 +5,7 @@ import {
   ContractCall,
   PostCondition,
 } from '../shared/transaction';
+import {BIP32Interface} from 'bip32';
 import { TransactionData, StxMempoolTransactionData } from './transaction';
 
 export type StxAddressDataResponse = {
@@ -63,3 +64,9 @@ export type StxTransactionDataResponse = {
 export interface TokenFiatRateResponse {
   tokenFiatRate: number;
 }
+
+export type Keychain = {
+  childKey: BIP32Interface;
+  address: string;
+  privateKey: string;
+};
