@@ -34,6 +34,7 @@ import {
 import {StacksMainnet, StacksTestnet} from '@stacks/network';
 import { AnchorMode, estimateTransfer, makeUnsignedSTXTokenTransfer, UnsignedTokenTransferOptions, } from '@stacks/transactions';
 import { getNonce, setNonce } from '../transactions';
+import { AddressToBnsResponse } from '../types/api/stacks/assets';
 
 export async function getTransaction(txid: string, network: SettingsNetwork): Promise<Transaction> {
   return fetch(`${network.address}/extended/v1/tx/${txid}`, {
@@ -376,5 +377,19 @@ export async function getNftsData(
         nftsList: response.data.results,
         total: response.data.total,
       };
+    });
+}
+
+export async function getBnsName(stxAddress: string, network: SettingsNetwork,) {
+  const apiUrl = `${network.address}/v1/addresses/stacks/${stxAddress}`;
+  return axios
+    .get<AddressToBnsResponse>(apiUrl, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      return response?.data?.names[0];
+    })
+    .catch((error) => {
+      return undefined;
     });
 }
