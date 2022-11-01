@@ -56,3 +56,6 @@ export interface NftEventsResponse {
   limit: number;
   offset: number;
 }
+export interface AddressToBnsResponse {
+  names: string[];
+}
