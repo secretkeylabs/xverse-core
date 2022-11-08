@@ -51,10 +51,13 @@ import {
     NftsListData,
     NonFungibleToken,
     NftEventsResponse,
+    AddressToBnsResponse,
+    getBnsNftName
   } from './api/stacks/assets';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 
+export {  getBnsNftName }
 export {
   NetworkType,
   SettingsNetwork,
@@ -98,4 +101,6 @@ export {
   NftsListData,
   NonFungibleToken,
   NftEventsResponse,
+  AddressToBnsResponse,
+
 };
