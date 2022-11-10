@@ -31,6 +31,9 @@ import {
   TransferTransaction,
   TransferTransactionsData,
   Transaction,
+  PostConditionsOptions,
+  uintCV,
+  cvToHex
 } from './api/stacks/transaction';
 
 import {
@@ -57,7 +60,7 @@ import {
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 
-export {  getBnsNftName }
+export { getBnsNftName, cvToHex, uintCV };
 export {
   NetworkType,
   SettingsNetwork,
@@ -102,5 +105,5 @@ export {
   NonFungibleToken,
   NftEventsResponse,
   AddressToBnsResponse,
-
+  PostConditionsOptions,
 };

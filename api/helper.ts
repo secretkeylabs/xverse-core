@@ -1,3 +1,4 @@
+import { AssetInfo, createAssetInfo, FungibleConditionCode, hexToCV, makeStandardFungiblePostCondition, makeStandardNonFungiblePostCondition, NonFungibleConditionCode, PostCondition } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
 import {
   StxTransactionDataResponse,
@@ -9,6 +10,7 @@ import {
   Output,
   BtcTransactionData,
   BtcTransactionDataResponse,
+  PostConditionsOptions,
 } from 'types';
 
 export function parseStxTransactionData({
@@ -298,3 +300,36 @@ export function getNewNonce(
   }
 }
 
+export function makeFungiblePostCondition(
+  options: PostConditionsOptions,
+): PostCondition {
+  const {contractAddress, contractName, assetName, stxAddress, amount} =
+    options;
+
+  const assetInfo = createAssetInfo(contractAddress, contractName, assetName);
+  return makeStandardFungiblePostCondition(
+    stxAddress,
+    FungibleConditionCode.Equal,
+    BigInt(amount),
+    assetInfo,
+  );
+}
+
+export function makeNonFungiblePostCondition(
+  options: PostConditionsOptions,
+): PostCondition {
+  const {contractAddress, contractName, assetName, stxAddress, amount} =
+    options;
+
+  const assetInfo: AssetInfo = createAssetInfo(
+    contractAddress,
+    contractName,
+    assetName,
+  );
+  return makeStandardNonFungiblePostCondition(
+    stxAddress,
+    NonFungibleConditionCode.DoesNotOwn,
+    assetInfo,
+    hexToCV(amount.toString()),
+  );
+}

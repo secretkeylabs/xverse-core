@@ -4,9 +4,8 @@ import {
   PostCondition,
   ContractCall,
 } from '../shared/transaction';
-import { StacksTransaction, TokenTransferPayload } from '@stacks/transactions';
-
-export { StacksTransaction, TokenTransferPayload };
+import { cvToHex, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
+export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
 
 export type StxMempoolResponse = {
   limit: number;
@@ -151,3 +150,11 @@ export interface Transaction {
   contract_call?: ContractCall;
   error?: string;
 }
+export interface PostConditionsOptions {
+  contractAddress: string;
+  contractName: string;
+  assetName: string;
+  stxAddress: string;
+  amount: string | number;
+}
+

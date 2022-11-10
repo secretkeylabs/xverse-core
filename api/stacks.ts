@@ -22,18 +22,21 @@ import {
   NonFungibleToken,
   NftsListData,
   NftEventsResponse,
+  PostConditionsOptions,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
 import {
   deDuplicatePendingTx,
   getNewNonce,
+  makeFungiblePostCondition,
+  makeNonFungiblePostCondition,
   mapTransferTransactionData,
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
 } from './helper';
 import {StacksMainnet, StacksTestnet} from '@stacks/network';
-import { AnchorMode, estimateTransfer, makeUnsignedSTXTokenTransfer, UnsignedTokenTransferOptions, } from '@stacks/transactions';
-import { getNonce, setNonce } from '../transactions';
+import { AnchorMode, BufferCV, bufferCVFromString, callReadOnlyFunction, ClarityType, ClarityValue, cvToString, estimateContractFunctionCall, estimateTransfer, hexToCV, makeUnsignedContractCall, makeUnsignedSTXTokenTransfer, noneCV, PostCondition, PrincipalCV, ResponseCV, someCV, standardPrincipalCV, TupleCV, uintCV, UnsignedContractCallOptions, UnsignedTokenTransferOptions, } from '@stacks/transactions';
+import { getNonce, setFee, setNonce } from '../transactions';
 import { AddressToBnsResponse } from '../types/api/stacks/assets';
 
 export async function getTransaction(txid: string, network: SettingsNetwork): Promise<Transaction> {
@@ -393,3 +396,196 @@ export async function getBnsName(stxAddress: string, network: SettingsNetwork,) 
       return undefined;
     });
 }
+
+
+/**
+ * Constructs an unsigned smart contract call transaction
+ */
+ export async function generateUnsignedContractCall(
+  publicKey: string,
+  contractAddress: string,
+  contractName: string,
+  functionName: string,
+  functionArgs: ClarityValue[],
+  network: SettingsNetwork,
+  nonce?: bigint,
+  postConditions: PostCondition[] = [],
+  sponsored?: boolean,
+  postConditionMode?: number,
+): Promise<StacksTransaction> {
+  const txNetwork =
+  network.type === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
+  var txOptions: UnsignedContractCallOptions = {
+    contractAddress,
+    contractName,
+    functionName,
+    functionArgs,
+    publicKey,
+    network: txNetwork,
+    postConditions: postConditions,
+    postConditionMode: postConditionMode ?? 1,
+    anchorMode: AnchorMode.Any,
+    sponsored: sponsored,
+  };
+
+  if (nonce) {
+    txOptions['nonce'] = BigInt(nonce);
+  }
+
+  return makeUnsignedContractCall(txOptions);
+}
+
+/**
+ * Estimates the fee for given transaction
+ * @param transaction StacksTransaction object
+ */
+ export async function estimateContractCallFees(
+  transaction: StacksTransaction,
+  network: SettingsNetwork,
+): Promise<bigint> {
+  const txNetwork =
+    network.type === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
+  return estimateContractFunctionCall(transaction, txNetwork).then((fee) => {
+    return fee;
+  });
+}
+
+/**
+ * generate fungible token transfer or nft transfer transaction
+ * @param amount
+ * @param senderAddress
+ * @param recipientAddress
+ * @param contractAddress
+ * @param contractName
+ * @param publicKey
+ * @param network
+ * @returns
+ */
+ export async function generateUnsignedTransaction(
+  amount: string,
+  senderAddress: string,
+  recipientAddress: string,
+  contractAddress: string,
+  contractName: string,
+  assetName: string,
+  publicKey: string,
+  network: SettingsNetwork,
+  pendingTxs: StxMempoolTransactionData[],
+  memo?: string,
+  isNFT: boolean = false,
+): Promise<StacksTransaction> {
+  var unsignedTx;
+  const functionName = 'transfer';
+  var functionArgs: ClarityValue[];
+
+  const postConditionOptions: PostConditionsOptions = {
+    contractAddress,
+    contractName,
+    assetName,
+    stxAddress: senderAddress,
+    amount,
+  };
+
+  var postConditions: PostCondition[];
+  if (isNFT) {
+    postConditions = [makeNonFungiblePostCondition(postConditionOptions)];
+    functionArgs = [
+      hexToCV(amount),
+      standardPrincipalCV(senderAddress),
+      standardPrincipalCV(recipientAddress),
+    ];
+  } else {
+    functionArgs = [
+      uintCV(Number(amount)),
+      standardPrincipalCV(senderAddress),
+      standardPrincipalCV(recipientAddress),
+    ];
+    if (memo) {
+      functionArgs.push(
+        memo !== '' ? someCV(bufferCVFromString(memo)) : noneCV(),
+      );
+    } else {
+      functionArgs.push(noneCV());
+    }
+    postConditions = [makeFungiblePostCondition(postConditionOptions)];
+  }
+
+  try {
+    unsignedTx = await generateUnsignedContractCall(
+      publicKey,
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs,
+      network,
+      undefined,
+      postConditions,
+    );
+
+    const fee = await estimateContractCallFees(unsignedTx, network);
+    setFee(unsignedTx, fee);
+
+    // bump nonce by number of pending transactions
+    const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+    setNonce(unsignedTx, nonce);
+    console.log("inside ")
+    console.log(unsignedTx)
+    return Promise.resolve(unsignedTx);
+  } catch (err: any) {
+    console.log("error")
+    console.log(err)
+    return Promise.reject(err.toString());
+  }
+}
+
+export async function fetchAddressOfBnsName(
+  bnsName: string,
+  stxAddress: string,
+  network: SettingsNetwork,
+): Promise<string> {
+  try {
+    if (bnsName.includes('.')) {
+      const ns = bnsName.split('.');
+      const name_ = ns[0];
+      const namespace_ = ns[1] ?? '';
+
+      const contractAddress = 'SP000000000000000000002Q6VF78';
+      const contractName = 'bns';
+      const functionName = 'name-resolve';
+      const senderAddress = stxAddress;
+      const namespace: BufferCV = bufferCVFromString(namespace_);
+      const name: BufferCV = bufferCVFromString(name_);
+
+      var stacksNetwork = null;
+      if (network.type === 'Mainnet') {
+        stacksNetwork = new StacksMainnet();
+      } else {
+        stacksNetwork = new StacksTestnet();
+      }
+
+      const options = {
+        contractAddress,
+        contractName,
+        functionName,
+        functionArgs: [namespace, name],
+        network: stacksNetwork,
+        senderAddress,
+      };
+
+      const responseCV = await callReadOnlyFunction(options);
+
+      if (responseCV.type === ClarityType.ResponseErr) {
+        return '';
+      } else {
+        const response = responseCV as ResponseCV;
+        const tupleCV = response.value as TupleCV;
+        const owner: PrincipalCV = tupleCV.data['owner'] as PrincipalCV;
+        const address = cvToString(owner);
+        return address;
+      }
+    } else return '';
+  } catch (err) {
+    return '';
+  }
+}
+
