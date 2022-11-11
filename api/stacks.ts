@@ -34,7 +34,7 @@ import {
 import {StacksMainnet, StacksTestnet} from '@stacks/network';
 import { AnchorMode, estimateTransfer, makeUnsignedSTXTokenTransfer, UnsignedTokenTransferOptions, } from '@stacks/transactions';
 import { getNonce, setNonce } from '../transactions';
-import { AddressToBnsResponse } from '../types/api/stacks/assets';
+import { AddressToBnsResponse, PoxData } from '../types/api/stacks/assets';
 
 export async function getTransaction(txid: string, network: SettingsNetwork): Promise<Transaction> {
   return fetch(`${network.address}/extended/v1/tx/${txid}`, {
@@ -392,4 +392,23 @@ export async function getBnsName(stxAddress: string, network: SettingsNetwork,) 
     .catch((error) => {
       return undefined;
     });
+}
+
+export async function getStacksInfo(network:string){
+  const url = `${network}/v2/info`;
+  console.log("inisde")
+  console.log(network)
+  return axios
+    .get<PoxData>(url, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      console.log("response ")
+      console.log(response)
+      return response?.data;
+    })
+    .catch((error) => {
+      return undefined;
+    });
+
 }
