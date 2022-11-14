@@ -396,15 +396,11 @@ export async function getBnsName(stxAddress: string, network: SettingsNetwork,) 
 
 export async function getStacksInfo(network:string){
   const url = `${network}/v2/info`;
-  console.log("inisde")
-  console.log(network)
   return axios
     .get<PoxData>(url, {
       timeout: 30000,
     })
     .then((response) => {
-      console.log("response ")
-      console.log(response)
       return response?.data;
     })
     .catch((error) => {
