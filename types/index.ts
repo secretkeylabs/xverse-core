@@ -51,9 +51,11 @@ import {
     NftsListData,
     NonFungibleToken,
     NftEventsResponse,
+    CoreInfo,
   } from './api/stacks/assets';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
+import { StackerInfo, StackingData, StackingPoolInfo, StackingStateData, Pool } from './api/xverse/stacking';
 
 export {
   NetworkType,
@@ -98,4 +100,10 @@ export {
   NftsListData,
   NonFungibleToken,
   NftEventsResponse,
+  StackingPoolInfo,
+  StackerInfo,
+  StackingData,
+  CoreInfo,
+  StackingStateData,
+  Pool
 };

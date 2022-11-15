@@ -7,6 +7,8 @@ import {
   SupportedCurrency,
   CoinsResponse,
   FeesMultipliers,
+  StackingPoolInfo,
+  StackerInfo,
 } from 'types';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
@@ -80,5 +82,27 @@ export async function fetchAppInfo(): Promise<FeesMultipliers | null> {
     })
     .catch((error) => {
       return null;
+    });
+}
+
+export async function fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
+  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/info`, {
+    method: 'GET',
+  })
+    .then((response) => response.json())
+    .then((response) => {
+      return response;
+    });
+}
+
+export async function fetchPoolStackerInfo(
+  stxAddress: string,
+): Promise<StackerInfo> {
+  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/${stxAddress}/status`, {
+    method: 'GET',
+  })
+    .then((response) => response.json())
+    .then((response) => {
+      return response;
     });
 }

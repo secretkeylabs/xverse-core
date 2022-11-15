@@ -70,3 +70,16 @@ export interface PoxData {
   total_liquid_supply_ustx: string;
   next_reward_cycle_in: number;
 }
+export interface DelegationInfo {
+  delegated: boolean;
+  amount?: string;
+  delegatedTo?: string;
+  untilBurnHeight?: number;
+}
+
+export interface CoreInfo {
+  burn_block_height: number;
+  stable_burn_block_height: number;
+  stacks_tip_height: number;
+  stacks_tip: string;
+}
