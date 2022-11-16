@@ -4,7 +4,7 @@ import {
   TransactionType,
   TransactionStatus,
   ContractCall,
-  PostCondition,
+  TransactionPostCondition,
 } from '../shared/transaction';
 
 export type TransactionData = {
@@ -15,7 +15,7 @@ export type TransactionData = {
   txType: TransactionType;
   txStatus: TransactionStatus;
   contractCall?: ContractCall;
-  post_conditions?: Array<PostCondition>;
+  post_conditions?: Array<TransactionPostCondition>;
   tokenType?: TokenType;
   tokenName?: string;
   recipientAddress?: string;

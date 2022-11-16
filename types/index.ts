@@ -31,6 +31,10 @@ import {
   TransferTransaction,
   TransferTransactionsData,
   Transaction,
+  PostConditionsOptions,
+  uintCV,
+  cvToHex,
+  UnsignedStacksTransation
 } from './api/stacks/transaction';
 
 import {
@@ -52,11 +56,14 @@ import {
     NonFungibleToken,
     NftEventsResponse,
     CoreInfo,
+    AddressToBnsResponse,
+    getBnsNftName
   } from './api/stacks/assets';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 import { StackerInfo, StackingData, StackingPoolInfo, StackingStateData, Pool } from './api/xverse/stacking';
 
+export { getBnsNftName, cvToHex, uintCV };
 export {
   NetworkType,
   SettingsNetwork,
@@ -105,5 +112,8 @@ export {
   StackingData,
   CoreInfo,
   StackingStateData,
-  Pool
+  Pool,
+  AddressToBnsResponse,
+  PostConditionsOptions,
+  UnsignedStacksTransation
 };

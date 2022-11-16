@@ -3,7 +3,7 @@ import {
   TransactionStatus,
   TransactionType,
   ContractCall,
-  PostCondition,
+  TransactionPostCondition,
 } from '../shared/transaction';
 import {BIP32Interface} from 'bip32';
 import { TransactionData, StxMempoolTransactionData } from './transaction';
@@ -58,7 +58,7 @@ export type StxTransactionDataResponse = {
   tx_type: TransactionType;
   contract_call?: ContractCall;
   events?: Array<Event>;
-  post_conditions?: PostCondition[];
+  post_conditions?: TransactionPostCondition[];
 };
 
 export interface TokenFiatRateResponse {

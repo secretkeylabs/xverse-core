@@ -31,7 +31,7 @@ export type AssetPostCondition = {
   contract_address: string;
 };
 
-export type PostCondition = {
+export type TransactionPostCondition = {
   type: TokenType;
   condition_code: string;
   amount: string;

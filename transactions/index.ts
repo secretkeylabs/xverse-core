@@ -1,4 +1,5 @@
 import { signBtcTransaction } from './btc';
+import {getNewNonce } from './helper';
 import {
   addressToString,
   broadcastSignedTransaction,
@@ -7,6 +8,12 @@ import {
   setNonce,
   getNonce,
   setFee,
+  generateUnsignedStxTokenTransferTransaction,
+  estimateFees,
+  generateUnsignedSTXTokenTransfer,
+  generateUnsignedTransaction,
+  estimateContractCallFees,
+  generateUnsignedContractCall,
 } from './stx';
 
 export {
@@ -18,4 +25,11 @@ export {
   setNonce,
   getNonce,
   setFee,
+  generateUnsignedSTXTokenTransfer,
+  estimateFees,
+  generateUnsignedStxTokenTransferTransaction,
+  getNewNonce,
+  generateUnsignedTransaction,
+  estimateContractCallFees,
+  generateUnsignedContractCall,
 };

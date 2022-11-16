@@ -1,3 +1,6 @@
+import { cvToJSON, hexToCV } from "@stacks/transactions";
+import { hexToString } from "../../helper";
+
 export interface Attribute {
   value: string;
   trait_type: string;
@@ -82,4 +85,15 @@ export interface CoreInfo {
   stable_burn_block_height: number;
   stacks_tip_height: number;
   stacks_tip: string;
+}
+
+export function getBnsNftName(nft: NonFungibleToken) {
+  const hex = nft.value.hex;
+  const cv = cvToJSON(hexToCV(hex));
+  const nameValue = cv.value?.name?.value ?? '';
+  const nameSpaceValue = cv.value?.namespace?.value ?? '';
+
+  return nameValue && nameSpaceValue
+    ? `${hexToString(nameValue)}.${hexToString(nameSpaceValue)}`
+    : '';
 }
