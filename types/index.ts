@@ -55,11 +55,13 @@ import {
     NftsListData,
     NonFungibleToken,
     NftEventsResponse,
+    CoreInfo,
     AddressToBnsResponse,
     getBnsNftName
   } from './api/stacks/assets';
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
+import { StackerInfo, StackingData, StackingPoolInfo, StackingStateData, Pool } from './api/xverse/stacking';
 
 export { getBnsNftName, cvToHex, uintCV };
 export {
@@ -105,6 +107,12 @@ export {
   NftsListData,
   NonFungibleToken,
   NftEventsResponse,
+  StackingPoolInfo,
+  StackerInfo,
+  StackingData,
+  CoreInfo,
+  StackingStateData,
+  Pool,
   AddressToBnsResponse,
   PostConditionsOptions,
   UnsignedStacksTransation

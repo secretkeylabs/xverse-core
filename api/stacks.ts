@@ -14,15 +14,13 @@ import {
 import { API_TIMEOUT_MILLI } from '../constant';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import {
-  BufferCV,
-  bufferCVFromString,
-  callReadOnlyFunction,
-  ClarityType,
-  cvToString,
-  PrincipalCV,
-  ResponseCV,
-  TupleCV,
-} from '@stacks/transactions';
+  deDuplicatePendingTx,
+  mapTransferTransactionData,
+  parseMempoolStxTransactionsData,
+  parseStxTransactionData,
+} from './helper';
+import { BufferCV, bufferCVFromString, callReadOnlyFunction, ClarityType, cvToHex, cvToString, estimateTransfer, hexToCV, makeUnsignedSTXTokenTransfer, PrincipalCV, ResponseCV, SomeCV, standardPrincipalCV, TupleCV, tupleCV, UIntCV, } from '@stacks/transactions';
+import { AddressToBnsResponse, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 
 import{
   SettingsNetwork,
@@ -36,9 +34,6 @@ import{
   Transaction,
   TransferTransactionsData,
 } from 'types';
-import { AddressToBnsResponse } from '../types/api/stacks/assets';
-import { deDuplicatePendingTx, mapTransferTransactionData, parseMempoolStxTransactionsData, parseStxTransactionData } from './helper';
-
 
 export async function fetchStxAddressData(
   stxAddress: string,
@@ -369,6 +364,62 @@ export async function getTransferTransactions(
     });
 }
 
+export async function getStacksInfo(network:string){
+  const url = `${network}/v2/info`;
+  return axios
+    .get<CoreInfo>(url, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      return response?.data;
+    })
+    .catch((error) => {
+      return undefined;
+    });
 
+}
 
+export async function fetchDelegationState(
+  stxAddress: string,
+  network: SettingsNetwork
+): Promise<DelegationInfo> {
+  const poxContractAddress = 'SP000000000000000000002Q6VF78';
+  const poxContractName = 'pox';
+  const mapName = 'delegation-state';
+  const mapEntryPath = `/${poxContractAddress}/${poxContractName}/${mapName}`;
+  const apiUrl = `${network.address}/v2/map_entry${mapEntryPath}?proof=0`;
+  const key = cvToHex(tupleCV({ stacker: standardPrincipalCV(stxAddress) }));
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  return axios.post(apiUrl, JSON.stringify(key), { headers: headers }).then((response) => {
+    const responseCV = hexToCV(response.data.data);
+    if (responseCV.type === ClarityType.OptionalNone) {
+      return {
+        delegated: false,
+      };
+    } else {
+      const someCV = responseCV as SomeCV;
+      const tupleCV = someCV.value as TupleCV;
+      const amount: UIntCV = tupleCV.data['amount-ustx'] as UIntCV;
+      const delegatedTo: PrincipalCV = tupleCV.data['delegated-to'] as PrincipalCV;
+      const untilBurnHeightSomeCV: SomeCV = tupleCV.data['until-burn-ht'] as SomeCV;
+      var untilBurnHeight = 9999999;
+      if (untilBurnHeightSomeCV.type === ClarityType.OptionalSome) {
+        const untilBurnHeightUIntCV: UIntCV = untilBurnHeightSomeCV.value as UIntCV;
+        untilBurnHeight = Number(untilBurnHeightUIntCV.value);
+      }
+      const delegatedAmount = new BigNumber(amount.value.toString());
+
+      const delegationInfo = {
+        delegated: true,
+        amount: delegatedAmount.toString(),
+        delegatedTo: cvToString(delegatedTo),
+        untilBurnHeight: untilBurnHeight,
+      };
+
+      return delegationInfo;
+    }
+  });
+}
 

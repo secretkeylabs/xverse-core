@@ -9,7 +9,9 @@
       "types/*": ["./types"],
       "currency/*": ["./currency"],
       "transactions/*": ["./transactions"],
-      "wallet/*": ["./wallet"]
+      "wallet/*": ["./wallet"],
+      "stacking/*": ["./stacking"],
+      
     },
     "declaration": true,
     "sourceMap": true,

@@ -62,6 +62,30 @@ export interface NftEventsResponse {
 export interface AddressToBnsResponse {
   names: string[];
 }
+export interface PoxData {
+  contract_id: string;
+  first_burnchain_block_height: number;
+  min_amount_ustx: string;
+  prepare_cycle_length: number;
+  rejection_fraction: number;
+  reward_cycle_id: number;
+  rejection_votes_left_required: string;
+  total_liquid_supply_ustx: string;
+  next_reward_cycle_in: number;
+}
+export interface DelegationInfo {
+  delegated: boolean;
+  amount?: string;
+  delegatedTo?: string;
+  untilBurnHeight?: number;
+}
+
+export interface CoreInfo {
+  burn_block_height: number;
+  stable_burn_block_height: number;
+  stacks_tip_height: number;
+  stacks_tip: string;
+}
 
 export function getBnsNftName(nft: NonFungibleToken) {
   const hex = nft.value.hex;
