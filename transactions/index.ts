@@ -1,4 +1,5 @@
 import { signBtcTransaction } from './btc';
+import { deDuplicatePendingTx, getNewNonce } from './helper';
 import {
   addressToString,
   broadcastSignedTransaction,
@@ -7,6 +8,17 @@ import {
   setNonce,
   getNonce,
   setFee,
+  getTransaction,
+  getConfirmedTransactions,
+  fetchStxPendingTxData,
+  generateUnsignedStxTokenTransferTransaction,
+  estimateFees,
+  generateUnsignedSTXTokenTransfer,
+  getTransferTransactions,
+  getMempoolTransactions,
+  generateUnsignedTransaction,
+  estimateContractCallFees,
+  generateUnsignedContractCall,
 } from './stx';
 
 export {
@@ -18,4 +30,17 @@ export {
   setNonce,
   getNonce,
   setFee,
+  getTransaction,
+  getConfirmedTransactions,
+  getMempoolTransactions,
+  getTransferTransactions,
+  generateUnsignedSTXTokenTransfer,
+  estimateFees,
+  generateUnsignedStxTokenTransferTransaction,
+  fetchStxPendingTxData,
+  getNewNonce,
+  deDuplicatePendingTx,
+  generateUnsignedTransaction,
+  estimateContractCallFees,
+  generateUnsignedContractCall,
 };

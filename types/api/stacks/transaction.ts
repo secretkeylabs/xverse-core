@@ -1,11 +1,39 @@
 import {
   TransactionType,
   TransactionStatus,
-  PostCondition,
+  TransactionPostCondition,
   ContractCall,
 } from '../shared/transaction';
-import { cvToHex, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
+import { ClarityValue, cvToHex, PostCondition, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
+import { SettingsNetwork, StxMempoolTransactionData } from 'types/network';
 export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
+
+export type UnsignedStacksTransation = {
+  amount: string,
+  senderAddress: string,
+  recipientAddress: string,
+  contractAddress: string,
+  contractName: string,
+  assetName: string,
+  publicKey: string,
+  network: SettingsNetwork,
+  pendingTxs: StxMempoolTransactionData[],
+  memo?: string,
+  isNFT?: boolean,
+}
+
+export type UnsignedContractCallTransaction = {
+  publicKey: string,
+  contractAddress: string,
+  contractName: string,
+  functionName: string,
+  functionArgs: ClarityValue[],
+  network: SettingsNetwork,
+  nonce?: bigint,
+  postConditions: PostCondition[],
+  sponsored?: boolean,
+  postConditionMode?: number
+}
 
 export type StxMempoolResponse = {
   limit: number;
@@ -31,7 +59,7 @@ export type StxMempoolTransactionDataResponse = {
   tx_status: TransactionStatus;
   tx_type: TransactionType;
   contract_call?: ContractCall;
-  post_conditions?: PostCondition[];
+  post_conditions?: TransactionPostCondition[];
 };
 
 export type TransferTransactionArrayObject = {
@@ -52,7 +80,7 @@ export type TransferTransaction = {
   sender_address: string;
   sponsored: boolean;
   post_condition_mode: string;
-  post_conditions: Array<PostCondition>;
+  post_conditions: Array<TransactionPostCondition>;
   anchor_mode: string;
   is_unanchored: string;
   block_hash: string;

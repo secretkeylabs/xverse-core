@@ -33,7 +33,8 @@ import {
   Transaction,
   PostConditionsOptions,
   uintCV,
-  cvToHex
+  cvToHex,
+  UnsignedStacksTransation
 } from './api/stacks/transaction';
 
 import {
@@ -106,4 +107,5 @@ export {
   NftEventsResponse,
   AddressToBnsResponse,
   PostConditionsOptions,
+  UnsignedStacksTransation
 };
