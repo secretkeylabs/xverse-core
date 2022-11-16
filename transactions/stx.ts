@@ -24,24 +24,14 @@ import {
   UnsignedContractCallOptions,
   UnsignedTokenTransferOptions,
 } from '@stacks/transactions';
-import axios from 'axios';
-import { API_TIMEOUT_MILLI } from '../constant';
 import{
   NetworkType,
   PostConditionsOptions,
   SettingsNetwork,
-  StxMempoolResponse,
   StxMempoolTransactionData,
-  StxMempoolTransactionListData,
-  StxPendingTxData,
-  StxTransactionData,
-  StxTransactionListData,
-  StxTransactionResponse,
-  Transaction,
-  TransferTransactionsData,
 } from 'types';
 import { getStxAddressKeyChain } from '../wallet/index';
-import { deDuplicatePendingTx, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition, mapTransferTransactionData, parseMempoolStxTransactionsData, parseStxTransactionData } from './helper';
+import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import { UnsignedContractCallTransaction, UnsignedStacksTransation } from '../types/api/stacks/transaction';
 
 export async function signTransaction(
@@ -114,121 +104,6 @@ export function getNonce(transaction: StacksTransaction): bigint {
 
 export function setFee(transaction: StacksTransaction, fee: bigint) {
   transaction.setFee(fee);
-}
-
-export async function getConfirmedTransactions({
-  stxAddress,
-  network,
-}: {
-  stxAddress: string;
-  network: SettingsNetwork;
-}): Promise<StxTransactionListData> {
-  let apiUrl = `${network.address}/extended/v1/address/${stxAddress}/transactions`;
-
-  return axios
-    .get<StxTransactionResponse>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-    })
-    .then((response) => {
-      return {
-        transactionsList: response.data.results.map((responseTx) =>
-          parseStxTransactionData({ responseTx, stxAddress })
-        ),
-        totalCount: response.data.total,
-      };
-    });
-}
-
-export async function getMempoolTransactions({
-  stxAddress,
-  network,
-  offset,
-  limit,
-}: {
-  stxAddress: string;
-  network: SettingsNetwork;
-  offset: number;
-  limit: number;
-}): Promise<StxMempoolTransactionListData> {
-  let apiUrl = `${network.address}/extended/v1/tx/mempool?address=${stxAddress}`;
-
-  return axios
-    .get<StxMempoolResponse>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-      params: {
-        limit: limit,
-        offset: offset,
-      },
-    })
-    .then((response) => {
-      const count: number = response.data.total;
-      const transactions: StxMempoolTransactionData[] = [];
-      response.data.results.forEach((responseTx) => {
-        transactions.push(parseMempoolStxTransactionsData({ responseTx, stxAddress }));
-      });
-      return {
-        transactionsList: transactions,
-        totalCount: count,
-      };
-    });
-}
-
-export async function fetchStxPendingTxData(
-  stxAddress: string,
-  network: SettingsNetwork
-): Promise<StxPendingTxData> {
-  const [confirmedTransactions, mempoolTransactions] = await Promise.all([
-    getConfirmedTransactions({
-      stxAddress,
-      network,
-    }),
-    getMempoolTransactions({
-      stxAddress,
-      network,
-      offset: 0,
-      limit: 25,
-    }),
-  ]);
-
-  const pendingTransactions = deDuplicatePendingTx({
-    confirmedTransactions: confirmedTransactions.transactionsList,
-    pendingTransactions: mempoolTransactions.transactionsList,
-  }).filter((tx) => tx.incoming === false);
-
-  return Promise.resolve({
-    pendingTransactions,
-  });
-}
-
-export async function getTransaction(txid: string, network: SettingsNetwork): Promise<Transaction> {
-  return fetch(`${network.address}/extended/v1/tx/${txid}`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
-    .then((response) => {
-      return response;
-    });
-}
-
-
-
-export async function getTransferTransactions(
-  stxAddress: string,
-  network: SettingsNetwork
-): Promise<StxTransactionData[]> {
-  let apiUrl = `${network.address}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
-  return axios
-    .get<TransferTransactionsData>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-    })
-    .then((response: { data: { results: any[] } }) => {
-      const transactions: StxTransactionData[] = [];
-      response.data.results.forEach((t) => {
-        transactions.push(mapTransferTransactionData({ responseTx: t.tx, stxAddress }));
-      });
-
-      return transactions;
-    });
 }
 
 /**
