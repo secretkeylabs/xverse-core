@@ -9,6 +9,7 @@ import {
   FeesMultipliers,
   StackingPoolInfo,
   StackerInfo,
+  SignedUrlResponse,
 } from 'types';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
@@ -104,5 +105,43 @@ export async function fetchPoolStackerInfo(
     .then((response) => response.json())
     .then((response) => {
       return response;
+    });
+}
+
+export async function getMoonPaySignedUrl(
+  unsignedUrl: string,
+): Promise<SignedUrlResponse | null> {
+  const url = `${XVERSE_API_BASE_URL}/v1/sign-url`;
+
+  const requestBody = {
+    url: unsignedUrl,
+  };
+
+  return axios
+    .post<SignedUrlResponse>(url, requestBody)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      return null;
+    });
+}
+
+export async function getBinaceSignature(
+  srcData: string,
+): Promise<SignedUrlResponse | null> {
+  const url = `${XVERSE_API_BASE_URL}/v1/binance/sign`;
+
+  const requestBody = {
+    url: srcData,
+  };
+
+  return axios
+    .post<SignedUrlResponse>(url, requestBody)
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      return null;
     });
 }

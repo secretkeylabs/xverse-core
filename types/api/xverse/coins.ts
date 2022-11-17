@@ -10,5 +10,9 @@ export interface Coin {
     tokenFiatRate?: number | null;
     visible?: boolean;
   }
+
+  export interface SignedUrlResponse {
+    signedUrl: string;
+  }
   
 export type CoinsResponse = Coin[];

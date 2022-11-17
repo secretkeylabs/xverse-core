@@ -19,7 +19,7 @@ import {
   FeesMultipliers,
 } from './api/xverse/transaction';
 
-import { Coin, CoinsResponse } from './api/xverse/coins';
+import { Coin, CoinsResponse, SignedUrlResponse } from './api/xverse/coins';
 
 import {
   FungibleToken,
@@ -115,5 +115,6 @@ export {
   Pool,
   AddressToBnsResponse,
   PostConditionsOptions,
-  UnsignedStacksTransation
+  UnsignedStacksTransation,
+  SignedUrlResponse
 };
