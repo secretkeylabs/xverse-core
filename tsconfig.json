@@ -11,7 +11,7 @@
       "transactions/*": ["./transactions"],
       "wallet/*": ["./wallet"],
       "stacking/*": ["./stacking"],
-      
+      "account/*": ["./account"],
     },
     "declaration": true,
     "sourceMap": true,

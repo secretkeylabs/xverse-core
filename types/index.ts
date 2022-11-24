@@ -62,6 +62,7 @@ import {
 import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 import { StackerInfo, StackingData, StackingPoolInfo, StackingStateData, Pool } from './api/xverse/stacking';
+import { Account } from './account';
 
 export { getBnsNftName, cvToHex, uintCV };
 export {
@@ -116,5 +117,6 @@ export {
   AddressToBnsResponse,
   PostConditionsOptions,
   UnsignedStacksTransation,
-  SignedUrlResponse
+  SignedUrlResponse,
+  Account
 };
