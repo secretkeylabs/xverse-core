@@ -34,6 +34,8 @@ import{
   Transaction,
   TransferTransactionsData,
 } from 'types';
+import { getNftDetail } from './gamma';
+import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
 
 export async function fetchStxAddressData(
   stxAddress: string,
@@ -182,6 +184,51 @@ export async function getNftsData(
         nftsList: response.data.results,
         total: response.data.total,
       };
+    });
+}
+
+export async function  getNfts(
+  stxAddress: string,
+  network: SettingsNetwork,
+  offset: number
+): Promise<NftsListData> {
+  const nfts = await getNftsData(stxAddress, network, offset);
+  for (const nft of nfts.nftsList) {
+    const principal: string[] = nft.asset_identifier.split('::');
+    const contractInfo: string[] = principal[0].split('.');
+    if (contractInfo[1] !== 'bns') {
+      const detail = await getNftDetail(
+        nft.value.repr.replace('u', ''),
+        contractInfo[0],
+        contractInfo[1]
+      );
+      if (detail) {
+        nft.data = detail.data;
+      }
+    }
+  }
+  return {
+    nftsList: nfts.nftsList,
+    total: nfts.total,
+  };
+}
+
+export async function getContractInterface(
+  contractAddress: string,
+  contractName: string,
+  network: SettingsNetwork,
+): Promise<ContractInterfaceResponse | null> {
+  const apiUrl = `${network.address}/v2/contracts/interface/${contractAddress}/${contractName}`;
+
+  return axios
+    .get<ContractInterfaceResponse>(apiUrl, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      return response.data;
+    })
+    .catch((error) => {
+      return null;
     });
 }
 
