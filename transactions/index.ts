@@ -1,5 +1,5 @@
 import { signBtcTransaction } from './btc';
-import {getNewNonce } from './helper';
+import {getFiatEquivalent, getNewNonce } from './helper';
 import {
   addressToString,
   broadcastSignedTransaction,
@@ -32,4 +32,5 @@ export {
   generateUnsignedTransaction,
   estimateContractCallFees,
   generateUnsignedContractCall,
+  getFiatEquivalent
 };

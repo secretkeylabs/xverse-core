@@ -1,8 +1,11 @@
 import { AssetInfo, createAssetInfo, FungibleConditionCode, hexToCV, makeStandardFungiblePostCondition, makeStandardNonFungiblePostCondition, NonFungibleConditionCode, PostCondition } from '@stacks/transactions';
+import BigNumber from 'bignumber.js';
+import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
 import {
   StxMempoolTransactionData,
   PostConditionsOptions,
-} from 'types';
+  FungibleToken,
+} from '../types';
 
 export function getNewNonce(
   pendingTransactions: StxMempoolTransactionData[],
@@ -55,3 +58,35 @@ export function makeFungiblePostCondition(
     assetInfo,
   );
 }
+
+export function getFiatEquivalent(value: number, currencyType:string, stxBtcRate: BigNumber, btcFiatRate: BigNumber, fungibleToken?: FungibleToken) {
+  if ((currencyType === 'FT' && !fungibleToken?.tokenFiatRate) || currencyType === 'NFT') {
+    return '';
+  }
+  if (!value) return '0';
+  switch (currencyType) {
+    case 'STX':
+      return getStxFiatEquivalent(
+        stxToMicrostacks(new BigNumber(value)),
+        new BigNumber(stxBtcRate),
+        new BigNumber(btcFiatRate),
+      )
+        .toFixed(2)
+        .toString();
+    case 'BTC':
+      return getBtcFiatEquivalent(btcToSats(new BigNumber(value)), new BigNumber(btcFiatRate))
+        .toFixed(2)
+        .toString();
+    case 'FT':
+      if (fungibleToken?.tokenFiatRate) {
+        return new BigNumber(value)
+          .multipliedBy(fungibleToken.tokenFiatRate)
+          .toFixed(2)
+          .toString();
+      }
+      break;
+    default:
+      return '';
+  }
+}
+
