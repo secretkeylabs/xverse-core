@@ -1,7 +1,8 @@
 import { createSha2Hash } from '@stacks/encryption';
-import { deriveRootKeychainFromMnemonic, deriveStxAddressChain } from '@stacks/keychain';
+import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
+import { deriveStxAddressChain } from '../wallet/index';
 
 export async function createAuthResponse(
   seedPhrase: string,
@@ -10,7 +11,7 @@ export async function createAuthResponse(
 ): Promise<string | undefined> {
   const rootNode = await deriveRootKeychainFromMnemonic(seedPhrase);
   const chainID = ChainID.Mainnet;
-  const deriveStxAddressKeychain = deriveStxAddressChain(chainID);
+  const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   const { privateKey } = deriveStxAddressKeychain(rootNode);
 
   const gaiaUrl = 'https://hub.blockstack.org';
