@@ -186,3 +186,21 @@ export interface PostConditionsOptions {
   amount: string | number;
 }
 
+export interface Args {
+  name: string;
+  type: string;
+}
+export interface Output {
+  type: Output;
+}
+export interface ContractFunction {
+  name: string;
+  access: string;
+  args: Args[];
+  output: Output;
+}
+
+export interface ContractInterfaceResponse {
+  functions: ContractFunction[];
+}
+
