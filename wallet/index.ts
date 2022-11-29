@@ -33,7 +33,7 @@ function getDerivationPath(chain: ChainID, index: BigInt) {
   return `${derivationPaths[chain]}${index.toString()}`;
 }
 
-function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0)) {
+export function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0)) {
   return (rootNode: BIP32Interface) => {
     const childKey = rootNode.derivePath(getDerivationPath(chain, index));
     if (!childKey.privateKey) {
