@@ -14,6 +14,7 @@ import {
   generateUnsignedTransaction,
   estimateContractCallFees,
   generateUnsignedContractCall,
+  generateContractDeployTransaction
 } from './stx';
 
 export {
@@ -32,5 +33,6 @@ export {
   generateUnsignedTransaction,
   estimateContractCallFees,
   generateUnsignedContractCall,
-  getFiatEquivalent
+  getFiatEquivalent,
+  generateContractDeployTransaction
 };

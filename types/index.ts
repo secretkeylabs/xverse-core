@@ -34,7 +34,8 @@ import {
   PostConditionsOptions,
   uintCV,
   cvToHex,
-  UnsignedStacksTransation
+  UnsignedStacksTransation,
+  UnsignedContractDeployOptions
 } from './api/stacks/transaction';
 
 import {
@@ -118,5 +119,6 @@ export {
   PostConditionsOptions,
   UnsignedStacksTransation,
   SignedUrlResponse,
-  Account
+  Account,
+  UnsignedContractDeployOptions
 };

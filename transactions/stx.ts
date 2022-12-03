@@ -1,28 +1,47 @@
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import {
+  AddressHashMode,
   addressToString,
+  AddressVersion,
   AnchorMode,
   broadcastTransaction,
   bufferCVFromString,
   ChainID,
   ClarityValue,
+  codeBodyString,
+  createLPList,
+  createLPString,
+  createSingleSigSpendingCondition,
+  createSponsoredAuth,
   createStacksPrivateKey,
+  createStacksPublicKey,
+  createStandardAuth,
+  estimateContractDeploy,
   estimateContractFunctionCall,
   estimateTransfer,
   hexToCV,
+  LengthPrefixedString,
   makeUnsignedContractCall,
   makeUnsignedSTXTokenTransfer,
   noneCV,
+  PayloadType,
   PostCondition,
+  PostConditionMode,
+  publicKeyToAddress,
+  publicKeyToString,
+  SmartContractPayload,
   someCV,
+  StacksMessageType,
   StacksTransaction,
   standardPrincipalCV,
   TransactionSigner,
+  TransactionVersion,
   TxBroadcastResultOk,
   TxBroadcastResultRejected,
   uintCV,
   UnsignedContractCallOptions,
   UnsignedTokenTransferOptions,
+  getNonce as fetchNewNonce,
 } from '@stacks/transactions';
 import{
   NetworkType,
@@ -32,7 +51,7 @@ import{
 } from 'types';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import { UnsignedContractCallTransaction, UnsignedStacksTransation } from '../types/api/stacks/transaction';
+import { UnsignedContractCallTransaction, UnsignedContractDeployOptions, UnsignedStacksTransation } from '../types/api/stacks/transaction';
 
 export async function signTransaction(
   unsignedTx: StacksTransaction,
@@ -326,6 +345,133 @@ export async function generateUnsignedTransaction(
   }
 }
 
+export function createSmartContractPayload(
+  contractName: string | LengthPrefixedString,
+  codeBody: string | LengthPrefixedString,
+): SmartContractPayload {
+  if (typeof contractName === 'string') {
+    contractName = createLPString(contractName);
+  }
+  if (typeof codeBody === 'string') {
+    codeBody = codeBodyString(codeBody);
+  }
 
+  return {
+    type: StacksMessageType.Payload,
+    payloadType: PayloadType.SmartContract,
+    contractName,
+    codeBody,
+  };
+}
+
+export async function makeUnsignedContractDeploy(
+  txOptions: UnsignedContractDeployOptions,
+): Promise<StacksTransaction> {
+  const defaultOptions = {
+    fee:  BigInt(0),
+    nonce:  BigInt(0),
+    network: new StacksMainnet(),
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Deny,
+    sponsored: false,
+  };
+
+  const options = Object.assign(defaultOptions, txOptions);
+
+  const payload = createSmartContractPayload(
+    options.contractName,
+    options.codeBody,
+  );
+
+  const addressHashMode = AddressHashMode.SerializeP2PKH;
+  const pubKey = createStacksPublicKey(options.publicKey);
+
+  let authorization = null;
+
+  const spendingCondition = createSingleSigSpendingCondition(
+    addressHashMode,
+    publicKeyToString(pubKey),
+    options.nonce,
+    options.fee,
+  );
+
+  if (options.sponsored) {
+    authorization = createSponsoredAuth(spendingCondition);
+  } else {
+    authorization = createStandardAuth(spendingCondition);
+  }
+
+  const postConditions: PostCondition[] = options.postConditions ?? [];
+
+  const lpPostConditions = createLPList(postConditions);
+  const transaction = new StacksTransaction(
+    options.network.version,
+    authorization,
+    payload,
+    lpPostConditions,
+    options.postConditionMode,
+    options.anchorMode,
+    options.network.chainId,
+  );
+
+  if (!txOptions.fee) {
+    const txFee = await estimateContractDeploy(transaction, options.network);
+    transaction.setFee(txFee);
+  }
+
+  if (!txOptions.nonce) {
+    const addressVersion =
+      options.network.version === TransactionVersion.Mainnet
+        ? AddressVersion.MainnetSingleSig
+        : AddressVersion.TestnetSingleSig;
+    const senderAddress = publicKeyToAddress(addressVersion, pubKey);
+    const txNonce = await fetchNewNonce(senderAddress, options.network);
+    transaction.setNonce(txNonce);
+  }
+
+  return transaction;
+}
+
+
+export function generateContractDeployment(options: {
+  contractName: string;
+  codeBody: string;
+  postConditions?: PostCondition[];
+  postConditionMode?: PostConditionMode;
+  publicKey: string;
+  network: NetworkType;
+  sponsored?: boolean;
+}): Promise<StacksTransaction> {
+  const txNetwork =
+    options.network === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
+
+  const txOptions = {
+    ...options,
+    network: txNetwork,
+  };
+
+  return makeUnsignedContractDeploy(txOptions);
+}
+
+export async function generateContractDeployTransaction(options: {
+  codeBody: string;
+  contractName: string;
+  postConditions?: PostCondition[];
+  postConditionMode?: PostConditionMode;
+  pendingTxs: StxMempoolTransactionData[];
+  publicKey: string;
+  network: NetworkType;
+  sponsored?: boolean;
+}): Promise<StacksTransaction> {
+  try {
+    const unsignedTx = await generateContractDeployment(options);
+    const nonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
+
+    setNonce(unsignedTx, nonce);
+    return Promise.resolve(unsignedTx);
+  } catch (err: any) {
+    return Promise.reject(err.toString());
+  }
+}
 
 export { addressToString };

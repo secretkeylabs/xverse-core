@@ -4,8 +4,9 @@ import {
   TransactionPostCondition,
   ContractCall,
 } from '../shared/transaction';
-import { ClarityValue, cvToHex, PostCondition, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
+import { AnchorMode, ClarityValue, cvToHex, PostCondition, PostConditionMode, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
 import { SettingsNetwork, StxMempoolTransactionData } from 'types/network';
+import { StacksNetwork } from '@stacks/network';
 export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
 
 export type UnsignedStacksTransation = {
@@ -204,3 +205,15 @@ export interface ContractInterfaceResponse {
   functions: ContractFunction[];
 }
 
+export interface UnsignedContractDeployOptions {
+  contractName: string;
+  codeBody: string;
+  fee?: bigint;
+  nonce?: bigint;
+  network?: StacksNetwork;
+  anchorMode?: AnchorMode;
+  postConditionMode?: PostConditionMode;
+  postConditions?: PostCondition[];
+  sponsored?: boolean;
+  publicKey: string;
+}
