@@ -15,7 +15,7 @@ import {
   PostConditionType,
   StacksMessageType,
 } from '@stacks/transactions';
-import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from 'api';
+import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import BigNumber from 'bignumber.js';
 import {
   btcToSats,
