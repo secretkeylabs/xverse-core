@@ -1,5 +1,13 @@
 import { signBtcTransaction } from './btc';
-import {getFiatEquivalent, getNewNonce } from './helper';
+import {
+  getFiatEquivalent,
+  getNewNonce,
+  hexStringToBuffer,
+  extractFromPayload,
+  getFTInfoFromPostConditions,
+  createContractCallPromises,
+  createDeployContractRequest,
+} from './helper';
 import {
   addressToString,
   broadcastSignedTransaction,
@@ -14,7 +22,7 @@ import {
   generateUnsignedTransaction,
   estimateContractCallFees,
   generateUnsignedContractCall,
-  generateContractDeployTransaction
+  generateContractDeployTransaction,
 } from './stx';
 
 export {
@@ -34,5 +42,10 @@ export {
   estimateContractCallFees,
   generateUnsignedContractCall,
   getFiatEquivalent,
-  generateContractDeployTransaction
+  generateContractDeployTransaction,
+  hexStringToBuffer,
+  extractFromPayload,
+  getFTInfoFromPostConditions,
+  createContractCallPromises,
+  createDeployContractRequest,
 };
