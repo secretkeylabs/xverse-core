@@ -1,6 +1,10 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../constant';
+import { 
+  API_TIMEOUT_MILLI, 
+  XVERSE_API_BASE_URL, 
+  XVERSE_SPONSOR_URL 
+} from '../constant';
 import {
   BtcFeeResponse,
   TokenFiatRateResponse,
@@ -11,6 +15,7 @@ import {
   StackerInfo,
   SignedUrlResponse,
 } from 'types';
+import { StacksTransaction } from '@stacks/transactions';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -143,5 +148,21 @@ export async function getBinaceSignature(
     })
     .catch((error) => {
       return null;
+    });
+}
+
+export async function sponsorTransaction(
+  signedTx: StacksTransaction
+): Promise<string> {
+  const sponsorUrl = `${XVERSE_SPONSOR_URL}/v1/sponsor`;
+
+  const data = {
+    tx: signedTx.serialize().toString('hex'),
+  };
+
+  return axios
+    .post(sponsorUrl, data, {timeout: 45000})
+    .then((response) => {
+      return response.data.txid;
     });
 }

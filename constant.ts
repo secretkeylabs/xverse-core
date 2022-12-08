@@ -17,3 +17,5 @@ export const BTC_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/test3/ad
 export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
 
 export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
+
+export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
