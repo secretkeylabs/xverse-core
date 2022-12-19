@@ -76,11 +76,10 @@ export async function broadcastSignedTransaction(
   signedTx: StacksTransaction,
   network: NetworkType
 ): Promise<string> {
-  const addressUrl = 'https://stacks-node-api.mainnet.stacks.co';
   const txNetwork =
     network === 'Mainnet'
-      ? new StacksMainnet({ url: addressUrl })
-      : new StacksTestnet({ url: addressUrl });
+      ? new StacksMainnet()
+      : new StacksTestnet();
   const result = await broadcastTransaction(signedTx, txNetwork);
   if (result.hasOwnProperty('error')) {
     const errorResult = result as TxBroadcastResultRejected;
