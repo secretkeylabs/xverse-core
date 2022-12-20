@@ -30,7 +30,7 @@ export async function estimateBtcTransaction(
   const changeSats = sumValue.minus(amountSats);
 
   if (sumValue.isLessThan(amountSats)) {
-    throw new Error('send.errors.insufficient_balance');
+    throw new Error('Insufficient balance');
   }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
@@ -75,7 +75,7 @@ export async function generateSignedBtcTransaction(
   const changeSats = sumValue.minus(amountSats).minus(fee);
 
   if (sumValue.isLessThan(amountSats.plus(fee))) {
-     throw new Error('send.errors.insufficient_balance_fees');
+     throw new Error('Insufficient balance when including transaction fees');
    }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
