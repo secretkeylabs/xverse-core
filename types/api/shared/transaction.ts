@@ -7,7 +7,12 @@ export type TransactionType =
   | 'bitcoin'
   | 'unsupported';
 
-export type TransactionStatus = 'pending' | 'success' | 'invalid';
+export type TransactionStatus =
+  | 'pending'
+  | 'success'
+  | 'invalid'
+  | 'abort_by_response'
+  | 'abort_by_post_condition';
 
 export type TokenType = 'fungible' | 'non_fungible';
 
