@@ -69,12 +69,14 @@ export async function generateSignedBtcTransaction(
   const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey, network });
   const p2sh = payments.p2sh({ redeem: p2wpkh, network });
   const utxos = await fetchBtcAddressUnspent(senderAddress, selectedNetwork);
-  const psbt = new Psbt({ network });
-  const selectedUnspentOutputs = selectUnspentOutputs(amountSats, utxos);
-  const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
-  const changeSats = sumValue.minus(amountSats).minus(fee);
 
-  if (sumValue.isLessThan(amountSats.plus(fee))) {
+  const totalAmountSats = amountSats.plus(fee);
+  const psbt = new Psbt({ network });
+  const selectedUnspentOutputs = selectUnspentOutputs(totalAmountSats, utxos);
+  const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
+  const changeSats = sumValue.minus(totalAmountSats);
+
+  if (sumValue.isLessThan(totalAmountSats)) {
      throw new Error('Insufficient balance when including transaction fees');
    }
 
