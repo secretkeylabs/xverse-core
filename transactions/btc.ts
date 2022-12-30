@@ -17,7 +17,7 @@ export async function estimateBtcTransaction(
   feeMode?: string
 ): Promise<BigNumber> {
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
-  const network = networks.bitcoin;
+  const network = selectedNetwork === 'Mainnet' ? networks.bitcoin : networks.testnet;
 
   const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey, network });
   const p2sh = payments.p2sh({ redeem: p2wpkh, network });
@@ -64,7 +64,7 @@ export async function generateSignedBtcTransaction(
   selectedNetwork: NetworkType
 ): Promise<string> {
   const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
-  const network = networks.bitcoin;
+  const network = selectedNetwork === 'Mainnet' ? networks.bitcoin : networks.testnet;
 
   const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey, network });
   const p2sh = payments.p2sh({ redeem: p2wpkh, network });
