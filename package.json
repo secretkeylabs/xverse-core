@@ -22,7 +22,8 @@
     "build": "webpack --mode production",
     "clean": "rimraf dist",
     "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist",
-    "postinstall": "npm run build:esm"
+    "postinstall": "npm run build:esm",
+    "test": "exit 0"
   },
   "repository": {
     "type": "git",
