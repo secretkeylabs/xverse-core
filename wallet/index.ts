@@ -6,8 +6,9 @@ import {
   BTC_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
+  GAIA_HUB_URL,
 } from '../constant';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain/dist/esm';
+import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import {
   ChainID,
   publicKeyToString,
@@ -16,13 +17,16 @@ import {
   getAddressFromPrivateKey,
   TransactionVersion,
   AddressVersion,
-} from '@stacks/transactions/dist/esm';
+} from '@stacks/transactions';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { NetworkType } from 'types';
+import { Account, NetworkType, SettingsNetwork } from 'types';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
-import { ecPairToHexString } from './helper';
+import { deriveWalletConfigKey, ecPairToHexString } from './helper';
 import { Keychain } from '../types/api/xverse/wallet';
+import { connectToGaiaHubWithConfig, getHubInfo, getOrCreateWalletConfig } from '../gaia';
+import { StacksMainnet, StacksTestnet } from '@stacks/network';
+import { getBnsName } from '../api';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -83,9 +87,9 @@ export async function walletFromSeedPhrase({
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
-    index,
+    index
   );
-  const {address, privateKey} = deriveStxAddressKeychain(rootNode);
+  const { address, privateKey } = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -193,64 +197,106 @@ export function validateBtcAddress({
   }
 }
 interface EncryptMnemonicArgs {
-  password: string,
-  seed: string,
+  password: string;
+  seed: string;
   passwordHashGenerator: (password: string) => Promise<{
-    salt: string,
-    hash: string,
-  }>
-  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>
+    salt: string;
+    hash: string;
+  }>;
+  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
 }
 
 interface DecryptMnemonicArgs {
-  password: string,
-  encryptedSeed: string,
+  password: string;
+  encryptedSeed: string;
   passwordHashGenerator: (password: string) => Promise<{
-    salt: string,
-    hash: string,
-  }>
-  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>
+    salt: string;
+    hash: string;
+  }>;
+  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
 }
 
 export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
-  const {
-    mnemonicEncryptionHandler,
-    passwordHashGenerator,
-    password,
-    seed,
-  } = cb;
+  const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
   try {
     const { hash } = await passwordHashGenerator(password);
     const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
     return encryptedSeedBuffer.toString('hex');
-  } catch(err) {
-    return Promise.reject(err)
+  } catch (err) {
+    return Promise.reject(err);
   }
 }
 
-
 export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
-  const {
-    mnemonicDecryptionHandler,
-    passwordHashGenerator,
-    password,
-    encryptedSeed,
-  } = cb;
+  const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
   try {
     const { hash } = await passwordHashGenerator(password);
     const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
     return seedPhrase;
-  } catch(err) {
-    return Promise.reject(err)
+  } catch (err) {
+    return Promise.reject(err);
   }
 }
 
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
-  accountIndex: number,
+  accountIndex: number
 ): Promise<Keychain> {
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
+}
+
+export async function restoreWalletWithAccounts(
+  mnemonic: string,
+  selectedNetwork: SettingsNetwork,
+  currentAccounts: Account[]
+): Promise<Account[]> {
+  const accountsList: Account[] = [];
+  const networkFetch =
+    selectedNetwork.type === 'Mainnet' ? new StacksMainnet().fetchFn : new StacksTestnet().fetchFn;
+  const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
+  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const walletConfigKey = await deriveWalletConfigKey(rootNode);
+  const currentGaiaConfig = connectToGaiaHubWithConfig({
+    hubInfo,
+    privateKey: walletConfigKey,
+    gaiaHubUrl: GAIA_HUB_URL,
+  });
+  const walletConfig = await getOrCreateWalletConfig({
+    walletAccounts: currentAccounts,
+    configPrivateKey: walletConfigKey,
+    gaiaHubConfig: currentGaiaConfig,
+    fetchFn: networkFetch,
+  });
+  if (walletConfig && walletConfig.accounts.length > 0) {
+    const newAccounts: Account[] = await Promise.all(
+      walletConfig.accounts.map(async (_, index) => {
+        let existingAccount = currentAccounts[index];
+        if (!existingAccount) {
+          const response = await walletFromSeedPhrase({
+            mnemonic,
+            index: BigInt(index),
+            network: selectedNetwork.type,
+          });
+          const username = await getBnsName(response.stxAddress, selectedNetwork);
+          existingAccount = {
+            id: index,
+            stxAddress: response.stxAddress,
+            btcAddress: response.btcAddress,
+            masterPubKey: response.masterPubKey,
+            stxPublicKey: response.stxPublicKey,
+            btcPublicKey: response.btcPublicKey,
+            bnsName: username,
+          };
+        }
+        return {
+          ...existingAccount,
+        };
+      })
+    );
+    return newAccounts;
+  }
+  return currentAccounts;
 }

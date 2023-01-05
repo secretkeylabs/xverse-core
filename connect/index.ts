@@ -2,6 +2,7 @@ import { createSha2Hash } from '@stacks/encryption';
 import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
+import { GAIA_HUB_URL } from '../constant';
 import { deriveStxAddressChain } from '../wallet/index';
 
 export async function createAuthResponse(
@@ -13,8 +14,6 @@ export async function createAuthResponse(
   const chainID = ChainID.Mainnet;
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   const { privateKey } = deriveStxAddressKeychain(rootNode);
-
-  const gaiaUrl = 'https://hub.blockstack.org';
 
   const identitiesKeychain = rootNode.derivePath(`m/888'/0'`);
   const publicKeyHex = Buffer.from(identitiesKeychain.publicKey.toString('hex'));
@@ -32,7 +31,7 @@ export async function createAuthResponse(
 
   if (dataPrivateKey) {
     return makeAuthResponse({
-      gaiaHubUrl: gaiaUrl,
+      gaiaHubUrl: GAIA_HUB_URL,
       appDomain: appURL.origin,
       transitPublicKey: authRequest?.payload?.public_keys[0],
       scopes: authRequest?.payload?.scopes,

@@ -10,6 +10,8 @@ export const BTC_TESTNET_PATH_WITHOUT_INDEX = `m/49'/1'/0'/0/`;
 
 export const STX_PATH_WITHOUT_INDEX = `m/44'/5757'/0'/0/`;
 
+export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
+
 export const BTC_BASE_URI_MAINNET = 'https://api.blockcypher.com/v1/btc/main/addrs/';
 
 export const BTC_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/test3/addrs/';
@@ -19,3 +21,5 @@ export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
 export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
+
+export const GAIA_HUB_URL = 'https://hub.blockstack.org';
