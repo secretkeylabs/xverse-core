@@ -1,6 +1,9 @@
-import { GaiaHubConfig, uploadToGaiaHub } from '@stacks/storage';
+import { connectToGaiaHub, GaiaHubConfig, uploadToGaiaHub } from '@stacks/storage';
 import { decryptContent, encryptContent, getPublicKeyFromPrivate } from '@stacks/encryption';
 import { createFetchFn, FetchFn } from '@stacks/network';
+import { BIP32Interface } from 'bip32';
+import { bytesToHex } from '@stacks/transactions';
+import { WALLET_CONFIG_PATH } from '../constant';
 import { Account } from 'types/account';
 
 export interface ConfigApp {
@@ -24,6 +27,26 @@ export interface WalletConfig {
     [key: string]: any;
   };
 }
+
+export const deriveConfigPrivateKey = (rootNode: BIP32Interface): Uint8Array => {
+  const derivedConfigKey = rootNode.derivePath(WALLET_CONFIG_PATH).privateKey;
+  if (!derivedConfigKey) throw new TypeError('Unable to derive config key for wallet identities');
+  return derivedConfigKey;
+};
+
+export async function deriveWalletConfigKey(rootNode: BIP32Interface): Promise<string> {
+  return bytesToHex(deriveConfigPrivateKey(rootNode));
+}
+
+export const createWalletGaiaConfig = async ({
+  gaiaHubUrl,
+  configPrivateKey,
+}: {
+  gaiaHubUrl: string;
+  configPrivateKey: string;
+}): Promise<GaiaHubConfig> => {
+  return connectToGaiaHub(gaiaHubUrl, configPrivateKey);
+};
 
 export const getOrCreateWalletConfig = async ({
   configPrivateKey,

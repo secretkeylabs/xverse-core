@@ -1,6 +1,6 @@
 import { validateMnemonic } from "bip39";
 import { newWallet, walletFromSeedPhrase } from '../../wallet'
-import { testSeed } from "./mocks";
+import { testSeed } from "../mocks";
 
 describe(newWallet, () => {
   test('generates a valid seedPhrase', async () => {

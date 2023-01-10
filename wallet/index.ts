@@ -6,7 +6,6 @@ import {
   BTC_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
-  GAIA_HUB_URL,
 } from '../constant';
 import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import {
@@ -19,14 +18,13 @@ import {
   AddressVersion,
 } from '@stacks/transactions';
 import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
-import { Account, NetworkType, SettingsNetwork } from 'types';
+import { NetworkType } from 'types/network';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
-import { deriveWalletConfigKey, ecPairToHexString } from './helper';
-import { Keychain } from '../types/api/xverse/wallet';
-import { connectToGaiaHubWithConfig, getHubInfo, getOrCreateWalletConfig } from '../gaia';
-import { StacksMainnet, StacksTestnet } from '@stacks/network';
-import { getBnsName } from '../api';
+import { ecPairToHexString } from './helper';
+import { Keychain } from 'types/api/xverse/wallet';
+import { BaseWallet } from 'types/wallet';
+import { deriveWalletConfigKey } from '../gaia';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -55,14 +53,7 @@ export function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0))
   };
 }
 
-export async function newWallet(): Promise<{
-  stxAddress: string;
-  btcAddress: string;
-  masterPubKey: string;
-  stxPublicKey: string;
-  btcPublicKey: string;
-  seedPhrase: string;
-}> {
+export async function newWallet(): Promise<BaseWallet> {
   const entropy = crypto.randomBytes(ENTROPY_BYTES);
   const mnemonic = bip39.entropyToMnemonic(entropy);
   return walletFromSeedPhrase({ mnemonic, index: 0n, network: 'Mainnet' });
@@ -76,14 +67,7 @@ export async function walletFromSeedPhrase({
   mnemonic: string;
   index: BigInt;
   network: NetworkType;
-}): Promise<{
-  stxAddress: string;
-  btcAddress: string;
-  masterPubKey: string;
-  stxPublicKey: string;
-  btcPublicKey: string;
-  seedPhrase: string;
-}> {
+}): Promise<BaseWallet> {
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
@@ -96,6 +80,7 @@ export async function walletFromSeedPhrase({
   const master = bip32.fromSeed(seed);
   const masterPubKey = master.publicKey.toString('hex');
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
+  const configPrivateKey = await deriveWalletConfigKey(rootNode);
 
   // derive segwit btc address
 
@@ -118,6 +103,7 @@ export async function walletFromSeedPhrase({
     masterPubKey,
     stxPublicKey,
     btcPublicKey,
+    configPrivateKey,
     seedPhrase: mnemonic,
   };
 }
@@ -246,57 +232,4 @@ export async function getStxAddressKeyChain(
   const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
-}
-
-export async function restoreWalletWithAccounts(
-  mnemonic: string,
-  selectedNetwork: SettingsNetwork,
-  currentAccounts: Account[]
-): Promise<Account[]> {
-  const accountsList: Account[] = [];
-  const networkFetch =
-    selectedNetwork.type === 'Mainnet' ? new StacksMainnet().fetchFn : new StacksTestnet().fetchFn;
-  const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
-  const walletConfigKey = await deriveWalletConfigKey(rootNode);
-  const currentGaiaConfig = connectToGaiaHubWithConfig({
-    hubInfo,
-    privateKey: walletConfigKey,
-    gaiaHubUrl: GAIA_HUB_URL,
-  });
-  const walletConfig = await getOrCreateWalletConfig({
-    walletAccounts: currentAccounts,
-    configPrivateKey: walletConfigKey,
-    gaiaHubConfig: currentGaiaConfig,
-    fetchFn: networkFetch,
-  });
-  if (walletConfig && walletConfig.accounts.length > 0) {
-    const newAccounts: Account[] = await Promise.all(
-      walletConfig.accounts.map(async (_, index) => {
-        let existingAccount = currentAccounts[index];
-        if (!existingAccount) {
-          const response = await walletFromSeedPhrase({
-            mnemonic,
-            index: BigInt(index),
-            network: selectedNetwork.type,
-          });
-          const username = await getBnsName(response.stxAddress, selectedNetwork);
-          existingAccount = {
-            id: index,
-            stxAddress: response.stxAddress,
-            btcAddress: response.btcAddress,
-            masterPubKey: response.masterPubKey,
-            stxPublicKey: response.stxPublicKey,
-            btcPublicKey: response.btcPublicKey,
-            bnsName: username,
-          };
-        }
-        return {
-          ...existingAccount,
-        };
-      })
-    );
-    return newAccounts;
-  }
-  return currentAccounts;
 }
