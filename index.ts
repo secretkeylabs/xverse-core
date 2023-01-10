@@ -5,3 +5,4 @@ export * from './currency';
 export * from './api';
 export * from './connect';
 export * from './account';
+export * from './gaia';

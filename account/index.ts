@@ -122,7 +122,7 @@ export async function restoreWalletWithAccounts(
   if (walletConfig && walletConfig.accounts.length > 0) {
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
-        let existingAccount = currentAccounts[index];
+        let existingAccount: Account = currentAccounts[index];
         if (!existingAccount) {
           const response = await walletFromSeedPhrase({
             mnemonic,
@@ -139,8 +139,14 @@ export async function restoreWalletWithAccounts(
             btcPublicKey: response.btcPublicKey,
             bnsName: username,
           };
+          return existingAccount;
+        } else {
+          const userName = await getBnsName(existingAccount.stxAddress, selectedNetwork);
+          return {
+            ...existingAccount,
+            bnsName: userName,
+          };
         }
-        return existingAccount;
       })
     );
     return newAccounts;
@@ -152,7 +158,6 @@ export async function createWalletAccount(
   seedPhrase: string,
   selectedNetwork: SettingsNetwork,
   walletAccounts: Account[],
-  walletConfigKey: string
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
   const { stxAddress, btcAddress, masterPubKey, stxPublicKey, btcPublicKey } =
@@ -174,6 +179,8 @@ export async function createWalletAccount(
       bnsName,
     },
   ];
+  const rootNode = await deriveRootKeychainFromMnemonic(seedPhrase);
+  const walletConfigKey = await deriveWalletConfigKey(rootNode);
   const gaiaHubConfig = await createWalletGaiaConfig({
     gaiaHubUrl: GAIA_HUB_URL,
     configPrivateKey: walletConfigKey,

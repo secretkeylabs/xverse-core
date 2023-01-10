@@ -80,7 +80,6 @@ export async function walletFromSeedPhrase({
   const master = bip32.fromSeed(seed);
   const masterPubKey = master.publicKey.toString('hex');
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
-  const configPrivateKey = await deriveWalletConfigKey(rootNode);
 
   // derive segwit btc address
 
@@ -103,7 +102,6 @@ export async function walletFromSeedPhrase({
     masterPubKey,
     stxPublicKey,
     btcPublicKey,
-    configPrivateKey,
     seedPhrase: mnemonic,
   };
 }

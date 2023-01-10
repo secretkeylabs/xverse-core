@@ -4,6 +4,5 @@ export interface BaseWallet {
   masterPubKey: string;
   stxPublicKey: string;
   btcPublicKey: string;
-  configPrivateKey: string;
   seedPhrase: string;
 }
