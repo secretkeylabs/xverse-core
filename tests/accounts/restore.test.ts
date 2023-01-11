@@ -16,5 +16,5 @@ test('restore wallet accounts', async () => {
     },
     [{ ...wallet, id: 0 }]
   );
-  expect(accounts.length).toBeGreaterThan(0);
+  expect(accounts.length).toEqual(4);
 });
