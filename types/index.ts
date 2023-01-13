@@ -35,7 +35,7 @@ import {
   uintCV,
   cvToHex,
   UnsignedStacksTransation,
-  UnsignedContractDeployOptions
+  UnsignedContractDeployOptions,
 } from './api/stacks/transaction';
 
 import {
@@ -64,6 +64,7 @@ import { NftDetailResponse } from './api/gamma/currency';
 import { SupportedCurrency } from './currency';
 import { StackerInfo, StackingData, StackingPoolInfo, StackingStateData, Pool } from './api/xverse/stacking';
 import { Account } from './account';
+import { ErrorCodes, ResponseError } from './error';
 
 export { getBnsNftName, cvToHex, uintCV };
 export {
@@ -120,5 +121,7 @@ export {
   UnsignedStacksTransation,
   SignedUrlResponse,
   Account,
-  UnsignedContractDeployOptions
+  UnsignedContractDeployOptions,
+  ResponseError,
+  ErrorCodes
 };
