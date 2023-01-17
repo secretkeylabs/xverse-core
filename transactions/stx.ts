@@ -107,7 +107,7 @@ export async function signMultiStxTransactions(
     });
 
     return Promise.all(signedTxPromises);
-  } catch (error: any) {
+  } catch (error) {
     return Promise.reject(error.toString());
   }
 }
@@ -196,7 +196,7 @@ export async function generateUnsignedStxTokenTransferTransaction(
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
     return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }
@@ -339,7 +339,7 @@ export async function generateUnsignedTransaction(
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
     return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }
@@ -468,7 +468,7 @@ export async function generateContractDeployTransaction(options: {
 
     setNonce(unsignedTx, nonce);
     return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }

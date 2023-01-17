@@ -198,7 +198,7 @@ export async function signBtcTransaction({
       total: total,
     };
     return Promise.resolve(signedBtcTx);
-  } catch (error : any) {
+  } catch (error) {
     return Promise.reject(error.toString());
   }
 }
@@ -225,7 +225,7 @@ export async function getBtcFees(
       feeMode
     );
     return fee;
-  } catch (error : any) {
+  } catch (error) {
     return Promise.reject(error.toString());
   }
 }
