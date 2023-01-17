@@ -1,6 +1,6 @@
 import { ECPair, payments, networks, Psbt, Payment } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
-import { BtcUtxoDataResponse, NetworkType } from 'types';
+import { BtcUtxoDataResponse, ErrorCodes, NetworkType, ResponseError } from '../types';
 import { fetchBtcFeeRate } from '../api/xverse';
 import { getBtcPrivateKey  } from '../wallet';
 import { fetchBtcAddressUnspent } from '../api/btc';
@@ -30,7 +30,7 @@ export async function estimateBtcTransaction(
   const changeSats = sumValue.minus(amountSats);
 
   if (sumValue.isLessThan(amountSats)) {
-    throw new Error('Insufficient balance');
+    throw new ResponseError(ErrorCodes.InSufficientBalance).statusCode;
   }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);
@@ -46,7 +46,6 @@ export async function estimateBtcTransaction(
     feeMode === 'high'
       ? new BigNumber(feeRate?.priority).multipliedBy(txSize)
       : new BigNumber(feeRate?.regular).multipliedBy(txSize);
-
   return fee;
 }
 
@@ -77,7 +76,7 @@ export async function generateSignedBtcTransaction(
   const changeSats = sumValue.minus(totalAmountSats);
 
   if (sumValue.isLessThan(totalAmountSats)) {
-     throw new Error('Insufficient balance when including transaction fees');
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
    }
 
   addInputs(psbt, selectedUnspentOutputs, p2sh);

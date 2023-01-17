@@ -1,6 +1,7 @@
 export * from './wallet';
 export * from './account';
 export * from './network';
+export * from './error';
 export * from './api/xverse/wallet';
 export * from './api/xverse/transaction';
 export * from './api/xverse/coins';
