@@ -2,7 +2,7 @@
   "name": "@secretkeylabs/xverse-core",
   "version": "0.3.0",
   "description": "",
-  "main": "build/index.js",
+  "main": "dist/index.js",
   "dependencies": {
     "@stacks/encryption": "4.3.5",
     "@stacks/keychain": "4.3.5",
