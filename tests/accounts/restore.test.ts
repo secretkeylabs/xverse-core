@@ -1,6 +1,7 @@
 import { testSeed } from '../mocks';
 import { walletFromSeedPhrase } from '../../wallet';
 import { restoreWalletWithAccounts } from '../../account';
+import { StacksMainnet } from '@stacks/network';
 
 test('restore wallet accounts', async () => {
   const wallet = await walletFromSeedPhrase({
@@ -14,6 +15,7 @@ test('restore wallet accounts', async () => {
       type: 'Mainnet',
       address: 'https://stacks-node-api.mainnet.stacks.co',
     },
+    new StacksMainnet(),
     [{ ...wallet, id: 0 }]
   );
   expect(accounts.length).toEqual(4);
