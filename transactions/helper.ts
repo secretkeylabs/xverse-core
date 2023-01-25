@@ -28,7 +28,6 @@ import {
   PostConditionsOptions,
   FungibleToken,
   Coin,
-  SettingsNetwork,
   FeesMultipliers,
 } from '../types';
 import {
@@ -37,6 +36,7 @@ import {
   getNonce,
   setNonce,
 } from './stx';
+import { StacksNetwork } from '@stacks/network';
 
 export function getNewNonce(
   pendingTransactions: StxMempoolTransactionData[],
@@ -166,7 +166,7 @@ export const getFTInfoFromPostConditions = (postConds: PostCondition[]) =>
 export const createContractCallPromises = async (
   payload: any,
   stxAddress: string,
-  network: SettingsNetwork,
+  network: StacksNetwork,
   stxPublicKey: string
 ) => {
   const sponsored = payload?.sponsored;
@@ -225,7 +225,7 @@ export const createContractCallPromises = async (
  */
 export const createDeployContractRequest = async (
   payload: any,
-  network: SettingsNetwork,
+  network: StacksNetwork,
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
   walletAddress: string
@@ -242,7 +242,7 @@ export const createDeployContractRequest = async (
     postConditionMode,
     pendingTxs: pendingTransactions,
     publicKey: stxPublicKey,
-    network: network.type,
+    network,
     sponsored,
   });
   const { fee } = contractDeployTx.auth.spendingCondition;
