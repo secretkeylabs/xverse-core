@@ -12,6 +12,7 @@
     "@stacks/wallet-sdk": "^5.0.2",
     "axios": "0.27.2",
     "bignumber.js": "9.1.0",
+    "bn.js": "^5.1.3",
     "bip32": "^2.0.6",
     "bip39": "3.0.3",
     "bitcoinjs-lib": "5.2.0",
