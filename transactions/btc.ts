@@ -14,7 +14,7 @@ export interface Recipient {
   amountSats: BigNumber;
 }
 
-export interface SignedBtcTxResponse {
+export interface SignedBtcTx {
   signedTx: string;
   fee: BigNumber;
   total: BigNumber;
@@ -158,7 +158,7 @@ export async function signBtcTransaction(
   seedPhrase: string,
   network: NetworkType,
   fee?: BigNumber
-): Promise<SignedBtcTxResponse> {
+): Promise<SignedBtcTx> {
   let btcFee: BigNumber;
   const privateKey = await getBtcPrivateKey({ seedPhrase, index: BigInt(index), network });
   if (!fee) {
@@ -181,7 +181,7 @@ export async function signBtcTransaction(
       totalSats = totalSats.plus(recipient.amountSats);
     });
 
-    const signedBtcTx: SignedBtcTxResponse = {
+    const signedBtcTx: SignedBtcTx = {
       signedTx: signedTx.toHex(),
       fee: btcFee,
       total: totalSats,
