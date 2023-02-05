@@ -245,8 +245,13 @@ export async function generateUnsignedStxTokenTransferTransaction(
    if (nonce) {
      txOptions['nonce'] = BigInt(nonce);
    }
-
-   return makeUnsignedContractCall(txOptions);
+   try {
+    const unsigned = await makeUnsignedContractCall(txOptions);
+    return unsigned;
+   } catch (err) {
+     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(2000) });
+     return unsigned;
+   }
  }
 
 /**
