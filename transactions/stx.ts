@@ -131,7 +131,6 @@ export async function generateUnsignedSTXTokenTransfer(
   anchorMode?: AnchorMode,
   postConditions?: PostCondition[],
   postConditionMode?: PostConditionMode,
-  nonce?: bigint
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
@@ -146,7 +145,6 @@ export async function generateUnsignedSTXTokenTransfer(
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
     postConditionMode,
     postConditions,
-    nonce,
   };
 
   return makeUnsignedSTXTokenTransfer(txOptions);
@@ -192,16 +190,16 @@ export async function generateUnsignedStxTokenTransferTransaction(
       sponsored,
       anchorMode,
       postConditions,
-      postConditionMode,
-      nonce
+      postConditionMode
     );
     fee = await estimateFees(unsignedTx, network);
-
     total = amountBigint + fee;
     unsignedTx.setFee(fee);
-    if (!nonce) {
-      const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-      setNonce(unsignedTx, newNonce);
+    const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+    if (nonce) {
+      setNonce(unsignedTx, BigInt(nonce));
+    } else {
+     setNonce(unsignedTx, newNonce);
     }
     return Promise.resolve(unsignedTx);
   } catch (err) {
