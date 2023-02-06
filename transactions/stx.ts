@@ -247,7 +247,7 @@ export async function generateUnsignedStxTokenTransferTransaction(
     const unsigned = await makeUnsignedContractCall(txOptions);
     return unsigned;
    } catch (err) {
-     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(2000) });
+     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
      return unsigned;
    }
  }
