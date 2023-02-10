@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import * as bip39 from 'bip39';
 import * as bip32 from 'bip32';
+import { hashMessage } from "@stacks/encryption";
 import {
   BTC_PATH_WITHOUT_INDEX,
   BTC_TESTNET_PATH_WITHOUT_INDEX,
@@ -231,3 +232,6 @@ export async function getStxAddressKeyChain(
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }
+
+export { hashMessage };
+
