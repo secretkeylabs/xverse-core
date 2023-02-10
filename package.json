@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
-    "@stacks/encryption": "4.3.5",
+    "@stacks/encryption": "6.1.1",
     "@stacks/keychain": "4.3.5",
     "@stacks/network": "4.3.5",
     "@stacks/storage": "^6.0.0",
