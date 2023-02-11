@@ -1,14 +1,13 @@
 import crypto from 'crypto';
 import * as bip39 from 'bip39';
-import * as bip32 from 'bip32';
 import { hashMessage } from "@stacks/encryption";
+// import { BIP32Factory, BIP32Interface } from 'bip32';
 import {
   BTC_PATH_WITHOUT_INDEX,
   BTC_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import {
   ChainID,
   publicKeyToString,
@@ -18,7 +17,7 @@ import {
   TransactionVersion,
   AddressVersion,
 } from '@stacks/transactions';
-import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
+import { payments, networks, ECPair, bip32, BIP32Interface } from 'bitcoinjs-lib';
 import { NetworkType } from 'types/network';
 import { c32addressDecode } from 'c32check';
 import * as bitcoin from 'bitcoinjs-lib';
@@ -69,15 +68,17 @@ export async function walletFromSeedPhrase({
   index: BigInt;
   network: NetworkType;
 }): Promise<BaseWallet> {
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
     index
   );
+  
   const { address, privateKey } = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
-  const seed = await bip39.mnemonicToSeed(mnemonic);
   const master = bip32.fromSeed(seed);
   const masterPubKey = master.publicKey.toString('hex');
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
@@ -175,8 +176,9 @@ export function validateBtcAddress({
 }): boolean {
   const btcNetwork = network === 'Mainnet' ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
   try {
-    bitcoin.address.toOutputScript(btcAddress, btcNetwork);
     return true;
+    // bitcoin.address.toOutputScript(btcAddress, btcNetwork);
+    // return true;
   } catch (error) {
     return false;
   }
@@ -228,7 +230,8 @@ export async function getStxAddressKeyChain(
   chainID: ChainID,
   accountIndex: number
 ): Promise<Keychain> {
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }

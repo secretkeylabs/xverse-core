@@ -65,4 +65,7 @@ module.exports = {
       stream: false,
     },
   },
+  experiments: {
+    asyncWebAssembly: true,
+  },
 };
