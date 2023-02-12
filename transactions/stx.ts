@@ -441,21 +441,6 @@ export async function makeUnsignedContractDeploy(
   return transaction;
 }
 
-
-export function generateContractDeployment(options: {
-  contractName: string;
-  codeBody: string;
-  postConditions?: PostCondition[];
-  postConditionMode?: PostConditionMode;
-  publicKey: string;
-  network: StacksNetwork;
-  sponsored?: boolean;
-  anchorMode?: AnchorMode;
-  nonce?: bigint;
-}): Promise<StacksTransaction> {
-  return makeUnsignedContractDeploy(options);
-}
-
 export async function generateContractDeployTransaction(options: {
   codeBody: string;
   contractName: string;
@@ -470,7 +455,7 @@ export async function generateContractDeployTransaction(options: {
 }): Promise<StacksTransaction> {
   try {
     const { nonce } = options;
-    const unsignedTx = await generateContractDeployment(options);
+    const unsignedTx = await makeUnsignedContractDeploy(options);
     if (nonce) {
       return Promise.resolve(unsignedTx);
     } else {
