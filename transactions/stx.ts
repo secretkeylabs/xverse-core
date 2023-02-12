@@ -127,11 +127,14 @@ export async function generateUnsignedSTXTokenTransfer(
   amount: string,
   txNetwork: StacksNetwork,
   memo?: string,
-  sponsored?: boolean
+  sponsored?: boolean,
+  anchorMode?: AnchorMode,
+  postConditions?: PostCondition[],
+  postConditionMode?: PostConditionMode,
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
-   const txOptions: UnsignedTokenTransferOptions = {
+  const txOptions: UnsignedTokenTransferOptions = {
     publicKey: publicKey,
     recipient: recipientAddress,
     amount: amountBN,
@@ -139,7 +142,9 @@ export async function generateUnsignedSTXTokenTransfer(
     network: txNetwork,
     fee: 0,
     sponsored: sponsored,
-    anchorMode: AnchorMode.Any,
+    anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
+    postConditionMode,
+    postConditions,
   };
 
   return makeUnsignedSTXTokenTransfer(txOptions);
@@ -165,7 +170,11 @@ export async function generateUnsignedStxTokenTransferTransaction(
   pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
   network: StacksNetwork,
-  sponsored?: boolean
+  sponsored?: boolean,
+  anchorMode?: AnchorMode,
+  postConditions?: PostCondition[],
+  postConditionMode?: PostConditionMode,
+  nonce?: bigint
 ): Promise<StacksTransaction> {
   try {
     var unsignedTx: StacksTransaction | null = null;
@@ -178,15 +187,20 @@ export async function generateUnsignedStxTokenTransferTransaction(
       amount,
       network,
       memo,
-      sponsored
+      sponsored,
+      anchorMode,
+      postConditions,
+      postConditionMode
     );
     fee = await estimateFees(unsignedTx, network);
-
     total = amountBigint + fee;
     unsignedTx.setFee(fee);
-
-    const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-    setNonce(unsignedTx, nonce);
+    const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+    if (nonce) {
+      setNonce(unsignedTx, BigInt(nonce));
+    } else {
+     setNonce(unsignedTx, newNonce);
+    }
     return Promise.resolve(unsignedTx);
   } catch (err) {
     return Promise.reject(err.toString());
@@ -211,6 +225,7 @@ export async function generateUnsignedStxTokenTransferTransaction(
      postConditionMode,
      sponsored,
      nonce,
+     anchorMode,
    } = unsignedTx;
    const txOptions: UnsignedContractCallOptions = {
      contractAddress,
@@ -221,15 +236,20 @@ export async function generateUnsignedStxTokenTransferTransaction(
      network,
      postConditions: postConditions,
      postConditionMode: postConditionMode ?? 1,
-     anchorMode: AnchorMode.Any,
+     anchorMode: anchorMode ? anchorMode :  AnchorMode.Any,
      sponsored: sponsored,
    };
 
    if (nonce) {
      txOptions['nonce'] = BigInt(nonce);
    }
-
-   return makeUnsignedContractCall(txOptions);
+   try {
+    const unsigned = await makeUnsignedContractCall(txOptions);
+    return unsigned;
+   } catch (err) {
+     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
+     return unsigned;
+   }
  }
 
 /**
@@ -421,19 +441,6 @@ export async function makeUnsignedContractDeploy(
   return transaction;
 }
 
-
-export function generateContractDeployment(options: {
-  contractName: string;
-  codeBody: string;
-  postConditions?: PostCondition[];
-  postConditionMode?: PostConditionMode;
-  publicKey: string;
-  network: StacksNetwork,
-  sponsored?: boolean;
-}): Promise<StacksTransaction> {
-  return makeUnsignedContractDeploy(options);
-}
-
 export async function generateContractDeployTransaction(options: {
   codeBody: string;
   contractName: string;
@@ -441,15 +448,21 @@ export async function generateContractDeployTransaction(options: {
   postConditionMode?: PostConditionMode;
   pendingTxs: StxMempoolTransactionData[];
   publicKey: string;
-  network: StacksNetwork,
+  network: StacksNetwork;
   sponsored?: boolean;
+  anchorMode?: AnchorMode;
+  nonce?: bigint;
 }): Promise<StacksTransaction> {
   try {
-    const unsignedTx = await generateContractDeployment(options);
-    const nonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
-
-    setNonce(unsignedTx, nonce);
-    return Promise.resolve(unsignedTx);
+    const { nonce } = options;
+    const unsignedTx = await makeUnsignedContractDeploy(options);
+    if (nonce) {
+      return Promise.resolve(unsignedTx);
+    } else {
+      const newNonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
+      setNonce(unsignedTx, newNonce);
+      return Promise.resolve(unsignedTx);
+    }
   } catch (err) {
     return Promise.reject(err.toString());
   }

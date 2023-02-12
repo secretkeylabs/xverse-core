@@ -25,6 +25,12 @@ import {
   generateContractDeployTransaction,
 } from './stx';
 
+import {
+  generateUnsignedAllowContractCallerTransaction,
+  generateUnsignedDelegateTransaction,
+  generateUnsignedRevokeTransaction,
+} from './stacking'
+
 export {
   signBtcTransaction,
   addressToString,
@@ -48,4 +54,7 @@ export {
   getFTInfoFromPostConditions,
   createContractCallPromises,
   createDeployContractRequest,
+  generateUnsignedAllowContractCallerTransaction,
+  generateUnsignedDelegateTransaction,
+  generateUnsignedRevokeTransaction,
 };

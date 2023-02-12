@@ -33,7 +33,8 @@ export type UnsignedContractCallTransaction = {
   nonce?: bigint,
   postConditions: PostCondition[],
   sponsored?: boolean,
-  postConditionMode?: number
+  postConditionMode?: number,
+  anchorMode?: AnchorMode,
 }
 
 export type StxMempoolResponse = {
