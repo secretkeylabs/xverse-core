@@ -1,10 +1,11 @@
 import crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { hashMessage } from "@stacks/encryption";
-// import { BIP32Factory, BIP32Interface } from 'bip32';
 import {
   BTC_PATH_WITHOUT_INDEX,
   BTC_TESTNET_PATH_WITHOUT_INDEX,
+  BTC_TAPROOT_PATH_WITHOUT_INDEX,
+  BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
@@ -25,6 +26,10 @@ import { ecPairToHexString } from './helper';
 import { Keychain } from 'types/api/xverse/wallet';
 import { BaseWallet } from 'types/wallet';
 import { deriveWalletConfigKey } from '../gaia';
+import {validate, Network as btcAddressNetwork} from 'bitcoin-address-validation';
+import * as btc from 'micro-btc-signer';
+import { hex } from '@scure/base';
+import * as secp256k1 from '@noble/secp256k1'
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -84,10 +89,14 @@ export async function walletFromSeedPhrase({
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
   // derive segwit btc address
-
   const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
-
   const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
+
+  // derive taproot btc address
+  const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
+  const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
+  const ordinalsAddress = btc.getAddress('tr', privKey)!;
+
   const segwitBtcAddress = payments.p2sh({
     redeem: payments.p2wpkh({
       pubkey: keyPair.publicKey,
@@ -101,6 +110,7 @@ export async function walletFromSeedPhrase({
   return {
     stxAddress,
     btcAddress,
+    ordinalsAddress,
     masterPubKey,
     stxPublicKey,
     btcPublicKey,
@@ -112,6 +122,12 @@ function getBitcoinDerivationPath({ index, network }: { index: BigInt; network: 
   return network === 'Mainnet'
     ? `${BTC_PATH_WITHOUT_INDEX}${index.toString()}`
     : `${BTC_TESTNET_PATH_WITHOUT_INDEX}${index.toString()}`;
+}
+
+function getTaprootDerivationPath({ index, network }: { index: BigInt; network: NetworkType }) {
+  return network === 'Mainnet'
+    ? `${BTC_TAPROOT_PATH_WITHOUT_INDEX}${index.toString()}`
+    : `${BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX}${index.toString()}`;
 }
 
 export async function getBtcPrivateKey({
@@ -174,11 +190,10 @@ export function validateBtcAddress({
   btcAddress: string;
   network: NetworkType;
 }): boolean {
-  const btcNetwork = network === 'Mainnet' ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
+  const btcNetwork =
+    network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
   try {
-    return true;
-    // bitcoin.address.toOutputScript(btcAddress, btcNetwork);
-    // return true;
+    return validate(btcAddress, btcNetwork);
   } catch (error) {
     return false;
   }

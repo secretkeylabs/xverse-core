@@ -8,6 +8,10 @@ export const BTC_PATH_WITHOUT_INDEX = `m/49'/0'/0'/0/`;
 
 export const BTC_TESTNET_PATH_WITHOUT_INDEX = `m/49'/1'/0'/0/`;
 
+export const BTC_TAPROOT_PATH_WITHOUT_INDEX = `m/86'/0'/0'/0/`;
+
+export const BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX = `m/86'/1'/0'/0/`;
+
 export const STX_PATH_WITHOUT_INDEX = `m/44'/5757'/0'/0/`;
 
 export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
