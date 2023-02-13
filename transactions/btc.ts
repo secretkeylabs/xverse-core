@@ -1,9 +1,13 @@
-import { ECPair, payments, networks, Psbt, Payment, Transaction } from 'bitcoinjs-lib';
+// import { payments, networks, Psbt, Payment, Transaction } from 'bitcoinjs-lib';
+// import { ECPairFactory } from 'ecpair';
 import BigNumber from 'bignumber.js';
 import { BtcUtxoDataResponse, ErrorCodes, NetworkType, ResponseError } from '../types';
 import { fetchBtcFeeRate } from '../api/xverse';
 import { getBtcPrivateKey } from '../wallet';
 import { fetchBtcAddressUnspent } from '../api/btc';
+import * as btc from 'micro-btc-signer';
+import { hex } from '@scure/base';
+import * as secp256k1 from '@noble/secp256k1'
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 
@@ -40,25 +44,30 @@ export function selectUnspentOutputs(
   return inputs;
 }
 
-export function addInputs(psbt: Psbt, unspentOutputs: Array<UnspentOutput>, p2sh: Payment) {
+export function addInputs(
+  tx: btc.Transaction, 
+  unspentOutputs: Array<UnspentOutput>, 
+  p2sh: any
+) {
   unspentOutputs.forEach((output) => {
-    psbt.addInput({
-      hash: output.tx_hash,
+    tx.addInput({
+      txid: output.tx_hash,
       index: output.tx_output_n,
       witnessUtxo: {
-        script: p2sh.output ? p2sh.output : Buffer.alloc(0),
-        value: output.value,
+        script: p2sh.script ? p2sh.script : Buffer.alloc(0),
+        amount: BigInt(output.value),
       },
-      redeemScript: p2sh.redeem!.output ? p2sh.redeem!.output : Buffer.alloc(0),
-    });
+      redeemScript: p2sh.redeemScript ? p2sh.redeemScript : Buffer.alloc(0),
+    })
   });
 }
 
-export function addOutput(psbt: Psbt, recipientAddress: string, amountSats: BigNumber) {
-  psbt.addOutput({
-    address: recipientAddress,
-    value: Number(amountSats),
-  });
+export function addOutput(
+  tx: btc.Transaction, 
+  recipientAddress: string, 
+  amountSats: BigNumber
+) {
+  tx.addOutputAddress(recipientAddress, BigInt(amountSats.toNumber()));
 }
 
 export function sumUnspentOutputs(unspentOutputs: Array<UnspentOutput>): BigNumber {
@@ -75,12 +84,12 @@ export async function generateSignedBtcTransaction(
   recipients: Array<Recipient>,
   feeSats: BigNumber,
   selectedNetwork: NetworkType
-): Promise<Transaction> {
-  const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey, 'hex'));
-  const network = selectedNetwork === 'Mainnet' ? networks.bitcoin : networks.testnet;
+): Promise<btc.Transaction> {
+  const privKey = hex.decode(privateKey);
+  const tx = new btc.Transaction();
 
-  const p2wpkh = payments.p2wpkh({ pubkey: keyPair.publicKey, network });
-  const p2sh = payments.p2sh({ redeem: p2wpkh, network });
+  const p2wph = btc.p2wpkh(secp256k1.getPublicKey(privKey, true))
+  const p2sh = btc.p2sh(p2wph);
 
   const utxos = await fetchBtcAddressUnspent(senderAddress, selectedNetwork);
 
@@ -89,7 +98,6 @@ export async function generateSignedBtcTransaction(
     totalSats = totalSats.plus(recipient.amountSats);
   });
 
-  const psbt = new Psbt({ network });
   const selectedUnspentOutputs = selectUnspentOutputs(totalSats, utxos);
   const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
   const changeSats = sumValue.minus(totalSats);
@@ -98,18 +106,19 @@ export async function generateSignedBtcTransaction(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  addInputs(psbt, selectedUnspentOutputs, p2sh);
+  addInputs(tx, selectedUnspentOutputs, p2sh)
+
   recipients.forEach((recipient) => {
-    addOutput(psbt, recipient.address, recipient.amountSats);
+    addOutput(tx, recipient.address, recipient.amountSats);
   });
 
   if (changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
-    addOutput(psbt, senderAddress, changeSats);
+    addOutput(tx, senderAddress, changeSats);
   }
 
-  psbt.signAllInputs(keyPair);
-  psbt.finalizeAllInputs();
-  return psbt.extractTransaction();
+  tx.sign(privKey);
+  tx.finalize();
+  return tx;
 }
 
 export async function estimateBtcTransaction(
@@ -126,7 +135,7 @@ export async function estimateBtcTransaction(
     new BigNumber(0),
     selectedNetwork
   );
-  const txSize = tx.virtualSize();
+  const txSize = tx.vsize;
   const feeRate = await fetchBtcFeeRate();
 
   const fee =
@@ -182,7 +191,7 @@ export async function signBtcTransaction(
     });
 
     const signedBtcTx: SignedBtcTx = {
-      signedTx: signedTx.toHex(),
+      signedTx: signedTx.hex,
       fee: btcFee,
       total: totalSats,
     };
