@@ -1,5 +1,6 @@
 import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { hexToString } from "../../helper";
+import { BtcOrdinal } from "../blockcypher/wallet";
 
 export interface Attribute {
   value: string;
@@ -50,6 +51,7 @@ export type AccountAssetsListData = {
 
 export type NftsListData = {
   nftsList: Array<NonFungibleToken>;
+  ordinals: Array<BtcOrdinal>;
   total: number;
 };
 

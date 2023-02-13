@@ -17,6 +17,7 @@ export {
   BtcTransactionDataResponse,
   BtcAddressData,
   BtcTransactionsDataResponse,
+  BtcOrdinal,
 } from './api/blockcypher/wallet';
 export {
   AccountAssetsListData,

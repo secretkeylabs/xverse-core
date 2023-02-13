@@ -12,7 +12,7 @@ import {
   NftEventsResponse,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
-import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
+import { StacksNetwork } from '@stacks/network';
 import {
   deDuplicatePendingTx,
   mapTransferTransactionData,
@@ -35,6 +35,7 @@ import{
 } from 'types';
 import { getNftDetail } from './gamma';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
+import { fetchBtcOrdinalsData } from './btc';
 
 export async function fetchStxAddressData(
   stxAddress: string,
@@ -166,7 +167,7 @@ export async function getNftsData(
   stxAddress: string,
   network: StacksNetwork,
   offset: number
-): Promise<NftsListData> {
+): Promise<NftEventsResponse> {
   let apiUrl = `${network.coreApiUrl}/extended/v1/tokens/nft/holdings`;
 
   return axios
@@ -179,20 +180,18 @@ export async function getNftsData(
       },
     })
     .then((response) => {
-      return {
-        nftsList: response.data.results,
-        total: response.data.total,
-      };
+      return response.data;   
     });
 }
 
 export async function  getNfts(
   stxAddress: string,
+  btcAddress: string,
   network: StacksNetwork,
   offset: number
 ): Promise<NftsListData> {
   const nfts = await getNftsData(stxAddress, network, offset);
-  for (const nft of nfts.nftsList) {
+  for (const nft of nfts.results) {
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
     if (contractInfo[1] !== 'bns') {
@@ -206,9 +205,12 @@ export async function  getNfts(
       }
     }
   }
+  const walletOrdinals = await fetchBtcOrdinalsData(btcAddress, 'Mainnet');
+  console.log("🚀 ~ file: stacks.ts:209 ~ walletOrdinals", walletOrdinals)
   return {
-    nftsList: nfts.nftsList,
-    total: nfts.total,
+    nftsList: nfts.results,
+    ordinals: walletOrdinals,
+    total: nfts.total + walletOrdinals.length,
   };
 }
 
