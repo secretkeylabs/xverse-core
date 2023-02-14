@@ -81,7 +81,9 @@ export interface BtcTransactionData extends TransactionData {
 
 export interface Input {
   addresses: string[];
+  output_index: number;
   output_value: number;
+  witness?: string[];
 }
 
 export interface Output {
@@ -133,4 +135,12 @@ export interface BtcTransactionsDataResponse {
   txs: Array<BtcTransactionDataResponse>;
   txrefs: Array<BtcUtxoDataResponse>;
   unconfirmed_txrefs: Array<BtcUtxoDataResponse>;
+}
+
+export interface BtcOrdinal {
+  id: string;
+  address: string;
+  contentUrl: string;
+  contentType: string;
+  contentLength: string;
 }

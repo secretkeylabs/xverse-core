@@ -4,6 +4,7 @@ import {
   BtcAddressDataResponse,
   BtcTransactionBroadcastResponse,
   BtcBalance,
+  BtcOrdinal,
 } from 'types';
 import axios from 'axios';
 import { BtcAddressData } from 'types/api/blockcypher/wallet';
@@ -82,14 +83,12 @@ export async function fetchBtcTransactionsData(
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
-  }
-
+  }  
   return axios.get<BtcTransactionsDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
     const transactions: BtcTransactionData[] = [];
     response.data.txs.forEach((tx) => {
       transactions.push(parseBtcTransactionData(tx, btcAddress));
     });
-
     const addressData: BtcAddressData = {
       address: response.data.address,
       totalReceived: response.data.total_received,
@@ -104,4 +103,39 @@ export async function fetchBtcTransactionsData(
     };
     return addressData;
   });
+}
+
+
+export async function fetchBtcOrdinalsData(
+  btcAddress: string,
+  network: NetworkType
+): Promise<BtcOrdinal[]> {
+  const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network);
+  const ordinals: BtcOrdinal[] = []
+   await Promise.all(unspentUTXOS.map(async (utxo) => {
+    const ordinalContentUrl = `https://gammaordinals.com/content/${utxo.tx_hash}i0`;
+    try {
+      const isOrdinal = await axios.get(ordinalContentUrl);
+          if(isOrdinal) {
+            ordinals.push({
+              id: `${utxo.tx_hash}i0`,
+              address: btcAddress,
+              contentUrl: ordinalContentUrl,
+              contentType: isOrdinal.headers['content-type'],
+              contentLength: isOrdinal.headers['content-length'],
+            });
+          }
+    } catch (err) {
+    }
+  }));
+  return ordinals;
+}
+
+export async function getTextOrdinalContent(url:string) {
+  return axios
+    .get<string>(url, {
+    timeout: 30000,
+  })
+    .then((response) => response?.data)
+    .catch((error) => undefined);
 }
