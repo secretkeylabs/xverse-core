@@ -11,6 +11,7 @@ import { BtcAddressData } from 'types/api/blockcypher/wallet';
 import { BtcTransactionsDataResponse } from 'types/api/blockcypher/wallet';
 import { BtcTransactionData } from 'types/api/blockcypher/wallet';
 import { parseBtcTransactionData } from './helper';
+import { XVERSE_API_BASE_URL } from '../constant';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
@@ -113,16 +114,12 @@ export async function fetchBtcOrdinalsData(
   const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network);
   const ordinals: BtcOrdinal[] = []
    await Promise.all(unspentUTXOS.map(async (utxo) => {
-    const ordinalContentUrl = `https://gammaordinals.com/content/${utxo.tx_hash}i0`;
+    const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}`;
     try {
-      const isOrdinal = await axios.get(ordinalContentUrl);
-          if(isOrdinal) {
+      const ordinal = await axios.get(ordinalContentUrl);
+          if (ordinal) {
             ordinals.push({
-              id: `${utxo.tx_hash}i0`,
-              address: btcAddress,
-              contentUrl: ordinalContentUrl,
-              contentType: isOrdinal.headers['content-type'],
-              contentLength: isOrdinal.headers['content-length'],
+              id: ordinal.data.id,
             });
           }
     } catch (err) {

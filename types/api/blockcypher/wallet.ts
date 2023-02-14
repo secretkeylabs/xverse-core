@@ -139,8 +139,4 @@ export interface BtcTransactionsDataResponse {
 
 export interface BtcOrdinal {
   id: string;
-  address: string;
-  contentUrl: string;
-  contentType: string;
-  contentLength: string;
 }
