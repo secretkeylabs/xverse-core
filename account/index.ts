@@ -1,5 +1,4 @@
 import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import {
   connectToGaiaHubWithConfig,
   getHubInfo,
@@ -12,6 +11,8 @@ import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '
 import { Account, BtcAddressData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
 import { walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
+import * as bip39 from 'bip39';
+import { bip32 } from 'bitcoinjs-lib';
 
 export async function checkAccountActivity(
   stxAddress: string,
@@ -39,7 +40,8 @@ export async function restoreWalletWithAccounts(
 ): Promise<Account[]> {
   const networkFetch = networkObject.fetchFn;
   const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const walletConfigKey = await deriveWalletConfigKey(rootNode);
   const currentGaiaConfig = connectToGaiaHubWithConfig({
     hubInfo,
@@ -67,6 +69,7 @@ export async function restoreWalletWithAccounts(
             id: index,
             stxAddress: response.stxAddress,
             btcAddress: response.btcAddress,
+            ordinalsAddress: response.ordinalsAddress,
             masterPubKey: response.masterPubKey,
             stxPublicKey: response.stxPublicKey,
             btcPublicKey: response.btcPublicKey,
@@ -94,7 +97,7 @@ export async function createWalletAccount(
   walletAccounts: Account[],
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-   const { stxAddress, btcAddress, masterPubKey, stxPublicKey, btcPublicKey } =
+   const { stxAddress, btcAddress, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey } =
     await walletFromSeedPhrase({
       mnemonic: seedPhrase,
       index: BigInt(accountIndex),
@@ -107,13 +110,15 @@ export async function createWalletAccount(
       id: accountIndex,
       stxAddress,
       btcAddress,
+      ordinalsAddress,
       masterPubKey,
       stxPublicKey,
       btcPublicKey,
       bnsName,
     },
   ];
-  const rootNode = await deriveRootKeychainFromMnemonic(seedPhrase);
+  const seed = await bip39.mnemonicToSeed(seedPhrase);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const walletConfigKey = await deriveWalletConfigKey(rootNode);
   const gaiaHubConfig = await createWalletGaiaConfig({
     gaiaHubUrl: GAIA_HUB_URL,
