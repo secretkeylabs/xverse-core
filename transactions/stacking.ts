@@ -1,6 +1,9 @@
 import {
   AddressHashMode,
+  BufferCV,
   bufferCV,
+  ClarityType,
+  ClarityValue,
   contractPrincipalCV,
   noneCV,
   someCV,
@@ -63,11 +66,19 @@ export function decodeBtcAddress(btcAddress: string) {
   }
 }
 
-export function addressToVersionHashbyteTupleCV(btcAddress: string) {
+declare type TupleData<T extends ClarityValue = ClarityValue> = {
+  [key: string]: T;
+};
+interface TupleCV<T extends TupleData = TupleData> {
+  type: ClarityType.Tuple;
+  data: T;
+}
+
+export function addressToVersionHashbyteTupleCV(btcAddress: string): TupleCV<TupleData<BufferCV>> {
   const { hashMode, data } = decodeBtcAddress(btcAddress);
   const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
-  const hashbytes = bufferCV(data);
-  const address = tupleCV({
+  const hashbytes: BufferCV = bufferCV(data);
+  const address: TupleCV<TupleData<BufferCV>> = tupleCV({
     hashbytes,
     version: hashModeBuffer,
   });
