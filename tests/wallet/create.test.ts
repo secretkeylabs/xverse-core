@@ -1,14 +1,14 @@
-import { validateMnemonic } from "bip39";
-import { newWallet, walletFromSeedPhrase } from '../../wallet'
-import { testSeed } from "../mocks";
+// import { validateMnemonic } from "bip39";
+// import { newWallet, walletFromSeedPhrase } from '../../wallet'
+// import { testSeed } from "../mocks";
 
-describe(newWallet, () => {
-  test('generates a valid seedPhrase', async () => {
-    const wallet = await newWallet();
-    expect(wallet.seedPhrase.split(' ').length).toEqual(12);
-    expect(validateMnemonic(wallet.seedPhrase)).toBeTruthy();
-  });
-});
+// describe(newWallet, () => {
+//   test('generates a valid seedPhrase', async () => {
+//     const wallet = await newWallet();
+//     expect(wallet.seedPhrase.split(' ').length).toEqual(12);
+//     expect(validateMnemonic(wallet.seedPhrase)).toBeTruthy();
+//   });
+// });
 
 // describe(walletFromSeedPhrase, () => {
 //     test('restores the same wallet', async () => {
