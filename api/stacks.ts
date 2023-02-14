@@ -209,7 +209,7 @@ export async function  getNfts(
   return {
     nftsList: nfts.results,
     ordinals: walletOrdinals,
-    total: nfts.total + walletOrdinals.length,
+    total: nfts.total,
   };
 }
 
