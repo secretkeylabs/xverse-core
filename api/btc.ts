@@ -130,3 +130,12 @@ export async function fetchBtcOrdinalsData(
   }));
   return ordinals;
 }
+
+export async function getTextOrdinalContent(url:string) {
+  return axios
+    .get<string>(url, {
+    timeout: 30000,
+  })
+    .then((response) => response?.data)
+    .catch((error) => undefined);
+}
