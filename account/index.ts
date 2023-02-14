@@ -58,7 +58,7 @@ export async function restoreWalletWithAccounts(
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
         let existingAccount: Account = currentAccounts[index];
-        if (!existingAccount) {
+        if (!existingAccount || !existingAccount.ordinalsAddress) {
           const response = await walletFromSeedPhrase({
             mnemonic,
             index: BigInt(index),
