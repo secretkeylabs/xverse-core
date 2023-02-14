@@ -14,6 +14,7 @@ import {
   StackingPoolInfo,
   StackerInfo,
   SignedUrlResponse,
+  OrdinalInfo,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 
@@ -165,4 +166,11 @@ export async function sponsorTransaction(
     .then((response) => {
       return response.data.txid;
     });
+}
+
+
+export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
+  const ordinalInfoUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/${ordinalId}`;
+  const ordinalInfo = await axios.get(ordinalInfoUrl);
+  return ordinalInfo.data;
 }

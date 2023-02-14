@@ -37,3 +37,6 @@ export {
   StackingStateData,
   Pool,
 } from './api/xverse/stacking';
+export {
+  OrdinalInfo,
+} from './api/xverse/ordinals';

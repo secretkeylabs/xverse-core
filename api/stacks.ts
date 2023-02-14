@@ -206,7 +206,6 @@ export async function  getNfts(
     }
   }
   const walletOrdinals = await fetchBtcOrdinalsData(btcAddress, 'Mainnet');
-  console.log("🚀 ~ file: stacks.ts:209 ~ walletOrdinals", walletOrdinals)
   return {
     nftsList: nfts.results,
     ordinals: walletOrdinals,
