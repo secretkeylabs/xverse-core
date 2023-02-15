@@ -139,4 +139,5 @@ export interface BtcTransactionsDataResponse {
 
 export interface BtcOrdinal {
   id: string;
+  confirmationTime: string,
 }

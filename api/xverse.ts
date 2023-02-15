@@ -17,6 +17,7 @@ import {
   OrdinalInfo,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
+import { fetchBtcOrdinalsData } from './btc';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -168,6 +169,9 @@ export async function sponsorTransaction(
     });
 }
 
+export async function getOrdinalsByAddress(ordinalsAddress: string) {
+  return fetchBtcOrdinalsData(ordinalsAddress, 'Mainnet');
+}
 
 export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
   const ordinalInfoUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/${ordinalId}`;
