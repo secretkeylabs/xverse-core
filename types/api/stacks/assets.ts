@@ -51,7 +51,6 @@ export type AccountAssetsListData = {
 
 export type NftsListData = {
   nftsList: Array<NonFungibleToken>;
-  ordinals: Array<BtcOrdinal>;
   total: number;
 };
 

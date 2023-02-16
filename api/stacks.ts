@@ -186,7 +186,6 @@ export async function getNftsData(
 
 export async function  getNfts(
   stxAddress: string,
-  btcAddress: string,
   network: StacksNetwork,
   offset: number
 ): Promise<NftsListData> {
@@ -205,10 +204,8 @@ export async function  getNfts(
       }
     }
   }
-  const walletOrdinals = await fetchBtcOrdinalsData(btcAddress, 'Mainnet');
   return {
     nftsList: nfts.results,
-    ordinals: walletOrdinals,
     total: nfts.total,
   };
 }
