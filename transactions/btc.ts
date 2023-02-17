@@ -51,7 +51,6 @@ export function addInputs(
   p2sh: any
 ) {
   unspentOutputs.forEach((output) => {
-    console.log(p2sh);
     tx.addInput({
       txid: output.tx_hash,
       index: output.tx_output_n,
@@ -177,7 +176,7 @@ export async function signBtcTransaction(
   } else {
     btcFee = fee;
   }
-
+  try {
     const signedTx = await generateSignedBtcTransaction(
       privateKey,
       btcAddress,
@@ -197,4 +196,8 @@ export async function signBtcTransaction(
       total: totalSats,
     };
     return Promise.resolve(signedBtcTx);
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+
 }
