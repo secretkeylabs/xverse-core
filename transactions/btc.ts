@@ -8,6 +8,7 @@ import { fetchBtcAddressUnspent } from '../api/btc';
 import * as btc from 'micro-btc-signer';
 import { hex } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1'
+import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 
@@ -63,11 +64,12 @@ export function addInputs(
 }
 
 export function addOutput(
-  tx: btc.Transaction, 
-  recipientAddress: string, 
-  amountSats: BigNumber
+  tx: btc.Transaction,
+  recipientAddress: string,
+  amountSats: BigNumber,
+  network: BitcoinNetwork,
 ) {
-  tx.addOutputAddress(recipientAddress, BigInt(amountSats.toNumber()));
+  tx.addOutputAddress(recipientAddress, BigInt(amountSats.toNumber()), network);
 }
 
 export function sumUnspentOutputs(unspentOutputs: Array<UnspentOutput>): BigNumber {
@@ -87,10 +89,9 @@ export async function generateSignedBtcTransaction(
 ): Promise<btc.Transaction> {
   const privKey = hex.decode(privateKey);
   const tx = new btc.Transaction();
-
-  const p2wph = btc.p2wpkh(secp256k1.getPublicKey(privKey, true))
-  const p2sh = btc.p2sh(p2wph);
-
+  const btcNetwork = getBtcNetwork(selectedNetwork);
+  const p2wph = btc.p2wpkh(secp256k1.getPublicKey(privKey, true), btcNetwork);
+  const p2sh = btc.p2sh(p2wph, btcNetwork);
   const utxos = await fetchBtcAddressUnspent(senderAddress, selectedNetwork);
 
   var totalSats = feeSats;
@@ -109,11 +110,11 @@ export async function generateSignedBtcTransaction(
   addInputs(tx, selectedUnspentOutputs, p2sh)
 
   recipients.forEach((recipient) => {
-    addOutput(tx, recipient.address, recipient.amountSats);
+    addOutput(tx, recipient.address, recipient.amountSats, btcNetwork);
   });
 
   if (changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
-    addOutput(tx, senderAddress, changeSats);
+    addOutput(tx, senderAddress, changeSats, btcNetwork);
   }
 
   tx.sign(privKey);
@@ -175,7 +176,6 @@ export async function signBtcTransaction(
   } else {
     btcFee = fee;
   }
-
   try {
     const signedTx = await generateSignedBtcTransaction(
       privateKey,
@@ -199,4 +199,5 @@ export async function signBtcTransaction(
   } catch (error) {
     return Promise.reject(error.toString());
   }
+
 }
