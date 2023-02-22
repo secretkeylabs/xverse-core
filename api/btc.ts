@@ -15,10 +15,11 @@ import { XVERSE_API_BASE_URL } from '../constant';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
-  network: NetworkType
+  network: NetworkType,
+  limit: number = 100
 ): Promise<Array<BtcUtxoDataResponse>> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=100`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=100`;
+  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
+  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
@@ -79,8 +80,8 @@ export async function fetchBtcTransactionsData(
   btcAddress: string,
   network: NetworkType
 ): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`;
+  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000`;
+  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?includeHex=true&txlimit=3000`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;

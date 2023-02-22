@@ -146,6 +146,22 @@ export async function getBtcPrivateKey({
   return btcChild.privateKey!.toString('hex');
 }
 
+export async function getBtcTaprootPrivateKey({
+  seedPhrase,
+  index,
+  network,
+}: {
+  seedPhrase: string;
+  index: BigInt;
+  network: NetworkType;
+}): Promise<string> {
+  const seed = await bip39.mnemonicToSeed(seedPhrase);
+  const master = bip32.fromSeed(seed);
+
+  const btcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
+  return btcChild.privateKey!.toString('hex');
+}
+
 export function validateStxAddress({
   stxAddress,
   network,

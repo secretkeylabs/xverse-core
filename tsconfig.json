@@ -24,5 +24,8 @@
     "noImplicitAny": true,
     "allowUnreachableCode": false,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "./tests",
+  ],
 }
