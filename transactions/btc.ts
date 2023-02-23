@@ -165,7 +165,7 @@ export async function calculateFee(
   selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
-  feeRate: BtcFeeResponse,
+  feeRate: BigNumber,
   changeAddress: string,
   network: NetworkType
 ): Promise<BigNumber> {
@@ -186,14 +186,14 @@ export async function calculateFee(
 
   const txSize = tx.vsize;
 
-  return new BigNumber(feeRate?.regular).multipliedBy(txSize);
+  return new BigNumber(feeRate).multipliedBy(txSize);
 }
 
 export async function calculateOrdinalSendFee(
   selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
-  feeRate: BtcFeeResponse,
+  feeRate: BigNumber,
   changeAddress: string,
   network: NetworkType
 ): Promise<BigNumber> {
@@ -214,7 +214,125 @@ export async function calculateOrdinalSendFee(
 
   const txSize = tx.vsize;
 
-  return new BigNumber(feeRate?.regular).multipliedBy(txSize);
+  return new BigNumber(feeRate).multipliedBy(txSize);
+}
+
+// Used to calculate fees for setting low/high fee settings
+// Should replace this function
+export async function getBtcFees(
+  recipients: Array<Recipient>,
+  btcAddress: string,
+  network: NetworkType,
+  feeMode?: string
+): Promise<BigNumber> {
+  try {
+    const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+    var feeRate: BtcFeeResponse = defaultFeeRate;
+  
+    feeRate = await fetchBtcFeeRate();
+
+    // Get total sats to send (including custom fee)
+    var satsToSend = new BigNumber(0);
+    recipients.forEach((recipient) => {
+      satsToSend = satsToSend.plus(recipient.amountSats);
+    });
+
+    // Select unspent outputs
+    var selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs);
+    var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+    if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    }
+
+    const changeAddress = btcAddress;
+
+    // Calculate transaction fee
+    const { fee } = await getFee(
+      unspentOutputs,
+      selectedUnspentOutputs,
+      sumSelectedOutputs,
+      satsToSend,
+      recipients,
+      feeRate,
+      changeAddress,
+      network,
+      undefined,
+      feeMode
+    )
+
+    return fee;
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+}
+
+// Used to calculate fees for setting low/high fee settings
+// Should replace this function
+export async function getBtcFeesForOrdinalSend(
+  recipientAddress: string,
+  ordinalAddress: string,
+  ordinalUtxoHash: string,
+  btcAddress: string,
+  network: NetworkType,
+  feeMode?: string
+): Promise<BigNumber> {
+  try {
+    const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+    const ordinalUtxos = await fetchBtcAddressUnspent(ordinalAddress, network, 1000);
+    const fileredOrdinalUtxos = ordinalUtxos.filter((output) => output.tx_hash === ordinalUtxoHash);
+  
+    if (fileredOrdinalUtxos.length <= 0) {
+      throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
+    }
+  
+    const ordinalUtxo: BtcUtxoDataResponse = fileredOrdinalUtxos[0];
+
+    var feeRate: BtcFeeResponse = defaultFeeRate;
+  
+    feeRate = await fetchBtcFeeRate();
+
+    // Get total sats to send (including custom fee)
+    var satsToSend = new BigNumber(ordinalUtxo.value);
+
+    // Select unspent outputs
+    var selectedUnspentOutputs = selectUnspentOutputs(
+      satsToSend, 
+      unspentOutputs,
+      ordinalUtxo
+    );
+
+    var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+    if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    }
+
+    const recipients = [{
+      address: recipientAddress,
+      amountSats: new BigNumber(ordinalUtxo.value)
+    }]
+
+    const changeAddress = btcAddress;
+
+    // Calculate transaction fee
+    const { fee } = await getFee(
+      unspentOutputs,
+      selectedUnspentOutputs,
+      sumSelectedOutputs,
+      satsToSend,
+      recipients,
+      feeRate,
+      changeAddress,
+      network,
+      ordinalUtxo,
+      feeMode
+    )
+
+    return fee;
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
 }
 
 export async function getFee(
@@ -226,19 +344,25 @@ export async function getFee(
   feeRate: BtcFeeResponse,
   changeAddress: string,
   network: NetworkType,
-  pinnedOutput?: UnspentOutput
+  pinnedOutput?: UnspentOutput,
+  feeMode?: string
 ): Promise<{ 
   newSelectedUnspentOutputs: Array<BtcUtxoDataResponse>,
   fee: BigNumber
 }> {
   var i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
 
+  var selectedFeeRate = feeRate.regular;
+  if (feeMode && feeMode === 'high') {
+    selectedFeeRate = feeRate.priority
+  }
+
   // Calculate fee
   var calculatedFee = await calculateFee(      
     selectedUnspentOutputs,
     satsToSend,
     recipients,
-    feeRate,
+    new BigNumber(selectedFeeRate),
     changeAddress,
     network
   );
@@ -266,7 +390,7 @@ export async function getFee(
       i_selectedUnspentOutputs,
       satsToSend,
       recipients,
-      feeRate,
+      new BigNumber(selectedFeeRate),
       changeAddress,
       network
     );

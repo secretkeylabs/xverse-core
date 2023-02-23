@@ -4,7 +4,9 @@ import {
   createTransaction, 
   calculateFee, 
   signBtcTransaction,
-  signOrdinalSendTransaction
+  signOrdinalSendTransaction,
+  getBtcFees,
+  getBtcFeesForOrdinalSend
 } from '../../transactions/btc';
 import { getBtcPrivateKey } from '../../wallet'
 import { testSeed } from '../mocks';
@@ -160,13 +162,173 @@ describe('bitcoin transactions', () => {
     expect(signedTx.outputs[2].amount).eq(BigInt(totalUnspentValue-satsToSend));
   })
 
+  it('can calculate transaction fee legacy function', async () => {
+    const network = "Mainnet";
+
+    const unspent1Value = 100000;
+    const unspent2Value = 200000;
+    const unspent3Value = 250000;
+    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
+
+    const utxos: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent1Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent2Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent3Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      }
+    ]
+
+    const recipient1Amount = 200000;
+    const recipient2Amount = 100000;
+    const satsToSend = recipient1Amount+recipient2Amount;
+
+    const recipients: Array<Recipient> = [
+      {
+        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        amountSats: new BigNumber(recipient1Amount),
+      },
+      {
+        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        amountSats: new BigNumber(recipient2Amount),
+      }
+    ]
+
+    const changeAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30
+    }
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+
+    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos))
+    
+    const fee = await getBtcFees(
+      recipients,
+      changeAddress,
+      network
+    )
+
+    // expect transaction size to be 385 bytes;
+    const txSize = 385;
+    expect(fee.toNumber()).eq(txSize*feeRate.regular);
+  })
+
+  it('can calculate ordinal send transaction fee legacy function', async () => {
+    const network = "Mainnet";
+
+    const ordinalValue = 80000;
+    const unspent1Value = 10000;
+
+    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
+    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: ordinalUtxoHash,
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: ordinalValue,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      }
+    ];
+
+    const utxos: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent1Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+    ]
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 8,
+      priority: 30
+    }
+
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+
+    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+
+    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
+    const ordinalAddress = "bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw";
+    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    
+    const fee = await getBtcFeesForOrdinalSend(
+      recipientAddress,
+      ordinalAddress,
+      ordinalUtxoHash,
+      btcAddress,
+      network
+    )
+
+    // expect transaction size to be 260 bytes;
+    const txSize = 260;
+    expect(fee.toNumber()).eq(txSize*feeRate.regular);
+  })
+
   it('can calculate transaction fee', async () => {
     const network = "Mainnet";
-    const privateKey = await getBtcPrivateKey({ 
-      seedPhrase: testSeed, 
-      index: BigInt(0), 
-      network
-    });
 
     const unspent1Value = 100000;
     const unspent2Value = 200000;
@@ -245,7 +407,7 @@ describe('bitcoin transactions', () => {
       selectedUnspentOutputs,
       new BigNumber(satsToSend),
       recipients,
-      feeRate,
+      new BigNumber(feeRate.regular),
       changeAddress,
       network
     );
