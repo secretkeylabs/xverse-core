@@ -24,7 +24,7 @@ export async function createAuthResponse(
   const sha2Hash = await createSha2Hash();
 
   const saltData = await sha2Hash.digest(publicKeyHex, 'sha256');
-  const salt = saltData.toString();
+  const salt = saltData.toString('hex');
 
   const identityKeychain = identitiesKeychain.deriveHardened(0);
   const dataPrivateKey = identityKeychain.privateKey?.toString('hex');
