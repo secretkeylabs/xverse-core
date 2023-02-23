@@ -365,6 +365,117 @@ describe('bitcoin transactions', () => {
     expect(signedTx.signedTx).toEqual(tx);
   })
 
+  it('can create + sign btc transaction with custom fees', async () => {
+    const network = "Mainnet";
+
+    const unspent1Value = 100000;
+    const unspent2Value = 200000;
+    const unspent3Value = 1000;
+    const unspent4Value = 1000;
+    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value + unspent4Value;
+
+    const utxos: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent1Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent2Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent3Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent4Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      }
+    ]
+
+    const recipient1Amount = 200000;
+    const recipient2Amount = 100000;
+    const satsToSend = recipient1Amount+recipient2Amount;
+
+    const recipients: Array<Recipient> = [
+      {
+        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        amountSats: new BigNumber(recipient1Amount),
+      },
+      {
+        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        amountSats: new BigNumber(recipient2Amount),
+      }
+    ]
+
+    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 2,
+      priority: 30
+    }
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+
+    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos))
+    const customFees = new BigNumber(500);
+
+    const signedTx = await signBtcTransaction(
+      recipients,
+      btcAddress,
+      0,
+      testSeed,
+      network,
+      customFees
+    )
+
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0)
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
+    expect(signedTx.fee.toNumber()).eq(customFees.toNumber());
+
+  })
+
   it('fails to create transaction when insufficient balance after adding fees', async () => {
     const network = "Mainnet";
 
@@ -565,4 +676,110 @@ describe('bitcoin transactions', () => {
     // Needs a better transaction size calculator
     // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
   })
+
+  it('can create and sign oridnal transaction with custom fees', async () => {
+    const network = "Mainnet";
+
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
+    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: 'notordinal111114d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59abc',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: ordinalValue,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: ordinalUtxoHash,
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: ordinalValue,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      }
+    ];
+
+    const utxos: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent1Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent2Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+    ]
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30
+    }
+
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+
+    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+
+    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
+    const ordinalAddress = "bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw";
+    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const customFeeAmount = new BigNumber(2000);
+
+    const signedTx = await signOrdinalSendTransaction(
+      recipientAddress,
+      ordinalAddress,
+      ordinalUtxoHash,
+      btcAddress,
+      0,
+      testSeed,
+      network,
+      customFeeAmount
+    )
+
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0)
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(2)
+    expect(signedTx.fee.toNumber()).eq(customFeeAmount.toNumber());
+  })
 })
+
+

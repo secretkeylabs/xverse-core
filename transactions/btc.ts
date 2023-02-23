@@ -18,6 +18,15 @@ import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 
+const defaultFeeRate = {
+  limits: {
+    min: 5,
+    max: 10,
+  },
+  regular: 5,
+  priority: 10,
+};
+
 export interface UnspentOutput extends BtcUtxoDataResponse {}
 
 export interface Recipient {
@@ -372,8 +381,12 @@ export async function signBtcTransaction(
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
   const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
-  const feeRate = await fetchBtcFeeRate();
+  var feeRate: BtcFeeResponse = defaultFeeRate;
 
+  if (!fee) {
+    feeRate = await fetchBtcFeeRate();
+  }
+  
   // Get sender address payment private key
   const privateKey = await getBtcPrivateKey({ seedPhrase, index: BigInt(accountIndex), network });
 
@@ -459,7 +472,11 @@ export async function signOrdinalSendTransaction(
 
   const ordinalUtxo: BtcUtxoDataResponse = fileredOrdinalUtxos[0];
 
-  const feeRate = await fetchBtcFeeRate();
+  var feeRate: BtcFeeResponse = defaultFeeRate;
+
+  if (!fee) {
+    feeRate = await fetchBtcFeeRate();
+  }
 
   // Get sender address payment and ordinals private key
   const privateKey = await getBtcPrivateKey({
