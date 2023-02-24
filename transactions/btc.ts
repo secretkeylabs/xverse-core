@@ -242,7 +242,7 @@ export async function getBtcFees(
     var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
     const changeAddress = btcAddress;
@@ -271,47 +271,36 @@ export async function getBtcFees(
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
   recipientAddress: string,
-  ordinalAddress: string,
-  ordinalUtxoHash: string,
+  ordinalUtxo: BtcUtxoDataResponse,
   btcAddress: string,
   network: NetworkType,
   feeMode?: string
 ): Promise<BigNumber> {
   try {
     const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
-    const ordinalUtxos = await fetchBtcAddressUnspent(ordinalAddress, network, 1000);
-    const fileredOrdinalUtxos = ordinalUtxos.filter((output) => output.tx_hash === ordinalUtxoHash);
-  
-    if (fileredOrdinalUtxos.length <= 0) {
-      throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
-    }
-  
-    const ordinalUtxo: BtcUtxoDataResponse = fileredOrdinalUtxos[0];
 
     var feeRate: BtcFeeResponse = defaultFeeRate;
-  
+
     feeRate = await fetchBtcFeeRate();
 
     // Get total sats to send (including custom fee)
     var satsToSend = new BigNumber(ordinalUtxo.value);
 
     // Select unspent outputs
-    var selectedUnspentOutputs = selectUnspentOutputs(
-      satsToSend, 
-      unspentOutputs,
-      ordinalUtxo
-    );
+    var selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs, ordinalUtxo);
 
     var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
-    const recipients = [{
-      address: recipientAddress,
-      amountSats: new BigNumber(ordinalUtxo.value)
-    }]
+    const recipients = [
+      {
+        address: recipientAddress,
+        amountSats: new BigNumber(ordinalUtxo.value),
+      },
+    ];
 
     const changeAddress = btcAddress;
 
@@ -327,7 +316,7 @@ export async function getBtcFeesForOrdinalSend(
       network,
       ordinalUtxo,
       feeMode
-    )
+    );
 
     return fee;
   } catch (error) {
@@ -380,7 +369,7 @@ export async function getFee(
     // Check if select output count has changed since last iteration
     // If it hasn't, there is insufficient balance
     if ((lastSelectedUnspentOutputCount >= unspentOutputs.length + (pinnedOutput ? 1 : 0))) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
     lastSelectedUnspentOutputCount = i_selectedUnspentOutputs.length;
@@ -398,7 +387,7 @@ export async function getFee(
     count++;
     if (count > 500) {
       // Exit after max 500 iterations
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
   }
 
@@ -525,7 +514,7 @@ export async function signBtcTransaction(
   var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
   const changeAddress = btcAddress;
@@ -576,25 +565,15 @@ export async function signBtcTransaction(
 
 export async function signOrdinalSendTransaction(
   recipientAddress: string,
-  ordinalAddress: string,
-  ordinalUtxoHash: string,
+  ordinalUtxo: BtcUtxoDataResponse,
   btcAddress: string,
   accountIndex: number,
   seedPhrase: string,
   network: NetworkType,
   fee?: BigNumber
 ): Promise<SignedBtcTx> {
-
-  // Get sender address unspent outputs and ordinal output
+  // Get sender address unspent outputs
   const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
-  const ordinalUtxos = await fetchBtcAddressUnspent(ordinalAddress, network, 1000);
-  const fileredOrdinalUtxos = ordinalUtxos.filter((output) => output.tx_hash === ordinalUtxoHash);
-  
-  if (fileredOrdinalUtxos.length <= 0) {
-    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
-  }
-
-  const ordinalUtxo: BtcUtxoDataResponse = fileredOrdinalUtxos[0];
 
   var feeRate: BtcFeeResponse = defaultFeeRate;
 
@@ -606,36 +585,35 @@ export async function signOrdinalSendTransaction(
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network 
+    network,
   });
 
   const taprootPrivateKey = await getBtcTaprootPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network
+    network,
   });
 
   // Get total sats to send (including custom fee)
-  var satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) 
+  var satsToSend = fee
+    ? fee.plus(new BigNumber(ordinalUtxo.value))
     : new BigNumber(ordinalUtxo.value);
 
   // Select unspent outputs
-  var selectedUnspentOutputs = selectUnspentOutputs(
-    satsToSend, 
-    unspentOutputs,
-    ordinalUtxo
-  );
+  var selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs, ordinalUtxo);
 
   var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  const recipients = [{
-    address: recipientAddress,
-    amountSats: new BigNumber(ordinalUtxo.value)
-  }]
+  const recipients = [
+    {
+      address: recipientAddress,
+      amountSats: new BigNumber(ordinalUtxo.value),
+    },
+  ];
 
   const changeAddress = btcAddress;
 
@@ -652,12 +630,12 @@ export async function signOrdinalSendTransaction(
       changeAddress,
       network,
       ordinalUtxo
-    )
+    );
 
     calculatedFee = fee;
     selectedUnspentOutputs = newSelectedUnspentOutputs;
     satsToSend = satsToSend.plus(fee);
-  } 
+  }
 
   try {
     const tx = createOrdinalTransaction(
