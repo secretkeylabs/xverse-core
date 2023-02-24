@@ -132,6 +132,7 @@ export async function fetchBtcOrdinalsData(
           ordinals.push({
             id: ordinal.data.id,
             confirmationTime: utxo.confirmed,
+            utxo,
           });
         }
         return Promise.resolve(ordinal);
