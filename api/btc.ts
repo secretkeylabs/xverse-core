@@ -11,7 +11,7 @@ import { BtcAddressData } from 'types/api/blockcypher/wallet';
 import { BtcTransactionsDataResponse } from 'types/api/blockcypher/wallet';
 import { BtcTransactionData } from 'types/api/blockcypher/wallet';
 import { parseBtcTransactionData } from './helper';
-import { XVERSE_API_BASE_URL } from '../constant';
+import { ORDINAL_BASE_URI, XVERSE_API_BASE_URL } from '../constant';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
@@ -149,4 +149,13 @@ export async function getTextOrdinalContent(url: string) {
     })
     .then((response) => response?.data)
     .catch((error) => undefined);
+}
+
+export async function broadcastRawBtcOrdinalTransaction(
+  rawTx: string,
+  network: NetworkType,
+): Promise<string> {
+  return axios.post(ORDINAL_BASE_URI, rawTx, {timeout: 45000}).then((response) => {
+    return response.data;
+  });
 }
