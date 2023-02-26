@@ -139,5 +139,6 @@ export interface BtcTransactionsDataResponse {
 
 export interface BtcOrdinal {
   id: string;
+  utxo: BtcUtxoDataResponse;
   confirmationTime: string,
 }
