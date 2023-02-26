@@ -11,7 +11,6 @@ import { BtcAddressData } from 'types/api/blockcypher/wallet';
 import { BtcTransactionsDataResponse } from 'types/api/blockcypher/wallet';
 import { BtcTransactionData } from 'types/api/blockcypher/wallet';
 import { parseBtcTransactionData } from './helper';
-import { ORDINAL_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
@@ -107,55 +106,5 @@ export async function fetchBtcTransactionsData(
   });
 }
 
-const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
-  if (new Date(prev.confirmationTime).getTime() > new Date(next.confirmationTime).getTime()) {
-    return 1;
-  }
-  if (new Date(prev.confirmationTime).getTime() < new Date(next.confirmationTime).getTime()) {
-    return -1;
-  }
-  return 0;
-};
 
-export async function fetchBtcOrdinalsData(
-  btcAddress: string,
-  network: NetworkType
-): Promise<BtcOrdinal[]> {
-  const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network);
-  const ordinals: BtcOrdinal[] = [];
-  await Promise.all(
-    unspentUTXOS.map(async (utxo) => {
-      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}`;
-      try {
-        const ordinal = await axios.get(ordinalContentUrl);
-        if (ordinal) {
-          ordinals.push({
-            id: ordinal.data.id,
-            confirmationTime: utxo.confirmed,
-            utxo,
-          });
-        }
-        return Promise.resolve(ordinal);
-      } catch (err) {}
-    })
-  );
-  return ordinals.sort(sortOrdinalsByConfirmationTime);
-}
 
-export async function getTextOrdinalContent(url: string) {
-  return axios
-    .get<string>(url, {
-      timeout: 30000,
-    })
-    .then((response) => response?.data)
-    .catch((error) => undefined);
-}
-
-export async function broadcastRawBtcOrdinalTransaction(
-  rawTx: string,
-  network: NetworkType,
-): Promise<string> {
-  return axios.post(ORDINAL_BROADCAST_URI, rawTx, {timeout: 45000}).then((response) => {
-    return response.data;
-  });
-}

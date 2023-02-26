@@ -35,7 +35,6 @@ import{
 } from 'types';
 import { getNftDetail } from './gamma';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
-import { fetchBtcOrdinalsData } from './btc';
 
 export async function fetchStxAddressData(
   stxAddress: string,
