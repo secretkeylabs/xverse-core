@@ -58,6 +58,10 @@ export async function restoreWalletWithAccounts(
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
         let existingAccount: Account = currentAccounts[index];
+        if (existingAccount && index === 0) {
+          const username = await getBnsName(existingAccount.stxAddress, networkObject);
+          existingAccount = { ...existingAccount, bnsName: username };
+        }
         if (!existingAccount || !existingAccount.ordinalsAddress) {
           const response = await walletFromSeedPhrase({
             mnemonic,
@@ -76,13 +80,8 @@ export async function restoreWalletWithAccounts(
             bnsName: username,
           };
           return existingAccount;
-        } else {
-          const userName = await getBnsName(existingAccount.stxAddress, networkObject);
-          return {
-            ...existingAccount,
-            bnsName: userName,
-          };
-        }
+        } 
+        return existingAccount;
       })
     );
     return newAccounts;
