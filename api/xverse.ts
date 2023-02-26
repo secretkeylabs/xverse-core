@@ -17,7 +17,7 @@ import {
   OrdinalInfo,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
-import { fetchBtcOrdinalsData } from './btc';
+import { fetchBtcOrdinalsData } from './ordinals';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
