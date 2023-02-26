@@ -316,8 +316,7 @@ describe('bitcoin transactions', () => {
     
     const fee = await getBtcFeesForOrdinalSend(
       recipientAddress,
-      ordinalAddress,
-      ordinalUtxoHash,
+      ordinalOutputs[0],
       btcAddress,
       network
     )
@@ -745,19 +744,6 @@ describe('bitcoin transactions', () => {
     const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
     const ordinalOutputs: Array<BtcUtxoDataResponse> = [
       { 
-        tx_hash: 'notordinal111114d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59abc',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
-        value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      },
-      { 
         tx_hash: ordinalUtxoHash,
         block_height: 123123,
         tx_input_n: -1,
@@ -824,8 +810,7 @@ describe('bitcoin transactions', () => {
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
-      ordinalAddress,
-      ordinalUtxoHash,
+      ordinalOutputs[0],
       btcAddress,
       0,
       testSeed,
@@ -833,7 +818,7 @@ describe('bitcoin transactions', () => {
     )
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(2)
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
     // expect(signedTx.signedTx).eq(expectedTx)
     // Needs a better transaction size calculator
     // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
@@ -848,19 +833,6 @@ describe('bitcoin transactions', () => {
 
     const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
     const ordinalOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: 'notordinal111114d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59abc',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
-        value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      },
       { 
         tx_hash: ordinalUtxoHash,
         block_height: 123123,
@@ -929,8 +901,7 @@ describe('bitcoin transactions', () => {
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
-      ordinalAddress,
-      ordinalUtxoHash,
+      ordinalOutputs[0],
       btcAddress,
       0,
       testSeed,
@@ -939,7 +910,7 @@ describe('bitcoin transactions', () => {
     )
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(2)
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
     expect(signedTx.fee.toNumber()).eq(customFeeAmount.toNumber());
   })
 })
