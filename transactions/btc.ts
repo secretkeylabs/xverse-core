@@ -369,7 +369,7 @@ export async function getFee(
     // Check if select output count has changed since last iteration
     // If it hasn't, there is insufficient balance
     if ((lastSelectedUnspentOutputCount >= unspentOutputs.length + (pinnedOutput ? 1 : 0))) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
     lastSelectedUnspentOutputCount = i_selectedUnspentOutputs.length;
@@ -387,7 +387,7 @@ export async function getFee(
     count++;
     if (count > 500) {
       // Exit after max 500 iterations
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
   }
 
@@ -514,7 +514,7 @@ export async function signBtcTransaction(
   var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
   const changeAddress = btcAddress;
@@ -605,7 +605,7 @@ export async function signOrdinalSendTransaction(
   var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee);
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
   const recipients = [
