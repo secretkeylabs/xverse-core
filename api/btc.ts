@@ -13,7 +13,7 @@ import {
 } from '../types/api/blockcypher/wallet';
 import { NetworkType } from '../types/network';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
-import { getOrdinalsByAddress } from './xverse';
+import { BtcAddressMempool } from '../types/api/blockstream/transactions';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
@@ -151,7 +151,8 @@ export async function fetchBtcPaymentTransactions(
 export async function fetchBtcTransactionsData(
   btcAddress: string,
   ordinalsAddress: string,
-  network: NetworkType
+  network: NetworkType,
+  withOrdinals: boolean,
 ): Promise<BtcTransactionData[]> {
   const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?txlimit=3000`;
   const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?txlimit=3000`;
@@ -159,9 +160,33 @@ export async function fetchBtcTransactionsData(
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
   }
+  if (withOrdinals) {
   const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, network);
-  const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, network);
-
-  
+  const paymentTransactions = await fetchBtcPaymentTransactions(
+    btcAddress,
+    ordinalsAddress,
+    network
+  );
   return [...new Set([...paymentTransactions, ...ordinalsTransactions])];
+  }
+  const paymentTransactions = await fetchBtcPaymentTransactions(
+    btcAddress,
+    ordinalsAddress,
+    network
+  );
+  return paymentTransactions;
+}
+
+export async function fetchPendingOrdinalsTransactions(
+  ordinalsAddress: string,
+  network: NetworkType
+): Promise<BtcAddressMempool[]> {
+  const apiUrlMainnet = `https://blockstream.info/api/address/${ordinalsAddress}/txs/mempool`;
+  const apiUrlMainnetTestnet = `https://blockstream.info/testnet/api/address/${ordinalsAddress}/txs/mempool`;
+  let apiUrl = apiUrlMainnet;
+  if (network === 'Testnet') {
+    apiUrl = apiUrlMainnetTestnet;
+  }
+  const response = await axios.get<BtcAddressMempool[]>(apiUrl);
+  return response.data;
 }

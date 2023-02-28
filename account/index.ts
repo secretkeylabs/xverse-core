@@ -30,6 +30,7 @@ export async function checkAccountActivity(
     btcAddress,
     ordinalsAddress,
     networkType,
+    true,
   );
   return btcTxHistory.length !== 0;
 }
