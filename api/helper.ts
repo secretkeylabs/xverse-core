@@ -9,7 +9,7 @@ import {
   StxTransactionDataResponse,
   StxMempoolTransactionDataResponse,
   TransferTransaction,
-} from 'types';
+} from '../types';
 
 export function sumOutputsForAddress(
   outputs: Output[],
@@ -36,21 +36,65 @@ export function sumInputsForAddress(inputs: Input[], address: string): number {
   return total;
 }
 
+export function parseOrdinalsBtcTransactions(
+  responseTx: BtcTransactionDataResponse,
+  ordinalsAddress: string
+): BtcTransactionData {
+  let inputAddresses: string[] = [];
+  responseTx.inputs.forEach((input) => {
+    if (input.addresses !== null && input.addresses.length > 0) {
+      inputAddresses = [...inputAddresses, ...input.addresses];
+    }
+  });
+  const inputAddressSet = new Set(inputAddresses);
+  const incoming = !inputAddressSet.has(ordinalsAddress);
+    const parsedTx: BtcTransactionData = {
+      blockHash: responseTx.block_hash,
+      blockHeight: responseTx.block_height,
+      blockIndex: responseTx.block_index,
+      txid: responseTx.hash,
+      addresses: responseTx.addresses,
+      total: responseTx.total,
+      fees: responseTx.fees,
+      size: responseTx.size,
+      preference: responseTx.preference,
+      relayedBy: responseTx.relayed_by,
+      confirmed: responseTx.confirmed,
+      received: responseTx.received,
+      ver: responseTx.ver,
+      doubleSpend: responseTx.double_spend,
+      vinSz: responseTx.vin_sz,
+      voutSz: responseTx.vout_sz,
+      dataProtocol: responseTx.data_protocol,
+      confirmations: responseTx.confirmations,
+      confidence: responseTx.confirmations,
+      inputs: responseTx.inputs,
+      outputs: responseTx.outputs,
+      seenTime: new Date(responseTx.received),
+      incoming,
+      amount: new BigNumber(0),
+      txType: 'bitcoin',
+      txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
+      isOrdinal: true,
+    };
+    return parsedTx;
+} 
+
 export function parseBtcTransactionData(
   responseTx: BtcTransactionDataResponse,
   btcAddress: string,
+  ordinalsAddress: string,
 ): BtcTransactionData {
-  const inputAddresses: string[] = [];
+  let inputAddresses: string[] = [];
   responseTx.inputs.forEach((input) => {
-    if (input.addresses !== null) {
-      if (input.addresses.length > 0) {
-        inputAddresses.push(input.addresses[0]);
-      }
+    if (input.addresses !== null && input.addresses.length > 0) {
+        inputAddresses = [...inputAddresses, ...input.addresses];
     }
   });
-
   const inputAddressSet = new Set(inputAddresses);
+
   const incoming = !inputAddressSet.has(btcAddress);
+  const isOrdinal = inputAddressSet.has(ordinalsAddress);
 
   // calculate sent/received amount from inputs/outputs
   var amount = 0;
@@ -67,7 +111,6 @@ export function parseBtcTransactionData(
     blockHeight: responseTx.block_height,
     blockIndex: responseTx.block_index,
     txid: responseTx.hash,
-    hex: responseTx.hex,
     addresses: responseTx.addresses,
     total: responseTx.total,
     fees: responseTx.fees,
@@ -90,6 +133,7 @@ export function parseBtcTransactionData(
     amount: new BigNumber(amount),
     txType: 'bitcoin',
     txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
+    isOrdinal,
   };
 
   return parsedTx;

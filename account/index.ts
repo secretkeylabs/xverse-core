@@ -8,7 +8,7 @@ import {
   createWalletGaiaConfig,
 } from '../gaia';
 import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
-import { Account, BtcAddressData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
+import { Account, BtcTransactionData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
 import { walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
 import * as bip39 from 'bip39';
@@ -17,6 +17,7 @@ import { bip32 } from 'bitcoinjs-lib';
 export async function checkAccountActivity(
   stxAddress: string,
   btcAddress: string,
+  ordinalsAddress: string,
   selectedNetwork: StacksNetwork
 ) {
   const stxTxHistory: StxTransactionListData = await getConfirmedTransactions({
@@ -25,11 +26,12 @@ export async function checkAccountActivity(
   });
   if (stxTxHistory.totalCount !== 0) return true;
   const networkType : NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
-  const btcTxHistory: BtcAddressData = await fetchBtcTransactionsData(
+  const btcTxHistory: BtcTransactionData[] = await fetchBtcTransactionsData(
     btcAddress,
-    networkType
+    ordinalsAddress,
+    networkType,
   );
-  return btcTxHistory.transactions.length !== 0;
+  return btcTxHistory.length !== 0;
 }
 
 export async function restoreWalletWithAccounts(
