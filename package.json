@@ -1,6 +1,6 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
