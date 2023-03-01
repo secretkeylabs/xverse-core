@@ -40,3 +40,4 @@ export {
 export {
   OrdinalInfo,
 } from './api/xverse/ordinals';
+export * from './api/blockstream/transactions';

@@ -59,7 +59,6 @@ export interface BtcTransactionData extends TransactionData {
   blockHeight: string;
   blockIndex: number;
   txid: string;
-  hex: string;
   addresses: string[];
   total: number;
   fees: number;
@@ -77,6 +76,7 @@ export interface BtcTransactionData extends TransactionData {
   confidence: number;
   inputs: Input[];
   outputs: Output[];
+  isOrdinal: boolean;
 }
 
 export interface Input {
@@ -109,6 +109,18 @@ export interface BtcBalance {
   balance: number;
 }
 
+export interface BtcAddressBalanceResponse {
+  address: string;
+  total_received: number;
+  total_sent: number;
+  balance: number;
+  unconfirmed_balance: number;
+  final_balance: number;
+  n_tx: number;
+  unconfirmed_n_tx: number;
+  final_n_tx: number;
+}
+
 export interface BtcAddressData {
   address: string;
   totalReceived: number;
@@ -119,7 +131,6 @@ export interface BtcAddressData {
   nTx: number;
   unconfirmedTx: number;
   finalNTx: number;
-  transactions: Array<BtcTransactionData>;
 }
 
 export interface BtcTransactionsDataResponse {
