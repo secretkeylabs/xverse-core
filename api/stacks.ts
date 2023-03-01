@@ -78,16 +78,25 @@ export async function fetchStxAddressData(
   const nftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'non_fungible');
 
   const allConfirmedTransactions: Array<TransactionData> = [
-    ...confirmedTransactions.transactionsList,
-    ...ftTransactions.filter((tx) =>
-      confirmedTransactions.transactionsList.some((ctx) => tx.txid !== ctx.txid)
-    ),
-    ...nftTransactions.filter((tx) =>
-      confirmedTransactions.transactionsList.some((ctx) => tx.txid !== ctx.txid)
-    ),
+    ...confirmedTransactions.transactionsList
   ];
+  ftTransactions.forEach((tx) => {
+    let index = allConfirmedTransactions.findIndex((trans) => {
+      return trans.txid === tx.txid;
+    });
+    if (index === -1) {
+      allConfirmedTransactions.push(tx);
+    }
+  });
+  nftTransactions.forEach((tx) => {
+    let index = allConfirmedTransactions.findIndex((trans) => {
+      return trans.txid === tx.txid;
+    });
+    if (index === -1) {
+      allConfirmedTransactions.push(tx);
+    }
+  });
 
-  // sorting the transactions on the base of date
   allConfirmedTransactions.sort((t1, t2) => t2.seenTime.getTime() - t1.seenTime.getTime());
 
   const transactions: Array<TransactionData> = [
