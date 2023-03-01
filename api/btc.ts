@@ -15,7 +15,7 @@ import { parseBtcTransactionData } from './helper';
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
   network: NetworkType,
-  limit: number = 100
+  limit: number = 500
 ): Promise<Array<BtcUtxoDataResponse>> {
   const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
   const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
