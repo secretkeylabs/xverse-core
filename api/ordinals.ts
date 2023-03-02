@@ -1,7 +1,7 @@
 import {
   NetworkType,
   BtcOrdinal,
-} from 'types';
+} from '../types';
 import axios from 'axios';
 import { ORDINAL_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
 import { fetchBtcAddressUnspent } from './btc';
