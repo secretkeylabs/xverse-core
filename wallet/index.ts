@@ -8,6 +8,9 @@ import {
   BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
+  BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
+  BTC_SEGWIT_PATH_PURPOSE,
+  BTC_TAPROOT_PATH_PURPOSE
 } from '../constant';
 import {
   ChainID,
@@ -118,16 +121,25 @@ export async function walletFromSeedPhrase({
   };
 }
 
-function getBitcoinDerivationPath({ index, network }: { index: BigInt; network: NetworkType }) {
+export function getBitcoinDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
   return network === 'Mainnet'
-    ? `${BTC_PATH_WITHOUT_INDEX}${index.toString()}`
-    : `${BTC_TESTNET_PATH_WITHOUT_INDEX}${index.toString()}`;
+    ? `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
 }
 
-function getTaprootDerivationPath({ index, network }: { index: BigInt; network: NetworkType }) {
+export function getSegwitDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
   return network === 'Mainnet'
-    ? `${BTC_TAPROOT_PATH_WITHOUT_INDEX}${index.toString()}`
-    : `${BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX}${index.toString()}`;
+    ? `${BTC_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+}
+
+export function getTaprootDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
+  return network === 'Mainnet'
+    ? `${BTC_TAPROOT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_TAPROOT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
 }
 
 export async function getBtcPrivateKey({
