@@ -64,11 +64,13 @@ describe('Bitcoin PSBT tests', () => {
 
     expect(testnetWrappedSegwitPath).eq(`m/49'/1'/0'/0/0`);
 
-    // expect(() => getSigningDerivationPath(
-    //   accounts,
-    //   nativeSegwitAddress2,
-    //   'Mainnet'
-    // )).toThrowError();
+    const nativeSegwitPath = getSigningDerivationPath(
+      accounts,
+      nativeSegwitAddress2,
+      'Mainnet'
+    );
+
+    expect(nativeSegwitPath).eq(`m/84'/0'/0'/0/1`);
 
     const taprootPath = getSigningDerivationPath(
       accounts,
