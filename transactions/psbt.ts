@@ -9,7 +9,7 @@ import {
   getSegwitDerivationPath
 } from '../wallet';
 import * as btc from 'micro-btc-signer';
-import { hex } from '@scure/base';
+import { hex, base64 } from '@scure/base';
 import { getAddressInfo } from 'bitcoin-address-validation';
 
 import * as bip39 from 'bip39';
@@ -63,18 +63,18 @@ export async function signPsbt(
   seedPhrase: string,
   accounts: Array<Account>,
   inputsToSign: Array<InputToSign>,
-  psbtHex: string,
+  psbtBase64: string,
   finalize: boolean = false,
   network?: NetworkType
 ): Promise<string> {
-  if (psbtHex.length <= 0) {
+  if (psbtBase64.length <= 0) {
     throw new Error('Invalid transaction hex');
   }
 
   // decode raw tx
   var psbt: btc.Transaction;
   try {
-    psbt = btc.Transaction.fromPSBT(Buffer.from(psbtHex, 'hex'));
+    psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
     throw new Error('Error decoding transaction hex');
   }
@@ -117,5 +117,6 @@ export async function signPsbt(
     throw new Error (`Error signing PSBT ${error.toString()}`)
   }
 
-  return psbt.hex;
+  const signedPsbt = psbt.toPSBT(0);
+  return base64.encode(signedPsbt);
 }
