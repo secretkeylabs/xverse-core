@@ -1,11 +1,13 @@
 import { afterEach, assert, describe, expect, it, vi } from 'vitest'
 import { 
   getSigningDerivationPath,
-  signPsbt
+  signPsbt,
+  signBip340
 } from '../../transactions/psbt';
 import { testSeed } from '../mocks';
 import * as btc from 'micro-btc-signer';
-import { base64 } from '@scure/base';
+import { hex, base64 } from '@scure/base';
+import * as secp256k1 from '@noble/secp256k1'
 
 describe('Bitcoin PSBT tests', () => {
   it('can get signing BTC derivation path from address', async () => {
@@ -275,5 +277,75 @@ describe('Bitcoin PSBT tests', () => {
     expect(tx.outputs[2].amount === 2500)
     expect(signedTx).eq("cHNidP8BAPACAAAAA5Evp8km1CNBDBIsYggniR/NvUUDBDb6WcuD1DOQsJPUAAAAAAD/////5qwEb0oAGOwAnAR5OLeWLYd6S/SR3sD/X7CbE/e/rhoAAAAAAP////+xBuF/9xcpWDltvahghJUCKL9w3dsIfOSAiILPfJES4AAAAAAA/////wOIEwAAAAAAACJRIIU68eV/MOTfkfSbnM3w+baLI+7kIe/333nH9g1obw1GcBcAAAAAAAAXqRTTBnT+7Rl0Jgm/IVcCmMbXWrT674fECQAAAAAAABepFBNY6hKIP8okiDQ80xyMLI2aTnPPhwAAAAAAAQEfiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lgEIawJHMEQCIFEYfP/zcvesjerNv9BjZdg0xP3ibEPFoIAsCdZoChulAiBiterMyi5ZwdawGJp6IVxejBtD1mvwqbr9KaqbvPGV04MhAjU3oy1aszimulLxNwjqRcHjyzPCav8/oYLZxm/Utjb/AAEBH3AXAAAAAAAAFgAUSecr7VOVTmLb6zM3jzCfLgHh95YBCGsCRzBEAiBePDGZlesvy66Hj+Sn32gN54PSypIbyYJrngkNNa56IAIgOF7ilSXzITsh3HGKEu17dKUg5U3BxiZyfdxG9LtpJQODIQI1N6MtWrM4prpS8TcI6kXB48szwmr/P6GC2cZv1LY2/wABASCIEwAAAAAAABepFAUgUCirqioN5JvmIo4fMRMep/KwhwEHFxYAFIg5mZE8/6WNMX1FM8lMuUh4eI2zAQhsAkgwRQIhALUopoKdNUWQvldE0hUblLXtpHyOIesrWWZM33iduIFCAiBEJBIL7m1HIldljYZ3zQuka4nAjq/jadmz/d/+mvNXWIMhAyIV2BIoLAeSyFNcNwLMqZT149qc2FAsPhkNQi8AZv3/AAAAAA==")
   })
+
+  it('can sign message BIP340 for taproot address', async () => {
+    const btcAddress = 'bc1qf8njhm2nj48x9kltxvmc7vyl9cq7raukwg6mjk';
+    const taprootAddress = 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq';
+    const publicKey = '025b21869d6643175e0530aeec51d265290d036384990ee60bf089b23ff6b9a367';
+
+    const accounts = [
+      {
+        id: 0,
+        stxAddress: 'STXADDRESS1',
+        btcAddress: btcAddress,
+        ordinalsAddress: taprootAddress,
+        masterPubKey: '12345',
+        stxPublicKey: '123',
+        btcPublicKey: '123',
+      }
+    ]
+
+    const messageHash = "243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89";
+
+    const signature = await signBip340(
+      testSeed,
+      accounts,
+      taprootAddress,
+      messageHash,
+    )
+
+    const verify = await secp256k1.schnorr.verify(
+      signature, 
+      hex.decode(messageHash), 
+      hex.decode(publicKey)
+    );
+    
+    expect(verify).toBe(true);
+  })
+
+  // it('can sign message BIP340 for p2sh address', async () => {
+  //   const btcAddress = '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr';
+  //   const taprootAddress = 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq';
+  //   const publicKey = '032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff';
+
+  //   const accounts = [
+  //     {
+  //       id: 0,
+  //       stxAddress: 'STXADDRESS1',
+  //       btcAddress: btcAddress,
+  //       ordinalsAddress: taprootAddress,
+  //       masterPubKey: '12345',
+  //       stxPublicKey: '123',
+  //       btcPublicKey: '123',
+  //     }
+  //   ]
+
+  //   const messageHash = "243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89";
+
+  //   const signature = await signBip340(
+  //     testSeed,
+  //     accounts,
+  //     btcAddress,
+  //     messageHash,
+  //   )
+
+  //   const verify = await secp256k1.schnorr.verify(
+  //     signature, 
+  //     hex.decode(messageHash), 
+  //     hex.decode(publicKey)
+  //   );
+    
+  //   expect(verify).toBe(true);
+  // })
 
 });
