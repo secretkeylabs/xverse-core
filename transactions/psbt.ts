@@ -32,7 +32,7 @@ export function getSigningDerivationPath(
 ) : string {
   const { type } = getAddressInfo(address);
   
-  if (accounts.length <=0 ) {
+  if (accounts.length <= 0) {
     throw new Error('Invalid accounts list')
   }
 
@@ -55,6 +55,10 @@ export function getSigningDerivationPath(
       throw new Error('Unsupported address type')
     }
   })
+
+  if (path.length <= 0) {
+    throw new Error('Address not found');
+  }
 
   return path;
 }

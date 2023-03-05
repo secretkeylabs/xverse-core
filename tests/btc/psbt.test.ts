@@ -194,6 +194,48 @@ describe('Bitcoin PSBT tests', () => {
     }).rejects.toThrowError(new Error(`Error signing PSBT Error: Outputs spends more than inputs amount`));
   })
 
+  it('should fail to sign if account does not exist', async () => {
+    const taprootAddress2 = 'bc1pnc669rz0hyncjzxdgfeqm0dfhfr84ues4dwgq4lr47zpltzvekss4ptlxw';
+
+    const notaddress = "bc1p60h0xp5c69qxvjarv09xa5r7f0pk5pzsfreytcxrurnuz37vxq9qz6nyrp";
+
+    const accounts = [
+      {
+        id: 0,
+        stxAddress: 'STXADDRESS1',
+        btcAddress: notaddress,
+        ordinalsAddress: notaddress,
+        masterPubKey: '12345',
+        stxPublicKey: '123',
+        btcPublicKey: '123',
+      },
+      {
+        id: 1,
+        stxAddress: 'STXADDRESS2',
+        btcAddress: notaddress,
+        ordinalsAddress: notaddress,
+        masterPubKey: '12345',
+        stxPublicKey: '123',
+        btcPublicKey: '123',
+      }
+    ]
+
+    const psbt = "cHNidP8BAKcCAAAAAqEBTmLbp6WYROm5RV2POvBGoxaLWl+kWIIthS0z/EiwAAAAAAD/////oQFOYtunpZhE6blFXY868EajFotaX6RYgi2FLTP8SLABAAAAAP////8C+CoAAAAAAAAiUSCFOvHlfzDk35H0m5zN8Pm2iyPu5CHv9995x/YNaG8NRpCRAAAAAAAAF6kUE1jqEog/yiSINDzTHIwsjZpOc8+HAAAAAAABASsQJwAAAAAAACJRIJ41ooxPuSeJCM1Ccg29qbpGevMwq1yAV+OvhB+sTM2hARcgOARHxBVG5zbz1L+dwHXSMB9SUvMxVuNWT9OT7v/ao0cAAQEgSJ0AAAAAAAAXqRQTWOoSiD/KJIg0PNMcjCyNmk5zz4ciAgIA4tYyJ/3UzeAsFhouYJHMqtSYLtwGv3o/RDts3IV2wUgwRQIhAIaOl4qa2hmet1MttngonQu5oGj2oPvqhLygFo+l+tHlAiBOolD4s9EPrxmgntBBDy9QzAMuDc7GvlSpj3TlsRcaOAEBBBYAFGe2rUg89HflW7BtR1VH5NREU7RzAAAA";
+
+    await expect(async () => {
+      await signPsbt(
+        testSeed,
+        accounts,
+        [{
+          address: taprootAddress2,
+          signingIndexes: [0],
+        }],
+        psbt,
+        true
+      )
+    }).rejects.toThrowError(new Error(`Error signing PSBT Error: Address not found`));
+  })
+
   it('can sign native segwit psbt with multi input + sighash', async () => {
     const btcAddress = 'bc1qf8njhm2nj48x9kltxvmc7vyl9cq7raukwg6mjk';
     const taprootAddress = 'bc1pnc669rz0hyncjzxdgfeqm0dfhfr84ues4dwgq4lr47zpltzvekss4ptlxw';
