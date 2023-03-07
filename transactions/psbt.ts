@@ -13,7 +13,7 @@ import { hex, base64 } from '@scure/base';
 import { getAddressInfo } from 'bitcoin-address-validation';
 
 import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
+import { bip32, script, address } from 'bitcoinjs-lib';
 import * as secp256k1 from '@noble/secp256k1'
 
 export interface InputToSign {
@@ -147,4 +147,104 @@ export async function signBip340(
   );
 
   return hex.encode(signature);
+}
+
+export interface PSBTInput {
+  txid: string,
+  index: number,
+  value: bigint,
+  userSigns: boolean,
+  sighashType: number,
+}
+
+export interface PSBTOutput {
+  address: string,
+  amount: bigint,
+  userReceives: boolean,
+}
+
+export interface ParsedPSBT {
+  inputs: Array<PSBTInput>,
+  outputs: Array<PSBTOutput>,
+  netAmount: bigint
+}
+
+export function parsePsbt(
+  accounts: Array<Account>,
+  inputsToSign: Array<InputToSign>,
+  psbtBase64: string,
+): ParsedPSBT {
+  if (psbtBase64.length <= 0) {
+    throw new Error('Invalid transaction hex');
+  }
+
+  // decode raw tx
+  var psbt: btc.Transaction;
+  try {
+    psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
+  } catch (error) {
+    throw new Error('Error decoding transaction hex');
+  }
+  
+  const inputs: Array<PSBTInput> = [];
+  psbt.inputs.forEach(input => {
+    inputs.push({
+      txid: Buffer.from(input.txid).toString('hex'),
+      index: input.index,
+      value: input.witnessUtxo.amount,
+      sighashType: input.sighashType,
+      userSigns: false
+    })
+  })
+
+  inputsToSign.forEach(inputToSign => {
+    inputToSign.signingIndexes.forEach(index => {
+      inputs[index].userSigns = true;
+    })
+  })
+
+  const outputs: Array<PSBTOutput> = [];
+  psbt.outputs.forEach(output => {
+    const pubKey = Buffer.from(output.script, 3, 20);
+    const outputAddress = address.fromOutputScript(pubKey);
+
+    var userReceives = false;
+
+    accounts.forEach(account => {
+      if (account.btcAddress === outputAddress ||
+          account.ordinalsAddress === outputAddress) {
+            userReceives = true;
+          }
+    })
+
+    outputs.push({
+      address: outputAddress,
+      amount: output.amount,
+      userReceives
+    })
+  });
+
+  var initialValue: bigint = 0n;
+
+  const totalUserSpend = inputs.reduce((accumulator: bigint, input) => {
+    if (input.userSigns) {
+      return accumulator + input.value
+    } else {
+      return accumulator
+    }
+  }, initialValue)
+
+  const totalUserReceive = outputs.reduce((accumulator: bigint, output) => {
+    if (output.userReceives) {
+      return accumulator + output.amount
+    } else {
+      return accumulator
+    }
+  }, initialValue)
+
+  return {
+    inputs,
+    outputs,
+    netAmount: totalUserReceive - totalUserSpend
+  }
 }
