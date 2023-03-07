@@ -318,22 +318,21 @@ describe('Bitcoin PSBT tests', () => {
     const btcAddress = 'bc1qf8njhm2nj48x9kltxvmc7vyl9cq7raukwg6mjk';
     const taprootAddress = 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq';
 
-    const accounts = [
-      {
-        id: 0,
-        stxAddress: 'STXADDRESS1',
-        btcAddress: btcAddress,
-        ordinalsAddress: taprootAddress,
-        masterPubKey: '12345',
-        stxPublicKey: '123',
-        btcPublicKey: '123',
-      }
-    ]
+    const account = {
+      id: 0,
+      stxAddress: 'STXADDRESS1',
+      btcAddress: btcAddress,
+      ordinalsAddress: taprootAddress,
+      masterPubKey: '12345',
+      stxPublicKey: '123',
+      btcPublicKey: '123',
+    }
+    
 
-    const psbt = "cHNidP8BAP0vAQIAAAAEfu91pxspg76DXX6E4xn7G+xIRcs08a5BtCb8yrojdLsAAAAAAP////+RL6fJJtQjQQwSLGIIJ4kfzb1FAwQ2+lnLg9QzkLCT1AAAAAAA/////+asBG9KABjsAJwEeTi3li2Hekv0kd7A/1+wmxP3v64aAAAAAAD/////sQbhf/cXKVg5bb2oYISVAii/cN3bCHzkgIiCz3yREuAAAAAAAP////8EiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lrgLAAAAAAAAF6kU0wZ0/u0ZdCYJvyFXApjG11q0+u+H0AcAAAAAAAAZdqkUAzXnS2EGlz7cG9xaRq7ziH8gm8iIrMQJAAAAAAAAF6kUE1jqEog/yiSINDzTHIwsjZpOc8+HAAAAAAABASuIEwAAAAAAACJRIJ41ooxPuSeJCM1Ccg29qbpGevMwq1yAV+OvhB+sTM2hAQMEgwAAAAEXIDgER8QVRuc289S/ncB10jAfUlLzMVbjVk/Tk+7/2qNHAAEBH4gTAAAAAAAAFgAUSecr7VOVTmLb6zM3jzCfLgHh95YBAwSDAAAAAAEBH3AXAAAAAAAAFgAUSecr7VOVTmLb6zM3jzCfLgHh95YBAwSDAAAAAAEBIIgTAAAAAAAAF6kUBSBQKKuqKg3km+Yijh8xEx6n8rCHIgIDIhXYEigsB5LIU1w3AsyplPXj2pzYUCw+GQ1CLwBm/f9HMEQCIEXMWf5lrjYr3mOAnYQWE5wYXIa4k2DtT2Gj/gqhMYpoAiAtDvJOHAmRcuX/K63U+nAV9z/IU5ro0i+Giq8i08MI2QEBBBYAFIg5mZE8/6WNMX1FM8lMuUh4eI2zAAAAAAA=";
+    const psbt = "cHNidP8BAP06AQIAAAAEfu91pxspg76DXX6E4xn7G+xIRcs08a5BtCb8yrojdLsAAAAAAP////+RL6fJJtQjQQwSLGIIJ4kfzb1FAwQ2+lnLg9QzkLCT1AAAAAAA/////+asBG9KABjsAJwEeTi3li2Hekv0kd7A/1+wmxP3v64aAAAAAAD/////sQbhf/cXKVg5bb2oYISVAii/cN3bCHzkgIiCz3yREuAAAAAAAP////8EiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lrgLAAAAAAAAIlEgG8uZpiTFY4EcF/Gd3sOMiYX0JWto4um8CmkKkdrjC1fQBwAAAAAAABl2qRQDNedLYQaXPtwb3FpGrvOIfyCbyIisxAkAAAAAAAAXqRQTWOoSiD/KJIg0PNMcjCyNmk5zz4cAAAAAAAEBK4gTAAAAAAAAIlEgnjWijE+5J4kIzUJyDb2pukZ68zCrXIBX46+EH6xMzaEBAwSDAAAAARcgOARHxBVG5zbz1L+dwHXSMB9SUvMxVuNWT9OT7v/ao0cAAQEfiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lgEDBIMAAAAAAQEfcBcAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lgEDBIMAAAAAAQEgiBMAAAAAAAAXqRQFIFAoq6oqDeSb5iKOHzETHqfysIciAgMiFdgSKCwHkshTXDcCzKmU9ePanNhQLD4ZDUIvAGb9/0gwRQIhAIfv0FBjbrYWBOPetiaFlIXmclPnAQc4saMUQNwoxUlmAiB8YiTko39mJ75s0GGW60R96Sec00dj+FyxINp+9jq4eAEBBBYAFIg5mZE8/6WNMX1FM8lMuUh4eI2zAAAAAAA=";
 
     const parsedPsbt = parsePsbt(
-      accounts,
+      account,
       [{
         address: taprootAddress,
         signingIndexes: [0],
@@ -341,5 +340,20 @@ describe('Bitcoin PSBT tests', () => {
       psbt
     )
 
+    expect(parsedPsbt.inputs.length).eq(4)
+    expect(parsedPsbt.outputs.length).eq(4)
+    expect(parsedPsbt.inputs[0].value).eq(5000n)
+    expect(parsedPsbt.inputs[1].value).eq(5000n)
+    expect(parsedPsbt.inputs[2].value).eq(6000n)
+    expect(parsedPsbt.inputs[3].value).eq(5000n)
+    expect(parsedPsbt.outputs[0].address).eq('bc1qf8njhm2nj48x9kltxvmc7vyl9cq7raukwg6mjk')
+    expect(parsedPsbt.outputs[1].address).eq('bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq')
+    expect(parsedPsbt.outputs[2].address).eq('1HybreHE1Qy5PvUFozzZ7uNnhHRr1ccEX')
+    expect(parsedPsbt.outputs[3].address).eq('33TKH4kkiFPyTLDNmdNsLggyLeAYre57Qm')
+    expect(parsedPsbt.outputs[0].amount).eq(5000n)
+    expect(parsedPsbt.outputs[1].amount).eq(3000n)
+    expect(parsedPsbt.outputs[2].amount).eq(2000n)
+    expect(parsedPsbt.outputs[3].amount).eq(2500n)
+    expect(parsedPsbt.netAmount).eq(3000n)
   })
 });

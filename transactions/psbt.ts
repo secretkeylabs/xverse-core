@@ -13,8 +13,10 @@ import { hex, base64 } from '@scure/base';
 import { getAddressInfo } from 'bitcoin-address-validation';
 
 import * as bip39 from 'bip39';
-import { bip32, script, address } from 'bitcoinjs-lib';
+import { bip32 } from 'bitcoinjs-lib';
 import * as secp256k1 from '@noble/secp256k1'
+
+import { getBtcNetwork } from './btcNetwork';
 
 export interface InputToSign {
   address: string,
@@ -170,10 +172,13 @@ export interface ParsedPSBT {
 }
 
 export function parsePsbt(
-  accounts: Array<Account>,
+  account: Account,
   inputsToSign: Array<InputToSign>,
   psbtBase64: string,
+  network?: NetworkType
 ): ParsedPSBT {
+  const btcNetwork = getBtcNetwork(network ?? 'Mainnet');
+
   if (psbtBase64.length <= 0) {
     throw new Error('Invalid transaction hex');
   }
@@ -207,17 +212,32 @@ export function parsePsbt(
   const outputs: Array<PSBTOutput> = [];
   // @ts-expect-error:
   psbt.outputs.forEach(output => {
-    const pubKey = Buffer.from(output.script, 3, 20);
-    const outputAddress = address.fromOutputScript(pubKey);
+    const outputScript = btc.OutScript.decode(output.script)
+
+    var outputAddress = '';
+
+    if (outputScript.type === 'ms' || outputScript.type === 'tr') {
+      // @ts-expect-error:
+      outputAddress = btc.Address(btcNetwork).encode({
+        type: outputScript.type, 
+        // @ts-expect-error:
+        pubkey: outputScript.pubkey
+      })
+    } else {
+      // @ts-expect-error:
+      outputAddress = btc.Address(btcNetwork).encode({
+        type: outputScript.type, 
+        // @ts-expect-error:
+        hash: outputScript.hash
+      })
+    }
 
     var userReceives = false;
 
-    accounts.forEach(account => {
-      if (account.btcAddress === outputAddress ||
-          account.ordinalsAddress === outputAddress) {
-            userReceives = true;
-          }
-    })
+    if (account.btcAddress === outputAddress ||
+      account.ordinalsAddress === outputAddress) {
+        userReceives = true;
+      }
 
     outputs.push({
       address: outputAddress,
