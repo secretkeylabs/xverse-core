@@ -187,6 +187,7 @@ export function parsePsbt(
   }
   
   const inputs: Array<PSBTInput> = [];
+  // @ts-expect-error:
   psbt.inputs.forEach(input => {
     inputs.push({
       txid: Buffer.from(input.txid).toString('hex'),
@@ -204,6 +205,7 @@ export function parsePsbt(
   })
 
   const outputs: Array<PSBTOutput> = [];
+  // @ts-expect-error:
   psbt.outputs.forEach(output => {
     const pubKey = Buffer.from(output.script, 3, 20);
     const outputAddress = address.fromOutputScript(pubKey);
