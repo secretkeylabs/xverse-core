@@ -168,7 +168,8 @@ export interface PSBTOutput {
 export interface ParsedPSBT {
   inputs: Array<PSBTInput>,
   outputs: Array<PSBTOutput>,
-  netAmount: bigint
+  netAmount: bigint,
+  fees: bigint
 }
 
 export function parsePsbt(
@@ -248,12 +249,20 @@ export function parsePsbt(
 
   var initialValue: bigint = 0n;
 
+  const totalInputs = inputs.reduce((accumulator: bigint, input) => {
+    return accumulator + input.value
+  }, initialValue)
+
   const totalUserSpend = inputs.reduce((accumulator: bigint, input) => {
     if (input.userSigns) {
       return accumulator + input.value
     } else {
       return accumulator
     }
+  }, initialValue)
+
+  const totalOutputs = outputs.reduce((accumulator: bigint, output) => {
+    return accumulator + output.amount
   }, initialValue)
 
   const totalUserReceive = outputs.reduce((accumulator: bigint, output) => {
@@ -267,6 +276,7 @@ export function parsePsbt(
   return {
     inputs,
     outputs,
-    netAmount: totalUserReceive - totalUserSpend
+    netAmount: totalUserReceive - totalUserSpend,
+    fees: totalInputs - totalOutputs
   }
 }

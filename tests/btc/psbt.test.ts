@@ -355,5 +355,6 @@ describe('Bitcoin PSBT tests', () => {
     expect(parsedPsbt.outputs[2].amount).eq(2000n)
     expect(parsedPsbt.outputs[3].amount).eq(2500n)
     expect(parsedPsbt.netAmount).eq(3000n)
+    expect(parsedPsbt.fees).eq(8500n)
   })
 });
