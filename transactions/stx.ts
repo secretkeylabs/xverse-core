@@ -72,9 +72,10 @@ export async function signTransaction(
 
 export async function broadcastSignedTransaction(
   signedTx: StacksTransaction,
-  txNetwork: StacksNetwork
+  txNetwork: StacksNetwork,
+  attachment: Buffer | undefined = undefined
 ): Promise<string> {
-  const result = await broadcastTransaction(signedTx, txNetwork);
+  const result = await broadcastTransaction(signedTx, txNetwork, attachment);
   if (result.hasOwnProperty('error')) {
     const errorResult = result as TxBroadcastResultRejected;
     throw new Error(errorResult.reason);
