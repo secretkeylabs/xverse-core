@@ -27,6 +27,9 @@ describe('wallet from seed phrase', () => {
       expect(wallet.btcPublicKey).toEqual(
         '032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff'
       );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '5b21869d6643175e0530aeec51d265290d036384990ee60bf089b23ff6b9a367'
+      );
     });
 
     it('restores the same wallet at index 1', async () => {
@@ -44,6 +47,9 @@ describe('wallet from seed phrase', () => {
       expect(wallet.btcPublicKey).toEqual(
         '022e633aba8838c039b2d2214f51ed284d3da7f585744f8975606376c23483d2c1'
       );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '380447c41546e736f3d4bf9dc075d2301f5252f33156e3564fd393eeffdaa347'
+      );
     });
 
     it('restores the same wallet at index 4', async () => {
@@ -60,6 +66,9 @@ describe('wallet from seed phrase', () => {
       );
       expect(wallet.btcPublicKey).toEqual(
         '02e5ec87babb75a7d8057e961f27f66363000cd9dfd74095fb1cb8ceda27f5e3a8'
+      );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '8754dc83200dbe5f134e4092cf563d8363cf33e20ab418006d46dd7a6374dc24'
       );
     });
 })

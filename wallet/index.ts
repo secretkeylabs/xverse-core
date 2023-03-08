@@ -24,7 +24,6 @@ import {
 import { payments, networks, ECPair, bip32, BIP32Interface } from 'bitcoinjs-lib';
 import { NetworkType } from 'types/network';
 import { c32addressDecode } from 'c32check';
-import * as bitcoin from 'bitcoinjs-lib';
 import { ecPairToHexString } from './helper';
 import { Keychain } from 'types/api/xverse/wallet';
 import { BaseWallet } from 'types/wallet';
@@ -110,6 +109,8 @@ export async function walletFromSeedPhrase({
   });
   const btcAddress = segwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
+  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
+
   return {
     stxAddress,
     btcAddress,
@@ -117,6 +118,7 @@ export async function walletFromSeedPhrase({
     masterPubKey,
     stxPublicKey,
     btcPublicKey,
+    ordinalsPublicKey: hex.encode(taprootInternalPubKey),
     seedPhrase: mnemonic,
   };
 }
