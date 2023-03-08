@@ -61,7 +61,7 @@ export async function restoreWalletWithAccounts(
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
         let existingAccount: Account = currentAccounts[index];
-        if (!existingAccount || !existingAccount.ordinalsAddress) {
+        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
           const response = await walletFromSeedPhrase({
             mnemonic,
             index: BigInt(index),
@@ -76,6 +76,7 @@ export async function restoreWalletWithAccounts(
             masterPubKey: response.masterPubKey,
             stxPublicKey: response.stxPublicKey,
             btcPublicKey: response.btcPublicKey,
+            ordinalsPublicKey: response.ordinalsPublicKey,
             bnsName: username,
           };
           return existingAccount;
@@ -100,7 +101,7 @@ export async function createWalletAccount(
   walletAccounts: Account[],
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-   const { stxAddress, btcAddress, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey } =
+   const { stxAddress, btcAddress, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey, ordinalsPublicKey } =
     await walletFromSeedPhrase({
       mnemonic: seedPhrase,
       index: BigInt(accountIndex),
@@ -117,6 +118,7 @@ export async function createWalletAccount(
       masterPubKey,
       stxPublicKey,
       btcPublicKey,
+      ordinalsPublicKey,
       bnsName,
     },
   ];
