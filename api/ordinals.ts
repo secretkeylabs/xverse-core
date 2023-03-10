@@ -24,7 +24,7 @@ export async function fetchBtcOrdinalsData(
   const ordinals: BtcOrdinal[] = [];
   await Promise.all(
     unspentUTXOS.map(async (utxo) => {
-      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}`;
+      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}/${utxo.tx_output_n}`;
       try {
         const ordinal = await axios.get(ordinalContentUrl);
         if (ordinal) {
