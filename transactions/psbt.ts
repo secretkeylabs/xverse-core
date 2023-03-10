@@ -128,7 +128,7 @@ export async function signPsbt(
   return base64.encode(signedPsbt);
 }
 
-export function psbtBase64ToHex(psbtBase64: string) {
+export function psbtBase64ToHex(psbtBase64: string): string {
   if (psbtBase64.length <= 0) {
     throw new Error('Invalid transaction');
   }
@@ -141,7 +141,7 @@ export function psbtBase64ToHex(psbtBase64: string) {
     throw new Error('Error decoding transaction');
   }
 
-  return psbt.toBytes()
+  return psbt.hex
 }
 
 export async function signBip340(
