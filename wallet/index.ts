@@ -32,6 +32,7 @@ import {validate, Network as btcAddressNetwork} from 'bitcoin-address-validation
 import * as btc from 'micro-btc-signer';
 import { hex } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1'
+import { getBtcNetwork } from '../transactions/btcNetwork';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -97,7 +98,8 @@ export async function walletFromSeedPhrase({
   // derive taproot btc address
   const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
   const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
-  const ordinalsAddress = btc.getAddress('tr', privKey)!;
+  const btcNetwork = getBtcNetwork(network);
+  const ordinalsAddress = btc.getAddress('tr', privKey, btcNetwork)!;
 
   const segwitBtcAddress = payments.p2sh({
     redeem: payments.p2wpkh({

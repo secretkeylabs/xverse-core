@@ -71,4 +71,24 @@ describe('wallet from seed phrase', () => {
         '8754dc83200dbe5f134e4092cf563d8363cf33e20ab418006d46dd7a6374dc24'
       );
     });
+
+    it('restores the same wallet testnet', async () => {
+      const wallet = await walletFromSeedPhrase({mnemonic: testSeed, network: 'Testnet', index: 0n});
+      
+      expect(wallet.stxAddress).toEqual('ST147ST7ESA3RES888QQMV6AK7GZK93ZR75HPGC8G');
+      expect(wallet.btcAddress).toEqual('2N2FTDg7yCJ58TxgovxpDYUZ3THYHZ2AuXT');
+      expect(wallet.ordinalsAddress).toEqual('tb1p4raql9qqc67e593dk8h8y307tenl8lghev8x8y5xx8u4rqldlksqrx8cc3');
+      expect(wallet.masterPubKey).toEqual(
+        '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3'
+      );
+      expect(wallet.stxPublicKey).toEqual(
+        '025df9b0ea2c81e4f8360bf9a16638ed3678bc84dbdc04124f5db86996999aa9a8'
+      );
+      expect(wallet.btcPublicKey).toEqual(
+        '03b814fb54bdcc420406d5567716871c25b23edab8e42c36c91906a5ddcbf1b8de'
+      );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '7db4ed7080ebc1a2769ae5567d57849f558aae256f9f3eabaa79282e32bc8721'
+      );
+    });
 })
