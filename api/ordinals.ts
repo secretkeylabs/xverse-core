@@ -3,7 +3,7 @@ import {
   BtcOrdinal,
 } from '../types';
 import axios from 'axios';
-import { ORDINAL_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
+import { ORDINAL_BROADCAST_URI, ORDINAL_TESTNET_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
 import { fetchBtcAddressUnspent } from './btc';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
@@ -57,7 +57,8 @@ export async function broadcastRawBtcOrdinalTransaction(
   rawTx: string,
   network: NetworkType,
 ): Promise<string> {
-  return axios.post(ORDINAL_BROADCAST_URI, rawTx, {timeout: 45000}).then((response) => {
+  const broadcastUrl = network === "Mainnet" ? ORDINAL_BROADCAST_URI : ORDINAL_TESTNET_BROADCAST_URI
+  return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
     return response.data;
   });
 }
