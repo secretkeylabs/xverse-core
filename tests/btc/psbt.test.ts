@@ -3,12 +3,14 @@ import {
   getSigningDerivationPath,
   signPsbt,
   parsePsbt,
-  signBip340
+  signBip340,
+  psbtBase64ToHex
 } from '../../transactions/psbt';
 import { testSeed } from '../mocks';
 import * as btc from 'micro-btc-signer';
 import { hex, base64 } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1'
+import { getBtcNetwork } from '../../transactions/btcNetwork';
 
 describe('Bitcoin PSBT tests', () => {
   it('can get signing BTC derivation path from address', async () => {
@@ -30,6 +32,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       },
       {
         id: 1,
@@ -39,6 +42,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       },
       {
         id: 2,
@@ -48,6 +52,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
 
@@ -99,6 +104,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       },
       {
         id: 1,
@@ -108,6 +114,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
 
@@ -142,6 +149,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
   
@@ -178,6 +186,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
   
@@ -211,6 +220,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       },
       {
         id: 1,
@@ -220,6 +230,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
 
@@ -252,6 +263,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
 
@@ -293,6 +305,7 @@ describe('Bitcoin PSBT tests', () => {
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
+        ordinalsPublicKey: '123'
       }
     ]
 
@@ -326,6 +339,7 @@ describe('Bitcoin PSBT tests', () => {
       masterPubKey: '12345',
       stxPublicKey: '123',
       btcPublicKey: '123',
+      ordinalsPublicKey: '123'
     }
     
 
@@ -357,4 +371,12 @@ describe('Bitcoin PSBT tests', () => {
     expect(parsedPsbt.netAmount).eq(3000n)
     expect(parsedPsbt.fees).eq(8500n)
   })
+
+  it('can convert PSBT from base64 to hex', async () => {
+    const psbtBase64 = "cHNidP8BAP06AQIAAAAEfu91pxspg76DXX6E4xn7G+xIRcs08a5BtCb8yrojdLsAAAAAAP////+RL6fJJtQjQQwSLGIIJ4kfzb1FAwQ2+lnLg9QzkLCT1AAAAAAA/////+asBG9KABjsAJwEeTi3li2Hekv0kd7A/1+wmxP3v64aAAAAAAD/////sQbhf/cXKVg5bb2oYISVAii/cN3bCHzkgIiCz3yREuAAAAAAAP////8EiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lrgLAAAAAAAAIlEgG8uZpiTFY4EcF/Gd3sOMiYX0JWto4um8CmkKkdrjC1fQBwAAAAAAABl2qRQDNedLYQaXPtwb3FpGrvOIfyCbyIisxAkAAAAAAAAXqRQTWOoSiD/KJIg0PNMcjCyNmk5zz4cAAAAAAAEBK4gTAAAAAAAAIlEgnjWijE+5J4kIzUJyDb2pukZ68zCrXIBX46+EH6xMzaEBAwSDAAAAARcgOARHxBVG5zbz1L+dwHXSMB9SUvMxVuNWT9OT7v/ao0cAAQEfiBMAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lgEDBIMAAAAAAQEfcBcAAAAAAAAWABRJ5yvtU5VOYtvrMzePMJ8uAeH3lgEDBIMAAAAAAQEgiBMAAAAAAAAXqRQFIFAoq6oqDeSb5iKOHzETHqfysIciAgMiFdgSKCwHkshTXDcCzKmU9ePanNhQLD4ZDUIvAGb9/0gwRQIhAIfv0FBjbrYWBOPetiaFlIXmclPnAQc4saMUQNwoxUlmAiB8YiTko39mJ75s0GGW60R96Sec00dj+FyxINp+9jq4eAEBBBYAFIg5mZE8/6WNMX1FM8lMuUh4eI2zAAAAAAA=";
+    const expectTxHex = "02000000047eef75a71b2983be835d7e84e319fb1bec4845cb34f1ae41b426fccaba2374bb0000000000ffffffff912fa7c926d423410c122c620827891fcdbd45030436fa59cb83d43390b093d40000000000ffffffffe6ac046f4a0018ec009c047938b7962d877a4bf491dec0ff5fb09b13f7bfae1a0000000000ffffffffb106e17ff7172958396dbda86084950228bf70dddb087ce4808882cf7c9112e00000000000ffffffff04881300000000000016001449e72bed53954e62dbeb33378f309f2e01e1f796b80b0000000000002251201bcb99a624c563811c17f19ddec38c8985f4256b68e2e9bc0a690a91dae30b57d0070000000000001976a9140335e74b6106973edc1bdc5a46aef3887f209bc888acc40900000000000017a9141358ea12883fca2488343cd31c8c2c8d9a4e73cf8700000000"
+    const txHex = psbtBase64ToHex(psbtBase64)
+    expect(hex.encode(txHex)).eq(expectTxHex)
+  })
+
 });

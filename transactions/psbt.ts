@@ -75,7 +75,7 @@ export async function signPsbt(
   network?: NetworkType
 ): Promise<string> {
   if (psbtBase64.length <= 0) {
-    throw new Error('Invalid transaction hex');
+    throw new Error('Invalid transaction');
   }
 
   // decode raw tx
@@ -83,7 +83,7 @@ export async function signPsbt(
   try {
     psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
-    throw new Error('Error decoding transaction hex');
+    throw new Error('Error decoding transaction');
   }
 
   const seed = await bip39.mnemonicToSeed(seedPhrase);
@@ -126,6 +126,22 @@ export async function signPsbt(
 
   const signedPsbt = psbt.toPSBT(0);
   return base64.encode(signedPsbt);
+}
+
+export function psbtBase64ToHex(psbtBase64: string) {
+  if (psbtBase64.length <= 0) {
+    throw new Error('Invalid transaction');
+  }
+
+  // decode raw tx
+  var psbt: btc.Transaction;
+  try {
+    psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
+  } catch (error) {
+    throw new Error('Error decoding transaction');
+  }
+
+  return psbt.toBytes()
 }
 
 export async function signBip340(
