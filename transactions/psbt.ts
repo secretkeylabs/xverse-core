@@ -211,10 +211,17 @@ export function parsePsbt(
   const inputs: Array<PSBTInput> = [];
   // @ts-expect-error:
   psbt.inputs.forEach(input => {
+    var value = 0n;
+    if(!input.witnessUtxo) {
+      value = input.nonWitnessUtxo.outputs[input.index].amount
+    } else {
+      value = input.witnessUtxo.amount
+    }
+    
     inputs.push({
       txid: Buffer.from(input.txid).toString('hex'),
       index: input.index,
-      value: input.witnessUtxo.amount,
+      value: value,
       sighashType: input.sighashType,
       userSigns: false
     })
