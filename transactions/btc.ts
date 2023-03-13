@@ -357,20 +357,22 @@ export async function getBtcFeesForNonOrdinalBtcSend(
     const changeAddress = btcAddress;
 
     // Calculate transaction fee
-    const { fee } = await getFee(
+    var selectedFeeRate = feeRate.regular;
+    if (feeMode && feeMode === 'high') {
+      selectedFeeRate = feeRate.priority
+    }
+  
+    // Calculate fee
+    var calculatedFee = await calculateFee(      
       unspentOutputs,
-      unspentOutputs,
-      sumSelectedOutputs,
       satsToSend,
       recipients,
-      feeRate,
+      new BigNumber(selectedFeeRate),
       changeAddress,
-      network,
-      undefined,
-      feeMode
+      network
     );
 
-    return fee;
+    return calculatedFee;
   } catch (error) {
     return Promise.reject(error.toString());
   }
