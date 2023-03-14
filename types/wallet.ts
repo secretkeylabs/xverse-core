@@ -5,5 +5,6 @@ export interface BaseWallet {
   masterPubKey: string;
   stxPublicKey: string;
   btcPublicKey: string;
+  ordinalsPublicKey: string;
   seedPhrase: string;
 }

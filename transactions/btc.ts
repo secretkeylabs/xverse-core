@@ -324,6 +324,60 @@ export async function getBtcFeesForOrdinalSend(
   }
 }
 
+// Used to calculate fees for setting low/high fee settings
+// Should replace this function
+export async function getBtcFeesForNonOrdinalBtcSend(
+  recipientAddress: string,
+  nonOrdinalUtxos: Array<BtcUtxoDataResponse>,
+  btcAddress: string,
+  network: NetworkType,
+  feeMode?: string
+): Promise<BigNumber> {
+  try {
+    const unspentOutputs = nonOrdinalUtxos
+
+    var feeRate: BtcFeeResponse = defaultFeeRate;
+
+    feeRate = await fetchBtcFeeRate();
+
+    var sumSelectedOutputs = sumUnspentOutputs(unspentOutputs);
+    var satsToSend = sumSelectedOutputs
+
+    if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+    }
+
+    const recipients = [
+      {
+        address: recipientAddress,
+        amountSats: new BigNumber(satsToSend),
+      },
+    ];
+
+    const changeAddress = btcAddress;
+
+    // Calculate transaction fee
+    var selectedFeeRate = feeRate.regular;
+    if (feeMode && feeMode === 'high') {
+      selectedFeeRate = feeRate.priority
+    }
+  
+    // Calculate fee
+    var calculatedFee = await calculateFee(      
+      unspentOutputs,
+      satsToSend,
+      recipients,
+      new BigNumber(selectedFeeRate),
+      changeAddress,
+      network
+    );
+
+    return calculatedFee;
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+}
+
 export async function getFee(
   unspentOutputs: Array<BtcUtxoDataResponse>,
   selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
@@ -671,4 +725,84 @@ export async function signOrdinalSendTransaction(
   }
 }
 
+export async function signNonOrdinalBtcSendTransaction(
+  recipientAddress: string,
+  nonOrdinalUtxos: Array<BtcUtxoDataResponse>,
+  accountIndex: number,
+  seedPhrase: string,
+  network: NetworkType,
+  fee?: BigNumber
+): Promise<SignedBtcTx> {
+  // Get sender address unspent outputs
+  const unspentOutputs = nonOrdinalUtxos
+
+  var feeRate: BtcFeeResponse = defaultFeeRate;
+
+  if (!fee) {
+    feeRate = await fetchBtcFeeRate();
+  }
+
+  // Get sender address payment and ordinals private key
+  const taprootPrivateKey = await getBtcTaprootPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network,
+  });
+
+  // Select unspent outputs
+  var selectedUnspentOutputs = unspentOutputs
+
+  var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+  const recipients = [{
+    address: recipientAddress,
+    amountSats: sumSelectedOutputs,
+  }];
+
+  const changeAddress = "";
+
+  // Calculate transaction fee
+  var calculatedFee: BigNumber = new BigNumber(0);
+  if (!fee) {
+    calculatedFee = await calculateFee(      
+      selectedUnspentOutputs,
+      sumSelectedOutputs,
+      recipients,
+      new BigNumber(feeRate.regular),
+      changeAddress,
+      network
+    );
+  }
+
+  try {
+    const tx = new btc.Transaction();
+    const btcNetwork = getBtcNetwork(network);
+  
+    // Create spend
+    const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
+    const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);  
+  
+    addInputsTaproot(tx, selectedUnspentOutputs, taprootInternalPubKey, p2tr)
+  
+    // Add outputs
+    recipients.forEach((recipient) => {
+      addOutput(tx, recipient.address, recipient.amountSats.minus(calculatedFee), btcNetwork);
+    });
+  
+    // Sign inputs
+    tx.sign(hex.decode(taprootPrivateKey))
+    tx.finalize();
+
+    const signedBtcTx: SignedBtcTx = {
+      tx: tx,
+      signedTx: tx.hex,
+      fee: fee ?? calculatedFee,
+      total: sumSelectedOutputs,
+    };
+
+    return Promise.resolve(signedBtcTx);
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+}
 
