@@ -1,6 +1,6 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "0.10.0-beta.5",
+  "version": "0.10.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
@@ -29,8 +29,7 @@
     "build-debug": "webpack --mode development",
     "build": "webpack --mode production",
     "clean": "rimraf dist",
-    "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist",
-    "postinstall": "npm run build:esm",
+    "build:esm": "npm run clean && tsc --build",
     "test": "vitest run",
     "test-dev": "vitest"
   },

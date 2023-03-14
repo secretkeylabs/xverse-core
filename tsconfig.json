@@ -2,7 +2,7 @@
   "compilerOptions": {
     "incremental": true,
     "target": "es2020",
-    "module": "commonjs",
+    "module": "ES6",
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
@@ -16,7 +16,7 @@
     },
     "declaration": true,
     "sourceMap": true,
-    "outDir": "lib",
+    "outDir": "dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
