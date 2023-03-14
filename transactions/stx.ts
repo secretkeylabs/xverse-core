@@ -1,4 +1,4 @@
-import { StacksMainnet, StacksTestnet } from '@stacks/network';
+import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
 import {
   AddressHashMode,
   addressToString,
@@ -44,9 +44,7 @@ import {
   getNonce as fetchNewNonce,
 } from '@stacks/transactions';
 import{
-  NetworkType,
   PostConditionsOptions,
-  SettingsNetwork,
   StxMempoolTransactionData,
 } from 'types';
 import { getStxAddressKeyChain } from '../wallet/index';
@@ -57,12 +55,12 @@ export async function signTransaction(
   unsignedTx: StacksTransaction,
   seedPhrase: string,
   accountIndex: number,
-  network: NetworkType
+  network: StacksNetwork
 ): Promise<StacksTransaction> {
   const tx = unsignedTx;
   const { privateKey } = await getStxAddressKeyChain(
     seedPhrase,
-    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
+    network === new StacksMainnet() ? ChainID.Mainnet : ChainID.Testnet,
     accountIndex
   );
   const signer = new TransactionSigner(tx);
@@ -74,13 +72,10 @@ export async function signTransaction(
 
 export async function broadcastSignedTransaction(
   signedTx: StacksTransaction,
-  network: NetworkType
+  txNetwork: StacksNetwork,
+  attachment: Buffer | undefined = undefined
 ): Promise<string> {
-  const txNetwork =
-    network === 'Mainnet'
-      ? new StacksMainnet()
-      : new StacksTestnet();
-  const result = await broadcastTransaction(signedTx, txNetwork);
+  const result = await broadcastTransaction(signedTx, txNetwork, attachment);
   if (result.hasOwnProperty('error')) {
     const errorResult = result as TxBroadcastResultRejected;
     throw new Error(errorResult.reason);
@@ -96,7 +91,7 @@ export async function broadcastSignedTransaction(
 export async function signMultiStxTransactions(
   unsignedTxs: Array<StacksTransaction>,
   accountIndex: number,
-  network: NetworkType,
+  network: StacksNetwork,
   seedPhrase: string
 ): Promise<Array<StacksTransaction>> {
   try {
@@ -107,7 +102,7 @@ export async function signMultiStxTransactions(
     });
 
     return Promise.all(signedTxPromises);
-  } catch (error: any) {
+  } catch (error) {
     return Promise.reject(error.toString());
   }
 }
@@ -131,13 +126,15 @@ export async function generateUnsignedSTXTokenTransfer(
   publicKey: string,
   recipientAddress: string,
   amount: string,
-  network: NetworkType,
+  txNetwork: StacksNetwork,
   memo?: string,
-  sponsored?: boolean
+  sponsored?: boolean,
+  anchorMode?: AnchorMode,
+  postConditions?: PostCondition[],
+  postConditionMode?: PostConditionMode,
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
-  const txNetwork = network === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
   const txOptions: UnsignedTokenTransferOptions = {
     publicKey: publicKey,
     recipient: recipientAddress,
@@ -146,7 +143,9 @@ export async function generateUnsignedSTXTokenTransfer(
     network: txNetwork,
     fee: 0,
     sponsored: sponsored,
-    anchorMode: AnchorMode.Any,
+    anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
+    postConditionMode,
+    postConditions,
   };
 
   return makeUnsignedSTXTokenTransfer(txOptions);
@@ -158,9 +157,8 @@ export async function generateUnsignedSTXTokenTransfer(
  */
 export async function estimateFees(
   transaction: StacksTransaction,
-  network: NetworkType
+  txNetwork: StacksNetwork,
 ): Promise<bigint> {
-  const txNetwork = network === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
   return estimateTransfer(transaction, txNetwork).then((fee) => {
     return BigInt(fee.toString());
   });
@@ -172,8 +170,12 @@ export async function generateUnsignedStxTokenTransferTransaction(
   memo: string,
   pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
-  network: NetworkType,
-  sponsored?: boolean
+  network: StacksNetwork,
+  sponsored?: boolean,
+  anchorMode?: AnchorMode,
+  postConditions?: PostCondition[],
+  postConditionMode?: PostConditionMode,
+  nonce?: bigint
 ): Promise<StacksTransaction> {
   try {
     var unsignedTx: StacksTransaction | null = null;
@@ -186,17 +188,22 @@ export async function generateUnsignedStxTokenTransferTransaction(
       amount,
       network,
       memo,
-      sponsored
+      sponsored,
+      anchorMode,
+      postConditions,
+      postConditionMode
     );
     fee = await estimateFees(unsignedTx, network);
-
     total = amountBigint + fee;
     unsignedTx.setFee(fee);
-
-    const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-    setNonce(unsignedTx, nonce);
+    const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+    if (nonce) {
+      setNonce(unsignedTx, BigInt(nonce));
+    } else {
+     setNonce(unsignedTx, newNonce);
+    }
     return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }
@@ -219,26 +226,31 @@ export async function generateUnsignedStxTokenTransferTransaction(
      postConditionMode,
      sponsored,
      nonce,
+     anchorMode,
    } = unsignedTx;
-   const txNetwork = network.type === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
    const txOptions: UnsignedContractCallOptions = {
      contractAddress,
      contractName,
      functionName,
      functionArgs,
      publicKey,
-     network: txNetwork,
+     network,
      postConditions: postConditions,
      postConditionMode: postConditionMode ?? 1,
-     anchorMode: AnchorMode.Any,
+     anchorMode: anchorMode ? anchorMode :  AnchorMode.Any,
      sponsored: sponsored,
    };
 
    if (nonce) {
      txOptions['nonce'] = BigInt(nonce);
    }
-
-   return makeUnsignedContractCall(txOptions);
+   try {
+    const unsigned = await makeUnsignedContractCall(txOptions);
+    return unsigned;
+   } catch (err) {
+     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
+     return unsigned;
+   }
  }
 
 /**
@@ -247,10 +259,9 @@ export async function generateUnsignedStxTokenTransferTransaction(
  */
 export async function estimateContractCallFees(
   transaction: StacksTransaction,
-  network: SettingsNetwork
+  network: StacksNetwork
 ): Promise<bigint> {
-  const txNetwork = network.type === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
-  return estimateContractFunctionCall(transaction, txNetwork).then((fee) => {
+  return estimateContractFunctionCall(transaction, network).then((fee) => {
     return fee;
   });
 }
@@ -339,7 +350,7 @@ export async function generateUnsignedTransaction(
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
     return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }
@@ -431,27 +442,6 @@ export async function makeUnsignedContractDeploy(
   return transaction;
 }
 
-
-export function generateContractDeployment(options: {
-  contractName: string;
-  codeBody: string;
-  postConditions?: PostCondition[];
-  postConditionMode?: PostConditionMode;
-  publicKey: string;
-  network: NetworkType;
-  sponsored?: boolean;
-}): Promise<StacksTransaction> {
-  const txNetwork =
-    options.network === 'Mainnet' ? new StacksMainnet() : new StacksTestnet();
-
-  const txOptions = {
-    ...options,
-    network: txNetwork,
-  };
-
-  return makeUnsignedContractDeploy(txOptions);
-}
-
 export async function generateContractDeployTransaction(options: {
   codeBody: string;
   contractName: string;
@@ -459,16 +449,22 @@ export async function generateContractDeployTransaction(options: {
   postConditionMode?: PostConditionMode;
   pendingTxs: StxMempoolTransactionData[];
   publicKey: string;
-  network: NetworkType;
+  network: StacksNetwork;
   sponsored?: boolean;
+  anchorMode?: AnchorMode;
+  nonce?: bigint;
 }): Promise<StacksTransaction> {
   try {
-    const unsignedTx = await generateContractDeployment(options);
-    const nonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
-
-    setNonce(unsignedTx, nonce);
-    return Promise.resolve(unsignedTx);
-  } catch (err: any) {
+    const { nonce } = options;
+    const unsignedTx = await makeUnsignedContractDeploy(options);
+    if (nonce) {
+      return Promise.resolve(unsignedTx);
+    } else {
+      const newNonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
+      setNonce(unsignedTx, newNonce);
+      return Promise.resolve(unsignedTx);
+    }
+  } catch (err) {
     return Promise.reject(err.toString());
   }
 }

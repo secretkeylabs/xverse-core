@@ -20,8 +20,12 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "useUnknownInCatchVariables": false,
     "noImplicitAny": true,
     "allowUnreachableCode": false,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "./tests",
+  ],
 }

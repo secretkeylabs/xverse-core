@@ -1,6 +1,7 @@
 export * from './wallet';
 export * from './account';
 export * from './network';
+export * from './error';
 export * from './api/xverse/wallet';
 export * from './api/xverse/transaction';
 export * from './api/xverse/coins';
@@ -16,6 +17,7 @@ export {
   BtcTransactionDataResponse,
   BtcAddressData,
   BtcTransactionsDataResponse,
+  BtcOrdinal,
 } from './api/blockcypher/wallet';
 export {
   AccountAssetsListData,
@@ -35,3 +37,7 @@ export {
   StackingStateData,
   Pool,
 } from './api/xverse/stacking';
+export {
+  OrdinalInfo,
+} from './api/xverse/ordinals';
+export * from './api/blockstream/transactions';

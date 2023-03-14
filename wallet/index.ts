@@ -1,13 +1,17 @@
 import crypto from 'crypto';
 import * as bip39 from 'bip39';
-import * as bip32 from 'bip32';
+import { hashMessage } from "@stacks/encryption";
 import {
   BTC_PATH_WITHOUT_INDEX,
   BTC_TESTNET_PATH_WITHOUT_INDEX,
+  BTC_TAPROOT_PATH_WITHOUT_INDEX,
+  BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
+  BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
+  BTC_SEGWIT_PATH_PURPOSE,
+  BTC_TAPROOT_PATH_PURPOSE
 } from '../constant';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import {
   ChainID,
   publicKeyToString,
@@ -17,14 +21,18 @@ import {
   TransactionVersion,
   AddressVersion,
 } from '@stacks/transactions';
-import { payments, networks, ECPair, BIP32Interface } from 'bitcoinjs-lib';
+import { payments, networks, ECPair, bip32, BIP32Interface } from 'bitcoinjs-lib';
 import { NetworkType } from 'types/network';
 import { c32addressDecode } from 'c32check';
-import * as bitcoin from 'bitcoinjs-lib';
 import { ecPairToHexString } from './helper';
 import { Keychain } from 'types/api/xverse/wallet';
 import { BaseWallet } from 'types/wallet';
 import { deriveWalletConfigKey } from '../gaia';
+import {validate, Network as btcAddressNetwork} from 'bitcoin-address-validation';
+import * as btc from 'micro-btc-signer';
+import { hex } from '@scure/base';
+import * as secp256k1 from '@noble/secp256k1'
+import { getBtcNetwork } from '../transactions/btcNetwork';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
@@ -68,24 +76,31 @@ export async function walletFromSeedPhrase({
   index: BigInt;
   network: NetworkType;
 }): Promise<BaseWallet> {
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
     index
   );
+  
   const { address, privateKey } = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
-  const seed = await bip39.mnemonicToSeed(mnemonic);
   const master = bip32.fromSeed(seed);
   const masterPubKey = master.publicKey.toString('hex');
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
   // derive segwit btc address
-
   const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
-
   const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
+
+  // derive taproot btc address
+  const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
+  const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
+  const btcNetwork = getBtcNetwork(network);
+  const ordinalsAddress = btc.getAddress('tr', privKey, btcNetwork)!;
+
   const segwitBtcAddress = payments.p2sh({
     redeem: payments.p2wpkh({
       pubkey: keyPair.publicKey,
@@ -96,20 +111,39 @@ export async function walletFromSeedPhrase({
   });
   const btcAddress = segwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
+  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
+
   return {
     stxAddress,
     btcAddress,
+    ordinalsAddress,
     masterPubKey,
     stxPublicKey,
     btcPublicKey,
+    ordinalsPublicKey: hex.encode(taprootInternalPubKey),
     seedPhrase: mnemonic,
   };
 }
 
-function getBitcoinDerivationPath({ index, network }: { index: BigInt; network: NetworkType }) {
+export function getBitcoinDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
   return network === 'Mainnet'
-    ? `${BTC_PATH_WITHOUT_INDEX}${index.toString()}`
-    : `${BTC_TESTNET_PATH_WITHOUT_INDEX}${index.toString()}`;
+    ? `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+}
+
+export function getSegwitDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
+  return network === 'Mainnet'
+    ? `${BTC_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+}
+
+export function getTaprootDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
+  const accountIndex = account ? account.toString() : '0'
+  return network === 'Mainnet'
+    ? `${BTC_TAPROOT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_TAPROOT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
 }
 
 export async function getBtcPrivateKey({
@@ -125,6 +159,22 @@ export async function getBtcPrivateKey({
   const master = bip32.fromSeed(seed);
 
   const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
+  return btcChild.privateKey!.toString('hex');
+}
+
+export async function getBtcTaprootPrivateKey({
+  seedPhrase,
+  index,
+  network,
+}: {
+  seedPhrase: string;
+  index: BigInt;
+  network: NetworkType;
+}): Promise<string> {
+  const seed = await bip39.mnemonicToSeed(seedPhrase);
+  const master = bip32.fromSeed(seed);
+
+  const btcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
   return btcChild.privateKey!.toString('hex');
 }
 
@@ -172,10 +222,10 @@ export function validateBtcAddress({
   btcAddress: string;
   network: NetworkType;
 }): boolean {
-  const btcNetwork = network === 'Mainnet' ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
+  const btcNetwork =
+    network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
   try {
-    bitcoin.address.toOutputScript(btcAddress, btcNetwork);
-    return true;
+    return validate(btcAddress, btcNetwork);
   } catch (error) {
     return false;
   }
@@ -227,7 +277,11 @@ export async function getStxAddressKeyChain(
   chainID: ChainID,
   accountIndex: number
 ): Promise<Keychain> {
-  const rootNode = await deriveRootKeychainFromMnemonic(mnemonic);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }
+
+export { hashMessage };
+

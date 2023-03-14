@@ -5,7 +5,7 @@ import {
   ContractCall,
 } from '../shared/transaction';
 import { AnchorMode, ClarityValue, cvToHex, PostCondition, PostConditionMode, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
-import { SettingsNetwork, StxMempoolTransactionData } from 'types/network';
+import { StxMempoolTransactionData } from 'types/network';
 import { StacksNetwork } from '@stacks/network';
 export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
 
@@ -17,7 +17,7 @@ export type UnsignedStacksTransation = {
   contractName: string,
   assetName: string,
   publicKey: string,
-  network: SettingsNetwork,
+  network: StacksNetwork,
   pendingTxs: StxMempoolTransactionData[],
   memo?: string,
   isNFT?: boolean,
@@ -29,11 +29,12 @@ export type UnsignedContractCallTransaction = {
   contractName: string,
   functionName: string,
   functionArgs: ClarityValue[],
-  network: SettingsNetwork,
+  network: StacksNetwork,
   nonce?: bigint,
   postConditions: PostCondition[],
   sponsored?: boolean,
-  postConditionMode?: number
+  postConditionMode?: number,
+  anchorMode?: AnchorMode,
 }
 
 export type StxMempoolResponse = {
