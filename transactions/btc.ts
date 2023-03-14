@@ -772,6 +772,8 @@ export async function signNonOrdinalBtcSendTransaction(
       changeAddress,
       network
     );
+  } else {
+    calculatedFee = fee;
   }
 
   try {
