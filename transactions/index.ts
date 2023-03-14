@@ -30,6 +30,7 @@ import {
   generateUnsignedDelegateTransaction,
   generateUnsignedRevokeTransaction,
 } from './stacking'
+import { ParsedPSBT, parsePsbt, PSBTInput, PSBTOutput } from './psbt';
 
 export {
   signBtcTransaction,
@@ -57,4 +58,8 @@ export {
   generateUnsignedAllowContractCallerTransaction,
   generateUnsignedDelegateTransaction,
   generateUnsignedRevokeTransaction,
+  parsePsbt,
+  ParsedPSBT,
+  PSBTOutput,
+  PSBTInput,
 };

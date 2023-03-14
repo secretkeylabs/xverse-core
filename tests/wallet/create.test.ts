@@ -27,6 +27,9 @@ describe('wallet from seed phrase', () => {
       expect(wallet.btcPublicKey).toEqual(
         '032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff'
       );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '5b21869d6643175e0530aeec51d265290d036384990ee60bf089b23ff6b9a367'
+      );
     });
 
     it('restores the same wallet at index 1', async () => {
@@ -44,6 +47,9 @@ describe('wallet from seed phrase', () => {
       expect(wallet.btcPublicKey).toEqual(
         '022e633aba8838c039b2d2214f51ed284d3da7f585744f8975606376c23483d2c1'
       );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '380447c41546e736f3d4bf9dc075d2301f5252f33156e3564fd393eeffdaa347'
+      );
     });
 
     it('restores the same wallet at index 4', async () => {
@@ -60,6 +66,29 @@ describe('wallet from seed phrase', () => {
       );
       expect(wallet.btcPublicKey).toEqual(
         '02e5ec87babb75a7d8057e961f27f66363000cd9dfd74095fb1cb8ceda27f5e3a8'
+      );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '8754dc83200dbe5f134e4092cf563d8363cf33e20ab418006d46dd7a6374dc24'
+      );
+    });
+
+    it('restores the same wallet testnet', async () => {
+      const wallet = await walletFromSeedPhrase({mnemonic: testSeed, network: 'Testnet', index: 0n});
+      
+      expect(wallet.stxAddress).toEqual('ST147ST7ESA3RES888QQMV6AK7GZK93ZR75HPGC8G');
+      expect(wallet.btcAddress).toEqual('2N2FTDg7yCJ58TxgovxpDYUZ3THYHZ2AuXT');
+      expect(wallet.ordinalsAddress).toEqual('tb1p4raql9qqc67e593dk8h8y307tenl8lghev8x8y5xx8u4rqldlksqrx8cc3');
+      expect(wallet.masterPubKey).toEqual(
+        '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3'
+      );
+      expect(wallet.stxPublicKey).toEqual(
+        '025df9b0ea2c81e4f8360bf9a16638ed3678bc84dbdc04124f5db86996999aa9a8'
+      );
+      expect(wallet.btcPublicKey).toEqual(
+        '03b814fb54bdcc420406d5567716871c25b23edab8e42c36c91906a5ddcbf1b8de'
+      );
+      expect(wallet.ordinalsPublicKey).toEqual(
+        '7db4ed7080ebc1a2769ae5567d57849f558aae256f9f3eabaa79282e32bc8721'
       );
     });
 })
