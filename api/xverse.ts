@@ -94,7 +94,8 @@ export async function fetchAppInfo(): Promise<FeesMultipliers | null> {
 }
 
 export async function fetchStackingPoolInfo(source?: string): Promise<StackingPoolInfo> {
-  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/info/${source}`, {
+  const sourceQueryParam: string = source ? `?source=${source}` : '';
+  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/info${sourceQueryParam}`, {
     method: 'GET',
   })
     .then((response) => response.json())
