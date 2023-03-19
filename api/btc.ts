@@ -16,14 +16,18 @@ export async function fetchBtcTransactionData(
   network: NetworkType
 ): Promise<string> {
   const apiUrl = {
-    Mainnet: `https://api.blockcypher.com/v1/btc/main/txs/${tx_hash}`,
-    Testnet: `https://api.blockcypher.com/v1/btc/test3/txs/${tx_hash}`,
-    Regtest: `https://api.blockcypher.com/v1/bcy/test/txs/${tx_hash}`,
+    Mainnet: `https://api.blockcypher.com/v1/btc/main/txs/${tx_hash}?includeHex=true`,
+    Testnet: `https://api.blockcypher.com/v1/btc/test3/txs/${tx_hash}?includeHex=true`,
+    BlockCypher: `https://api.blockcypher.com/v1/bcy/test/txs/${tx_hash}?includeHex=true`,
   };
+  console.log('xverse-core/btc.ts/fetchBtcTransactionData | tx_hash: ', tx_hash);
+  console.log('xverse-core/btc.ts/fetchBtcTransactionData | network: ', network);
+  console.log('xverse-core/btc.ts/fetchBtcTransactionData | url: ', apiUrl[network])
 
   return axios
     .get<BtcTransactionData>(apiUrl[network], { headers: { 'Access-Control-Allow-Origin': '*' } })
     .then((response) => {
+      console.log('xverse-core/btc.ts/fetchBtcTransactionData | BtcTransactionData: ', response);
       const rawTx: string = response.data.hex;
       return rawTx;
     });
@@ -36,7 +40,7 @@ export async function fetchBtcAddressUnspent(
   const apiUrl = {
     Mainnet: `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=50`,
     Testnet: `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=50`,
-    Regtest: `https://api.blockcypher.com/v1/bcy/test/assrs/${btcAddress}?unspentOnly=true&limit=50`,
+    BlockCypher: `https://api.blockcypher.com/v1/bcy/test/assrs/${btcAddress}?unspentOnly=true&limit=50`,
   };
 
   return axios.get<BtcAddressDataResponse>(apiUrl[network], { timeout: 45000 }).then((response) => {
@@ -58,7 +62,7 @@ export async function fetchPoolBtcAddressBalance(
   const apiUrl = {
     Mainnet: `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}`,
     Testnet: `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}`,
-    Regtest: `https://api.blockcypher.com/v1/bcy/test/addrs/${btcAddress}`,
+    BlockCypher: `https://api.blockcypher.com/v1/bcy/test/addrs/${btcAddress}`,
   };
 
   return axios
@@ -80,12 +84,13 @@ export async function broadcastRawBtcTransaction(
   const apiUrl = {
     Mainnet: 'https://api.blockcypher.com/v1/btc/main/txs/push',
     Testnet: 'https://api.blockcypher.com/v1/btc/test3/txs/push',
-    Regtest: 'https://api.blockcypher.com/v1/bcy/test/txs/push',
+    BlockCypher: 'https://api.blockcypher.com/v1/bcy/test/txs/push',
   };
 
   const data = {
     tx: rawTx,
   };
+  console.log('BTCTRANSACTION DATA: ', data)
   return axios
     .post<BtcTransactionBroadcastResponse>(apiUrl[network], data, { timeout: 45000 })
     .then((response) => {
@@ -100,7 +105,7 @@ export async function fetchBtcTransactionsData(
   const apiUrl = {
     Mainnet: `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`,
     Testnet: `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`,
-    Regtest: `https://api.blockcypher.com/v1/bcy/test/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`,
+    BlockCypher: `https://api.blockcypher.com/v1/bcy/test/addrs/${btcAddress}/full?includeHex=true&txlimit=3000&limit=50`,
   };
 
   return axios
