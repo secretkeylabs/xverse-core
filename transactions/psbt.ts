@@ -229,7 +229,11 @@ export function parsePsbt(
 
   inputsToSign.forEach(inputToSign => {
     inputToSign.signingIndexes.forEach(index => {
-      inputs[index].userSigns = true;
+      if(inputs.length >= index) {
+        inputs[index].userSigns = true;
+      } else {
+        throw new Error('Signing index out of range')
+      }
     })
   })
 
