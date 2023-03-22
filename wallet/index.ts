@@ -86,14 +86,22 @@ export async function walletFromSeedPhrase({
   const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
 
   const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
-  const segwitBtcAddress = payments.p2sh({
-    redeem: payments.p2wpkh({
-      pubkey: keyPair.publicKey,
-      network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
-    }),
+
+  // Current nested segwit address they support
+  // const segwitBtcAddress = payments.p2wpkh({
+  //   redeem: payments.p2sh({
+  //     pubkey: keyPair.publicKey,
+  //     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  //   }),
+  //   pubkey: keyPair.publicKey,
+  //   network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  // });
+
+  const segwitBtcAddress = payments.p2wpkh({
     pubkey: keyPair.publicKey,
     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
   });
+
   const btcAddress = segwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
   return {
@@ -105,6 +113,7 @@ export async function walletFromSeedPhrase({
     seedPhrase: mnemonic,
   };
 }
+
 
 function getBitcoinDerivationPath({ index, network }: { index: BigInt; network: NetworkType }) {
   return network === 'Mainnet'
