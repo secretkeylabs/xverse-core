@@ -808,3 +808,136 @@ export async function signNonOrdinalBtcSendTransaction(
   }
 }
 
+
+export async function signOrdinalSendTransactionFromBtcAddress(
+  recipientAddress: string,
+  ordinalUtxo: BtcUtxoDataResponse,
+  btcAddress: string,
+  accountIndex: number,
+  seedPhrase: string,
+  network: NetworkType,
+  fee?: BigNumber
+): Promise<SignedBtcTx> {
+  // Get sender address unspent outputs
+  const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+
+  var feeRate: BtcFeeResponse = defaultFeeRate;
+
+  if (!fee) {
+    feeRate = await fetchBtcFeeRate();
+  }
+
+  // Get sender address payment and ordinals private key
+  const privateKey = await getBtcPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network,
+  });
+
+  const taprootPrivateKey = await getBtcTaprootPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network,
+  });
+
+  // Get total sats to send (including custom fee)
+  var satsToSend = fee
+    ? fee.plus(new BigNumber(ordinalUtxo.value))
+    : new BigNumber(ordinalUtxo.value);
+
+  // Select unspent outputs
+  var selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs, ordinalUtxo);
+
+  var sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+  if (sumSelectedOutputs.isLessThan(satsToSend)) {
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+  }
+
+  const recipients = [
+    {
+      address: recipientAddress,
+      amountSats: new BigNumber(ordinalUtxo.value),
+    },
+  ];
+
+  const changeAddress = btcAddress;
+
+  // Calculate transaction fee
+  var calculatedFee: BigNumber = new BigNumber(0);
+  if (!fee) {
+    const { newSelectedUnspentOutputs, fee } = await getFee(
+      unspentOutputs,
+      selectedUnspentOutputs,
+      sumSelectedOutputs,
+      satsToSend,
+      recipients,
+      feeRate,
+      changeAddress,
+      network,
+      ordinalUtxo
+    );
+
+    calculatedFee = fee;
+    selectedUnspentOutputs = newSelectedUnspentOutputs;
+    satsToSend = satsToSend.plus(fee);
+  }
+
+  try {
+    // Create Bitcoin transaction
+    const tx = new btc.Transaction();
+    const btcNetwork = getBtcNetwork(network);
+
+    // Create wrapped segwit spend
+    const privKey = hex.decode(privateKey);
+    const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
+    const p2wph = btc.p2wpkh(secp256k1.getPublicKey(privKey, true), btcNetwork);
+    const p2sh = btc.p2sh(p2wph, btcNetwork);
+    const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);  
+
+    // Calculate utxo sum
+    const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
+
+    // Calculate change
+    const changeSats = sumValue.minus(satsToSend);
+
+    const i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
+
+    // Assume first input is taproot/ordinal
+    const ordinalUnspentOutput = i_selectedUnspentOutputs.shift();
+    addInputsTaproot(tx, [ordinalUnspentOutput!], taprootInternalPubKey, p2tr)
+
+    // Add remaining inputs
+    addInputs(tx, i_selectedUnspentOutputs, p2sh)
+
+    // Add outputs
+    recipients.forEach((recipient) => {
+      addOutput(tx, recipient.address, recipient.amountSats, btcNetwork);
+    });
+
+    // Add change output
+    if (changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
+      addOutput(tx, changeAddress, changeSats, btcNetwork);
+    }
+    // Sign ordinal input at index 0
+    tx.signIdx(hex.decode(taprootPrivateKey), 0);
+
+    // Sign remaining inputs
+    for (let index = 1; index < selectedUnspentOutputs.length; index++) {
+      tx.signIdx(hex.decode(privateKey), index);
+    }
+
+    tx.finalize();
+
+    const signedBtcTx: SignedBtcTx = {
+      tx: tx,
+      signedTx: tx.hex,
+      fee: fee ?? calculatedFee,
+      total: satsToSend,
+    };
+
+    return Promise.resolve(signedBtcTx);
+  } catch (error) {
+    return Promise.reject(error.toString());
+  }
+}
