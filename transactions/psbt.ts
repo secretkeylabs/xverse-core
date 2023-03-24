@@ -197,7 +197,7 @@ export function parsePsbt(
   const btcNetwork = getBtcNetwork(network ?? 'Mainnet');
 
   if (psbtBase64.length <= 0) {
-    throw new Error('Invalid transaction hex');
+    throw new Error('Invalid transaction');
   }
 
   // decode raw tx
@@ -205,7 +205,7 @@ export function parsePsbt(
   try {
     psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
-    throw new Error('Error decoding transaction hex');
+    throw new Error('Error decoding transaction');
   }
   
   const inputs: Array<PSBTInput> = [];
@@ -229,7 +229,11 @@ export function parsePsbt(
 
   inputsToSign.forEach(inputToSign => {
     inputToSign.signingIndexes.forEach(index => {
-      inputs[index].userSigns = true;
+      if(inputs.length >= index) {
+        inputs[index].userSigns = true;
+      } else {
+        throw new Error('Signing index out of range')
+      }
     })
   })
 
