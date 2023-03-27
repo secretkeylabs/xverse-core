@@ -824,6 +824,109 @@ describe('bitcoin transactions', () => {
     // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
   })
 
+  it('can create and sign ordinal send with ordinal utxo in payment address', async () => {
+    const network = "Mainnet";
+
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
+    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: ordinalUtxoHash,
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: ordinalValue,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      }
+    ];
+
+    const utxos: Array<BtcUtxoDataResponse> = [
+      { 
+        tx_hash: ordinalUtxoHash,
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: ordinalValue,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent1Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+      { 
+        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        block_height: 123123,
+        tx_input_n: -1,
+        tx_output_n: 2,
+        value: unspent2Value,
+        ref_balance: 123123123,
+        spent: false,
+        confirmations: 100000,
+        confirmed: "2020-02-20T02:02:22Z",
+        double_spend: false,
+        double_spend_tx: "asdf",
+      },
+    ]
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30
+    }
+
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+
+    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+
+    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
+    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+
+    const signedTx = await signOrdinalSendTransaction(
+      recipientAddress,
+      ordinalOutputs[0],
+      btcAddress,
+      0,
+      testSeed,
+      network
+    )
+
+    const expectedTx = '020000000001034301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388ac421d0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac024730440220496debceec57ca0b6a9d681d5dcff892b3bdc177a2229464da3d7a2a54955211022078818d398f75905c9c28c9a9e40fc27006fc29435d1d86f5380cc1a9574660cd0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02473044022001f76914fbbbc9e3c4d182f4522ee0f1c10c7b63e7977085700ce42736485284022041dd076c1b4906d69130d3096d875fea2ec20e17f43e020557be2ce60038b88d0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff024730440220104a1278f54d395cf432ec9f7bc22846a7d0345940562bb50ca441600e799b9302202d6782eb54413150283d210ca5ea674ef84cd9eb059de6091c61218b3a8ae62c0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000'
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1)
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
+    expect(signedTx.signedTx).eq(expectedTx)
+    // Needs a better transaction size calculator
+    // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
+  })
+
   it('can create and sign oridnal transaction with custom fees', async () => {
     const network = "Mainnet";
 
