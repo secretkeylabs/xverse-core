@@ -17,6 +17,7 @@ export {
   BtcTransactionDataResponse,
   BtcAddressData,
   BtcTransactionsDataResponse,
+  BtcOrdinal,
 } from './api/blockcypher/wallet';
 export {
   AccountAssetsListData,
@@ -36,3 +37,7 @@ export {
   StackingStateData,
   Pool,
 } from './api/xverse/stacking';
+export {
+  OrdinalInfo,
+} from './api/xverse/ordinals';
+export * from './api/blockstream/transactions';

@@ -25,6 +25,13 @@ import {
   generateContractDeployTransaction,
 } from './stx';
 
+import {
+  generateUnsignedAllowContractCallerTransaction,
+  generateUnsignedDelegateTransaction,
+  generateUnsignedRevokeTransaction,
+} from './stacking'
+import { ParsedPSBT, parsePsbt, PSBTInput, PSBTOutput } from './psbt';
+
 export {
   signBtcTransaction,
   addressToString,
@@ -48,4 +55,11 @@ export {
   getFTInfoFromPostConditions,
   createContractCallPromises,
   createDeployContractRequest,
+  generateUnsignedAllowContractCallerTransaction,
+  generateUnsignedDelegateTransaction,
+  generateUnsignedRevokeTransaction,
+  parsePsbt,
+  ParsedPSBT,
+  PSBTOutput,
+  PSBTInput,
 };

@@ -12,7 +12,7 @@ import {
   NftEventsResponse,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
-import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
+import { StacksNetwork } from '@stacks/network';
 import {
   deDuplicatePendingTx,
   mapTransferTransactionData,
@@ -78,16 +78,25 @@ export async function fetchStxAddressData(
   const nftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'non_fungible');
 
   const allConfirmedTransactions: Array<TransactionData> = [
-    ...confirmedTransactions.transactionsList,
-    ...ftTransactions.filter((tx) =>
-      confirmedTransactions.transactionsList.some((ctx) => tx.txid !== ctx.txid)
-    ),
-    ...nftTransactions.filter((tx) =>
-      confirmedTransactions.transactionsList.some((ctx) => tx.txid !== ctx.txid)
-    ),
+    ...confirmedTransactions.transactionsList
   ];
+  ftTransactions.forEach((tx) => {
+    let index = allConfirmedTransactions.findIndex((trans) => {
+      return trans.txid === tx.txid;
+    });
+    if (index === -1) {
+      allConfirmedTransactions.push(tx);
+    }
+  });
+  nftTransactions.forEach((tx) => {
+    let index = allConfirmedTransactions.findIndex((trans) => {
+      return trans.txid === tx.txid;
+    });
+    if (index === -1) {
+      allConfirmedTransactions.push(tx);
+    }
+  });
 
-  // sorting the transactions on the base of date
   allConfirmedTransactions.sort((t1, t2) => t2.seenTime.getTime() - t1.seenTime.getTime());
 
   const transactions: Array<TransactionData> = [
@@ -166,7 +175,7 @@ export async function getNftsData(
   stxAddress: string,
   network: StacksNetwork,
   offset: number
-): Promise<NftsListData> {
+): Promise<NftEventsResponse> {
   let apiUrl = `${network.coreApiUrl}/extended/v1/tokens/nft/holdings`;
 
   return axios
@@ -179,10 +188,7 @@ export async function getNftsData(
       },
     })
     .then((response) => {
-      return {
-        nftsList: response.data.results,
-        total: response.data.total,
-      };
+      return response.data;   
     });
 }
 
@@ -192,7 +198,7 @@ export async function  getNfts(
   offset: number
 ): Promise<NftsListData> {
   const nfts = await getNftsData(stxAddress, network, offset);
-  for (const nft of nfts.nftsList) {
+  for (const nft of nfts.results) {
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
     if (contractInfo[1] !== 'bns') {
@@ -207,7 +213,7 @@ export async function  getNfts(
     }
   }
   return {
-    nftsList: nfts.nftsList,
+    nftsList: nfts.results,
     total: nfts.total,
   };
 }

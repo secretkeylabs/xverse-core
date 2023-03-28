@@ -1,11 +1,12 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "0.5.0",
+  "version": "0.10.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
-    "@stacks/encryption": "4.3.5",
-    "@stacks/keychain": "4.3.5",
+    "@noble/secp256k1": "^1.7.1",
+    "@scure/base": "^1.1.1",
+    "@stacks/encryption": "6.1.1",
     "@stacks/network": "4.3.5",
     "@stacks/storage": "^6.0.0",
     "@stacks/transactions": "4.3.5",
@@ -14,18 +15,23 @@
     "bignumber.js": "9.1.0",
     "bip32": "^2.0.6",
     "bip39": "3.0.3",
+    "bitcoin-address-validation": "^2.2.1",
     "bitcoinjs-lib": "5.2.0",
+    "bn.js": "^5.1.3",
     "buffer": "6.0.3",
+    "ecpair": "^2.1.0",
     "jsontokens": "^4.0.1",
+    "micro-btc-signer": "^0.4.2",
     "process": "^0.11.10",
     "util": "^0.12.4"
   },
   "scripts": {
+    "build-debug": "webpack --mode development",
     "build": "webpack --mode production",
     "clean": "rimraf dist",
-    "build:esm": "npm run clean && tsc --module ES6 --outDir ./dist",
-    "postinstall": "npm run build:esm",
-    "test": "jest"
+    "build:esm": "npm run clean && tsc --build",
+    "test": "vitest run",
+    "test-dev": "vitest"
   },
   "repository": {
     "type": "git",
@@ -34,12 +40,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/jest": "^29.2.5",
-    "jest": "^29.3.1",
     "rimraf": "^3.0.2",
-    "ts-jest": "^29.0.3",
     "ts-loader": "^9.4.1",
     "typescript": "^4.8.3",
+    "vitest": "^0.28.5",
     "webpack": "^5.74.0",
     "webpack-cli": "^4.10.0"
   }

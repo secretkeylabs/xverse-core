@@ -1,18 +1,21 @@
 import { createSha2Hash } from '@stacks/encryption';
-import { deriveRootKeychainFromMnemonic } from '@stacks/keychain';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
 import { GAIA_HUB_URL } from '../constant';
 import { deriveStxAddressChain } from '../wallet/index';
+import * as bip39 from 'bip39';
+import { bip32 } from 'bitcoinjs-lib';
 
 export async function createAuthResponse(
   seedPhrase: string,
   accountIndex: number,
   authRequest: any
 ): Promise<string | undefined> {
-  const rootNode = await deriveRootKeychainFromMnemonic(seedPhrase);
+  const seed = await bip39.mnemonicToSeed(seedPhrase);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const chainID = ChainID.Mainnet;
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
+
   const { privateKey } = deriveStxAddressKeychain(rootNode);
 
   const identitiesKeychain = rootNode.derivePath(`m/888'/0'`);
@@ -21,7 +24,7 @@ export async function createAuthResponse(
   const sha2Hash = await createSha2Hash();
 
   const saltData = await sha2Hash.digest(publicKeyHex, 'sha256');
-  const salt = saltData.toString('hex');
+  const salt = saltData.toString();
 
   const identityKeychain = identitiesKeychain.deriveHardened(0);
   const dataPrivateKey = identityKeychain.privateKey?.toString('hex');
