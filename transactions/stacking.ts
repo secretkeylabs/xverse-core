@@ -89,6 +89,7 @@ export async function generateUnsignedDelegateTransaction(
   amount: BigNumber,
   rewardAddress: string,
   poolAddress: string,
+  poolContractAddress: string,
   poolContractName: string,
   pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
@@ -102,7 +103,7 @@ export async function generateUnsignedDelegateTransaction(
   try {
     unsignedTx = await generateUnsignedContractCall({
       publicKey,
-      contractAddress: poolAddress,
+      contractAddress: poolContractAddress,
       contractName: poolContractName,
       functionName: 'delegate-stx',
       functionArgs: [
