@@ -88,25 +88,27 @@ export async function walletFromSeedPhrase({
   const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
 
   // Current nested segwit address they support
-  // const segwitBtcAddress = payments.p2wpkh({
-  //   redeem: payments.p2sh({
-  //     pubkey: keyPair.publicKey,
-  //     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
-  //   }),
-  //   pubkey: keyPair.publicKey,
-  //   network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
-  // });
-
-  const segwitBtcAddress = payments.p2wpkh({
+  const nestedSegwitBtcAddress = payments.p2sh({
+    redeem: payments.p2wpkh({
+      pubkey: keyPair.publicKey,
+      network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+    }),
     pubkey: keyPair.publicKey,
     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
   });
 
-  const btcAddress = segwitBtcAddress.address!;
+  const nativeSegwitBtcAddress = payments.p2wpkh({
+    pubkey: keyPair.publicKey,
+    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  });
+
+  const btcAddress = nestedSegwitBtcAddress.address!;
+  const dlcBtcAddress = nativeSegwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
   return {
     stxAddress,
     btcAddress,
+    dlcBtcAddress,
     masterPubKey,
     stxPublicKey,
     btcPublicKey,

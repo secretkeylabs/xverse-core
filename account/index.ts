@@ -67,6 +67,7 @@ export async function restoreWalletWithAccounts(
             id: index,
             stxAddress: response.stxAddress,
             btcAddress: response.btcAddress,
+            dlcBtcAddress: response.dlcBtcAddress,
             masterPubKey: response.masterPubKey,
             stxPublicKey: response.stxPublicKey,
             btcPublicKey: response.btcPublicKey,
@@ -94,7 +95,7 @@ export async function createWalletAccount(
   walletAccounts: Account[],
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-   const { stxAddress, btcAddress, masterPubKey, stxPublicKey, btcPublicKey } =
+   const { stxAddress, btcAddress, dlcBtcAddress, masterPubKey, stxPublicKey, btcPublicKey } =
     await walletFromSeedPhrase({
       mnemonic: seedPhrase,
       index: BigInt(accountIndex),
@@ -107,6 +108,7 @@ export async function createWalletAccount(
       id: accountIndex,
       stxAddress,
       btcAddress,
+      dlcBtcAddress,
       masterPubKey,
       stxPublicKey,
       btcPublicKey,
