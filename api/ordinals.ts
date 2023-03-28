@@ -22,7 +22,7 @@ export async function fetchBtcOrdinalsData(
   btcAddress: string,
   network: NetworkType
 ): Promise<BtcOrdinal[]> {
-  const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network);
+  const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network, 2000);
   const ordinals: BtcOrdinal[] = [];
   await Promise.all(
     unspentUTXOS.map(async (utxo) => {
@@ -104,7 +104,7 @@ export async function getNonOrdinalUtxo(
   address: string,
   network: NetworkType,
 ): Promise<Array<UnspentOutput>> {
-  const unspentOutputs = await fetchBtcAddressUnspent(address, network)
+  const unspentOutputs = await fetchBtcAddressUnspent(address, network, 2000)
   const nonOrdinalOutputs: Array<UnspentOutput> = []
 
   for (let i = 0; i < unspentOutputs.length; i++) {
