@@ -82,23 +82,30 @@ export async function getBtcWalletData(
   btcPaymentAddress: string,
   network: NetworkType
 ): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcPaymentAddress}/balance`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcPaymentAddress}/balance`;
+  const btcApiBaseUrl = `https://blockstream.info/api/address/${btcPaymentAddress}`;
+  const btcApiBaseUrlTestnet = `https://blockstream.info/testnet/api/address/${btcPaymentAddress}`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
   }
   return axios.get<BtcAddressBalanceResponse>(apiUrl).then((response) => {
+    const {
+      data: {
+        address,
+        chain_stats,
+        mempool_stats,
+      }
+    } = response;
+    const finalBalance = chain_stats.funded_txo_sum - chain_stats.spent_txo_sum;
+    const unconfirmedBalance = mempool_stats.funded_txo_sum - mempool_stats.spent_txo_sum;
     return {
-      address: response.data.address,
-      balance: response.data.balance,
-      finalBalance: response.data.final_balance,
-      finalNTx: response.data.final_n_tx,
-      nTx: response.data.n_tx,
-      totalReceived: response.data.total_received,
-      totalSent: response.data.total_sent,
-      unconfirmedTx: response.data.unconfirmed_balance,
-      unconfirmedBalance: response.data.unconfirmed_balance,
+      address,
+      finalBalance,
+      finalNTx: chain_stats.tx_count,
+      totalReceived: chain_stats.funded_txo_sum,
+      totalSent: chain_stats.spent_txo_sum,
+      unconfirmedTx: mempool_stats.tx_count,
+      unconfirmedBalance,
     };
   });
 }
