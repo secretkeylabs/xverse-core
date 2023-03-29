@@ -95,13 +95,6 @@ export interface Output {
 export interface BtcTransactionBroadcastResponse {
   tx: {
     hash: string;
-    addresses: Array<string>;
-    total: number;
-    fees: number;
-    size: number;
-    vsize: number;
-    preference: string;
-    received: string;
   };
 }
 
@@ -111,24 +104,28 @@ export interface BtcBalance {
 
 export interface BtcAddressBalanceResponse {
   address: string;
-  total_received: number;
-  total_sent: number;
-  balance: number;
-  unconfirmed_balance: number;
-  final_balance: number;
-  n_tx: number;
-  unconfirmed_n_tx: number;
-  final_n_tx: number;
+  chain_stats: {
+    funded_txo_count: number;
+    funded_txo_sum: number;
+    spent_txo_count: number;
+    spent_txo_sum: number;
+    tx_count: number;
+  };
+  mempool_stats: {
+    funded_txo_count: number;
+    funded_txo_sum: number;
+    spent_txo_count: number;
+    spent_txo_sum: number;
+    tx_count: number;
+  };
 }
 
 export interface BtcAddressData {
   address: string;
   totalReceived: number;
   totalSent: number;
-  balance: number;
   unconfirmedBalance: number;
   finalBalance: number;
-  nTx: number;
   unconfirmedTx: number;
   finalNTx: number;
 }
