@@ -1,4 +1,4 @@
-import { TransactionData } from "../xverse/transaction";
+import { TransactionData } from '../xverse/transaction';
 
 export type BtcUtxoDataResponse = {
   tx_hash: string;
@@ -53,7 +53,6 @@ export interface BtcTransactionDataResponse {
   outputs: Output[];
 }
 
-
 export interface BtcTransactionData extends TransactionData {
   blockHash: string;
   blockHeight: string;
@@ -79,6 +78,10 @@ export interface BtcTransactionData extends TransactionData {
   isOrdinal: boolean;
 }
 
+export interface BtcTransactionDataHexIncluded extends BtcTransactionData {
+  hex: string;
+}
+
 export interface Input {
   addresses: string[];
   output_index: number;
@@ -90,7 +93,6 @@ export interface Output {
   addresses: string[];
   value: number;
 }
-
 
 export interface BtcTransactionBroadcastResponse {
   tx: {
@@ -151,5 +153,5 @@ export interface BtcTransactionsDataResponse {
 export interface BtcOrdinal {
   id: string;
   utxo: BtcUtxoDataResponse;
-  confirmationTime: string,
+  confirmationTime: string;
 }
