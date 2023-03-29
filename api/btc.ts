@@ -1,3 +1,4 @@
+import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './../constant';
 import axios from 'axios';
 import {
   BtcAddressBalanceResponse,
@@ -62,20 +63,15 @@ export async function broadcastRawBtcTransaction(
   rawTx: string,
   network: NetworkType
 ): Promise<BtcTransactionBroadcastResponse> {
-  const btcApiBaseUrl = 'https://api.blockcypher.com/v1/btc/main/txs/push';
-  const btcApiBaseUrlTestnet = 'https://api.blockcypher.com/v1/btc/test3/txs/push';
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  const data = {
-    tx: rawTx,
-  };
-  return axios
-    .post<BtcTransactionBroadcastResponse>(apiUrl, data, { timeout: 45000 })
-    .then((response) => {
-      return response.data;
-    });
+  const broadcastUrl =
+    network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
+  return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
+    return {
+      tx: {
+        hash: response.data
+      }
+    };
+  });
 }
 
 export async function getBtcWalletData(

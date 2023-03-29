@@ -95,13 +95,6 @@ export interface Output {
 export interface BtcTransactionBroadcastResponse {
   tx: {
     hash: string;
-    addresses: Array<string>;
-    total: number;
-    fees: number;
-    size: number;
-    vsize: number;
-    preference: string;
-    received: string;
   };
 }
 

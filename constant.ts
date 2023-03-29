@@ -34,6 +34,6 @@ export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 
-export const ORDINAL_BROADCAST_URI = 'https://blockstream.info/api/tx';
+export const MAINNET_BROADCAST_URI = 'https://blockstream.info/api/tx';
 
-export const ORDINAL_TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
+export const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
