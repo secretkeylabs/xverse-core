@@ -429,7 +429,7 @@ export async function fetchDelegationState(
   network: StacksNetwork
 ): Promise<DelegationInfo> {
   const poxContractAddress = 'SP000000000000000000002Q6VF78';
-  const poxContractName = 'pox';
+  const poxContractName = 'pox-2';
   const mapName = 'delegation-state';
   const mapEntryPath = `/${poxContractAddress}/${poxContractName}/${mapName}`;
   const apiUrl = `${network.coreApiUrl}/v2/map_entry${mapEntryPath}?proof=0`;
