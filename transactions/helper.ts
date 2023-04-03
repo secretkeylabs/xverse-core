@@ -29,6 +29,8 @@ import {
   FungibleToken,
   Coin,
   FeesMultipliers,
+  NetworkType, 
+  Account
 } from '../types';
 import {
   generateContractDeployTransaction,
@@ -37,6 +39,12 @@ import {
   setNonce,
 } from './stx';
 import { StacksNetwork } from '@stacks/network';
+import { 
+  getBitcoinDerivationPath,
+  getTaprootDerivationPath,
+  getSegwitDerivationPath
+} from '../wallet';
+import { getAddressInfo } from 'bitcoin-address-validation';
 
 export function getNewNonce(
   pendingTransactions: StxMempoolTransactionData[],
@@ -257,3 +265,41 @@ export const createDeployContractRequest = async (
     sponsored,
   };
 };
+
+export function getSigningDerivationPath(
+  accounts: Array<Account>, 
+  address: string,
+  network: NetworkType
+) : string {
+  const { type } = getAddressInfo(address);
+  
+  if (accounts.length <= 0) {
+    throw new Error('Invalid accounts list')
+  }
+
+  var path = '';
+
+  accounts.forEach((account, index) => {
+    if (type === 'p2sh') {
+      if (account.btcAddress === address) {
+        path = getBitcoinDerivationPath({ index: BigInt(index), network})
+      }
+    } else if (type === 'p2wpkh') {
+      if (account.btcAddress === address) {
+        path = getSegwitDerivationPath({ index: BigInt(index), network})
+      } 
+    } else if (type === 'p2tr') {
+      if (account.ordinalsAddress === address) {
+        path = getTaprootDerivationPath({ index: BigInt(index), network})
+      }
+    } else {
+      throw new Error('Unsupported address type')
+    }
+  })
+
+  if (path.length <= 0) {
+    throw new Error('Address not found');
+  }
+
+  return path;
+}
