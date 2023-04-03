@@ -35,12 +35,11 @@ export async function checkAccountActivity(
   return btcTxHistory.length !== 0;
 }
 
-export async function restoreWalletWithAccounts(
+const fetchActiveAccounts = async (
   mnemonic: string,
-  selectedNetwork: SettingsNetwork,
-  networkObject:  StacksNetwork,
+  networkObject: StacksNetwork,
   currentAccounts: Account[]
-): Promise<Account[]> {
+) => {
   const networkFetch = networkObject.fetchFn;
   const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
   const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -51,12 +50,21 @@ export async function restoreWalletWithAccounts(
     privateKey: walletConfigKey,
     gaiaHubUrl: GAIA_HUB_URL,
   });
-  const walletConfig = await getOrCreateWalletConfig({
+  return getOrCreateWalletConfig({
     walletAccounts: currentAccounts,
     configPrivateKey: walletConfigKey,
     gaiaHubConfig: currentGaiaConfig,
     fetchFn: networkFetch,
   });
+};
+
+export async function restoreWalletWithAccounts(
+  mnemonic: string,
+  selectedNetwork: SettingsNetwork,
+  networkObject:  StacksNetwork,
+  currentAccounts: Account[]
+): Promise<Account[]> {
+  const walletConfig = await fetchActiveAccounts(mnemonic, networkObject, currentAccounts);
   if (walletConfig && walletConfig.accounts.length > 0) {
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
