@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import { StacksNetwork } from '@stacks/network';
 import {
   Input,
   Output,
@@ -11,10 +12,10 @@ import {
   TransferTransaction,
 } from '../types';
 
-export function sumOutputsForAddress(
-  outputs: Output[],
-  address: string,
-): number {
+export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
+export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+
+export function sumOutputsForAddress(outputs: Output[], address: string): number {
   var total = 0;
   outputs.forEach((output) => {
     if (output.addresses) {
@@ -48,47 +49,47 @@ export function parseOrdinalsBtcTransactions(
   });
   const inputAddressSet = new Set(inputAddresses);
   const incoming = !inputAddressSet.has(ordinalsAddress);
-    const parsedTx: BtcTransactionData = {
-      blockHash: responseTx.block_hash,
-      blockHeight: responseTx.block_height,
-      blockIndex: responseTx.block_index,
-      txid: responseTx.hash,
-      addresses: responseTx.addresses,
-      total: responseTx.total,
-      fees: responseTx.fees,
-      size: responseTx.size,
-      preference: responseTx.preference,
-      relayedBy: responseTx.relayed_by,
-      confirmed: responseTx.confirmed,
-      received: responseTx.received,
-      ver: responseTx.ver,
-      doubleSpend: responseTx.double_spend,
-      vinSz: responseTx.vin_sz,
-      voutSz: responseTx.vout_sz,
-      dataProtocol: responseTx.data_protocol,
-      confirmations: responseTx.confirmations,
-      confidence: responseTx.confirmations,
-      inputs: responseTx.inputs,
-      outputs: responseTx.outputs,
-      seenTime: new Date(responseTx.received),
-      incoming,
-      amount: new BigNumber(0),
-      txType: 'bitcoin',
-      txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
-      isOrdinal: true,
-    };
-    return parsedTx;
-} 
+  const parsedTx: BtcTransactionData = {
+    blockHash: responseTx.block_hash,
+    blockHeight: responseTx.block_height,
+    blockIndex: responseTx.block_index,
+    txid: responseTx.hash,
+    addresses: responseTx.addresses,
+    total: responseTx.total,
+    fees: responseTx.fees,
+    size: responseTx.size,
+    preference: responseTx.preference,
+    relayedBy: responseTx.relayed_by,
+    confirmed: responseTx.confirmed,
+    received: responseTx.received,
+    ver: responseTx.ver,
+    doubleSpend: responseTx.double_spend,
+    vinSz: responseTx.vin_sz,
+    voutSz: responseTx.vout_sz,
+    dataProtocol: responseTx.data_protocol,
+    confirmations: responseTx.confirmations,
+    confidence: responseTx.confirmations,
+    inputs: responseTx.inputs,
+    outputs: responseTx.outputs,
+    seenTime: new Date(responseTx.received),
+    incoming,
+    amount: new BigNumber(0),
+    txType: 'bitcoin',
+    txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
+    isOrdinal: true,
+  };
+  return parsedTx;
+}
 
 export function parseBtcTransactionData(
   responseTx: BtcTransactionDataResponse,
   btcAddress: string,
-  ordinalsAddress: string,
+  ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
   responseTx.inputs.forEach((input) => {
     if (input.addresses !== null && input.addresses.length > 0) {
-        inputAddresses = [...inputAddresses, ...input.addresses];
+      inputAddresses = [...inputAddresses, ...input.addresses];
     }
   });
   const inputAddressSet = new Set(inputAddresses);
@@ -324,6 +325,13 @@ export function parseStxTransactionData({
   return parsedTx;
 }
 
-
-
-
+/**
+ * Solves issue wiht proper network address
+ *
+ * @param {StacksNetwork} network object to be used for distinguish is user on mainnet or testnet
+ *
+ * @returns {string} Network URL to be used
+ */
+export const getNetworkURL = (network: StacksNetwork): string => {
+  return network.isMainnet() ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
+};

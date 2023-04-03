@@ -1,9 +1,9 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { 
-  API_TIMEOUT_MILLI, 
-  XVERSE_API_BASE_URL, 
-  XVERSE_SPONSOR_URL 
+import {
+  API_TIMEOUT_MILLI,
+  XVERSE_API_BASE_URL,
+  XVERSE_SPONSOR_URL
 } from '../constant';
 import {
   BtcFeeResponse,

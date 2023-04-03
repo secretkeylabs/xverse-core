@@ -43,13 +43,14 @@ import {
   UnsignedTokenTransferOptions,
   getNonce as fetchNewNonce,
 } from '@stacks/transactions';
-import{
-  PostConditionsOptions,
-  StxMempoolTransactionData,
-} from 'types';
+import { PostConditionsOptions, StxMempoolTransactionData } from 'types';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import { UnsignedContractCallTransaction, UnsignedContractDeployOptions, UnsignedStacksTransation } from '../types/api/stacks/transaction';
+import {
+  UnsignedContractCallTransaction,
+  UnsignedContractDeployOptions,
+  UnsignedStacksTransation,
+} from '../types/api/stacks/transaction';
 
 export async function signTransaction(
   unsignedTx: StacksTransaction,
@@ -131,7 +132,7 @@ export async function generateUnsignedSTXTokenTransfer(
   sponsored?: boolean,
   anchorMode?: AnchorMode,
   postConditions?: PostCondition[],
-  postConditionMode?: PostConditionMode,
+  postConditionMode?: PostConditionMode
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
@@ -157,7 +158,7 @@ export async function generateUnsignedSTXTokenTransfer(
  */
 export async function estimateFees(
   transaction: StacksTransaction,
-  txNetwork: StacksNetwork,
+  txNetwork: StacksNetwork
 ): Promise<bigint> {
   return estimateTransfer(transaction, txNetwork).then((fee) => {
     return BigInt(fee.toString());
@@ -200,7 +201,7 @@ export async function generateUnsignedStxTokenTransferTransaction(
     if (nonce) {
       setNonce(unsignedTx, BigInt(nonce));
     } else {
-     setNonce(unsignedTx, newNonce);
+      setNonce(unsignedTx, newNonce);
     }
     return Promise.resolve(unsignedTx);
   } catch (err) {
@@ -208,50 +209,49 @@ export async function generateUnsignedStxTokenTransferTransaction(
   }
 }
 
-
 /**
  * Constructs an unsigned smart contract call transaction
  */
- export async function generateUnsignedContractCall(
-   unsignedTx: UnsignedContractCallTransaction
- ): Promise<StacksTransaction> {
-   const {
-     network,
-     contractAddress,
-     contractName,
-     functionName,
-     functionArgs,
-     publicKey,
-     postConditions = [],
-     postConditionMode,
-     sponsored,
-     nonce,
-     anchorMode,
-   } = unsignedTx;
-   const txOptions: UnsignedContractCallOptions = {
-     contractAddress,
-     contractName,
-     functionName,
-     functionArgs,
-     publicKey,
-     network,
-     postConditions: postConditions,
-     postConditionMode: postConditionMode ?? 1,
-     anchorMode: anchorMode ? anchorMode :  AnchorMode.Any,
-     sponsored: sponsored,
-   };
+export async function generateUnsignedContractCall(
+  unsignedTx: UnsignedContractCallTransaction
+): Promise<StacksTransaction> {
+  const {
+    network,
+    contractAddress,
+    contractName,
+    functionName,
+    functionArgs,
+    publicKey,
+    postConditions = [],
+    postConditionMode,
+    sponsored,
+    nonce,
+    anchorMode,
+  } = unsignedTx;
+  const txOptions: UnsignedContractCallOptions = {
+    contractAddress,
+    contractName,
+    functionName,
+    functionArgs,
+    publicKey,
+    network,
+    postConditions: postConditions,
+    postConditionMode: postConditionMode ?? 1,
+    anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
+    sponsored: sponsored,
+  };
 
-   if (nonce) {
-     txOptions['nonce'] = BigInt(nonce);
-   }
-   try {
+  if (nonce) {
+    txOptions['nonce'] = BigInt(nonce);
+  }
+  try {
     const unsigned = await makeUnsignedContractCall(txOptions);
     return unsigned;
-   } catch (err) {
-     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
-     return unsigned;
-   }
- }
+  } catch (err) {
+    const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
+    return unsigned;
+  }
+}
 
 /**
  * Estimates the fee for given transaction
@@ -329,7 +329,7 @@ export async function generateUnsignedTransaction(
   }
 
   try {
-    const unsignedContractCallParam: UnsignedContractCallTransaction ={
+    const unsignedContractCallParam: UnsignedContractCallTransaction = {
       publicKey: publicKey,
       contractAddress,
       contractName,
@@ -338,10 +338,8 @@ export async function generateUnsignedTransaction(
       network,
       nonce: undefined,
       postConditions: postConditions,
-    }
-    unsignedTx = await generateUnsignedContractCall(
-      unsignedContractCallParam
-    );
+    };
+    unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
     const fee = await estimateContractCallFees(unsignedTx, network);
     setFee(unsignedTx, fee);
@@ -357,7 +355,7 @@ export async function generateUnsignedTransaction(
 
 export function createSmartContractPayload(
   contractName: string | LengthPrefixedString,
-  codeBody: string | LengthPrefixedString,
+  codeBody: string | LengthPrefixedString
 ): SmartContractPayload {
   if (typeof contractName === 'string') {
     contractName = createLPString(contractName);
@@ -375,11 +373,11 @@ export function createSmartContractPayload(
 }
 
 export async function makeUnsignedContractDeploy(
-  txOptions: UnsignedContractDeployOptions,
+  txOptions: UnsignedContractDeployOptions
 ): Promise<StacksTransaction> {
   const defaultOptions = {
-    fee:  BigInt(0),
-    nonce:  BigInt(0),
+    fee: BigInt(0),
+    nonce: BigInt(0),
     network: new StacksMainnet(),
     anchorMode: AnchorMode.Any,
     postConditionMode: PostConditionMode.Deny,
@@ -388,10 +386,7 @@ export async function makeUnsignedContractDeploy(
 
   const options = Object.assign(defaultOptions, txOptions);
 
-  const payload = createSmartContractPayload(
-    options.contractName,
-    options.codeBody,
-  );
+  const payload = createSmartContractPayload(options.contractName, options.codeBody);
 
   const addressHashMode = AddressHashMode.SerializeP2PKH;
   const pubKey = createStacksPublicKey(options.publicKey);
@@ -402,7 +397,7 @@ export async function makeUnsignedContractDeploy(
     addressHashMode,
     publicKeyToString(pubKey),
     options.nonce,
-    options.fee,
+    options.fee
   );
 
   if (options.sponsored) {
@@ -421,7 +416,7 @@ export async function makeUnsignedContractDeploy(
     lpPostConditions,
     options.postConditionMode,
     options.anchorMode,
-    options.network.chainId,
+    options.network.chainId
   );
 
   if (!txOptions.fee) {
