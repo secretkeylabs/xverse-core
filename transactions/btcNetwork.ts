@@ -21,7 +21,7 @@ const bitcoinTestnet: BitcoinNetwork = {
   wif: 0xef,
 };
 
-const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
+export const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
   Mainnet: bitcoinMainnet,
   Testnet: bitcoinTestnet,
 };
