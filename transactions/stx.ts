@@ -1,4 +1,4 @@
-import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
+import { StacksMainnet, StacksNetwork } from '@stacks/network';
 import {
   AddressHashMode,
   addressToString,

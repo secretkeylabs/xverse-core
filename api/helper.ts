@@ -12,8 +12,7 @@ import {
   TransferTransaction,
 } from '../types';
 
-export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
-export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
 
 export function sumOutputsForAddress(outputs: Output[], address: string): number {
   var total = 0;
