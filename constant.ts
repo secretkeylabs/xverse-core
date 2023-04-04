@@ -8,7 +8,7 @@ export const BTC_WRAPPED_SEGWIT_PATH_PURPOSE = `m/49'/`;
 
 export const BTC_SEGWIT_PATH_PURPOSE = `m/84'/`;
 
-export const BTC_TAPROOT_PATH_PURPOSE = `m/86'/`
+export const BTC_TAPROOT_PATH_PURPOSE = `m/86'/`;
 
 export const BTC_PATH_WITHOUT_INDEX = `m/49'/0'/0'/0/`;
 
@@ -37,3 +37,7 @@ export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 export const MAINNET_BROADCAST_URI = 'https://blockstream.info/api/tx';
 
 export const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
+
+export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
+
+export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';

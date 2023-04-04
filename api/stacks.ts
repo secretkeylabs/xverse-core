@@ -19,10 +19,26 @@ import {
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
 } from './helper';
-import { BufferCV, bufferCVFromString, callReadOnlyFunction, ClarityType, cvToHex, cvToString, estimateTransfer, hexToCV, makeUnsignedSTXTokenTransfer, PrincipalCV, ResponseCV, SomeCV, standardPrincipalCV, TupleCV, tupleCV, UIntCV, } from '@stacks/transactions';
+import {
+  BufferCV,
+  bufferCVFromString,
+  callReadOnlyFunction,
+  ClarityType,
+  cvToHex,
+  cvToString,
+  hexToCV,
+  PrincipalCV,
+  ResponseCV,
+  SomeCV,
+  standardPrincipalCV,
+  TupleCV,
+  tupleCV,
+  UIntCV,
+} from '@stacks/transactions';
 import { AddressToBnsResponse, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
+import { getNetworkURL } from './helper';
 
-import{
+import {
   StxMempoolResponse,
   StxMempoolTransactionData,
   StxMempoolTransactionListData,
@@ -42,7 +58,7 @@ export async function fetchStxAddressData(
   offset: number,
   paginationLimit: number
 ): Promise<StxAddressData> {
-  const apiUrl = `${network.coreApiUrl}/v2/accounts/${stxAddress}?proof=0`;
+  const apiUrl = `${getNetworkURL(network)}/v2/accounts/${stxAddress}?proof=0`;
   const balanceInfo = await axios.get<StxAddressDataResponse>(apiUrl, {
     timeout: API_TIMEOUT_MILLI,
   });
@@ -78,7 +94,7 @@ export async function fetchStxAddressData(
   const nftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'non_fungible');
 
   const allConfirmedTransactions: Array<TransactionData> = [
-    ...confirmedTransactions.transactionsList
+    ...confirmedTransactions.transactionsList,
   ];
   ftTransactions.forEach((tx) => {
     let index = allConfirmedTransactions.findIndex((trans) => {
@@ -118,7 +134,7 @@ export async function getFtData(
   stxAddress: string,
   network: StacksNetwork
 ): Promise<FungibleToken[]> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/address/${stxAddress}/balances`;
+  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
 
   return axios
     .get<TokensResponse>(apiUrl, {
@@ -150,7 +166,7 @@ export async function getAccountAssets(
   network: StacksNetwork,
   offset: number
 ): Promise<AccountAssetsListData> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/address/${stxAddress}/balances`;
+  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
 
   return axios
     .get<TokensResponse>(apiUrl, {
@@ -176,7 +192,7 @@ export async function getNftsData(
   network: StacksNetwork,
   offset: number
 ): Promise<NftEventsResponse> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/tokens/nft/holdings`;
+  let apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
 
   return axios
     .get<NftEventsResponse>(apiUrl, {
@@ -188,11 +204,11 @@ export async function getNftsData(
       },
     })
     .then((response) => {
-      return response.data;   
+      return response.data;
     });
 }
 
-export async function  getNfts(
+export async function getNfts(
   stxAddress: string,
   network: StacksNetwork,
   offset: number
@@ -221,9 +237,11 @@ export async function  getNfts(
 export async function getContractInterface(
   contractAddress: string,
   contractName: string,
-  network: StacksNetwork,
+  network: StacksNetwork
 ): Promise<ContractInterfaceResponse | null> {
-  const apiUrl = `${network.coreApiUrl}/v2/contracts/interface/${contractAddress}/${contractName}`;
+  const apiUrl = `${getNetworkURL(
+    network
+  )}/v2/contracts/interface/${contractAddress}/${contractName}`;
 
   return axios
     .get<ContractInterfaceResponse>(apiUrl, {
@@ -238,7 +256,7 @@ export async function getContractInterface(
 }
 
 export async function getBnsName(stxAddress: string, network: StacksNetwork) {
-  const apiUrl = `${network.coreApiUrl}/v1/addresses/stacks/${stxAddress}`;
+  const apiUrl = `${getNetworkURL(network)}/v1/addresses/stacks/${stxAddress}`;
   return axios
     .get<AddressToBnsResponse>(apiUrl, {
       timeout: 30000,
@@ -301,7 +319,7 @@ export async function getConfirmedTransactions({
   stxAddress: string;
   network: StacksNetwork;
 }): Promise<StxTransactionListData> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/address/${stxAddress}/transactions`;
+  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions`;
 
   return axios
     .get<StxTransactionResponse>(apiUrl, {
@@ -328,7 +346,7 @@ export async function getMempoolTransactions({
   offset: number;
   limit: number;
 }): Promise<StxMempoolTransactionListData> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/tx/mempool?address=${stxAddress}`;
+  let apiUrl = `${getNetworkURL(network)}/extended/v1/tx/mempool?address=${stxAddress}`;
 
   return axios
     .get<StxMempoolResponse>(apiUrl, {
@@ -379,7 +397,7 @@ export async function fetchStxPendingTxData(
 }
 
 export async function getTransaction(txid: string, network: StacksNetwork): Promise<Transaction> {
-  return fetch(`${network.coreApiUrl}/extended/v1/tx/${txid}`, {
+  return fetch(`${getNetworkURL(network)}/extended/v1/tx/${txid}`, {
     method: 'GET',
   })
     .then((response) => response.json())
@@ -388,13 +406,13 @@ export async function getTransaction(txid: string, network: StacksNetwork): Prom
     });
 }
 
-
-
 export async function getTransferTransactions(
   stxAddress: string,
   network: StacksNetwork
 ): Promise<StxTransactionData[]> {
-  let apiUrl = `${network.coreApiUrl}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
+  let apiUrl = `${getNetworkURL(
+    network
+  )}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
   return axios
     .get<TransferTransactionsData>(apiUrl, {
       timeout: API_TIMEOUT_MILLI,
@@ -409,7 +427,7 @@ export async function getTransferTransactions(
     });
 }
 
-export async function getStacksInfo(network:string){
+export async function getStacksInfo(network: string) {
   const url = `${network}/v2/info`;
   return axios
     .get<CoreInfo>(url, {
@@ -421,7 +439,6 @@ export async function getStacksInfo(network:string){
     .catch((error) => {
       return undefined;
     });
-
 }
 
 export async function fetchDelegationState(
@@ -432,7 +449,7 @@ export async function fetchDelegationState(
   const poxContractName = 'pox';
   const mapName = 'delegation-state';
   const mapEntryPath = `/${poxContractAddress}/${poxContractName}/${mapName}`;
-  const apiUrl = `${network.coreApiUrl}/v2/map_entry${mapEntryPath}?proof=0`;
+  const apiUrl = `${getNetworkURL(network)}/v2/map_entry${mapEntryPath}?proof=0`;
   const key = cvToHex(tupleCV({ stacker: standardPrincipalCV(stxAddress) }));
   const headers = {
     'Content-Type': 'application/json',
@@ -467,4 +484,3 @@ export async function fetchDelegationState(
     }
   });
 }
-

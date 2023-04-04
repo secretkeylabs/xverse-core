@@ -1,16 +1,12 @@
 import crypto from 'crypto';
 import * as bip39 from 'bip39';
-import { hashMessage } from "@stacks/encryption";
+import { hashMessage } from '@stacks/encryption';
 import {
-  BTC_PATH_WITHOUT_INDEX,
-  BTC_TESTNET_PATH_WITHOUT_INDEX,
-  BTC_TAPROOT_PATH_WITHOUT_INDEX,
-  BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
   BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
   BTC_SEGWIT_PATH_PURPOSE,
-  BTC_TAPROOT_PATH_PURPOSE
+  BTC_TAPROOT_PATH_PURPOSE,
 } from '../constant';
 import {
   ChainID,
@@ -27,11 +23,10 @@ import { c32addressDecode } from 'c32check';
 import { ecPairToHexString } from './helper';
 import { Keychain } from 'types/api/xverse/wallet';
 import { BaseWallet } from 'types/wallet';
-import { deriveWalletConfigKey } from '../gaia';
-import {validate, Network as btcAddressNetwork} from 'bitcoin-address-validation';
+import { validate, Network as btcAddressNetwork } from 'bitcoin-address-validation';
 import * as btc from 'micro-btc-signer';
 import { hex } from '@scure/base';
-import * as secp256k1 from '@noble/secp256k1'
+import * as secp256k1 from '@noble/secp256k1';
 import { getBtcNetwork } from '../transactions/btcNetwork';
 
 export const derivationPaths = {
@@ -83,7 +78,7 @@ export async function walletFromSeedPhrase({
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
     index
   );
-  
+
   const { address, privateKey } = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
@@ -125,25 +120,49 @@ export async function walletFromSeedPhrase({
   };
 }
 
-export function getBitcoinDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
-  const accountIndex = account ? account.toString() : '0'
+export function getBitcoinDerivationPath({
+  account,
+  index,
+  network,
+}: {
+  account?: BigInt;
+  index: BigInt;
+  network: NetworkType;
+}) {
+  const accountIndex = account ? account.toString() : '0';
   return network === 'Mainnet'
     ? `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
-    : `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`;
 }
 
-export function getSegwitDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
-  const accountIndex = account ? account.toString() : '0'
+export function getSegwitDerivationPath({
+  account,
+  index,
+  network,
+}: {
+  account?: BigInt;
+  index: BigInt;
+  network: NetworkType;
+}) {
+  const accountIndex = account ? account.toString() : '0';
   return network === 'Mainnet'
     ? `${BTC_SEGWIT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
-    : `${BTC_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_SEGWIT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`;
 }
 
-export function getTaprootDerivationPath({ account, index, network }: { account?: BigInt, index: BigInt; network: NetworkType }) {
-  const accountIndex = account ? account.toString() : '0'
+export function getTaprootDerivationPath({
+  account,
+  index,
+  network,
+}: {
+  account?: BigInt;
+  index: BigInt;
+  network: NetworkType;
+}) {
+  const accountIndex = account ? account.toString() : '0';
   return network === 'Mainnet'
     ? `${BTC_TAPROOT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
-    : `${BTC_TAPROOT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`
+    : `${BTC_TAPROOT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`;
 }
 
 export async function getBtcPrivateKey({
@@ -222,8 +241,7 @@ export function validateBtcAddress({
   btcAddress: string;
   network: NetworkType;
 }): boolean {
-  const btcNetwork =
-    network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
+  const btcNetwork = network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
   try {
     return validate(btcAddress, btcNetwork);
   } catch (error) {
@@ -284,4 +302,3 @@ export async function getStxAddressKeyChain(
 }
 
 export { hashMessage };
-
