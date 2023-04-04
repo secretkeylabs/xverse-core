@@ -1,4 +1,4 @@
-import { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
+import { StacksMainnet, StacksNetwork } from '@stacks/network';
 import {
   connectToGaiaHubWithConfig,
   getHubInfo,
@@ -8,7 +8,13 @@ import {
   createWalletGaiaConfig,
 } from '../gaia';
 import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
-import { Account, BtcTransactionData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
+import {
+  Account,
+  BtcTransactionData,
+  NetworkType,
+  SettingsNetwork,
+  StxTransactionListData,
+} from '../types';
 import { walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
 import * as bip39 from 'bip39';
@@ -25,17 +31,17 @@ export async function checkAccountActivity(
     network: selectedNetwork,
   });
   if (stxTxHistory.totalCount !== 0) return true;
-  const networkType : NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
+  const networkType: NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
   const btcTxHistory: BtcTransactionData[] = await fetchBtcTransactionsData(
     btcAddress,
     ordinalsAddress,
     networkType,
-    true,
+    true
   );
   return btcTxHistory.length !== 0;
 }
 
-const fetchActiveAccounts = async (
+export const fetchActiveAccounts = async (
   mnemonic: string,
   networkObject: StacksNetwork,
   currentAccounts: Account[]
@@ -61,7 +67,7 @@ const fetchActiveAccounts = async (
 export async function restoreWalletWithAccounts(
   mnemonic: string,
   selectedNetwork: SettingsNetwork,
-  networkObject:  StacksNetwork,
+  networkObject: StacksNetwork,
   currentAccounts: Account[]
 ): Promise<Account[]> {
   const walletConfig = await fetchActiveAccounts(mnemonic, networkObject, currentAccounts);
@@ -69,7 +75,11 @@ export async function restoreWalletWithAccounts(
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
         let existingAccount: Account = currentAccounts[index];
-        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
+        if (
+          !existingAccount ||
+          !existingAccount.ordinalsAddress ||
+          !existingAccount.ordinalsPublicKey
+        ) {
           const response = await walletFromSeedPhrase({
             mnemonic,
             index: BigInt(index),
@@ -106,15 +116,22 @@ export async function createWalletAccount(
   seedPhrase: string,
   selectedNetwork: SettingsNetwork,
   networkObject: StacksNetwork,
-  walletAccounts: Account[],
+  walletAccounts: Account[]
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-   const { stxAddress, btcAddress, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey, ordinalsPublicKey } =
-    await walletFromSeedPhrase({
-      mnemonic: seedPhrase,
-      index: BigInt(accountIndex),
-      network: selectedNetwork.type,
-    });
+  const {
+    stxAddress,
+    btcAddress,
+    ordinalsAddress,
+    masterPubKey,
+    stxPublicKey,
+    btcPublicKey,
+    ordinalsPublicKey,
+  } = await walletFromSeedPhrase({
+    mnemonic: seedPhrase,
+    index: BigInt(accountIndex),
+    network: selectedNetwork.type,
+  });
   const bnsName = await getBnsName(stxAddress, networkObject);
   const updateAccountsList = [
     ...walletAccounts,
