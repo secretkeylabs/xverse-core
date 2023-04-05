@@ -20,27 +20,6 @@ import { GAIA_HUB_URL } from './../constant';
 import * as bip39 from 'bip39';
 import { bip32 } from 'bitcoinjs-lib';
 
-export async function checkAccountActivity(
-  stxAddress: string,
-  btcAddress: string,
-  ordinalsAddress: string,
-  selectedNetwork: StacksNetwork
-) {
-  const stxTxHistory: StxTransactionListData = await getConfirmedTransactions({
-    stxAddress,
-    network: selectedNetwork,
-  });
-  if (stxTxHistory.totalCount !== 0) return true;
-  const networkType: NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
-  const btcTxHistory: BtcTransactionData[] = await fetchBtcTransactionsData(
-    btcAddress,
-    ordinalsAddress,
-    networkType,
-    true
-  );
-  return btcTxHistory.length !== 0;
-}
-
 export const fetchActiveAccounts = async (
   mnemonic: string,
   networkObject: StacksNetwork,
@@ -63,6 +42,27 @@ export const fetchActiveAccounts = async (
     fetchFn: networkFetch,
   });
 };
+
+export async function checkAccountActivity(
+  stxAddress: string,
+  btcAddress: string,
+  ordinalsAddress: string,
+  selectedNetwork: StacksNetwork
+) {
+  const stxTxHistory: StxTransactionListData = await getConfirmedTransactions({
+    stxAddress,
+    network: selectedNetwork,
+  });
+  if (stxTxHistory.totalCount !== 0) return true;
+  const networkType: NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
+  const btcTxHistory: BtcTransactionData[] = await fetchBtcTransactionsData(
+    btcAddress,
+    ordinalsAddress,
+    networkType,
+    true
+  );
+  return btcTxHistory.length !== 0;
+}
 
 export async function restoreWalletWithAccounts(
   mnemonic: string,
