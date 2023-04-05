@@ -20,6 +20,29 @@ import { GAIA_HUB_URL } from './../constant';
 import * as bip39 from 'bip39';
 import { bip32 } from 'bitcoinjs-lib';
 
+export const fetchActiveAccounts = async (
+  mnemonic: string,
+  networkObject: StacksNetwork,
+  currentAccounts: Account[]
+) => {
+  const networkFetch = networkObject.fetchFn;
+  const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+  const walletConfigKey = await deriveWalletConfigKey(rootNode);
+  const currentGaiaConfig = connectToGaiaHubWithConfig({
+    hubInfo,
+    privateKey: walletConfigKey,
+    gaiaHubUrl: GAIA_HUB_URL,
+  });
+  return getOrCreateWalletConfig({
+    walletAccounts: currentAccounts,
+    configPrivateKey: walletConfigKey,
+    gaiaHubConfig: currentGaiaConfig,
+    fetchFn: networkFetch,
+  });
+};
+
 export async function checkAccountActivity(
   stxAddress: string,
   btcAddress: string,
@@ -47,22 +70,7 @@ export async function restoreWalletWithAccounts(
   networkObject: StacksNetwork,
   currentAccounts: Account[]
 ): Promise<Account[]> {
-  const networkFetch = networkObject.fetchFn;
-  const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
-  const seed = await bip39.mnemonicToSeed(mnemonic);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const walletConfigKey = await deriveWalletConfigKey(rootNode);
-  const currentGaiaConfig = connectToGaiaHubWithConfig({
-    hubInfo,
-    privateKey: walletConfigKey,
-    gaiaHubUrl: GAIA_HUB_URL,
-  });
-  const walletConfig = await getOrCreateWalletConfig({
-    walletAccounts: currentAccounts,
-    configPrivateKey: walletConfigKey,
-    gaiaHubConfig: currentGaiaConfig,
-    fetchFn: networkFetch,
-  });
+  const walletConfig = await fetchActiveAccounts(mnemonic, networkObject, currentAccounts);
   if (walletConfig && walletConfig.accounts.length > 0) {
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
