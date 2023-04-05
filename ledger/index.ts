@@ -154,7 +154,6 @@ export async function signLedgerNestedSegwitBtcTransaction(
 
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
-  psbt.setVersion(2);
 
   const transactionMap = new Map<string, Buffer>();
   for (const utxo of newSelectedUnspentOutputs) {
@@ -198,11 +197,11 @@ export async function signLedgerNestedSegwitBtcTransaction(
   // 4. Sign Transaction
   //================================================================================================
 
-  const signitures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
 
-  for (const signiture of signitures) {
-    psbt.updateInput(signiture[0], {
-      partialSig: [signiture[1]],
+  for (const signature of signatures) {
+    psbt.updateInput(signature[0], {
+      partialSig: [signature[1]],
     });
   }
 
