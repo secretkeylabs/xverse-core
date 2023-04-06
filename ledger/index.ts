@@ -32,14 +32,16 @@ import axios from 'axios';
  * @returns the address and the public key in compressed format
  * */
 export async function importNestedSegwitAccountFromLedger(
-  app: AppClient,
+  transport: Transport,
   network: NetworkType,
-  masterFingerPrint: string,
   accountIndex: number = 0,
   addressIndex: number = 0,
   showAddress: boolean = false
 ): Promise<{ address: string; publicKey: string }> {
+  const app = new AppClient(transport);
+
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
+  const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/49'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
     'sh(wpkh(@0/**))',
@@ -62,14 +64,16 @@ export async function importNestedSegwitAccountFromLedger(
  * @returns the address and the public key in compressed format
  * */
 export async function importTaprootAccountFromLedger(
-  app: AppClient,
+  transport: Transport,
   network: NetworkType,
-  masterFingerPrint: string,
   accountIndex: number = 0,
   addressIndex: number = 0,
   showAddress: boolean = false
 ): Promise<{ address: string; publicKey: string }> {
+  const app = new AppClient(transport);
+
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
+  const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
     'tr(@0/**)',
