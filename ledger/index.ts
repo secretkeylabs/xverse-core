@@ -13,11 +13,11 @@ import {
   ErrorCodes,
   NetworkType,
   ResponseError,
-} from 'types/network';
+} from '../types';
 import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
 import { Bip32Derivation, Transport } from './types';
-import { fetchBtcAddressUnspent } from 'api/btc';
-import { fetchBtcFeeRate } from 'api';
+import { fetchBtcAddressUnspent } from '../api/btc';
+import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
 
