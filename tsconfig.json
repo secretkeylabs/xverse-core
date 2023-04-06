@@ -12,7 +12,7 @@
       "wallet/*": ["./wallet"],
       "stacking/*": ["./stacking"],
       "account/*": ["./account"],
-      "gaia/*": ["./gaia"],
+      "gaia/*": ["./gaia"]
     },
     "declaration": true,
     "sourceMap": true,
@@ -25,7 +25,5 @@
     "allowUnreachableCode": false,
     "skipLibCheck": true
   },
-  "exclude": [
-    "./tests",
-  ],
+  "exclude": ["./tests", "./dist"]
 }
