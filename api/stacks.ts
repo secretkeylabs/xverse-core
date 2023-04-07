@@ -35,7 +35,7 @@ import {
   tupleCV,
   UIntCV,
 } from '@stacks/transactions';
-import { AddressToBnsResponse, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
+import { CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import { getNetworkURL } from './helper';
 
 import {
@@ -255,63 +255,6 @@ export async function getContractInterface(
     });
 }
 
-export async function getBnsName(stxAddress: string, network: StacksNetwork) {
-  const apiUrl = `${getNetworkURL(network)}/v1/addresses/stacks/${stxAddress}`;
-  return axios
-    .get<AddressToBnsResponse>(apiUrl, {
-      timeout: 30000,
-    })
-    .then((response) => {
-      return response?.data?.names[0];
-    })
-    .catch((error) => {
-      return undefined;
-    });
-}
-
-export async function fetchAddressOfBnsName(
-  bnsName: string,
-  stxAddress: string,
-  network: StacksNetwork
-): Promise<string> {
-  try {
-    if (bnsName.includes('.')) {
-      const ns = bnsName.split('.');
-      const name_ = ns[0];
-      const namespace_ = ns[1] ?? '';
-
-      const contractAddress = 'SP000000000000000000002Q6VF78';
-      const contractName = 'bns';
-      const functionName = 'name-resolve';
-      const senderAddress = stxAddress;
-      const namespace: BufferCV = bufferCVFromString(namespace_);
-      const name: BufferCV = bufferCVFromString(name_);
-
-      const options = {
-        contractAddress,
-        contractName,
-        functionName,
-        functionArgs: [namespace, name],
-        network,
-        senderAddress,
-      };
-
-      const responseCV = await callReadOnlyFunction(options);
-
-      if (responseCV.type === ClarityType.ResponseErr) {
-        return '';
-      } else {
-        const response = responseCV as ResponseCV;
-        const tupleCV = response.value as TupleCV;
-        const owner: PrincipalCV = tupleCV.data['owner'] as PrincipalCV;
-        const address = cvToString(owner);
-        return address;
-      }
-    } else return '';
-  } catch (err) {
-    return '';
-  }
-}
 export async function getConfirmedTransactions({
   stxAddress,
   network,

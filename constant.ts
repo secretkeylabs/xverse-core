@@ -41,3 +41,12 @@ export const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 
 export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+
+export const BNS_TESTNET_CONTRACT_ADDRESS = 'ST000000000000000000002AMW42H';
+
+export const BNS_CONTRACT_ADDRESS = 'SP000000000000000000002Q6VF78';
+
+export const BNS_CONTRACT_NAME = 'bns';
+
+export const BNS_NAME_COST = 2000000; // 2 stx
+

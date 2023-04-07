@@ -60,9 +60,21 @@ export interface NftEventsResponse {
   limit: number;
   offset: number;
 }
-export interface AddressToBnsResponse {
+
+export interface BnsNamesResponse {
   names: string[];
 }
+
+export interface BnsNameDataResponse {
+  address: string;
+  blockchain: string;
+  expire_block: number;
+  last_txid: string;
+  status: string;
+  zonefile: string;
+  zonefile_hash: string;
+}
+
 export interface PoxData {
   contract_id: string;
   first_burnchain_block_height: number;
@@ -74,6 +86,7 @@ export interface PoxData {
   total_liquid_supply_ustx: string;
   next_reward_cycle_in: number;
 }
+
 export interface DelegationInfo {
   delegated: boolean;
   amount?: string;
