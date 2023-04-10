@@ -51,6 +51,7 @@ import {
 } from 'types';
 import { getNftDetail } from './gamma';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
+import { getBnsNamesForOwner, getOwnerForBnsName } from './bns';
 
 export async function fetchStxAddressData(
   stxAddress: string,
@@ -253,6 +254,19 @@ export async function getContractInterface(
     .catch((error) => {
       return null;
     });
+}
+
+export async function getBnsName(stxAddress: string, network: StacksNetwork) {
+  const names = await getBnsNamesForOwner(stxAddress, network);
+  return names[0];
+}
+
+export async function fetchAddressOfBnsName(
+  bnsName: string,
+  stxAddress: string,
+  network: StacksNetwork
+): Promise<string> {
+    return await getOwnerForBnsName(bnsName, stxAddress, network);
 }
 
 export async function getConfirmedTransactions({

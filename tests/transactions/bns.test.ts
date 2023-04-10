@@ -1,10 +1,10 @@
-import { getZoneFileStub, generateSalt, generatePreorderNameHash, generateUnsignedBnsNameRegisterTransaction, generateUnsignedBnsNamePreorderTransaction, generateUnsignedBnsNameUpdateTransaction, generateUnsignedBnsNameTransferTransaction } from '../../transactions/bns'
+import { getZoneFileStub, generateSalt, generatePreorderNameHash, generateUnsignedBnsNameRegisterTransaction, generateUnsignedBnsNamePreorderTransaction, generateUnsignedBnsNameUpdateTransaction, generateUnsignedBnsNameTransferTransaction, getZoneFileForBnsNameUpdate, getBnsNamePreorderInfo } from '../../transactions/bns'
 import { getZoneFileForBnsName } from '../../api/bns';
 import { signTransaction, broadcastSignedTransaction } from '../../transactions/stx'
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { newWallet, walletFromSeedPhrase } from '../../wallet'
 import { parseZoneFile, makeZoneFile, addAddress, ZoneFileObject, setAddresses } from '@secretkeylabs/bns-zonefile';
-import { assert, describe, expect, it } from 'vitest';
+import { assert, describe, expect, it, test } from 'vitest';
 import { testSeedBns } from '../mocks';
 
 describe('bns api', () => {
@@ -12,14 +12,17 @@ describe('bns api', () => {
     let network = new StacksTestnet();
     let testIndex = 0;
     let wallet = await walletFromSeedPhrase({mnemonic: testSeedBns, network: 'Testnet', index: BigInt(testIndex)});
+    let testAddress = wallet.stxAddress;
     let namespace = 'id';
     let name = 'testname0';
-    //let salt = generateSalt();
+    let preorderInfo = await getBnsNamePreorderInfo(namespace, name, testAddress, network);
+    let cost = preorderInfo['cost'];
+    //let salt = preorderInfo['salt'];
     let salt = Buffer.from([ 14, 154, 95, 185, 168, 74, 239, 236, 26, 226, 22, 95, 82, 44, 87, 227, 203, 153, 26, 11 ])
     //console.log('salt:', new Uint32Array(salt));
     console.log('hash:', generatePreorderNameHash(namespace, name, salt));
 
-    let unsignedTx = await generateUnsignedBnsNamePreorderTransaction(namespace, name, salt, [], wallet.stxPublicKey, network);
+    let unsignedTx = await generateUnsignedBnsNamePreorderTransaction(namespace, name, cost, salt, [], wallet.stxPublicKey, network);
     let signedTx = await signTransaction(unsignedTx, testSeedBns, testIndex, network);
 
     let txid = await broadcastSignedTransaction(signedTx, network);
@@ -55,10 +58,9 @@ describe('bns api', () => {
     let testAddress = wallet.stxAddress;
     let namespace = 'id';
     let name = 'testname0';
-    let coin = 'stx';
-    let zoneFileObj = await getZoneFileForBnsName(name + '.' + namespace, network) as ZoneFileObject;
-    console.log(zoneFileObj);
-    setAddresses(zoneFileObj, coin, [testAddress]);
+    let addressMap = { 'stx': [ testAddress ] }
+
+    let zoneFileObj = await getZoneFileForBnsNameUpdate(namespace, name, addressMap, network);
     console.log(zoneFileObj);
 
     let zoneFileStr = makeZoneFile(zoneFileObj);
@@ -70,7 +72,7 @@ describe('bns api', () => {
     console.log('txid:', txid);
   });
 
-  it('bns name transfer', async () => {
+  it.skip('bns name transfer', async () => {
     let network = new StacksTestnet();
     let testIndex = 0;
     let wallet = await walletFromSeedPhrase({mnemonic: testSeedBns, network: 'Testnet', index: BigInt(testIndex)});

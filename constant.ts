@@ -48,5 +48,5 @@ export const BNS_CONTRACT_ADDRESS = 'SP000000000000000000002Q6VF78';
 
 export const BNS_CONTRACT_NAME = 'bns';
 
-export const BNS_NAME_COST = 2000000; // 2 stx
+export const BNS_BTC_NAME_COST = 2000000; // 2 stx
 

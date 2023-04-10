@@ -25,7 +25,7 @@ export {
   NonFungibleToken,
   NftEventsResponse,
   CoreInfo,
-  AddressToBnsResponse,
+  BnsNameDataResponse,
   getBnsNftName,
 } from './api/stacks/assets';
 export { NftDetailResponse } from './api/gamma/currency';

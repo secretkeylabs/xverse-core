@@ -1,7 +1,5 @@
 /*
 
-name-renewal
-
 https://github.com/hirosystems/btc-us-website/blob/main/src/lib/nameservice.js
 
 */
@@ -12,11 +10,8 @@ import {
   bufferCVFromString,
   ClarityType,
   ClarityValue,
-  contractPrincipalCV,
   noneCV,
-  someCV,
   standardPrincipalCV,
-  tupleCV,
   uintCV,
   hash160,
 } from '@stacks/transactions';
@@ -30,9 +25,9 @@ import {
   setNonce,
 } from './stx';
 import { randomBytes } from "@stacks/encryption";
-import { BNS_CONTRACT_ADDRESS, BNS_TESTNET_CONTRACT_ADDRESS, BNS_CONTRACT_NAME, BNS_NAME_COST } from '../constant';
-import { parseZoneFile, makeZoneFile } from '@secretkeylabs/bns-zonefile';
-import { ZoneFileObject } from '@secretkeylabs/bns-zonefile';
+import { BNS_CONTRACT_ADDRESS, BNS_TESTNET_CONTRACT_ADDRESS, BNS_CONTRACT_NAME } from '../constant';
+import { makeZoneFile, ZoneFileObject, setAddresses } from '@secretkeylabs/bns-zonefile';
+import { getBnsNamePrice, getZoneFileForBnsName } from 'api/bns';
 
 export function getZoneFileHash(zoneFileObj: ZoneFileObject): Buffer {
 	return hash160(Buffer.from(makeZoneFile(zoneFileObj)));
@@ -52,9 +47,39 @@ export function generatePreorderNameHash(namespace: string, name: string, salt: 
 	return hash160(Buffer.concat([Buffer.from(name + '.' + namespace), salt]));
 }
 
+export async function getBnsNamePreorderInfo(
+  namespace: string,
+  name: string,
+  stxAddress: string,
+  network: StacksNetwork
+) {
+  return {
+    'cost': await getBnsNamePrice(namespace, name, stxAddress, network),
+    'zoneFileObj': getZoneFileStub(namespace, name),
+    'salt': generateSalt(),
+  }
+}
+
+export async function getZoneFileForBnsNameUpdate(
+  namespace: string,
+  name: string,
+  addressMap: { [coin: string]: string[] },
+  network: StacksNetwork
+): Promise<ZoneFileObject> {
+    let zoneFileObj = await getZoneFileForBnsName(name + '.' + namespace, network) as ZoneFileObject;
+    if (zoneFileObj.$origin == undefined) {
+      zoneFileObj = getZoneFileStub(namespace, name);
+    }
+    for (let coin in addressMap) {
+      setAddresses(zoneFileObj, coin, addressMap[coin]);
+    }
+    return zoneFileObj;
+}
+
 export async function generateUnsignedBnsNamePreorderTransaction(
   namespace: string,
   name: string,
+  cost: number,
   salt: Buffer,
   pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
@@ -72,7 +97,7 @@ export async function generateUnsignedBnsNamePreorderTransaction(
       functionName: 'name-preorder',
       functionArgs: [
         bufferCV(hash),
-        uintCV(BNS_NAME_COST)
+        uintCV(cost)
       ],
       network,
       postConditions: [],
@@ -88,7 +113,6 @@ export async function generateUnsignedBnsNamePreorderTransaction(
     return Promise.reject(err.toString());
   }
 }
-
 
 export async function generateUnsignedBnsNameRegisterTransaction(
   namespace: string,
@@ -194,9 +218,7 @@ export async function generateUnsignedBnsNameTransferTransaction(
     const fee = await estimateContractCallFees(unsignedTx, network);
     setFee(unsignedTx, fee);
 
-    //const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-    let nonce = 9n;
-    
+    const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
 
     return Promise.resolve(unsignedTx);

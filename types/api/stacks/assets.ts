@@ -61,10 +61,6 @@ export interface NftEventsResponse {
   offset: number;
 }
 
-export interface BnsNamesResponse {
-  names: string[];
-}
-
 export interface BnsNameDataResponse {
   address: string;
   blockchain: string;
