@@ -11,6 +11,7 @@
     "@stacks/storage": "^6.0.0",
     "@stacks/transactions": "4.3.5",
     "@stacks/wallet-sdk": "^5.0.2",
+    "@zondax/ledger-stacks": "^1.0.4",
     "axios": "0.27.2",
     "bignumber.js": "9.1.0",
     "bip32": "^2.0.6",

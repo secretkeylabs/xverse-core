@@ -13,6 +13,7 @@ import {
   ErrorCodes,
   NetworkType,
   ResponseError,
+  StacksNetwork,
 } from '../types';
 import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
 import { Bip32Derivation, Transport } from './types';
@@ -20,6 +21,19 @@ import { fetchBtcAddressUnspent } from '../api/btc';
 import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
+import StacksApp from '@zondax/ledger-stacks';
+import {
+  AnchorMode,
+  SingleSigSpendingCondition,
+  StacksTransaction,
+  UnsignedTokenTransferOptions,
+  broadcastRawTransaction,
+  bytesToHex,
+  createMessageSignature,
+  deserializeTransaction,
+  makeUnsignedSTXTokenTransfer,
+  publicKeyToAddress,
+} from '@stacks/transactions';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
@@ -260,4 +274,99 @@ export async function signLedgerNestedSegwitBtcTransaction(
 
   psbt.finalizeAllInputs();
   return psbt.extractTransaction().toHex();
+}
+
+//================================================================================================
+// STX
+//================================================================================================
+
+export async function importStacksAccountFromLedger(
+  transport: Transport,
+  network: NetworkType,
+  accountIndex: number = 0,
+  addressIndex: number = 0
+): Promise<{ address: string; publicKey: string; testnetAddress: string }> {
+  const appStacks = new StacksApp(transport);
+  const MainnetSingleSig = 22;
+  const TestnetSingleSig = 26;
+
+  // Returns address and COMPRESSED public key
+  const { address, publicKey } = await appStacks.getAddressAndPubKey(
+    `m/44'/5757'/${accountIndex}'/0/${addressIndex}`, // copied from hiro, /0 at the end means 1st account
+    MainnetSingleSig
+  );
+
+  const testnetAddress = publicKeyToAddress(TestnetSingleSig, {
+    data: publicKey,
+    type: 6, // 6 = Public Key
+  });
+
+  return { address, testnetAddress, publicKey: publicKey.toString('hex') };
+}
+
+type TxPayload = {
+  recipient: string;
+  memo: string | undefined;
+  amount: string;
+  network: StacksNetwork | undefined;
+  anchorMode: AnchorMode;
+};
+
+type UnsignedArgs = {
+  txData: TxPayload;
+  publicKey: string;
+  fee: number | string;
+  nonce?: number;
+};
+
+function initNonce(nonce?: number) {
+  return nonce !== undefined ? new BigNumber(nonce, 10) : undefined;
+}
+
+export function generateUnsignedStxTransferTx(args: UnsignedArgs) {
+  const { txData, publicKey, nonce, fee } = args;
+  const { recipient, memo, amount, network, anchorMode } = txData;
+  const options = {
+    recipient,
+    memo,
+    publicKey,
+    anchorMode: anchorMode ?? AnchorMode.Any,
+    amount: new BigNumber(amount).toString(),
+    nonce: initNonce(nonce)?.toString(),
+    fee: new BigNumber(fee, 10).toString(),
+    network,
+  };
+
+  return makeUnsignedSTXTokenTransfer(options);
+}
+
+function signTransactionWithSignature(transaction: string | Buffer, signatureVRS: Buffer) {
+  const deserialzedTx = deserializeTransaction(transaction);
+  const spendingCondition = createMessageSignature(signatureVRS.toString('hex'));
+  (deserialzedTx.auth.spendingCondition as SingleSigSpendingCondition).signature =
+    spendingCondition;
+  return deserialzedTx;
+}
+
+export async function signStxTransaction(
+  transport: Transport,
+  transaction: StacksTransaction
+): Promise<StacksTransaction> {
+  const appStacks = new StacksApp(transport);
+  const path = `m/44'/5757'/${0}'/0/${0}`;
+  const transactionBuffer = transaction.serialize();
+  const resp = await appStacks.sign(path, transactionBuffer);
+  const signedTx = signTransactionWithSignature(transactionBuffer, resp.signatureVRS);
+
+  // const stacksTransactionHex = `0x${bytesToHex(signedTx.serialize())}`;
+
+  return signedTx; // TX ready to be broadcast
+}
+
+async function broadcastStxTransaction(
+  signedTx: StacksTransaction,
+  network: string = 'https://stacks-node-api.testnet.stacks.co/v2/transactions'
+) {
+  const response = await broadcastRawTransaction(signedTx.serialize(), network);
+  return response.txid;
 }
