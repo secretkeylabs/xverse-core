@@ -1,4 +1,4 @@
-export interface Account {
+export interface OldAccount {
   id: number;
   stxAddress: string;
   btcAddress: string;
@@ -8,4 +8,9 @@ export interface Account {
   btcPublicKey: string;
   ordinalsPublicKey: string;
   bnsName?: string;
+}
+
+export interface Account extends OldAccount {
+  isLedgerAccount?: boolean;
+  accountName?: string;
 }
