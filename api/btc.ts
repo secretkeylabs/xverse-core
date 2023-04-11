@@ -1,20 +1,13 @@
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './../constant';
 import axios from 'axios';
 import {
-  BtcAddressBalanceResponse,
-  BtcAddressData,
   BtcTransactionsDataResponse,
   BtcTransactionData,
   BtcUtxoDataResponse,
   BtcAddressDataResponse,
-  BtcTransactionBroadcastResponse,
-  BtcOrdinal,
   BtcBalance,
-  BtcTransactionDataResponse,
 } from '../types/api/blockcypher/wallet';
 import { NetworkType } from '../types/network';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
-import { BtcAddressMempool } from '../types/api/blockstream/transactions';
 
 export async function fetchBtcAddressUnspent(
   btcAddress: string,
@@ -59,58 +52,6 @@ export async function fetchPoolBtcAddressBalance(
     });
 }
 
-export async function broadcastRawBtcTransaction(
-  rawTx: string,
-  network: NetworkType
-): Promise<BtcTransactionBroadcastResponse> {
-  const broadcastUrl =
-    network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
-  return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
-    return {
-      tx: {
-        hash: response.data
-      }
-    };
-  });
-}
-
-export async function getBtcWalletData(
-  btcPaymentAddress: string,
-  network: NetworkType
-): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://blockstream.info/api/address/${btcPaymentAddress}`;
-  const btcApiBaseUrlTestnet = `https://blockstream.info/testnet/api/address/${btcPaymentAddress}`;
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  return axios.get<BtcAddressBalanceResponse>(apiUrl).then((response) => {
-    const {
-      data: {
-        address,
-        chain_stats,
-        mempool_stats,
-      }
-    } = response;
-    const finalBalance = chain_stats.funded_txo_sum - chain_stats.spent_txo_sum;
-    const unconfirmedBalance = mempool_stats.funded_txo_sum - mempool_stats.spent_txo_sum;
-    return {
-      address,
-      finalBalance,
-      finalNTx: chain_stats.tx_count,
-      totalReceived: chain_stats.funded_txo_sum,
-      totalSent: chain_stats.spent_txo_sum,
-      unconfirmedTx: mempool_stats.tx_count,
-      unconfirmedBalance,
-    };
-  });
-}
-
-export async function fetchBtcTransactionData(txHash: string, btcAddress: string, ordinalsAddress: string): Promise<BtcTransactionData> {
-  const txDataApiUrl = `https://api.blockcypher.com/v1/btc/main/txs/${txHash}`;
-  const response = await axios.get<BtcTransactionDataResponse>(txDataApiUrl);
-  return parseBtcTransactionData(response.data, btcAddress, ordinalsAddress);
-}
 
 export async function fetchBtcOrdinalTransactions(
   ordinalsAddress: string,
@@ -180,16 +121,3 @@ export async function fetchBtcTransactionsData(
   return paymentTransactions;
 }
 
-export async function fetchPendingOrdinalsTransactions(
-  ordinalsAddress: string,
-  network: NetworkType
-): Promise<BtcAddressMempool[]> {
-  const apiUrlMainnet = `https://blockstream.info/api/address/${ordinalsAddress}/txs/mempool`;
-  const apiUrlMainnetTestnet = `https://blockstream.info/testnet/api/address/${ordinalsAddress}/txs/mempool`;
-  let apiUrl = apiUrlMainnet;
-  if (network === 'Testnet') {
-    apiUrl = apiUrlMainnetTestnet;
-  }
-  const response = await axios.get<BtcAddressMempool[]>(apiUrl);
-  return response.data;
-}

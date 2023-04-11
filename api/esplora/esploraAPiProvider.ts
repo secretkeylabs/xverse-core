@@ -1,10 +1,12 @@
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import {
   BtcAddressBalanceResponse,
   BtcTransactionBroadcastResponse,
 } from '../../types/api/blockcypher/wallet';
+import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
 import { NetworkType } from '../../types/network';
-import * as esplora from './types';
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import * as esplora from '../../types/api/esplora';
+import { BitcoinApiProvider } from './types';
 
 export class ApiInstance {
   bitcoinApi: AxiosInstance;
@@ -12,37 +14,40 @@ export class ApiInstance {
     this.bitcoinApi = axios.create(config);
   }
 
-  httpGet(url: string, params: any = {}): Promise<any> {
-    return this.bitcoinApi
-      .get(url, { params })
-      .then((response) => response.data)
-      .catch((e) => e.toJSON());
+  async httpGet(url: string, params: any = {}): Promise<any> {
+    try {
+      const response = await this.bitcoinApi.get(url, { params });
+      return response.data;
+    } catch (e) {
+      return e.toJSON();
+    }
   }
 
-  httpPost(url: string, data: any): Promise<any> {
-    return this.bitcoinApi
-      .post(url, data)
-      .then((response) => response.data)
-      .catch((e) => e.toJSON());
+  async httpPost(url: string, data: any): Promise<any> {
+    try {
+      const response = await this.bitcoinApi.post(url, data);
+      return response.data;
+    } catch (e) {
+      return e.toJSON();
+    }
   }
 }
 
 export interface EsploraApiProviderOptions {
-  url: string;
   network: NetworkType;
-  numberOfBlockConfirmation?: number;
+  url?: string;
 }
 
 export default class BitcoinEsploraApiProvider
   extends ApiInstance
-  implements esplora.BitcoinApiProvider
+  implements BitcoinApiProvider
 {
   _network: NetworkType;
 
   constructor(options: EsploraApiProviderOptions) {
-    const { url, network, numberOfBlockConfirmation = 1 } = options;
+    const { url, network } = options;
     super({
-      baseURL: url,
+      baseURL: url || network == 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET,
     });
     this._network = network;
   }
@@ -63,7 +68,7 @@ export default class BitcoinEsploraApiProvider
     };
   }
 
-  async _getUnspentTransactions(address: string): Promise<bitcoin.UTXO[]> {
+  async _getUnspentTransactions(address: string): Promise<esplora.UTXO[]> {
     const data: esplora.UTXO[] = await this.httpGet(`/address/${address}/utxo`);
     return data.map((utxo) => ({
       ...utxo,
@@ -85,6 +90,10 @@ export default class BitcoinEsploraApiProvider
 
   async getAddressTransactions(address: string): Promise<esplora.Transaction[]> {
     return this.httpGet(`/address/${address}/txs`);
+  }
+
+  async getAddressMempoolTransactions(address: string): Promise<esplora.BtcAddressMempool[]> {
+    return this.httpGet(`/address/${address}/txs/mempool`);
   }
 
   async sendRawTransaction(rawTransaction: string): Promise<BtcTransactionBroadcastResponse> {

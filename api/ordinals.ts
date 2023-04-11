@@ -1,18 +1,20 @@
 import {
   NetworkType,
   BtcOrdinal,
+  UTXO,
 } from '../types';
 import axios from 'axios';
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
+import { XVERSE_API_BASE_URL } from '../constant';
 import { fetchBtcAddressUnspent } from './btc';
 import { BtcUtxoDataResponse } from '../types/api/blockcypher/wallet';
 import { UnspentOutput } from '../transactions/btc'
+import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
-  if (new Date(prev.confirmationTime).getTime() > new Date(next.confirmationTime).getTime()) {
+  if (prev.confirmationTime > next.confirmationTime) {
     return 1;
   }
-  if (new Date(prev.confirmationTime).getTime() < new Date(next.confirmationTime).getTime()) {
+  if (prev.confirmationTime < next.confirmationTime) {
     return -1;
   }
   return 0;
@@ -22,17 +24,20 @@ export async function fetchBtcOrdinalsData(
   btcAddress: string,
   network: NetworkType
 ): Promise<BtcOrdinal[]> {
-  const unspentUTXOS = await fetchBtcAddressUnspent(btcAddress, network, 2000);
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentUTXOS = await btcClient.getUnspentUtxos(btcAddress);
   const ordinals: BtcOrdinal[] = [];
   await Promise.all(
-    unspentUTXOS.map(async (utxo) => {
-      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}/${utxo.tx_output_n}`;
+    unspentUTXOS.map(async (utxo: UTXO) => {
+      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.txid}/${utxo.vout}`;
       try {
         const ordinal = await axios.get(ordinalContentUrl);
         if (ordinal) {
           ordinals.push({
             id: ordinal.data.id,
-            confirmationTime: utxo.confirmed,
+            confirmationTime: utxo.status.block_time || 0,
             utxo,
           });
         }
@@ -43,8 +48,8 @@ export async function fetchBtcOrdinalsData(
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }
 
-export async function getOrdinalIdFromUtxo(utxo: BtcUtxoDataResponse) {
-  const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.tx_hash}/${utxo.tx_output_n}`;
+export async function getOrdinalIdFromUtxo(utxo: UTXO) {
+  const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.txid}/${utxo.vout}`;
   try {
     const ordinal = await axios.get(ordinalContentUrl);
     if (ordinal) {
@@ -72,17 +77,6 @@ export async function getTextOrdinalContent(url: string): Promise<string> {
     });
 }
 
-export async function broadcastRawBtcOrdinalTransaction(
-  rawTx: string,
-  network: NetworkType,
-): Promise<string> {
-  const broadcastUrl =
-    network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
-  return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
-    return response.data;
-  });
-}
-
 export function parseOrdinalTextContentData(content: string): string {
   try {
     const contentData = JSON.parse(content);
@@ -104,9 +98,12 @@ export function parseOrdinalTextContentData(content: string): string {
 export async function getNonOrdinalUtxo(
   address: string,
   network: NetworkType,
-): Promise<Array<UnspentOutput>> {
-  const unspentOutputs = await fetchBtcAddressUnspent(address, network, 2000)
-  const nonOrdinalOutputs: Array<UnspentOutput> = []
+): Promise<Array<UTXO>> {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentOutputs = await btcClient.getUnspentUtxos(address);
+  const nonOrdinalOutputs: Array<UTXO> = []
 
   for (let i = 0; i < unspentOutputs.length; i++) {
     const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i])
