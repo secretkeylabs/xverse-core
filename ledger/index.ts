@@ -23,11 +23,6 @@ import axios from 'axios';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
- * @param app - the ledger app client
- * @param network - the network type
- * @param masterFingerPrint - the master finger print
- * @param accountIndex - the account index
- * @param addressIndex - the address index
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
@@ -55,11 +50,6 @@ export async function importNestedSegwitAccountFromLedger(
 
 /**
  * This function is used to get the taproot account data from the ledger
- * @param app - the ledger app client
- * @param network - the network type
- * @param masterFingerPrint - the master finger print
- * @param accountIndex - the account index
- * @param addressIndex - the address index
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
@@ -87,9 +77,6 @@ export async function importTaprootAccountFromLedger(
 
 /**
  * This function is used to get the transaction data for the ledger psbt
- * @param network - the network type
- * @param senderAddress - the sender address
- * @param recipient - the recipient
  * @returns the selected utxos, the change value and the fee
  * */
 async function getTransactionData(
@@ -137,14 +124,8 @@ async function getTransactionData(
 
 /**
  * This function is used to create a nested segwit transaction for the ledger
- * @param network - the network type
- * @param recipient - the recipient
- * @param changeAddress - the change address
- * @param changeValue - the change value
  * @param inputUTXOs - the selected input utxos
  * @param inputDerivation - the derivation data for the sender address
- * @param redeemScript - the redeem script
- * @param witnessScript - the witness script
  * @returns the psbt without any signatures
  * */
 async function createNestedSegwitPsbt(
@@ -200,8 +181,6 @@ async function createNestedSegwitPsbt(
 /**
  * This function is used to sign a Nested Segwit transaction with the ledger
  * @param transport - the transport object with connected ledger device
- * @param network - the network type
- * @param addressIndex - the address index
  * @param recipient - the recipient of the transaction
  * @returns the signed raw transaction in hex format
  * */
