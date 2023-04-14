@@ -72,7 +72,7 @@ export async function getTextOrdinalContent(url: string): Promise<string> {
       transformResponse: [(data) => parseOrdinalTextContentData(data)]
     })
     .then((response) => response!.data)
-    .catch((error) => { 
+    .catch((error) => {
       return '';
     });
 }
