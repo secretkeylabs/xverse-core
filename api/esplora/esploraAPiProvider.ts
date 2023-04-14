@@ -38,10 +38,7 @@ export interface EsploraApiProviderOptions {
   url?: string;
 }
 
-export default class BitcoinEsploraApiProvider
-  extends ApiInstance
-  implements BitcoinApiProvider
-{
+export default class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApiProvider {
   _network: NetworkType;
 
   constructor(options: EsploraApiProviderOptions) {
@@ -103,5 +100,10 @@ export default class BitcoinEsploraApiProvider
         hash: data,
       },
     };
+  }
+
+  async getLatestBlockHeight(): Promise<number> {
+    const data: number = await this.httpGet('/blocks/tip/height');
+    return data;
   }
 }

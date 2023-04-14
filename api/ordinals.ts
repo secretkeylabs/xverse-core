@@ -5,9 +5,6 @@ import {
 } from '../types';
 import axios from 'axios';
 import { XVERSE_API_BASE_URL } from '../constant';
-import { fetchBtcAddressUnspent } from './btc';
-import { BtcUtxoDataResponse } from '../types/api/blockcypher/wallet';
-import { UnspentOutput } from '../transactions/btc'
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {

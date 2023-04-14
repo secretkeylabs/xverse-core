@@ -22,9 +22,9 @@ export const STX_PATH_WITHOUT_INDEX = `m/44'/5757'/0'/0/`;
 
 export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 
-export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api/';
+export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
 
-export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api/';
+export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
 
 export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
 
