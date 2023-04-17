@@ -1,57 +1,7 @@
 import axios from 'axios';
-import {
-  BtcTransactionsDataResponse,
-  BtcTransactionData,
-  BtcUtxoDataResponse,
-  BtcAddressDataResponse,
-  BtcBalance,
-} from '../types/api/blockcypher/wallet';
+import { BtcTransactionsDataResponse, BtcTransactionData } from '../types/api/blockcypher/wallet';
 import { NetworkType } from '../types/network';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
-
-export async function fetchBtcAddressUnspent(
-  btcAddress: string,
-  network: NetworkType,
-  limit: number = 1000
-): Promise<Array<BtcUtxoDataResponse>> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}?unspentOnly=true&limit=${limit}`;
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  return axios.get<BtcAddressDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
-    const confirmed = response.data.txrefs
-      ? (response.data.txrefs as Array<BtcUtxoDataResponse>)
-      : [];
-    const unconfirmed = response.data.unconfirmed_n_tx
-      ? (response.data.unconfirmed_txrefs as Array<BtcUtxoDataResponse>)
-      : [];
-    const combined = [...confirmed, ...unconfirmed];
-    return combined;
-  });
-}
-
-export async function fetchPoolBtcAddressBalance(
-  btcAddress: string,
-  network: NetworkType
-): Promise<BtcBalance> {
-  const btcApiBaseUrl = 'https://api.blockcypher.com/v1/btc/main/addrs/';
-  const btcApiBaseUrlTestnet = 'https://api.blockcypher.com/v1/btc/test3/addrs/';
-  let apiUrl = `${btcApiBaseUrl}${btcAddress}`;
-  if (network === 'Testnet') {
-    apiUrl = `${btcApiBaseUrlTestnet}${btcAddress}`;
-  }
-  return axios
-    .get<BtcAddressDataResponse>(apiUrl, { headers: { 'Access-Control-Allow-Origin': '*' } })
-    .then((response) => {
-      const btcPoolData: BtcBalance = {
-        balance: response.data.final_balance,
-      };
-      return btcPoolData;
-    });
-}
-
 
 export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, network: NetworkType) {
   const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${ordinalsAddress}/full?txlimit=3000`;
@@ -117,4 +67,3 @@ export async function fetchBtcTransactionsData(
   );
   return paymentTransactions;
 }
-

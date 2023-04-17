@@ -10,6 +10,7 @@ import { BitcoinApiProvider } from './types';
 
 export class ApiInstance {
   bitcoinApi: AxiosInstance;
+
   constructor(config: AxiosRequestConfig) {
     this.bitcoinApi = axios.create(config);
   }
@@ -51,16 +52,16 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
 
   async getBalance(address: string) {
     const data: BtcAddressBalanceResponse = await this.httpGet(`/address/${address}`);
-    const { chain_stats, mempool_stats } = data;
-    const finalBalance = chain_stats.funded_txo_sum - chain_stats.spent_txo_sum;
-    const unconfirmedBalance = mempool_stats.funded_txo_sum - mempool_stats.spent_txo_sum;
+    const { chain_stats: chainStats, mempool_stats: mempoolStats } = data;
+    const finalBalance = chainStats.funded_txo_sum - chainStats.spent_txo_sum;
+    const unconfirmedBalance = mempoolStats.funded_txo_sum - mempoolStats.spent_txo_sum;
     return {
       address,
       finalBalance,
-      finalNTx: chain_stats.tx_count,
-      totalReceived: chain_stats.funded_txo_sum,
-      totalSent: chain_stats.spent_txo_sum,
-      unconfirmedTx: mempool_stats.tx_count,
+      finalNTx: chainStats.tx_count,
+      totalReceived: chainStats.funded_txo_sum,
+      totalSent: chainStats.spent_txo_sum,
+      unconfirmedTx: mempoolStats.tx_count,
       unconfirmedBalance,
     };
   }

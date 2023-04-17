@@ -52,4 +52,3 @@ export {
   BtcAddressMempool,
   FeeEstimates,
 } from './api/esplora';
-export * from './api/blockstream/transactions';
