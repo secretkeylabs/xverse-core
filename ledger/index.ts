@@ -34,6 +34,10 @@ import {
   makeUnsignedSTXTokenTransfer,
   publicKeyToAddress,
 } from '@stacks/transactions';
+import { hashMessage, publicKeyToBtcAddress } from '@stacks/encryption';
+import { makeDIDFromAddress } from '@stacks/auth';
+import base64url from 'base64url';
+import ecdsaFormat from 'ecdsa-sig-formatter';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
@@ -363,10 +367,73 @@ export async function signStxTransaction(
   return signedTx; // TX ready to be broadcast
 }
 
-async function broadcastStxTransaction(
+export async function broadcastStxTransaction(
   signedTx: StacksTransaction,
   network: string = 'https://stacks-node-api.testnet.stacks.co/v2/transactions'
 ) {
   const response = await broadcastRawTransaction(signedTx.serialize(), network);
   return response.txid;
+}
+
+export async function signStxMessage(
+  transport: Transport,
+  message: string
+): Promise<StacksTransaction> {
+  const appStacks = new StacksApp(transport);
+  console.log(message);
+
+  const hash = hashMessage(message);
+  const path = `m/44'/5757'/${0}'/0/${0}`;
+  const result = await appStacks.sign_msg("m/44'/5757'/0'/0/0", bytesToHex(hash));
+  console.log(result);
+  if (result.returnCode === 36864) {
+    console.log(Buffer.from(result.signatureCompact).toString());
+  } else {
+    console.error(`${result.errorMessage}: ${JSON.stringify(result)}`);
+  }
+
+  return result;
+}
+
+export async function makeLedgerCompatibleUnsignedAuthResponsePayload({
+  dataPublicKey,
+  profile = {},
+  expiresAt = new Date().getTime() + 30 * 24 * 60 * 60 * 1000,
+}: {
+  dataPublicKey: string;
+  profile: any;
+  expiresAt?: number;
+}): Promise<string> {
+  const address = publicKeyToBtcAddress(dataPublicKey);
+
+  if (!address) {
+    throw new Error();
+  }
+
+  const payload = {
+    jti: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+    iat: Math.floor(new Date().getTime() / 1000), // JWT times are in seconds
+    exp: Math.floor(expiresAt / 1000), // JWT times are in seconds
+    iss: makeDIDFromAddress(address),
+    public_keys: [dataPublicKey],
+    profile,
+  };
+
+  const header = { typ: 'JWT', alg: 'ES256K' };
+
+  const formedHeader = base64url.encode(JSON.stringify(header));
+
+  const formedPayload = base64url.encode(JSON.stringify(payload));
+
+  const inputToSign = [formedHeader, formedPayload].join('.');
+
+  return inputToSign;
+}
+
+export async function signStxJWTAuth(transport: Transport, accountIndex: number, payload: string) {
+  const appStacks = new StacksApp(transport);
+  const response = await appStacks.sign_jwt(`m/44'/5757'/0'/0/${accountIndex}`, payload);
+
+  const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
+  return [payload, resultingSig].join('.');
 }
