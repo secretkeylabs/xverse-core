@@ -147,6 +147,7 @@ export async function createWalletAccount(
       bnsName,
     },
   ];
+  try {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
   const walletConfigKey = await deriveWalletConfigKey(rootNode);
@@ -160,4 +161,8 @@ export async function createWalletAccount(
     configPrivateKey: walletConfigKey,
   });
   return updateAccountsList;
+  } catch(err) {
+    return updateAccountsList;
+  }
+
 }
