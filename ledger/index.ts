@@ -375,10 +375,18 @@ export async function broadcastStxTransaction(
   return response.txid;
 }
 
-export async function signStxMessage(
-  transport: Transport,
-  message: string
-): Promise<StacksTransaction> {
+interface ResponseBase {
+  errorMessage: string;
+  returnCode: number;
+}
+interface ResponseSign extends ResponseBase {
+  postSignHash: Buffer;
+  signatureCompact: Buffer;
+  signatureVRS: Buffer;
+  signatureDER: Buffer;
+}
+
+export async function signStxMessage(transport: Transport, message: string): Promise<ResponseSign> {
   const appStacks = new StacksApp(transport);
   console.log(message);
 
@@ -432,8 +440,11 @@ export async function makeLedgerCompatibleUnsignedAuthResponsePayload({
 
 export async function signStxJWTAuth(transport: Transport, accountIndex: number, payload: string) {
   const appStacks = new StacksApp(transport);
-  const response = await appStacks.sign_jwt(`m/44'/5757'/0'/0/${accountIndex}`, payload);
+  const response = await appStacks.sign_jwt(`m/888'/0'/${accountIndex}'`, payload);
+  console.log({ response, payload });
 
   const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
   return [payload, resultingSig].join('.');
 }
+
+// app.getIdentityPubKey
