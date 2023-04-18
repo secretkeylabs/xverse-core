@@ -1,3 +1,4 @@
+import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './../constant';
 import axios from 'axios';
 import {
   BtcAddressBalanceResponse,
@@ -7,7 +8,6 @@ import {
   BtcUtxoDataResponse,
   BtcAddressDataResponse,
   BtcTransactionBroadcastResponse,
-  BtcOrdinal,
   BtcBalance,
   BtcTransactionDataResponse,
   BtcTransactionDataHexIncluded,
@@ -63,43 +63,40 @@ export async function broadcastRawBtcTransaction(
   rawTx: string,
   network: NetworkType
 ): Promise<BtcTransactionBroadcastResponse> {
-  const btcApiBaseUrl = 'https://api.blockcypher.com/v1/btc/main/txs/push';
-  const btcApiBaseUrlTestnet = 'https://api.blockcypher.com/v1/btc/test3/txs/push';
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  const data = {
-    tx: rawTx,
-  };
-  return axios
-    .post<BtcTransactionBroadcastResponse>(apiUrl, data, { timeout: 45000 })
-    .then((response) => {
-      return response.data;
-    });
+  const broadcastUrl = network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
+  return axios.post(broadcastUrl, rawTx, { timeout: 45000 }).then((response) => {
+    return {
+      tx: {
+        hash: response.data,
+      },
+    };
+  });
 }
 
 export async function getBtcWalletData(
   btcPaymentAddress: string,
   network: NetworkType
 ): Promise<BtcAddressData> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcPaymentAddress}/balance`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcPaymentAddress}/balance`;
+  const btcApiBaseUrl = `https://blockstream.info/api/address/${btcPaymentAddress}`;
+  const btcApiBaseUrlTestnet = `https://blockstream.info/testnet/api/address/${btcPaymentAddress}`;
   let apiUrl = btcApiBaseUrl;
   if (network === 'Testnet') {
     apiUrl = btcApiBaseUrlTestnet;
   }
   return axios.get<BtcAddressBalanceResponse>(apiUrl).then((response) => {
+    const {
+      data: { address, chain_stats, mempool_stats },
+    } = response;
+    const finalBalance = chain_stats.funded_txo_sum - chain_stats.spent_txo_sum;
+    const unconfirmedBalance = mempool_stats.funded_txo_sum - mempool_stats.spent_txo_sum;
     return {
-      address: response.data.address,
-      balance: response.data.balance,
-      finalBalance: response.data.final_balance,
-      finalNTx: response.data.final_n_tx,
-      nTx: response.data.n_tx,
-      totalReceived: response.data.total_received,
-      totalSent: response.data.total_sent,
-      unconfirmedTx: response.data.unconfirmed_balance,
-      unconfirmedBalance: response.data.unconfirmed_balance,
+      address,
+      finalBalance,
+      finalNTx: chain_stats.tx_count,
+      totalReceived: chain_stats.funded_txo_sum,
+      totalSent: chain_stats.spent_txo_sum,
+      unconfirmedTx: mempool_stats.tx_count,
+      unconfirmedBalance,
     };
   });
 }

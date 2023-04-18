@@ -3,7 +3,7 @@ import {
   BtcOrdinal,
 } from '../types';
 import axios from 'axios';
-import { ORDINAL_BROADCAST_URI, ORDINAL_TESTNET_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
+import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
 import { fetchBtcAddressUnspent } from './btc';
 import { BtcUtxoDataResponse } from '../types/api/blockcypher/wallet';
 import { UnspentOutput } from '../transactions/btc'
@@ -67,7 +67,7 @@ export async function getTextOrdinalContent(url: string): Promise<string> {
       transformResponse: [(data) => parseOrdinalTextContentData(data)]
     })
     .then((response) => response!.data)
-    .catch((error) => { 
+    .catch((error) => {
       return '';
     });
 }
@@ -76,7 +76,8 @@ export async function broadcastRawBtcOrdinalTransaction(
   rawTx: string,
   network: NetworkType,
 ): Promise<string> {
-  const broadcastUrl = network === "Mainnet" ? ORDINAL_BROADCAST_URI : ORDINAL_TESTNET_BROADCAST_URI
+  const broadcastUrl =
+    network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
   return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
     return response.data;
   });

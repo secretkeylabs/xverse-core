@@ -2,10 +2,6 @@ import crypto from 'crypto';
 import * as bip39 from 'bip39';
 import { hashMessage } from '@stacks/encryption';
 import {
-  BTC_PATH_WITHOUT_INDEX,
-  BTC_TESTNET_PATH_WITHOUT_INDEX,
-  BTC_TAPROOT_PATH_WITHOUT_INDEX,
-  BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX,
   ENTROPY_BYTES,
   STX_PATH_WITHOUT_INDEX,
   BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
@@ -27,7 +23,6 @@ import { c32addressDecode } from 'c32check';
 import { ecPairToHexString } from './helper';
 import { Keychain } from 'types/api/xverse/wallet';
 import { BaseWallet } from 'types/wallet';
-import { deriveWalletConfigKey } from '../gaia';
 import { validate, Network as btcAddressNetwork } from 'bitcoin-address-validation';
 import * as btc from 'micro-btc-signer';
 import { hex } from '@scure/base';
