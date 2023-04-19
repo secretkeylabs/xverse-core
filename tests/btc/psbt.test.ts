@@ -1,4 +1,4 @@
-import { afterEach, assert, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { 
   getSigningDerivationPath,
   signPsbt,
@@ -6,11 +6,10 @@ import {
   signBip340,
   psbtBase64ToHex
 } from '../../transactions/psbt';
-import { testSeed } from '../mocks';
-import * as btc from 'micro-btc-signer';
+import { testSeed } from '../mocks/restore.mock';
+import * as btc from '@scure/btc-signer';
 import { hex, base64 } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1'
-import { getBtcNetwork } from '../../transactions/btcNetwork';
 
 describe('Bitcoin PSBT tests', () => {
   it('can get signing BTC derivation path from address', async () => {

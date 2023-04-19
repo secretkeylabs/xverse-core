@@ -1,20 +1,14 @@
 // import { payments, networks, Psbt, Payment, Transaction } from 'bitcoinjs-lib';
 // import { ECPairFactory } from 'ecpair';
 import BigNumber from 'bignumber.js';
-import {
-  BtcUtxoDataResponse,
-  ErrorCodes,
-  NetworkType,
-  ResponseError,
-  BtcFeeResponse,
-} from '../types';
+import { ErrorCodes, NetworkType, ResponseError, BtcFeeResponse, UTXO } from '../types';
 import { fetchBtcFeeRate } from '../api/xverse';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
-import { fetchBtcAddressUnspent } from '../api/btc';
-import * as btc from 'micro-btc-signer';
+import * as btc from '@scure/btc-signer';
 import { hex } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1';
 import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
+import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 
@@ -26,8 +20,6 @@ const defaultFeeRate = {
   regular: 5,
   priority: 10,
 };
-
-export interface UnspentOutput extends BtcUtxoDataResponse {}
 
 export interface Recipient {
   address: string;
@@ -41,17 +33,30 @@ export interface SignedBtcTx {
   total: BigNumber;
 }
 
+/**
+ * fetch btc fee rate from the api
+ * if api fails, returns default fee rate
+ */
+export async function getBtcFeeRate() {
+  try {
+    const feeRate = await fetchBtcFeeRate();
+    return feeRate;
+  } catch (e) {
+    return defaultFeeRate;
+  }
+}
+
 export async function isCustomFeesAllowed(customFees: string) {
-  const feeRate = await fetchBtcFeeRate();
+  const feeRate = await getBtcFeeRate();
   return Number(customFees) >= feeRate?.limits?.min ? true : false;
 }
 
 export function selectUnspentOutputs(
   amountSats: BigNumber,
-  unspentOutputs: Array<UnspentOutput>,
-  pinnedOutput?: UnspentOutput
-): Array<UnspentOutput> {
-  const inputs: Array<UnspentOutput> = [];
+  unspentOutputs: Array<UTXO>,
+  pinnedOutput?: UTXO
+): Array<UTXO> {
+  const inputs: Array<UTXO> = [];
   var sumValue = 0;
 
   if (pinnedOutput) {
@@ -69,11 +74,11 @@ export function selectUnspentOutputs(
   return inputs;
 }
 
-export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UnspentOutput>, p2sh: any) {
+export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UTXO>, p2sh: any) {
   unspentOutputs.forEach((output) => {
     tx.addInput({
-      txid: output.tx_hash,
-      index: output.tx_output_n,
+      txid: output.txid,
+      index: output.vout,
       witnessUtxo: {
         script: p2sh.script ? p2sh.script : Buffer.alloc(0),
         amount: BigInt(output.value),
@@ -85,14 +90,14 @@ export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UnspentOutp
 
 export function addInputsTaproot(
   tx: btc.Transaction,
-  unspentOutputs: Array<UnspentOutput>,
+  unspentOutputs: Array<UTXO>,
   internalPubKey: Uint8Array,
   p2tr: any
 ) {
   unspentOutputs.forEach((output) => {
     tx.addInput({
-      txid: output.tx_hash,
-      index: output.tx_output_n,
+      txid: output.txid,
+      index: output.vout,
       witnessUtxo: {
         script: p2tr.script,
         amount: BigInt(output.value),
@@ -111,7 +116,7 @@ export function addOutput(
   tx.addOutputAddress(recipientAddress, BigInt(amountSats.toNumber()), network);
 }
 
-export function sumUnspentOutputs(unspentOutputs: Array<UnspentOutput>): BigNumber {
+export function sumUnspentOutputs(unspentOutputs: Array<UTXO>): BigNumber {
   var sumValue = new BigNumber(0);
   unspentOutputs.forEach((output) => {
     sumValue = sumValue.plus(output.value);
@@ -121,7 +126,7 @@ export function sumUnspentOutputs(unspentOutputs: Array<UnspentOutput>): BigNumb
 
 export async function generateSignedBtcTransaction(
   privateKey: string,
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  selectedUnspentOutputs: Array<UTXO>,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
   changeAddress: string,
@@ -158,7 +163,7 @@ export async function generateSignedBtcTransaction(
 }
 
 export async function calculateFee(
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  selectedUnspentOutputs: Array<UTXO>,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
   feeRate: BigNumber,
@@ -186,7 +191,7 @@ export async function calculateFee(
 }
 
 export async function calculateOrdinalSendFee(
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  selectedUnspentOutputs: Array<UTXO>,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
   feeRate: BigNumber,
@@ -222,10 +227,13 @@ export async function getBtcFees(
   feeMode?: string
 ): Promise<BigNumber> {
   try {
-    const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+    const btcClient = new BitcoinEsploraApiProvider({
+      network,
+    });
+    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
     var feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
 
     // Get total sats to send (including custom fee)
     var satsToSend = new BigNumber(0);
@@ -267,17 +275,20 @@ export async function getBtcFees(
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
   recipientAddress: string,
-  ordinalUtxo: BtcUtxoDataResponse,
+  ordinalUtxo: UTXO,
   btcAddress: string,
   network: NetworkType,
   feeMode?: string
 ): Promise<BigNumber> {
   try {
-    const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
 
     var feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
 
     // Get total sats to send (including custom fee)
     var satsToSend = new BigNumber(ordinalUtxo.value);
@@ -324,7 +335,7 @@ export async function getBtcFeesForOrdinalSend(
 // Should replace this function
 export async function getBtcFeesForNonOrdinalBtcSend(
   recipientAddress: string,
-  nonOrdinalUtxos: Array<BtcUtxoDataResponse>,
+  nonOrdinalUtxos: Array<UTXO>,
   btcAddress: string,
   network: NetworkType,
   feeMode?: string
@@ -334,7 +345,7 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 
     var feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
 
     var sumSelectedOutputs = sumUnspentOutputs(unspentOutputs);
     var satsToSend = sumSelectedOutputs;
@@ -375,18 +386,18 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 }
 
 export async function getFee(
-  unspentOutputs: Array<BtcUtxoDataResponse>,
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  unspentOutputs: Array<UTXO>,
+  selectedUnspentOutputs: Array<UTXO>,
   sumSelectedOutputs: BigNumber,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
   feeRate: BtcFeeResponse,
   changeAddress: string,
   network: NetworkType,
-  pinnedOutput?: UnspentOutput,
+  pinnedOutput?: UTXO,
   feeMode?: string
 ): Promise<{
-  newSelectedUnspentOutputs: Array<BtcUtxoDataResponse>;
+  newSelectedUnspentOutputs: Array<UTXO>;
   fee: BigNumber;
 }> {
   var i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
@@ -449,7 +460,7 @@ export async function getFee(
 
 export function createTransaction(
   privateKey: string,
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  selectedUnspentOutputs: Array<UTXO>,
   totalSatsToSend: BigNumber,
   recipients: Array<Recipient>,
   changeAddress: string,
@@ -489,7 +500,7 @@ export function createTransaction(
 export function createOrdinalTransaction(
   privateKey: string,
   taprootPrivateKey: string,
-  selectedUnspentOutputs: Array<BtcUtxoDataResponse>,
+  selectedUnspentOutputs: Array<UTXO>,
   totalSatsToSend: BigNumber,
   recipients: Array<Recipient>,
   changeAddress: string,
@@ -547,11 +558,14 @@ export async function signBtcTransaction(
   fee?: BigNumber
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
-  const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
   var feeRate: BtcFeeResponse = defaultFeeRate;
 
   if (!fee) {
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
   }
 
   // Get sender address payment private key
@@ -619,7 +633,7 @@ export async function signBtcTransaction(
 
 export async function signOrdinalSendTransaction(
   recipientAddress: string,
-  ordinalUtxo: BtcUtxoDataResponse,
+  ordinalUtxo: UTXO,
   btcAddress: string,
   accountIndex: number,
   seedPhrase: string,
@@ -627,14 +641,16 @@ export async function signOrdinalSendTransaction(
   fee?: BigNumber
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
-  const unspentOutputs = await fetchBtcAddressUnspent(btcAddress, network);
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
 
   // Make sure ordinal utxo is removed from utxo set used for fees
   // This can be true if ordinal utxo is from the payment address
   const filteredUnspentOutputs = unspentOutputs.filter((unspentOutput) => {
     return !(
-      unspentOutput.tx_hash === ordinalUtxo.tx_hash &&
-      unspentOutput.tx_output_n === ordinalUtxo.tx_output_n
+      unspentOutput.txid === ordinalUtxo.txid && unspentOutput.vout === ordinalUtxo.vout
     );
   });
 
@@ -646,7 +662,7 @@ export async function signOrdinalSendTransaction(
   var feeRate: BtcFeeResponse = defaultFeeRate;
 
   if (!fee) {
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
   }
 
   // Get sender address payment and ordinals private key
@@ -750,7 +766,7 @@ export async function signOrdinalSendTransaction(
 
 export async function signNonOrdinalBtcSendTransaction(
   recipientAddress: string,
-  nonOrdinalUtxos: Array<BtcUtxoDataResponse>,
+  nonOrdinalUtxos: Array<UTXO>,
   accountIndex: number,
   seedPhrase: string,
   network: NetworkType,
@@ -762,7 +778,7 @@ export async function signNonOrdinalBtcSendTransaction(
   var feeRate: BtcFeeResponse = defaultFeeRate;
 
   if (!fee) {
-    feeRate = await fetchBtcFeeRate();
+    feeRate = await getBtcFeeRate();
   }
 
   // Get sender address payment and ordinals private key
