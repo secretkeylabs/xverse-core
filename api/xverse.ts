@@ -178,3 +178,9 @@ export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
   const ordinalInfo = await axios.get(ordinalInfoUrl);
   return ordinalInfo.data;
 }
+
+export async function getAppConfig() {
+    const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
+    const appConfig = await axios.get(appConfigUrl);
+    return appConfig;
+}

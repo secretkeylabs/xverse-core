@@ -37,5 +37,18 @@ export {
   StackingStateData,
   Pool,
 } from './api/xverse/stacking';
-export { OrdinalInfo } from './api/xverse/ordinals';
-export * from './api/blockstream/transactions';
+export {
+  OrdinalInfo,
+} from './api/xverse/ordinals';
+export {
+  Address,
+  Block,
+  UTXO,
+  Transaction,
+  Vin,
+  Vout,
+  TxStatus,
+  MempoolInput,
+  BtcAddressMempool,
+  FeeEstimates,
+} from './api/esplora';
