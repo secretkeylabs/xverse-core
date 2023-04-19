@@ -103,6 +103,11 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
     };
   }
 
+  async getRawTransaction(txHash: string): Promise<string> {
+    const data: string = await this.httpGet(`/tx/${txHash}/hex`);
+    return data;
+  }
+
   async getLatestBlockHeight(): Promise<number> {
     const data: number = await this.httpGet('/blocks/tip/height');
     return data;
