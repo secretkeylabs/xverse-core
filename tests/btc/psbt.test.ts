@@ -7,7 +7,7 @@ import {
   psbtBase64ToHex
 } from '../../transactions/psbt';
 import { testSeed } from '../mocks/restore.mock';
-import * as btc from 'micro-btc-signer';
+import * as btc from '@scure/btc-signer';
 import { hex, base64 } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1'
 
