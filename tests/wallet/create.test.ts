@@ -1,7 +1,7 @@
-import { assert, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { validateMnemonic } from "bip39";
 import { newWallet, walletFromSeedPhrase } from '../../wallet'
-import { testSeed } from "../mocks";
+import { testSeed } from "../mocks/restore.mock";
 
 describe('new wallet', () => {
   it('generates a valid seedPhrase', async () => {

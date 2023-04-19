@@ -1,64 +1,61 @@
-import { afterEach, assert, describe, expect, it, vi } from 'vitest'
-import { 
-  Recipient, 
-  createTransaction, 
-  calculateFee, 
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
+import {
+  Recipient,
+  createTransaction,
+  calculateFee,
   signBtcTransaction,
   signOrdinalSendTransaction,
   getBtcFees,
-  getBtcFeesForOrdinalSend
+  getBtcFeesForOrdinalSend,
 } from '../../transactions/btc';
-import { getBtcPrivateKey } from '../../wallet'
-import { testSeed } from '../mocks';
-import { 
-  BtcUtxoDataResponse, 
-  ErrorCodes, 
-  NetworkType, 
-  ResponseError 
-} from '../../types';
+import { getBtcPrivateKey } from '../../wallet';
+import { testSeed } from '../mocks/restore.mock';
+import { UTXO } from '../../types';
 import BigNumber from 'bignumber.js';
 import * as XverseAPIFunctions from '../../api/xverse';
-import * as BTCAPIFunctions from '../../api/btc';
+import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
+
+const btcClient = new BitcoinEsploraApiProvider({
+  network: 'Mainnet',
+});
 
 describe('bitcoin transactions', () => {
   afterEach(() => {
-    vi.restoreAllMocks()
-  })
+    vi.restoreAllMocks();
+  });
 
   it('can create a wrapped segwit transaction single recipient', async () => {
-    const network = "Mainnet";
-    const privateKey = await getBtcPrivateKey({ 
-      seedPhrase: testSeed, 
-      index: BigInt(0), 
-      network
+    const network = 'Mainnet';
+    const privateKey = await getBtcPrivateKey({
+      seedPhrase: testSeed,
+      index: BigInt(0),
+      network,
     });
     const unspent1Value = 10000;
-    const selectedUnspentOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const selectedUnspentOutputs: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+      },
+    ];
 
     const satsToSend = new BigNumber(8000);
     const recipient1Amount = new BigNumber(6000);
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: recipient1Amount,
-      }
-    ]
+      },
+    ];
 
-    const changeAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const signedTx = createTransaction(
       privateKey,
@@ -73,61 +70,55 @@ describe('bitcoin transactions', () => {
     expect(signedTx.outputs.length).eq(2);
     expect(signedTx.outputs[0].amount).eq(BigInt(recipient1Amount.toNumber()));
     expect(signedTx.outputs[1].amount).eq(BigInt(new BigNumber(unspent1Value).minus(satsToSend)));
-  })
+  });
 
   it('can create a wrapped segwit transaction multi recipient', async () => {
-    const network = "Mainnet";
-    const privateKey = await getBtcPrivateKey({ 
-      seedPhrase: testSeed, 
-      index: BigInt(0), 
-      network
+    const network = 'Mainnet';
+    const privateKey = await getBtcPrivateKey({
+      seedPhrase: testSeed,
+      index: BigInt(0),
+      network,
     });
     const unspent1Value = 100000;
     const unspent2Value = 200000;
     const unspent3Value = 300000;
     const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
 
-    const selectedUnspentOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const selectedUnspentOutputs: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent3Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+      },
+    ];
 
     const satsToSend = new BigNumber(300800);
     const recipient1Amount = new BigNumber(200000);
@@ -135,16 +126,16 @@ describe('bitcoin transactions', () => {
 
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: recipient1Amount,
       },
       {
-        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        address: '18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65',
         amountSats: recipient2Amount,
-      }
-    ]
+      },
+    ];
 
-    const changeAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const signedTx = createTransaction(
       privateKey,
@@ -159,239 +150,219 @@ describe('bitcoin transactions', () => {
     expect(signedTx.outputs.length).eq(3);
     expect(signedTx.outputs[0].amount).eq(BigInt(recipient1Amount.toNumber()));
     expect(signedTx.outputs[1].amount).eq(BigInt(recipient2Amount.toNumber()));
-    expect(signedTx.outputs[2].amount).eq(BigInt(totalUnspentValue-satsToSend));
-  })
+    expect(signedTx.outputs[2].amount).eq(BigInt(totalUnspentValue - satsToSend));
+  });
 
   it('can calculate transaction fee legacy function', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const unspent1Value = 100000;
     const unspent2Value = 200000;
     const unspent3Value = 250000;
     const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent3Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+      },
+    ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount+recipient2Amount;
+    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: new BigNumber(recipient1Amount),
       },
       {
-        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        address: '18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65',
         amountSats: new BigNumber(recipient2Amount),
-      }
-    ]
+      },
+    ];
 
-    const changeAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 10,
-      priority: 30
-    }
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+      priority: 30,
+    };
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos))
-    
-    const fee = await getBtcFees(
-      recipients,
-      changeAddress,
-      network
-    )
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
+    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
+
+    const fee = await getBtcFees(recipients, changeAddress, network);
 
     // expect transaction size to be 385 bytes;
     const txSize = 385;
-    expect(fee.toNumber()).eq(txSize*feeRate.regular);
-  })
+    expect(fee.toNumber()).eq(txSize * feeRate.regular);
+  });
 
   it('can calculate ordinal send transaction fee legacy function', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const ordinalValue = 80000;
     const unspent1Value = 10000;
 
-    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
-    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: ordinalUtxoHash,
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       }
     ];
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-    ]
+    ];
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 8,
-      priority: 30
-    }
+      priority: 30,
+    };
 
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
 
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
-    const ordinalAddress = "bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw";
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
-    
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
     const fee = await getBtcFeesForOrdinalSend(
       recipientAddress,
       ordinalOutputs[0],
       btcAddress,
       network
-    )
+    );
 
     // expect transaction size to be 260 bytes;
     const txSize = 260;
-    expect(fee.toNumber()).eq(txSize*feeRate.regular);
-  })
+    expect(fee.toNumber()).eq(txSize * feeRate.regular);
+  });
 
   it('can calculate transaction fee', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const unspent1Value = 100000;
     const unspent2Value = 200000;
     const unspent3Value = 250000;
     const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
 
-    const selectedUnspentOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const selectedUnspentOutputs: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent3Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+      },
+    ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount+recipient2Amount;
+    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: new BigNumber(recipient1Amount),
       },
       {
-        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        address: '18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65',
         amountSats: new BigNumber(recipient2Amount),
-      }
-    ]
+      },
+    ];
 
-    const changeAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const feeRate = {
       limits: {
@@ -399,8 +370,8 @@ describe('bitcoin transactions', () => {
         max: 5,
       },
       regular: 10,
-      priority: 30
-    }
+      priority: 30,
+    };
 
     const fee = await calculateFee(
       selectedUnspentOutputs,
@@ -413,11 +384,11 @@ describe('bitcoin transactions', () => {
 
     // expect transaction size to be 385 bytes;
     const txSize = 385;
-    expect(fee.toNumber()).eq(txSize*feeRate.regular);
-  })
+    expect(fee.toNumber()).eq(txSize * feeRate.regular);
+  });
 
   it('can create + sign btc transaction', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const unspent1Value = 100000;
     const unspent2Value = 200000;
@@ -425,109 +396,96 @@ describe('bitcoin transactions', () => {
     const unspent4Value = 1000;
     const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value + unspent4Value;
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent3Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent4Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+      },
+    ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount+recipient2Amount;
+    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: new BigNumber(recipient1Amount),
       },
       {
-        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        address: '18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65',
         amountSats: new BigNumber(recipient2Amount),
-      }
-    ]
+      },
+    ];
 
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 2,
-      priority: 30
-    }
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+      priority: 30,
+    };
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos))
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
+    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
 
-    const signedTx = await signBtcTransaction(
-      recipients,
-      btcAddress,
-      0,
-      testSeed,
-      network
-    )
+    const signedTx = await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
 
-    const tx = "020000000001038c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8e9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff02400d0300000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388aca0860100000000001976a914574e13c50c3450713ff252a9ad7604db865135e888ac0247304402206b7ba706045ca6c7f01d06372dac86533dff9eeeeb53fb2a2adb56fec612a02502206f9a4984cfab9a9b1eb7b6638e27f2a2fb9d492c6896dce12fbacec4edbb3e620121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff024830450221008295d854087321da8567e948815c9e15c762c1bb7e2f60fdc67d357e23d49bd90220173b4f1f3955899aa1a916e8423caeca7900dfbe9433027d25eeb5374fdc63810121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0247304402201dfd030dfb936406f5bb0d1c94af5bc3dde3eeaa37b05e15ea3479cd43e407ba022048b790d54e400784451991f6df67f35652e577978701d75224b12add0f17ffc80121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000"
-    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
-    expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
+    const tx =
+      '020000000001038c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8e9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff02400d0300000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388aca0860100000000001976a914574e13c50c3450713ff252a9ad7604db865135e888ac0247304402206b7ba706045ca6c7f01d06372dac86533dff9eeeeb53fb2a2adb56fec612a02502206f9a4984cfab9a9b1eb7b6638e27f2a2fb9d492c6896dce12fbacec4edbb3e620121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff024830450221008295d854087321da8567e948815c9e15c762c1bb7e2f60fdc67d357e23d49bd90220173b4f1f3955899aa1a916e8423caeca7900dfbe9433027d25eeb5374fdc63810121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0247304402201dfd030dfb936406f5bb0d1c94af5bc3dde3eeaa37b05e15ea3479cd43e407ba022048b790d54e400784451991f6df67f35652e577978701d75224b12add0f17ffc80121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize * feeRate.regular);
     expect(signedTx.signedTx).toEqual(tx);
-  })
+  });
 
   it('can create + sign btc transaction with custom fees', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const unspent1Value = 100000;
     const unspent2Value = 200000;
@@ -535,91 +493,83 @@ describe('bitcoin transactions', () => {
     const unspent4Value = 1000;
     const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value + unspent4Value;
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+                vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
         value: unspent3Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
         value: unspent4Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
-    ]
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+      },
+    ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount+recipient2Amount;
+    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
-        address: "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS",
+        address: '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS',
         amountSats: new BigNumber(recipient1Amount),
       },
       {
-        address: "18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65",
+        address: '18xdKbDgTKjTZZ9jpbrPax8X4qZeHG6b65',
         amountSats: new BigNumber(recipient2Amount),
-      }
-    ]
+      },
+    ];
 
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 2,
-      priority: 30
-    }
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+      priority: 30,
+    };
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos))
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
+    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
     const customFees = new BigNumber(500);
 
     const signedTx = await signBtcTransaction(
@@ -629,13 +579,12 @@ describe('bitcoin transactions', () => {
       testSeed,
       network,
       customFees
-    )
+    );
 
-    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
     expect(signedTx.fee.toNumber()).eq(customFees.toNumber());
-
-  })
+  });
 
   // it('fails to create transaction when insufficient balance after adding fees', async () => {
   //   const network = "Mainnet";
@@ -646,7 +595,7 @@ describe('bitcoin transactions', () => {
   //   const totalUnspentValue = unspent1Value +  + unspent2Value + unspent3Value;
 
   //   const utxos: Array<BtcUtxoDataResponse> = [
-  //     { 
+  //     {
   //       tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
   //       block_height: 123123,
   //       tx_input_n: -1,
@@ -659,7 +608,7 @@ describe('bitcoin transactions', () => {
   //       double_spend: false,
   //       double_spend_tx: "asdf",
   //     },
-  //     { 
+  //     {
   //       tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
   //       block_height: 123123,
   //       tx_input_n: -1,
@@ -672,7 +621,7 @@ describe('bitcoin transactions', () => {
   //       double_spend: false,
   //       double_spend_tx: "asdf",
   //     },
-  //     { 
+  //     {
   //       tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
   //       block_height: 123123,
   //       tx_input_n: -1,
@@ -735,78 +684,72 @@ describe('bitcoin transactions', () => {
   // })
 
   it('can create and sign ordinal send transaction', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const ordinalValue = 80000;
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
-    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
-    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: ordinalUtxoHash,
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO> = [
+      {
+        txid: ordinalUtxoHash,
         value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+      },
     ];
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-    ]
+    ];
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 10,
-      priority: 30
-    }
+      priority: 30,
+    };
 
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
 
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
-    const ordinalAddress = "bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw";
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
@@ -815,100 +758,92 @@ describe('bitcoin transactions', () => {
       0,
       testSeed,
       network
-    )
+    );
 
-    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
     // expect(signedTx.signedTx).eq(expectedTx)
     // Needs a better transaction size calculator
     // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
-  })
+  });
 
   it('can create and sign ordinal send with ordinal utxo in payment address', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const ordinalValue = 80000;
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
-    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
-    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: ordinalUtxoHash,
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
+      },
     ];
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: ordinalUtxoHash,
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
         value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-    ]
+    ];
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 10,
-      priority: 30
-    }
+      priority: 30,
+    };
 
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
 
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
@@ -917,89 +852,84 @@ describe('bitcoin transactions', () => {
       0,
       testSeed,
       network
-    )
+    );
 
-    const expectedTx = '020000000001034301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388ac421d0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac024730440220496debceec57ca0b6a9d681d5dcff892b3bdc177a2229464da3d7a2a54955211022078818d398f75905c9c28c9a9e40fc27006fc29435d1d86f5380cc1a9574660cd0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02473044022001f76914fbbbc9e3c4d182f4522ee0f1c10c7b63e7977085700ce42736485284022041dd076c1b4906d69130d3096d875fea2ec20e17f43e020557be2ce60038b88d0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff024730440220104a1278f54d395cf432ec9f7bc22846a7d0345940562bb50ca441600e799b9302202d6782eb54413150283d210ca5ea674ef84cd9eb059de6091c61218b3a8ae62c0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000'
-    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
-    expect(signedTx.signedTx).eq(expectedTx)
+    const expectedTx =
+      '020000000001034301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388ac421d0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac024730440220496debceec57ca0b6a9d681d5dcff892b3bdc177a2229464da3d7a2a54955211022078818d398f75905c9c28c9a9e40fc27006fc29435d1d86f5380cc1a9574660cd0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02473044022001f76914fbbbc9e3c4d182f4522ee0f1c10c7b63e7977085700ce42736485284022041dd076c1b4906d69130d3096d875fea2ec20e17f43e020557be2ce60038b88d0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff024730440220104a1278f54d395cf432ec9f7bc22846a7d0345940562bb50ca441600e799b9302202d6782eb54413150283d210ca5ea674ef84cd9eb059de6091c61218b3a8ae62c0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(signedTx.signedTx).eq(expectedTx);
     // Needs a better transaction size calculator
     // expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize*feeRate.regular);
-  })
+  });
 
   it('can create and sign oridnal transaction with custom fees', async () => {
-    const network = "Mainnet";
+    const network = 'Mainnet';
 
     const ordinalValue = 80000;
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
-    const ordinalUtxoHash = "5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143";
-    const ordinalOutputs: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: ordinalUtxoHash,
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO> = [
+      {
+        txid: ordinalUtxoHash,
         value: ordinalValue,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
-      }
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+      },
     ];
 
-    const utxos: Array<BtcUtxoDataResponse> = [
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+    const utxos: Array<UTXO> = [
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-      { 
-        tx_hash: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
-        block_height: 123123,
-        tx_input_n: -1,
-        tx_output_n: 2,
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
         value: unspent2Value,
-        ref_balance: 123123123,
-        spent: false,
-        confirmations: 100000,
-        confirmed: "2020-02-20T02:02:22Z",
-        double_spend: false,
-        double_spend_tx: "asdf",
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
       },
-    ]
+    ];
 
-    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate')
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
       limits: {
         min: 1,
         max: 5,
       },
       regular: 10,
-      priority: 30
-    }
+      priority: 30,
+    };
 
-    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate))
+    fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BTCAPIFunctions, 'fetchBtcAddressUnspent')
+    const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
 
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos))
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs))
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
+    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = "1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS";
-    const ordinalAddress = "bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw";
-    const btcAddress = "1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT";
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
     const customFeeAmount = new BigNumber(2000);
 
     const signedTx = await signOrdinalSendTransaction(
@@ -1010,12 +940,10 @@ describe('bitcoin transactions', () => {
       testSeed,
       network,
       customFeeAmount
-    )
+    );
 
-    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0)
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1)
+    expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
+    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
     expect(signedTx.fee.toNumber()).eq(customFeeAmount.toNumber());
-  })
-})
-
-
+  });
+});
