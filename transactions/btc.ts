@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import { ErrorCodes, NetworkType, ResponseError, BtcFeeResponse, UTXO } from '../types';
 import { fetchBtcFeeRate } from '../api/xverse';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
-import * as btc from 'micro-btc-signer';
+import * as btc from '@scure/btc-signer';
 import { hex } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1';
 import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';

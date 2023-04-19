@@ -5,7 +5,7 @@ import {
   getTaprootDerivationPath,
   getSegwitDerivationPath,
 } from '../wallet';
-import * as btc from 'micro-btc-signer';
+import * as btc from '@scure/btc-signer';
 import { hex, base64 } from '@scure/base';
 import { getAddressInfo } from 'bitcoin-address-validation';
 
