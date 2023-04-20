@@ -17,7 +17,7 @@ import {
 } from '../types';
 import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
 import { Bip32Derivation, Transport } from './types';
-// import { fetchBtcAddressUnspent } from '../api/btc';
+import { fetchBtcAddressUnspent } from '../api/btc';
 import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
@@ -105,8 +105,7 @@ async function getTransactionData(
   let feeRate: BtcFeeResponse = defaultFeeRate;
   const { amountSats } = recipient;
 
-  // const allUTXOs = await fetchBtcAddressUnspent(senderAddress, network);
-  const allUTXOs = [] as any; // TODO delete this later and uncomment above
+  const allUTXOs = await fetchBtcAddressUnspent(senderAddress, network);
   let selectedUTXOs = selectUnspentOutputs(amountSats, allUTXOs);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
@@ -255,7 +254,7 @@ export async function signLedgerNestedSegwitBtcTransaction(
     recipient,
     senderAddress,
     changeValue,
-    selectedUTXOs as any, // TODO: clear typing and fix it
+    selectedUTXOs,
     [inputDerivation],
     redeemScript,
     witnessScript
@@ -445,8 +444,6 @@ export async function signStxJWTAuth(transport: Transport, accountIndex: number,
   const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
   return [payload, resultingSig].join('.');
 }
-
-// app.getIdentityPubKey
 
 export async function handleLedgerStxJWTAuth(
   transport: Transport,
