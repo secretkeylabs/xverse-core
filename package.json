@@ -24,7 +24,8 @@
     "ecpair": "^2.1.0",
     "jsontokens": "^4.0.1",
     "process": "^0.11.10",
-    "util": "^0.12.4"
+    "util": "^0.12.4",
+    "varuint-bitcoin": "^1.1.2"
   },
   "scripts": {
     "build-debug": "webpack --mode development",
