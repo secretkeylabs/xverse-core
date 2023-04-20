@@ -21,7 +21,7 @@ import { fetchBtcAddressUnspent } from '../api/btc';
 import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
-import StacksApp from '@zondax/ledger-stacks';
+import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import {
   AnchorMode,
   SingleSigSpendingCondition,
@@ -376,32 +376,15 @@ export async function broadcastStxTransaction(
   return response.txid;
 }
 
-interface ResponseBase {
-  errorMessage: string;
-  returnCode: number;
-}
-interface ResponseSign extends ResponseBase {
-  postSignHash: Buffer;
-  signatureCompact: Buffer;
-  signatureVRS: Buffer;
-  signatureDER: Buffer;
-}
-
-export async function signStxMessage(transport: Transport, message: string): Promise<ResponseSign> {
+export async function signStxMessage(
+  transport: Transport,
+  message: string,
+  addressIndex: number
+): Promise<ResponseSign> {
   const appStacks = new StacksApp(transport);
-  console.log(message);
-
-  const hash = hashMessage(message);
-  const path = `m/44'/5757'/${0}'/0/${0}`;
-  const result = await appStacks.sign_msg("m/44'/5757'/0'/0/0", bytesToHex(hash));
-  console.log(result);
-  if (result.returnCode === 36864) {
-    console.log(Buffer.from(result.signatureCompact).toString());
-  } else {
-    console.error(`${result.errorMessage}: ${JSON.stringify(result)}`);
-  }
-
-  return result;
+  const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
+  const result = await appStacks.sign_msg(path, message);
+  return result as ResponseSign;
 }
 
 export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
