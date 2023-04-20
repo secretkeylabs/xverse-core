@@ -17,7 +17,7 @@ import {
 } from '../types';
 import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
 import { Bip32Derivation, Transport } from './types';
-import { fetchBtcAddressUnspent } from '../api/btc';
+// import { fetchBtcAddressUnspent } from '../api/btc';
 import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
@@ -105,7 +105,8 @@ async function getTransactionData(
   let feeRate: BtcFeeResponse = defaultFeeRate;
   const { amountSats } = recipient;
 
-  const allUTXOs = await fetchBtcAddressUnspent(senderAddress, network);
+  // const allUTXOs = await fetchBtcAddressUnspent(senderAddress, network);
+  const allUTXOs = [] as any; // TODO delete this later and uncomment above
   let selectedUTXOs = selectUnspentOutputs(amountSats, allUTXOs);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
@@ -254,7 +255,7 @@ export async function signLedgerNestedSegwitBtcTransaction(
     recipient,
     senderAddress,
     changeValue,
-    selectedUTXOs,
+    selectedUTXOs as any, // TODO: clear typing and fix it
     [inputDerivation],
     redeemScript,
     witnessScript
@@ -354,10 +355,11 @@ function signTransactionWithSignature(transaction: string | Buffer, signatureVRS
 
 export async function signStxTransaction(
   transport: Transport,
-  transaction: StacksTransaction
+  transaction: StacksTransaction,
+  addressIndex: number
 ): Promise<StacksTransaction> {
   const appStacks = new StacksApp(transport);
-  const path = `m/44'/5757'/${0}'/0/${0}`;
+  const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
   const transactionBuffer = transaction.serialize();
   const resp = await appStacks.sign(path, transactionBuffer);
   const signedTx = signTransactionWithSignature(transactionBuffer, resp.signatureVRS);
@@ -403,22 +405,19 @@ export async function signStxMessage(transport: Transport, message: string): Pro
   return result;
 }
 
-export async function makeLedgerCompatibleUnsignedAuthResponsePayload({
-  dataPublicKey,
-  profile = {},
-  expiresAt = new Date().getTime() + 30 * 24 * 60 * 60 * 1000,
-}: {
-  dataPublicKey: string;
-  profile: any;
-  expiresAt?: number;
-}): Promise<string> {
+export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
+  dataPublicKey: string,
+  profile: any
+): Promise<string> {
   const address = publicKeyToBtcAddress(dataPublicKey);
 
   if (!address) {
     throw new Error();
   }
 
+  const expiresAt = new Date().getTime() + 30 * 24 * 60 * 60 * 1000;
   const payload = {
+    // TODO: use a UUID
     jti: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
     iat: Math.floor(new Date().getTime() / 1000), // JWT times are in seconds
     exp: Math.floor(expiresAt / 1000), // JWT times are in seconds
@@ -448,3 +447,18 @@ export async function signStxJWTAuth(transport: Transport, accountIndex: number,
 }
 
 // app.getIdentityPubKey
+
+export async function handleLedgerStxJWTAuth(
+  transport: Transport,
+  accountIndex: number,
+  profile: any
+) {
+  const appStacks = new StacksApp(transport);
+  const { publicKey } = await appStacks.getIdentityPubKey(`m/888'/0'/${accountIndex}'`);
+
+  const inputToSign = await makeLedgerCompatibleUnsignedAuthResponsePayload(
+    publicKey.toString('hex'),
+    profile
+  );
+  return await signStxJWTAuth(transport, accountIndex, inputToSign);
+}
