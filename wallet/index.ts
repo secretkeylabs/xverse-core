@@ -73,6 +73,21 @@ export async function walletFromSeedPhrase({
 }): Promise<BaseWallet> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
+  let bitcoinNetwork: networks.Network;
+
+  switch (network) {
+    case 'Mainnet':
+      bitcoinNetwork = networks.bitcoin;
+      break;
+    case 'Testnet':
+      bitcoinNetwork = networks.testnet;
+      break;
+    case 'Regtest':
+      bitcoinNetwork = networks.regtest;
+      break;
+    default:
+      throw new Error('Invalid network provided.');
+  }
 
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
@@ -96,7 +111,7 @@ export async function walletFromSeedPhrase({
 
   const nativeSegwitBtcAddress = payments.p2wpkh({
     pubkey: nativeSegwitBtcAddressKeypair.publicKey,
-    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+    network: bitcoinNetwork,
   });
 
   const dlcBtcAddress = nativeSegwitBtcAddress.address!;
@@ -111,10 +126,10 @@ export async function walletFromSeedPhrase({
   const segwitBtcAddress = payments.p2sh({
     redeem: payments.p2wpkh({
       pubkey: keyPair.publicKey,
-      network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+      network: bitcoinNetwork,
     }),
     pubkey: keyPair.publicKey,
-    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+    network: bitcoinNetwork,
   });
 
   const btcAddress = segwitBtcAddress.address!;

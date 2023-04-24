@@ -3,7 +3,7 @@ import {
   BtcAddressBalanceResponse,
   BtcTransactionBroadcastResponse,
 } from '../../types/api/blockcypher/wallet';
-import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
+import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET, BTC_BASE_URI_REGTEST } from '../../constant';
 import { NetworkType } from '../../types/network';
 import * as esplora from '../../types/api/esplora';
 import { BitcoinApiProvider } from './types';
@@ -45,7 +45,11 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
   constructor(options: EsploraApiProviderOptions) {
     const { url, network } = options;
     super({
-      baseURL: url || network == 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET,
+      baseURL: url || network === 'Mainnet'
+        ? BTC_BASE_URI_MAINNET
+        : network === 'Testnet'
+        ? BTC_BASE_URI_TESTNET
+        : BTC_BASE_URI_REGTEST
     });
     this._network = network;
   }
@@ -77,8 +81,7 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
   }
 
   async getUnspentUtxos(address: string): Promise<esplora.UTXO[]> {
-    const utxoSets = await this._getUnspentTransactions(address);
-    return utxoSets;
+    return await this._getUnspentTransactions(address);
   }
 
   async _getAddressTransactionCount(address: string) {

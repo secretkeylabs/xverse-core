@@ -26,6 +26,8 @@ export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
 
 export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
 
+export const BTC_BASE_URI_REGTEST = 'https://dev-oracle.dlc.link/electrs';
+
 export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
 
 export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
