@@ -1,3 +1,4 @@
+import { UTXO } from "../esplora";
 import { TransactionData } from "../xverse/transaction";
 
 export type BtcUtxoDataResponse = {
@@ -147,6 +148,6 @@ export interface BtcTransactionsDataResponse {
 
 export interface BtcOrdinal {
   id: string;
-  utxo: BtcUtxoDataResponse;
-  confirmationTime: string,
+  utxo: UTXO;
+  confirmationTime: number,
 }
