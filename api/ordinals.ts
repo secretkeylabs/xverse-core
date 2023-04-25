@@ -1,12 +1,14 @@
-import {
-  NetworkType,
-  BtcOrdinal,
-} from '../types';
+import { NetworkType, BtcOrdinal } from '../types';
 import axios from 'axios';
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI, XVERSE_API_BASE_URL } from '../constant';
+import {
+  MAINNET_BROADCAST_URI,
+  ORDINALS_URL,
+  TESTNET_BROADCAST_URI,
+  XVERSE_API_BASE_URL,
+} from '../constant';
 import { fetchBtcAddressUnspent } from './btc';
 import { BtcUtxoDataResponse } from '../types/api/blockcypher/wallet';
-import { UnspentOutput } from '../transactions/btc'
+import { UnspentOutput } from '../transactions/btc';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   if (new Date(prev.confirmationTime).getTime() > new Date(next.confirmationTime).getTime()) {
@@ -51,20 +53,20 @@ export async function getOrdinalIdFromUtxo(utxo: BtcUtxoDataResponse) {
       if (ordinal.data.id) {
         return Promise.resolve(ordinal.data.id);
       } else {
-        return null
+        return null;
       }
     } else {
       return null;
     }
-  } catch (err) {
-  }
+  } catch (err) {}
 }
 
-export async function getTextOrdinalContent(url: string): Promise<string> {
+export async function getTextOrdinalContent(content: string): Promise<string> {
+  const url = `${ORDINALS_URL}${content}`;
   return axios
     .get<string>(url, {
       timeout: 30000,
-      transformResponse: [(data) => parseOrdinalTextContentData(data)]
+      transformResponse: [(data) => parseOrdinalTextContentData(data)],
     })
     .then((response) => response!.data)
     .catch((error) => {
@@ -74,11 +76,10 @@ export async function getTextOrdinalContent(url: string): Promise<string> {
 
 export async function broadcastRawBtcOrdinalTransaction(
   rawTx: string,
-  network: NetworkType,
+  network: NetworkType
 ): Promise<string> {
-  const broadcastUrl =
-    network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
-  return axios.post(broadcastUrl, rawTx, {timeout: 45000}).then((response) => {
+  const broadcastUrl = network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI;
+  return axios.post(broadcastUrl, rawTx, { timeout: 45000 }).then((response) => {
     return response.data;
   });
 }
@@ -86,10 +87,10 @@ export async function broadcastRawBtcOrdinalTransaction(
 export function parseOrdinalTextContentData(content: string): string {
   try {
     const contentData = JSON.parse(content);
-    if (contentData["p"]) {
+    if (contentData['p']) {
       // check for sns protocol
-      if (contentData["p"] === 'sns') {
-        return contentData.hasOwnProperty('name') ? contentData["name"] : content;
+      if (contentData['p'] === 'sns') {
+        return contentData.hasOwnProperty('name') ? contentData['name'] : content;
       } else {
         return content;
       }
@@ -103,18 +104,18 @@ export function parseOrdinalTextContentData(content: string): string {
 
 export async function getNonOrdinalUtxo(
   address: string,
-  network: NetworkType,
+  network: NetworkType
 ): Promise<Array<UnspentOutput>> {
-  const unspentOutputs = await fetchBtcAddressUnspent(address, network, 2000)
-  const nonOrdinalOutputs: Array<UnspentOutput> = []
+  const unspentOutputs = await fetchBtcAddressUnspent(address, network, 2000);
+  const nonOrdinalOutputs: Array<UnspentOutput> = [];
 
   for (let i = 0; i < unspentOutputs.length; i++) {
-    const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i])
+    const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i]);
     if (ordinalId) {
     } else {
-      nonOrdinalOutputs.push(unspentOutputs[i])
+      nonOrdinalOutputs.push(unspentOutputs[i]);
     }
   }
 
-  return nonOrdinalOutputs
+  return nonOrdinalOutputs;
 }

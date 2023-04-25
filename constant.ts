@@ -41,3 +41,6 @@ export const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 
 export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+
+export const ORDINALS_URL = 'https://gammaordinals.com';
+  )
