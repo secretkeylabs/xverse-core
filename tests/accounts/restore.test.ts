@@ -1,4 +1,3 @@
-import { testSeed } from '../mocks';
 import { walletFromSeedPhrase } from '../../wallet';
 import { restoreWalletWithAccounts } from '../../account';
 import { StacksMainnet } from '@stacks/network';

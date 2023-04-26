@@ -1,11 +1,12 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "0.14.0",
+  "version": "0.16.1",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
     "@noble/secp256k1": "^1.7.1",
     "@scure/base": "^1.1.1",
+    "@scure/btc-signer": "^1.0.0",
     "@stacks/encryption": "6.1.1",
     "@stacks/network": "4.3.5",
     "@stacks/storage": "^6.0.0",
@@ -27,6 +28,7 @@
     "jsontokens": "^4.0.1",
     "ledger-bitcoin": "^0.2.0",
     "micro-btc-signer": "^0.4.2",
+    "c32check": "^2.0.0",
     "process": "^0.11.10",
     "util": "^0.12.4"
   },
@@ -45,6 +47,16 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.58.0",
+    "@typescript-eslint/parser": "^5.58.0",
+    "airbnb": "^0.0.2",
+    "eslint": "^8.38.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.7",
     "rimraf": "^3.0.2",
     "ts-loader": "^9.4.1",
     "typescript": "^4.8.3",

@@ -40,4 +40,15 @@ export {
 export {
   OrdinalInfo,
 } from './api/xverse/ordinals';
-export * from './api/blockstream/transactions';
+export {
+  Address,
+  Block,
+  UTXO,
+  Transaction,
+  Vin,
+  Vout,
+  TxStatus,
+  MempoolInput,
+  BtcAddressMempool,
+  FeeEstimates,
+} from './api/esplora';

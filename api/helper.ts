@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import { StacksNetwork } from '@stacks/network';
 import {
   Input,
   Output,
@@ -10,6 +11,8 @@ import {
   StxMempoolTransactionDataResponse,
   TransferTransaction,
 } from '../types';
+
+import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
 
 export function sumOutputsForAddress(outputs: Output[], address: string): number {
   var total = 0;
@@ -325,3 +328,14 @@ export function parseStxTransactionData({
 
   return parsedTx;
 }
+
+/**
+ * Solves issue wiht proper network address
+ *
+ * @param {StacksNetwork} network object to be used for distinguish is user on mainnet or testnet
+ *
+ * @returns {string} Network URL to be used
+ */
+export const getNetworkURL = (network: StacksNetwork): string => {
+  return network.isMainnet() ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
+};
