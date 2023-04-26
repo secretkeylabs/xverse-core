@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
+import { AppClient, DefaultWalletPolicy, WalletPolicy } from 'ledger-bitcoin';
 import {
   defaultFeeRate,
   getFee,
@@ -38,6 +38,7 @@ import { hashMessage, publicKeyToBtcAddress } from '@stacks/encryption';
 import { makeDIDFromAddress } from '@stacks/auth';
 import base64url from 'base64url';
 import ecdsaFormat from 'ecdsa-sig-formatter';
+import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from '../constant';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
@@ -162,7 +163,9 @@ async function createNestedSegwitPsbt(
 
   const transactionMap = new Map<string, Buffer>();
   for (const utxo of inputUTXOs) {
-    const txDataApiUrl = `https://blockstream.info/testnet/api/tx/${utxo.tx_hash}/hex`;
+    const txDataApiUrl = `${
+      network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI
+    }/${utxo.tx_hash}/hex`;
     const response = await axios.get(txDataApiUrl);
     transactionMap.set(utxo.tx_hash, Buffer.from(response.data, 'hex'));
   }
@@ -259,6 +262,8 @@ export async function signLedgerNestedSegwitBtcTransaction(
     redeemScript,
     witnessScript
   );
+
+  console.log({ psbt: psbt.toBase64() });
 
   //================================================================================================
   // 4. Sign Transaction
@@ -368,11 +373,13 @@ export async function signStxTransaction(
   return signedTx; // TX ready to be broadcast
 }
 
-export async function broadcastStxTransaction(
-  signedTx: StacksTransaction,
-  network: string = 'https://stacks-node-api.testnet.stacks.co/v2/transactions'
-) {
-  const response = await broadcastRawTransaction(signedTx.serialize(), network);
+// TODO: check if we use this function, probably not
+export async function broadcastStxTransaction(signedTx: StacksTransaction, network: NetworkType) {
+  const broadcastUrl =
+    network === 'Mainnet'
+      ? 'https://stacks-node-api.mainnet.stacks.co/v2/transactions'
+      : 'https://stacks-node-api.testnet.stacks.co/v2/transactions';
+  const response = await broadcastRawTransaction(signedTx.serialize(), broadcastUrl);
   return response.txid;
 }
 
@@ -441,4 +448,72 @@ export async function handleLedgerStxJWTAuth(
     profile
   );
   return await signStxJWTAuth(transport, accountIndex, inputToSign);
+}
+
+// FIXME: below doesn't work yet
+export async function signLedgerNestedSegwitBtcTransactionRequest(
+  transport: Transport,
+  network: NetworkType,
+  addressIndex: number,
+  serializedPSBT: string
+): Promise<string> {
+  const coinType = network === 'Mainnet' ? 0 : 1;
+  const app = new AppClient(transport);
+
+  //================================================================================================
+  // 1. Get Account Data
+  //================================================================================================
+
+  const masterFingerPrint = await app.getMasterFingerprint();
+  const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/${0}'`); // account index is hardcoded!!!
+  const accountPolicy = new DefaultWalletPolicy(
+    'tr(@0/**)',
+    `[${masterFingerPrint}/86'/${coinType}'/${0}']${extendedPublicKey}` // account index is hardcoded!!!
+  );
+
+  const senderPublicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
+
+  //================================================================================================
+  // 4. Sign Transaction
+  //================================================================================================
+  const psbt = Psbt.fromBase64(serializedPSBT);
+
+  console.log({ psbt });
+
+  // psbt.addOutputs(parsedPsbt.txOutputs);
+
+  console.log({ psbt });
+
+  const inputDerivation: Bip32Derivation = {
+    path: `m/86'/${coinType}'/0'/0/${addressIndex}`,
+    pubkey: senderPublicKey,
+    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
+  };
+
+  console.log({ psbt });
+
+  console.log({ hex: psbt.toHex() });
+
+  for (let i = 0; i < psbt.txInputs.length; i++) {
+    psbt.updateInput(i, { bip32Derivation: [inputDerivation] });
+  }
+
+  console.log({ psbt });
+
+  console.log({ hex: psbt.toHex() });
+
+  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+  console.log({ signatures });
+  for (const signature of signatures) {
+    psbt.updateInput(signature[0], {
+      partialSig: [signature[1]],
+    });
+  }
+
+  //================================================================================================
+  // 5. Finalize Transaction
+  //================================================================================================
+
+  psbt.finalizeAllInputs();
+  return psbt.extractTransaction().toHex();
 }
