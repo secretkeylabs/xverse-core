@@ -14,10 +14,10 @@ import {
   NetworkType,
   ResponseError,
   StacksNetwork,
+  UTXO,
 } from '../types';
 import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
 import { Bip32Derivation, Transport } from './types';
-import { fetchBtcAddressUnspent } from '../api/btc';
 import { fetchBtcFeeRate } from '../api';
 import { networks, Psbt } from 'bitcoinjs-lib';
 import axios from 'axios';
@@ -38,7 +38,11 @@ import { hashMessage, publicKeyToBtcAddress } from '@stacks/encryption';
 import { makeDIDFromAddress } from '@stacks/auth';
 import base64url from 'base64url';
 import ecdsaFormat from 'ecdsa-sig-formatter';
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from '../constant';
+import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+
+const MAINNET_BROADCAST_URI = 'https://blockstream.info/api/tx';
+
+const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
@@ -103,10 +107,15 @@ async function getTransactionData(
   senderAddress: string,
   recipient: Recipient
 ) {
+  // Get sender address unspent outputs
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const allUTXOs = await btcClient.getUnspentUtxos(senderAddress);
+
   let feeRate: BtcFeeResponse = defaultFeeRate;
   const { amountSats } = recipient;
 
-  const allUTXOs = await fetchBtcAddressUnspent(senderAddress, network);
   let selectedUTXOs = selectUnspentOutputs(amountSats, allUTXOs);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
@@ -152,7 +161,7 @@ async function createNestedSegwitPsbt(
   recipient: Recipient,
   changeAddress: string,
   changeValue: BigNumber,
-  inputUTXOs: BtcUtxoDataResponse[],
+  inputUTXOs: UTXO[],
   inputDerivation: Bip32Derivation[] | undefined,
   redeemScript: Buffer,
   witnessScript: Buffer
@@ -165,22 +174,22 @@ async function createNestedSegwitPsbt(
   for (const utxo of inputUTXOs) {
     const txDataApiUrl = `${
       network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI
-    }/${utxo.tx_hash}/hex`;
+    }/${utxo.txid}/hex`;
     const response = await axios.get(txDataApiUrl);
-    transactionMap.set(utxo.tx_hash, Buffer.from(response.data, 'hex'));
+    transactionMap.set(utxo.txid, Buffer.from(response.data, 'hex'));
   }
 
   for (const utxo of inputUTXOs) {
     psbt.addInput({
-      hash: utxo.tx_hash,
-      index: utxo.tx_output_n,
+      hash: utxo.txid,
+      index: utxo.vout,
       redeemScript: redeemScript,
       // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
       witnessUtxo: {
         script: witnessScript,
         value: utxo.value,
       },
-      nonWitnessUtxo: transactionMap.get(utxo.tx_hash),
+      nonWitnessUtxo: transactionMap.get(utxo.txid),
       bip32Derivation: inputDerivation,
     });
   }
