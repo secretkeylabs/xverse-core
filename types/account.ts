@@ -10,7 +10,8 @@ export interface OldAccount {
   bnsName?: string;
 }
 
+export type AccountType = 'ledger' | 'software';
 export interface Account extends OldAccount {
-  isLedgerAccount?: boolean;
+  accountType?: AccountType;
   accountName?: string;
 }
