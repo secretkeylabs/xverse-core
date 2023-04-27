@@ -1,7 +1,7 @@
 import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from 'types/network';
 import { networks, Psbt } from 'bitcoinjs-lib';
-import { fetchBtcFeeRate } from 'api';
-import BitcoinEsploraApiProvider from 'api/esplora/esploraAPiProvider';
+import { fetchBtcFeeRate } from '../api';
+import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import {
   defaultFeeRate,
   selectUnspentOutputs,
