@@ -1,20 +1,21 @@
-import { NetworkType, Account } from '../types';
 import * as bitcoin from 'bitcoinjs-lib';
-import { getSigningDerivationPath } from '../transactions/psbt';
-import { encode } from 'varuint-bitcoin';
 import * as btc from '@scure/btc-signer';
-import * as secp256k1 from '@noble/secp256k1';
 import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
-import { getBtcNetwork } from '../transactions/btcNetwork';
+import * as secp256k1 from '@noble/secp256k1';
 import { hex } from '@scure/base';
+import { encode } from 'varuint-bitcoin';
+import { getAddressInfo, AddressType } from 'bitcoin-address-validation';
+import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
+import { getSigningDerivationPath } from '../transactions/psbt';
+import { Account, NetworkType } from '../types';
+
 /**
  *
  * @param message
  * @returns Bip322 Message Hash
  *
  */
-function bip0322Hash(message: string) {
+export function bip0322Hash(message: string) {
   const { sha256 } = bitcoin.crypto;
   const tag = 'BIP0322-signed-message';
   const tagHash = sha256(Buffer.from(tag));
@@ -22,8 +23,12 @@ function bip0322Hash(message: string) {
   return result.toString('hex');
 }
 
+const toUint8 = (buf: Buffer): Uint8Array => {
+  const uin = new Uint8Array(buf.length);
+  return uin.map((a, index, arr) => (arr[index] = buf[index]));
+};
 
-function encodeVarString(b: any) {
+function encodeVarString(b: Uint8Array) {
   return Buffer.concat([encode(b.byteLength), b]);
 }
 
@@ -35,36 +40,72 @@ interface SignBip322MessageOptions {
   seedPhrase: string;
 }
 
+const getSigningPk = (type: AddressType, privateKey: string | Buffer) => {
+  switch (type) {
+    case AddressType.p2tr: {
+      return secp256k1.schnorr.getPublicKey(privateKey);
+    }
+    case AddressType.p2sh: {
+      if (typeof privateKey !== 'string') {
+        const pk = bitcoin.ECPair.fromPrivateKey(privateKey).publicKey;
+        return toUint8(pk);
+      }
+    }
+    case AddressType.p2wpkh: {
+      return secp256k1.getPublicKey(privateKey, true);
+    }
+    default: {
+      throw new Error('Unsupported Address Type');
+    }
+  }
+};
+
+const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: BitcoinNetwork) => {
+  switch (type) {
+    case AddressType.p2tr: {
+      return btc.p2tr(publicKey, undefined, network).script;
+    }
+    case AddressType.p2wpkh: {
+      return btc.p2wpkh(publicKey, network).script;
+    }
+    case AddressType.p2sh: {
+      return btc.p2wpkh(publicKey, network).script;
+    }
+    default: {
+      throw new Error('Unsupported Address Type');
+    }
+  }
+};
+
 export const signBip322Message = async (options: SignBip322MessageOptions) => {
   const { accounts, message, network, seedPhrase, signatureAddress } = options;
+  if (!accounts || accounts.length === 0) {
+    throw new Error('a List of Accounts are required to derive the correct Private Key');
+  }
+  const { type } = getAddressInfo(signatureAddress);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const master = bip32.fromSeed(seed);
+  const master = bitcoin.bip32.fromSeed(seed);
   const signingDerivationPath = getSigningDerivationPath(accounts, signatureAddress, network);
   const child = master.derivePath(signingDerivationPath);
   if (child.privateKey) {
     const privateKey = child.privateKey?.toString('hex');
-    const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privateKey);
-    const p2tr = btc.p2tr(taprootInternalPubKey, undefined, getBtcNetwork(network));
-    const inputHash = Buffer.from(
-      '0000000000000000000000000000000000000000000000000000000000000000',
-      'hex'
+    const publicKey = getSigningPk(type, privateKey);
+    const txScript = getSignerScript(type, publicKey, getBtcNetwork(network));
+    const inputHash = hex.decode(
+      '0000000000000000000000000000000000000000000000000000000000000000'
     );
     const txVersion = 0;
     const inputIndex = 4294967295;
     const sequence = 0;
-    const scriptSig = Buffer.concat([
-      Buffer.from('0020', 'hex'),
-      Buffer.from(bip0322Hash(message), 'hex'),
-    ]);
-
-    // tx - to-spend
+    const scriptSig = btc.Script.encode(['OP_0', hex.decode(bip0322Hash(message))]);
+    // tx-to-spend
     const txToSpend = new btc.Transaction({
       allowUnknowOutput: true,
       version: txVersion,
     });
     txToSpend.addOutput({
       amount: BigInt(0),
-      script: p2tr.script,
+      script: txScript,
     });
     txToSpend.addInput({
       txid: inputHash,
@@ -72,36 +113,38 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
       sequence,
       finalScriptSig: scriptSig,
     });
-    // tx - to-sign
-      const psbtToSign = new btc.Transaction({
-        allowUnknowOutput: true,
-        version: txVersion,
-      });
-      psbtToSign.addInput({
-        txid: txToSpend.hash,
-        index: 0,
-        sequence: 0,
-        tapInternalKey: taprootInternalPubKey,
-        witnessUtxo: {
-          script: p2tr.script,
-          amount: BigInt(0),
-        },
-      });
-      psbtToSign.addOutput({ script: Buffer.from('6a', 'hex'), amount: BigInt(0) });
-      console.log(psbtToSign);
-      psbtToSign.signIdx(hex.decode(privateKey), 0);
-      psbtToSign.finalize();
-      const txToSign = psbtToSign.getInput(0);
-      if (txToSign.finalScriptWitness?.length) {
-        const len = encode(txToSign.finalScriptWitness?.length);
-        const result = Buffer.concat([
-          len,
-          ...txToSign.finalScriptWitness.map((w) => encodeVarString(w)),
-        ]);
+    // tx-to-sign
+    const txToSign = new btc.Transaction({
+      allowUnknowOutput: true,
+      version: txVersion,
+    });
+    txToSign.addInput({
+      txid: txToSpend.id,
+      index: 0,
+      sequence,
+      tapInternalKey: type === AddressType.p2tr ? publicKey : undefined,
+      witnessUtxo: {
+        script: txScript,
+        amount: BigInt(0),
+      },
+    });
+    txToSign.addOutput({ script: btc.Script.encode(['RETURN']), amount: BigInt(0) });
+    txToSign.sign(hex.decode(privateKey));
+    txToSign.finalize();
 
-        const signature = result.toString('base64');
-        return signature;
-      }
-
+    // formulate-signature
+    const firstInput = txToSign.getInput(0);
+    if (firstInput.finalScriptWitness?.length) {
+      const len = encode(firstInput.finalScriptWitness?.length);
+      const result = Buffer.concat([
+        len,
+        ...firstInput.finalScriptWitness.map((w) => encodeVarString(w)),
+      ]);
+      return result.toString('base64');
+    } else {
+      return '';
+    }
+  } else {
+    throw new Error("Couldn't sign Message");
   }
 };
