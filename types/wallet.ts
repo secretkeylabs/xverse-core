@@ -1,3 +1,5 @@
+import { AccountType } from './account';
+
 export interface BaseWallet {
   stxAddress: string;
   btcAddress: string;
@@ -7,4 +9,5 @@ export interface BaseWallet {
   btcPublicKey: string;
   ordinalsPublicKey: string;
   seedPhrase: string;
+  accountType?: AccountType;
 }

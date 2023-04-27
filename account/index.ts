@@ -96,6 +96,7 @@ export async function restoreWalletWithAccounts(
             btcPublicKey: response.btcPublicKey,
             ordinalsPublicKey: response.ordinalsPublicKey,
             bnsName: username,
+            accountType: 'software',
           };
           return existingAccount;
         } else {
@@ -133,36 +134,34 @@ export async function createWalletAccount(
     network: selectedNetwork.type,
   });
   const bnsName = await getBnsName(stxAddress, networkObject);
-  const updateAccountsList = [
-    ...walletAccounts,
-    {
-      id: accountIndex,
-      stxAddress,
-      btcAddress,
-      ordinalsAddress,
-      masterPubKey,
-      stxPublicKey,
-      btcPublicKey,
-      ordinalsPublicKey,
-      bnsName,
-    },
-  ];
+  const newAccount: Account = {
+    id: accountIndex,
+    stxAddress,
+    btcAddress,
+    ordinalsAddress,
+    masterPubKey,
+    stxPublicKey,
+    btcPublicKey,
+    ordinalsPublicKey,
+    bnsName,
+    accountType: 'software',
+  };
+  const updateAccountsList = [...walletAccounts, newAccount];
   try {
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const walletConfigKey = await deriveWalletConfigKey(rootNode);
-  const gaiaHubConfig = await createWalletGaiaConfig({
-    gaiaHubUrl: GAIA_HUB_URL,
-    configPrivateKey: walletConfigKey,
-  });
-  await updateWalletConfig({
-    walletAccounts: updateAccountsList,
-    gaiaHubConfig,
-    configPrivateKey: walletConfigKey,
-  });
-  return updateAccountsList;
-  } catch(err) {
+    const seed = await bip39.mnemonicToSeed(seedPhrase);
+    const rootNode = bip32.fromSeed(Buffer.from(seed));
+    const walletConfigKey = await deriveWalletConfigKey(rootNode);
+    const gaiaHubConfig = await createWalletGaiaConfig({
+      gaiaHubUrl: GAIA_HUB_URL,
+      configPrivateKey: walletConfigKey,
+    });
+    await updateWalletConfig({
+      walletAccounts: updateAccountsList,
+      gaiaHubConfig,
+      configPrivateKey: walletConfigKey,
+    });
+    return updateAccountsList;
+  } catch (err) {
     return updateAccountsList;
   }
-
 }
