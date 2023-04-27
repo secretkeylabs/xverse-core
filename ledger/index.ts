@@ -1,48 +1,20 @@
-import BigNumber from 'bignumber.js';
-import { AppClient, DefaultWalletPolicy, WalletPolicy } from 'ledger-bitcoin';
+import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
+import { Recipient } from '../transactions/btc';
+import { NetworkType } from '../types';
 import {
-  defaultFeeRate,
-  getFee,
-  Recipient,
-  selectUnspentOutputs,
-  sumUnspentOutputs,
-} from '../transactions/btc';
-import {
-  BtcFeeResponse,
-  BtcUtxoDataResponse,
-  ErrorCodes,
-  NetworkType,
-  ResponseError,
-  StacksNetwork,
-  UTXO,
-} from '../types';
-import { getNestedSegwitAccountDataFromXpub, getPublicKeyFromXpubAtIndex } from './helper';
-import { Bip32Derivation, Transport } from './types';
-import { fetchBtcFeeRate } from '../api';
-import { networks, Psbt } from 'bitcoinjs-lib';
-import axios from 'axios';
+  getNestedSegwitAccountDataFromXpub,
+  getPublicKeyFromXpubAtIndex,
+  makeLedgerCompatibleUnsignedAuthResponsePayload,
+  signStxJWTAuth,
+} from './helper';
+import { Bip32Derivation, LedgerStxJWTAuthProfile, Transport } from './types';
 import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
+import { StacksTransaction, AddressVersion } from '@stacks/transactions';
 import {
-  AnchorMode,
-  SingleSigSpendingCondition,
-  StacksTransaction,
-  UnsignedTokenTransferOptions,
-  broadcastRawTransaction,
-  bytesToHex,
-  createMessageSignature,
-  deserializeTransaction,
-  makeUnsignedSTXTokenTransfer,
-  publicKeyToAddress,
-} from '@stacks/transactions';
-import { hashMessage, publicKeyToBtcAddress } from '@stacks/encryption';
-import { makeDIDFromAddress } from '@stacks/auth';
-import base64url from 'base64url';
-import ecdsaFormat from 'ecdsa-sig-formatter';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
-
-const MAINNET_BROADCAST_URI = 'https://blockstream.info/api/tx';
-
-const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
+  getTransactionData,
+  createNestedSegwitPsbt,
+  addSignitureToStxTransaction,
+} from './transaction';
 
 /**
  * This function is used to get the nested segwit account data from the ledger
@@ -52,9 +24,9 @@ const TESTNET_BROADCAST_URI = 'https://blockstream.info/testnet/api/tx';
 export async function importNestedSegwitAccountFromLedger(
   transport: Transport,
   network: NetworkType,
-  accountIndex: number = 0,
-  addressIndex: number = 0,
-  showAddress: boolean = false
+  accountIndex = 0,
+  addressIndex = 0,
+  showAddress = false
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
@@ -79,9 +51,9 @@ export async function importNestedSegwitAccountFromLedger(
 export async function importTaprootAccountFromLedger(
   transport: Transport,
   network: NetworkType,
-  accountIndex: number = 0,
-  addressIndex: number = 0,
-  showAddress: boolean = false
+  accountIndex = 0,
+  addressIndex = 0,
+  showAddress = false
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
@@ -96,116 +68,6 @@ export async function importTaprootAccountFromLedger(
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
 
   return { address, publicKey: publicKey.toString('hex') };
-}
-
-/**
- * This function is used to get the transaction data for the ledger psbt
- * @returns the selected utxos, the change value and the fee
- * */
-async function getTransactionData(
-  network: NetworkType,
-  senderAddress: string,
-  recipient: Recipient
-) {
-  // Get sender address unspent outputs
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const allUTXOs = await btcClient.getUnspentUtxos(senderAddress);
-
-  let feeRate: BtcFeeResponse = defaultFeeRate;
-  const { amountSats } = recipient;
-
-  let selectedUTXOs = selectUnspentOutputs(amountSats, allUTXOs);
-  let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
-
-  if (sumOfSelectedUTXOs.isLessThan(amountSats)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-  }
-
-  feeRate = await fetchBtcFeeRate();
-  const { newSelectedUnspentOutputs, fee } = await getFee(
-    allUTXOs,
-    selectedUTXOs,
-    sumOfSelectedUTXOs,
-    amountSats,
-    [recipient],
-    feeRate,
-    senderAddress,
-    network
-  );
-
-  // Recalculate the sum of selected UTXOs if new UTXOs were selected
-  if (newSelectedUnspentOutputs.length !== selectedUTXOs.length) {
-    selectedUTXOs = newSelectedUnspentOutputs;
-    sumOfSelectedUTXOs = sumUnspentOutputs(newSelectedUnspentOutputs);
-
-    if (sumOfSelectedUTXOs.isLessThan(amountSats.plus(fee))) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-    }
-  }
-
-  const changeValue = sumOfSelectedUTXOs.minus(amountSats).minus(fee);
-
-  return { selectedUTXOs, changeValue, fee };
-}
-
-/**
- * This function is used to create a nested segwit transaction for the ledger
- * @param inputUTXOs - the selected input utxos
- * @param inputDerivation - the derivation data for the sender address
- * @returns the psbt without any signatures
- * */
-async function createNestedSegwitPsbt(
-  network: NetworkType,
-  recipient: Recipient,
-  changeAddress: string,
-  changeValue: BigNumber,
-  inputUTXOs: UTXO[],
-  inputDerivation: Bip32Derivation[] | undefined,
-  redeemScript: Buffer,
-  witnessScript: Buffer
-): Promise<Psbt> {
-  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
-  const psbt = new Psbt({ network: btcNetwork });
-  const { address: recipientAddress, amountSats } = recipient;
-
-  const transactionMap = new Map<string, Buffer>();
-  for (const utxo of inputUTXOs) {
-    const txDataApiUrl = `${
-      network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI
-    }/${utxo.txid}/hex`;
-    const response = await axios.get(txDataApiUrl);
-    transactionMap.set(utxo.txid, Buffer.from(response.data, 'hex'));
-  }
-
-  for (const utxo of inputUTXOs) {
-    psbt.addInput({
-      hash: utxo.txid,
-      index: utxo.vout,
-      redeemScript: redeemScript,
-      // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
-      witnessUtxo: {
-        script: witnessScript,
-        value: utxo.value,
-      },
-      nonWitnessUtxo: transactionMap.get(utxo.txid),
-      bip32Derivation: inputDerivation,
-    });
-  }
-
-  psbt.addOutputs([
-    {
-      address: recipientAddress,
-      value: amountSats.toNumber(),
-    },
-    {
-      address: changeAddress,
-      value: changeValue.toNumber(),
-    },
-  ]);
-
-  return psbt;
 }
 
 /**
@@ -224,10 +86,7 @@ export async function signLedgerNestedSegwitBtcTransaction(
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
 
-  //================================================================================================
-  // 1. Get Account Data
-  //================================================================================================
-
+  //Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/49'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -242,20 +101,13 @@ export async function signLedgerNestedSegwitBtcTransaction(
     witnessScript,
   } = getNestedSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  //================================================================================================
-  // 2. Get UTXOs
-  //================================================================================================
-
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
     senderAddress,
     recipient
   );
 
-  //================================================================================================
-  // 3. Create Transaction
-  //================================================================================================
-
+  // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: Bip32Derivation = {
     path: `m/49'/${coinType}'/0'/0/${addressIndex}`,
     pubkey: senderPublicKey,
@@ -272,12 +124,6 @@ export async function signLedgerNestedSegwitBtcTransaction(
     witnessScript
   );
 
-  console.log({ psbt: psbt.toBase64() });
-
-  //================================================================================================
-  // 4. Sign Transaction
-  //================================================================================================
-
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
 
   for (const signature of signatures) {
@@ -285,10 +131,6 @@ export async function signLedgerNestedSegwitBtcTransaction(
       partialSig: [signature[1]],
     });
   }
-
-  //================================================================================================
-  // 5. Finalize Transaction
-  //================================================================================================
 
   psbt.finalizeAllInputs();
   return psbt.extractTransaction().toHex();
@@ -298,75 +140,35 @@ export async function signLedgerNestedSegwitBtcTransaction(
 // STX
 //================================================================================================
 
+/**
+ * This function is used to get the stx account data from the ledger
+ * @param transport - the transport object with connected ledger device
+ * @returns the address and the public key in compressed format
+ * */
 export async function importStacksAccountFromLedger(
   transport: Transport,
   network: NetworkType,
-  accountIndex: number = 0,
-  addressIndex: number = 0
-): Promise<{ address: string; publicKey: string; testnetAddress: string }> {
+  accountIndex = 0,
+  addressIndex = 0
+): Promise<{ address: string; publicKey: string }> {
   const appStacks = new StacksApp(transport);
-  const MainnetSingleSig = 22;
-  const TestnetSingleSig = 26;
 
-  // Returns address and COMPRESSED public key
   const { address, publicKey } = await appStacks.getAddressAndPubKey(
-    `m/44'/5757'/${accountIndex}'/0/${addressIndex}`, // copied from hiro, /0 at the end means 1st account
-    MainnetSingleSig
+    `m/44'/5757'/${accountIndex}'/0/${addressIndex}`,
+    network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig
   );
 
-  const testnetAddress = publicKeyToAddress(TestnetSingleSig, {
-    data: publicKey,
-    type: 6, // 6 = Public Key
-  });
-
-  return { address, testnetAddress, publicKey: publicKey.toString('hex') };
+  return { address, publicKey: publicKey.toString('hex') };
 }
 
-type TxPayload = {
-  recipient: string;
-  memo: string | undefined;
-  amount: string;
-  network: StacksNetwork | undefined;
-  anchorMode: AnchorMode;
-};
-
-type UnsignedArgs = {
-  txData: TxPayload;
-  publicKey: string;
-  fee: number | string;
-  nonce?: number;
-};
-
-function initNonce(nonce?: number) {
-  return nonce !== undefined ? new BigNumber(nonce, 10) : undefined;
-}
-
-export function generateUnsignedStxTransferTx(args: UnsignedArgs) {
-  const { txData, publicKey, nonce, fee } = args;
-  const { recipient, memo, amount, network, anchorMode } = txData;
-  const options = {
-    recipient,
-    memo,
-    publicKey,
-    anchorMode: anchorMode ?? AnchorMode.Any,
-    amount: new BigNumber(amount).toString(),
-    nonce: initNonce(nonce)?.toString(),
-    fee: new BigNumber(fee, 10).toString(),
-    network,
-  };
-
-  return makeUnsignedSTXTokenTransfer(options);
-}
-
-function signTransactionWithSignature(transaction: string | Buffer, signatureVRS: Buffer) {
-  const deserialzedTx = deserializeTransaction(transaction);
-  const spendingCondition = createMessageSignature(signatureVRS.toString('hex'));
-  (deserialzedTx.auth.spendingCondition as SingleSigSpendingCondition).signature =
-    spendingCondition;
-  return deserialzedTx;
-}
-
-export async function signStxTransaction(
+/**
+ * This function is used to sign a Stacks transaction with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param transaction - the transaction to sign
+ * @param addressIndex - the address index of the account to sign with
+ * @returns the signed transaction ready to be broadcasted
+ * */
+export async function signLedgerStxTransaction(
   transport: Transport,
   transaction: StacksTransaction,
   addressIndex: number
@@ -375,80 +177,44 @@ export async function signStxTransaction(
   const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
   const transactionBuffer = transaction.serialize();
   const resp = await appStacks.sign(path, transactionBuffer);
-  const signedTx = signTransactionWithSignature(transactionBuffer, resp.signatureVRS);
-
-  // const stacksTransactionHex = `0x${bytesToHex(signedTx.serialize())}`;
+  const signedTx = addSignitureToStxTransaction(transactionBuffer, resp.signatureVRS);
 
   return signedTx; // TX ready to be broadcast
 }
 
-// TODO: check if we use this function, probably not
-export async function broadcastStxTransaction(signedTx: StacksTransaction, network: NetworkType) {
-  const broadcastUrl =
-    network === 'Mainnet'
-      ? 'https://stacks-node-api.mainnet.stacks.co/v2/transactions'
-      : 'https://stacks-node-api.testnet.stacks.co/v2/transactions';
-  const response = await broadcastRawTransaction(signedTx.serialize(), broadcastUrl);
-  return response.txid;
-}
-
+/**
+ * This function is used to sign a Stacks message with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param message - the message to sign
+ * @param accountIndex - the account index of the account to sign with
+ * @param addressIndex - the address index of the account to sign with
+ * @returns the signed message
+ * */
 export async function signStxMessage(
   transport: Transport,
   message: string,
-  addressIndex: number
+  accountIndex = 0,
+  addressIndex = 0
 ): Promise<ResponseSign> {
   const appStacks = new StacksApp(transport);
-  const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
+  const path = `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
+  // As of now 2023-04-27, the ledger app does not support signing messages longer than 152 bytes
   const result = await appStacks.sign_msg(path, message);
   return result as ResponseSign;
 }
 
-export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
-  dataPublicKey: string,
-  profile: any
-): Promise<string> {
-  const address = publicKeyToBtcAddress(dataPublicKey);
-
-  if (!address) {
-    throw new Error();
-  }
-
-  const expiresAt = new Date().getTime() + 30 * 24 * 60 * 60 * 1000;
-  const payload = {
-    // TODO: use a UUID
-    jti: '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
-    iat: Math.floor(new Date().getTime() / 1000), // JWT times are in seconds
-    exp: Math.floor(expiresAt / 1000), // JWT times are in seconds
-    iss: makeDIDFromAddress(address),
-    public_keys: [dataPublicKey],
-    profile,
-  };
-
-  const header = { typ: 'JWT', alg: 'ES256K' };
-
-  const formedHeader = base64url.encode(JSON.stringify(header));
-
-  const formedPayload = base64url.encode(JSON.stringify(payload));
-
-  const inputToSign = [formedHeader, formedPayload].join('.');
-
-  return inputToSign;
-}
-
-export async function signStxJWTAuth(transport: Transport, accountIndex: number, payload: string) {
-  const appStacks = new StacksApp(transport);
-  const response = await appStacks.sign_jwt(`m/888'/0'/${accountIndex}'`, payload);
-  console.log({ response, payload });
-
-  const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
-  return [payload, resultingSig].join('.');
-}
-
+/**
+ * This function is used to sign a Stacks JWT authentication request with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param accountIndex - the account index of the account to sign with
+ * @param profile
+ * @returns the signed JWT authentication request
+ * */
 export async function handleLedgerStxJWTAuth(
   transport: Transport,
   accountIndex: number,
-  profile: any
-) {
+  profile: LedgerStxJWTAuthProfile
+): Promise<string> {
   const appStacks = new StacksApp(transport);
   const { publicKey } = await appStacks.getIdentityPubKey(`m/888'/0'/${accountIndex}'`);
 
@@ -456,73 +222,5 @@ export async function handleLedgerStxJWTAuth(
     publicKey.toString('hex'),
     profile
   );
-  return await signStxJWTAuth(transport, accountIndex, inputToSign);
-}
-
-// FIXME: below doesn't work yet
-export async function signLedgerNestedSegwitBtcTransactionRequest(
-  transport: Transport,
-  network: NetworkType,
-  addressIndex: number,
-  serializedPSBT: string
-): Promise<string> {
-  const coinType = network === 'Mainnet' ? 0 : 1;
-  const app = new AppClient(transport);
-
-  //================================================================================================
-  // 1. Get Account Data
-  //================================================================================================
-
-  const masterFingerPrint = await app.getMasterFingerprint();
-  const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/${0}'`); // account index is hardcoded!!!
-  const accountPolicy = new DefaultWalletPolicy(
-    'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${coinType}'/${0}']${extendedPublicKey}` // account index is hardcoded!!!
-  );
-
-  const senderPublicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
-
-  //================================================================================================
-  // 4. Sign Transaction
-  //================================================================================================
-  const psbt = Psbt.fromBase64(serializedPSBT);
-
-  console.log({ psbt });
-
-  // psbt.addOutputs(parsedPsbt.txOutputs);
-
-  console.log({ psbt });
-
-  const inputDerivation: Bip32Derivation = {
-    path: `m/86'/${coinType}'/0'/0/${addressIndex}`,
-    pubkey: senderPublicKey,
-    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
-  };
-
-  console.log({ psbt });
-
-  console.log({ hex: psbt.toHex() });
-
-  for (let i = 0; i < psbt.txInputs.length; i++) {
-    psbt.updateInput(i, { bip32Derivation: [inputDerivation] });
-  }
-
-  console.log({ psbt });
-
-  console.log({ hex: psbt.toHex() });
-
-  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
-  console.log({ signatures });
-  for (const signature of signatures) {
-    psbt.updateInput(signature[0], {
-      partialSig: [signature[1]],
-    });
-  }
-
-  //================================================================================================
-  // 5. Finalize Transaction
-  //================================================================================================
-
-  psbt.finalizeAllInputs();
-  return psbt.extractTransaction().toHex();
+  return signStxJWTAuth(transport, accountIndex, inputToSign);
 }
