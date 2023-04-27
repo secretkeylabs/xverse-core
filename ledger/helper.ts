@@ -110,7 +110,6 @@ export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
 export async function signStxJWTAuth(transport: Transport, accountIndex: number, payload: string) {
   const appStacks = new StacksApp(transport);
   const response = await appStacks.sign_jwt(`m/888'/0'/${accountIndex}'`, payload);
-  console.log({ response, payload });
 
   const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
   return [payload, resultingSig].join('.');
