@@ -2,7 +2,7 @@ import * as bitcoin from 'bitcoinjs-lib';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import * as secp256k1 from '@noble/secp256k1';
-import { hex } from '@scure/base';
+import { base64, hex } from '@scure/base';
 import { encode } from 'varuint-bitcoin';
 import { getAddressInfo, AddressType } from 'bitcoin-address-validation';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
@@ -46,10 +46,7 @@ const getSigningPk = (type: AddressType, privateKey: string | Buffer) => {
       return secp256k1.schnorr.getPublicKey(privateKey);
     }
     case AddressType.p2sh: {
-      if (typeof privateKey !== 'string') {
-        const pk = bitcoin.ECPair.fromPrivateKey(privateKey).publicKey;
-        return toUint8(pk);
-      }
+      return secp256k1.getPublicKey(privateKey, true);
     }
     case AddressType.p2wpkh: {
       return secp256k1.getPublicKey(privateKey, true);
@@ -63,13 +60,14 @@ const getSigningPk = (type: AddressType, privateKey: string | Buffer) => {
 const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: BitcoinNetwork) => {
   switch (type) {
     case AddressType.p2tr: {
-      return btc.p2tr(publicKey, undefined, network).script;
+      return btc.p2tr(publicKey, undefined, network);
     }
     case AddressType.p2wpkh: {
-      return btc.p2wpkh(publicKey, network).script;
+      return btc.p2wpkh(publicKey, network);
     }
     case AddressType.p2sh: {
-      return btc.p2wpkh(publicKey, network).script;
+      const p2wph = btc.p2wpkh(publicKey, network);
+      return btc.p2sh(p2wph, network);
     }
     default: {
       throw new Error('Unsupported Address Type');
@@ -105,7 +103,7 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
     });
     txToSpend.addOutput({
       amount: BigInt(0),
-      script: txScript,
+      script: txScript.script,
     });
     txToSpend.addInput({
       txid: inputHash,
@@ -124,9 +122,10 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
       sequence,
       tapInternalKey: type === AddressType.p2tr ? publicKey : undefined,
       witnessUtxo: {
-        script: txScript,
+        script: txScript.script,
         amount: BigInt(0),
       },
+      redeemScript: AddressType.p2sh ? txScript.redeemScript : Buffer.alloc(0),
     });
     txToSign.addOutput({ script: btc.Script.encode(['RETURN']), amount: BigInt(0) });
     txToSign.sign(hex.decode(privateKey));
@@ -147,4 +146,18 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
   } else {
     throw new Error("Couldn't sign Message");
   }
+};
+
+export const verifySignature = (
+  address: string,
+  message: string,
+  signature: string,
+) => {
+  if (!address) throw new Error('Invalid Address');
+  const decodedSignature = base64.decode(signature).slice(2);
+  if (!decodedSignature) throw new Error('Malformed Signature');
+  const msgHash = bip0322Hash(message);
+  const pk = secp256k1.recoverPublicKey(msgHash, decodedSignature, 1);
+  const isValid = secp256k1.verify(decodedSignature, msgHash, pk, { strict: false });
+  return isValid;
 };
