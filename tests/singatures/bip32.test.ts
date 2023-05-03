@@ -36,14 +36,14 @@ describe('Bip322 Signatures', () => {
     expect(signature.length).toBeGreaterThan(0);
     // Function generates the same signature
     expect(signature).toEqual(
-      'AkgwRQIhAOOz/DsVTdCHHJR/bUtQ42vwjEP2Qypk29laJXzCs8fbAiARV2Qiwx0Z1rAuA+hGjgP/mTZzRWcH1xXBY+iUxdQTKAEhAyIV2BIoLAeSyFNcNwLMqZT149qc2FAsPhkNQi8AZv3/'
+      'JAA5OEh613wRJaMzfUkYILNP7Ny5MsPk77syQxznAG4QIkckJO5knVoQHi8L9BcMM6beSMEOjklBWQdOsnGaBak='
     );
-  // Function generates a valid signature
-    // const validSignature = verifySignature(
-    //   walletAccounts[0].btcAddress,
-    //   message,
-    //   signature,
-    // );
-    // expect(validSignature).toBeTruthy();
+  //  Function generates a valid signature
+    const validSignature = verifySignature(
+      walletAccounts[0].btcAddress,
+      message,
+      signature,
+    );
+    expect(validSignature).toBeTruthy();
   });
 });

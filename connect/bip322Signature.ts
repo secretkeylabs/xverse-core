@@ -1,13 +1,14 @@
-import * as bitcoin from 'bitcoinjs-lib';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import { encode } from 'varuint-bitcoin';
 import { getAddressInfo, AddressType } from 'bitcoin-address-validation';
+import {signAsync, verify} from 'bitcoinjs-message';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
 import { Account, NetworkType } from '../types';
+import { bip32, crypto } from 'bitcoinjs-lib';
 
 /**
  *
@@ -16,7 +17,7 @@ import { Account, NetworkType } from '../types';
  *
  */
 export function bip0322Hash(message: string) {
-  const { sha256 } = bitcoin.crypto;
+  const { sha256 } = crypto;
   const tag = 'BIP0322-signed-message';
   const tagHash = sha256(Buffer.from(tag));
   const result = sha256(Buffer.concat([tagHash, tagHash, Buffer.from(message)]));
@@ -82,10 +83,13 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
   }
   const { type } = getAddressInfo(signatureAddress);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const master = bitcoin.bip32.fromSeed(seed);
+  const master = bip32.fromSeed(seed);
   const signingDerivationPath = getSigningDerivationPath(accounts, signatureAddress, network);
   const child = master.derivePath(signingDerivationPath);
   if (child.privateKey) {
+      if (type === AddressType.p2sh) {
+        return (await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)'})).toString('base64');
+      }
     const privateKey = child.privateKey?.toString('hex');
     const publicKey = getSigningPk(type, privateKey);
     const txScript = getSignerScript(type, publicKey, getBtcNetwork(network));
@@ -154,6 +158,10 @@ export const verifySignature = (
   signature: string,
 ) => {
   if (!address) throw new Error('Invalid Address');
+  const { type } = getAddressInfo(address);
+  if(type === AddressType.p2sh) {
+    return verify(message, address, signature);
+  }
   const decodedSignature = base64.decode(signature).slice(2);
   if (!decodedSignature) throw new Error('Malformed Signature');
   const msgHash = bip0322Hash(message);
