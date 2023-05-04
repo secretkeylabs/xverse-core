@@ -29,7 +29,7 @@ export async function getCoinMetaData(
       if (coin.name === '') coin.name = contract.substring(coin.contract.indexOf('.') + 1);
     }
     const isSupported = supportedCoins.find(
-      (supportdCoin) => supportdCoin.contract === coin.contract
+      (supportedCoin) => supportedCoin.contract === coin.contract
     );
     if (isSupported) {
       coin.supported = true;
