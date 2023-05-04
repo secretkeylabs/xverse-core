@@ -25,6 +25,7 @@ export {
   NonFungibleToken,
   NftEventsResponse,
   CoreInfo,
+  CoinMetaData,
   AddressToBnsResponse,
   getBnsNftName,
 } from './api/stacks/assets';

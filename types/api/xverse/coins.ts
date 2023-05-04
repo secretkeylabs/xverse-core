@@ -1,9 +1,9 @@
 export interface Coin {
     id?: number;
     name: string;
-    ticker: string;
     contract: string;
     description?: string;
+    ticker?: string;
     image?: string;
     decimals?: number;
     supported?: boolean;

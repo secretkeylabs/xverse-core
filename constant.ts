@@ -37,3 +37,50 @@ export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 
 export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+
+export const  supportedCoins =  [
+    {
+        "contract": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.age000-governance-token",
+        "name": "ALEX"
+    },
+    {
+        "contract": "SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token",
+        "name": "Arkadiko Token"
+    },
+    {
+        "contract": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.auto-alex",
+        "name": "Auto ALEX"
+    },
+    {
+        "contract": "SP1H1733V5MZ3SZ9XRW9FKYGEZT0JDGEB8Y634C7R.miamicoin-token-v2",
+        "name": "MiamiCoin"
+    },
+    {
+        "contract": "SPSCWDV3RKV5ZRN1FQD84YE1NQFEDJ9R1F4DYQ11.newyorkcitycoin-token-v2",
+        "name": "NewYorkCityCoin"
+    },
+    {
+        "contract": "SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.usda-token",
+        "name": "USDA"
+    },
+    {
+        "contract": "SP27BB1Y2DGSXZHS7G9YHKTSH6KQ6BD3QG0AN3CR9.vibes-token",
+        "name": "Vibes"
+    },
+    {
+        "contract": "SP3DX3H4FEYZJZ586MFBS25ZW3HZDMEW92260R2PR.Wrapped-Bitcoin",
+        "name": "Wrapped Bitcoin"
+    },
+    {
+        "contract": "SP2TZK01NKDC89J6TA56SA47SDF7RTHYEQ79AAB9A.Wrapped-USD",
+        "name": "Wrapped USD"
+    },
+    {
+        "contract": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.token-susdt",
+        "name": "Wrapped USDT"
+    },
+    {
+        "contract": "SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.slime-token",
+        "name": "SLIME"
+    }
+]
