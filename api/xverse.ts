@@ -1,9 +1,9 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { 
-  API_TIMEOUT_MILLI, 
-  XVERSE_API_BASE_URL, 
-  XVERSE_SPONSOR_URL 
+import {
+  API_TIMEOUT_MILLI,
+  XVERSE_API_BASE_URL,
+  XVERSE_SPONSOR_URL
 } from '../constant';
 import {
   BtcFeeResponse,
@@ -177,4 +177,10 @@ export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
   const ordinalInfoUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/${ordinalId}`;
   const ordinalInfo = await axios.get(ordinalInfoUrl);
   return ordinalInfo.data;
+}
+
+export async function getAppConfig() {
+    const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
+    const appConfig = await axios.get(appConfigUrl);
+    return appConfig;
 }

@@ -25,7 +25,5 @@
     "allowUnreachableCode": false,
     "skipLibCheck": true
   },
-  "exclude": [
-    "./tests",
-  ],
+  "exclude": ["node_modules", "dist", "tests"]
 }
