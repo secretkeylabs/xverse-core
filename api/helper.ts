@@ -48,6 +48,13 @@ export function parseOrdinalsBtcTransactions(
   });
   const inputAddressSet = new Set(inputAddresses);
   const incoming = !inputAddressSet.has(ordinalsAddress);
+
+  const outputAddresses: string[] = [];
+  responseTx.vout.forEach((output) => {
+    if (output.scriptpubkey_address !== ordinalsAddress) {
+      outputAddresses.push(output.scriptpubkey_address);
+    }
+  });
   var amount = 0;
   if (incoming) {
     amount = sumOutputsForAddress(responseTx.vout, ordinalsAddress);
@@ -78,6 +85,7 @@ export function parseOrdinalsBtcTransactions(
     txType: 'bitcoin',
     txStatus: responseTx.status.confirmed ? 'success' : 'pending',
     isOrdinal: true,
+    recipientAddress: outputAddresses[0],
   };
   return parsedTx;
 }
@@ -97,6 +105,16 @@ export function parseBtcTransactionData(
 
   const incoming = !inputAddressSet.has(btcAddress);
   const isOrdinal = inputAddressSet.has(ordinalsAddress);
+
+  const outputAddresses: string[] = [];
+  responseTx.vout.forEach((output) => {
+    if (
+      output.scriptpubkey_address !== btcAddress &&
+      output.scriptpubkey_address !== ordinalsAddress
+    ) {
+      outputAddresses.push(output.scriptpubkey_address);
+    }
+  });
 
   // calculate sent/received amount from inputs/outputs
   var amount = 0;
@@ -128,6 +146,7 @@ export function parseBtcTransactionData(
     txType: 'bitcoin',
     txStatus: responseTx.status.confirmed ? 'success' : 'pending',
     isOrdinal,
+    recipientAddress: outputAddresses[0],
   };
 
   return parsedTx;
