@@ -4,7 +4,7 @@ import {
   UTXO,
 } from '../types';
 import axios from 'axios';
-import { XVERSE_API_BASE_URL } from '../constant';
+import { ORDINALS_URL, XVERSE_API_BASE_URL } from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
@@ -53,20 +53,20 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
       if (ordinal.data.id) {
         return Promise.resolve(ordinal.data.id);
       } else {
-        return null
+        return null;
       }
     } else {
       return null;
     }
-  } catch (err) {
-  }
+  } catch (err) {}
 }
 
-export async function getTextOrdinalContent(url: string): Promise<string> {
+export async function getTextOrdinalContent(content: string): Promise<string> {
+  const url = `${ORDINALS_URL}${content}`;
   return axios
     .get<string>(url, {
       timeout: 30000,
-      transformResponse: [(data) => parseOrdinalTextContentData(data)]
+      transformResponse: [(data) => parseOrdinalTextContentData(data)],
     })
     .then((response) => response!.data)
     .catch((error) => {
@@ -77,10 +77,10 @@ export async function getTextOrdinalContent(url: string): Promise<string> {
 export function parseOrdinalTextContentData(content: string): string {
   try {
     const contentData = JSON.parse(content);
-    if (contentData["p"]) {
+    if (contentData['p']) {
       // check for sns protocol
-      if (contentData["p"] === 'sns') {
-        return contentData.hasOwnProperty('name') ? contentData["name"] : content;
+      if (contentData['p'] === 'sns') {
+        return contentData.hasOwnProperty('name') ? contentData['name'] : content;
       } else {
         return content;
       }
@@ -103,12 +103,12 @@ export async function getNonOrdinalUtxo(
   const nonOrdinalOutputs: Array<UTXO> = []
 
   for (let i = 0; i < unspentOutputs.length; i++) {
-    const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i])
+    const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i]);
     if (ordinalId) {
     } else {
-      nonOrdinalOutputs.push(unspentOutputs[i])
+      nonOrdinalOutputs.push(unspentOutputs[i]);
     }
   }
 
-  return nonOrdinalOutputs
+  return nonOrdinalOutputs;
 }
