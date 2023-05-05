@@ -1,5 +1,6 @@
-import { UTXO } from "../esplora";
-import { TransactionData } from "../xverse/transaction";
+import { UTXO } from '../esplora';
+import { BtcTxInput, BtcTxOutput } from '../mempoolspace/btc';
+import { TransactionData } from '../xverse/transaction';
 
 export type BtcUtxoDataResponse = {
   tx_hash: string;
@@ -54,29 +55,16 @@ export interface BtcTransactionDataResponse {
   outputs: Output[];
 }
 
-
 export interface BtcTransactionData extends TransactionData {
   blockHash: string;
-  blockHeight: string;
-  blockIndex: number;
+  blockHeight: number;
   txid: string;
-  addresses: string[];
   total: number;
   fees: number;
   size: number;
-  preference: string;
-  relayedBy: string;
-  confirmed: string;
-  received: string;
-  ver: number;
-  doubleSpend: boolean;
-  vinSz: number;
-  voutSz: number;
-  dataProtocol: string;
-  confirmations: number;
-  confidence: number;
-  inputs: Input[];
-  outputs: Output[];
+  confirmed: boolean;
+  inputs: BtcTxInput[];
+  outputs: BtcTxOutput[];
   isOrdinal: boolean;
 }
 
@@ -91,7 +79,6 @@ export interface Output {
   addresses: string[];
   value: number;
 }
-
 
 export interface BtcTransactionBroadcastResponse {
   tx: {
@@ -149,5 +136,5 @@ export interface BtcTransactionsDataResponse {
 export interface BtcOrdinal {
   id: string;
   utxo: UTXO;
-  confirmationTime: number,
+  confirmationTime: number;
 }
