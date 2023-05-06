@@ -4,7 +4,11 @@ import {
   UTXO,
 } from '../types';
 import axios from 'axios';
-import { ORDINALS_URL, XVERSE_API_BASE_URL } from '../constant';
+import { 
+  ORDINALS_URL, 
+  XVERSE_API_BASE_URL,
+  ORDINALS_FT_INDEXER_API_URL
+} from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
@@ -111,4 +115,24 @@ export async function getNonOrdinalUtxo(
   }
 
   return nonOrdinalOutputs;
+}
+
+export async function getOrdinalsFtBalance(
+  address: string,
+) {
+  const url = `${ORDINALS_FT_INDEXER_API_URL}?address=${address}&cursor=1&size=1`;
+  return axios
+    .get(url, {
+      timeout: 30000,
+    })
+    .then((response) => { 
+      if(response.data.status == "1") {
+        return response!.data.result.list
+      } else {
+        return []
+      }
+    })
+    .catch((error) => {
+      return '';
+    });
 }
