@@ -2,6 +2,7 @@ import {
   NetworkType,
   BtcOrdinal,
   UTXO,
+  FungibleToken
 } from '../types';
 import axios from 'axios';
 import { 
@@ -119,20 +120,40 @@ export async function getNonOrdinalUtxo(
 
 export async function getOrdinalsFtBalance(
   address: string,
-) {
-  const url = `${ORDINALS_FT_INDEXER_API_URL}?address=${address}&cursor=1&size=1`;
+): Promise<FungibleToken[]> {
+  const url = `${ORDINALS_FT_INDEXER_API_URL}/${address}/brc20/summary?start=0&limit=200`;
   return axios
     .get(url, {
       timeout: 30000,
     })
     .then((response) => { 
-      if(response.data.status == "1") {
-        return response!.data.result.list
+      if(response.data.msg == "ok") {
+        const responseTokensList = response!.data.data.detail;
+        var tokensList: Array<FungibleToken> = [];
+        responseTokensList.forEach((responseToken: any) => {
+          const token: FungibleToken = {
+            name: responseToken.ticker,
+            balance: responseToken.overallBalance,
+            total_sent: "0",
+            total_received: "0",
+            principal: "",
+            assetName: "",
+            ticker: responseToken.ticker,
+            decimals: 0,
+            image: "",
+            visible: true,
+            supported: true,
+            tokenFiatRate: null,
+            protocol: "brc-20",
+          }
+          tokensList.push(token)
+        })
+        return tokensList
       } else {
         return []
       }
     })
     .catch((error) => {
-      return '';
+      return [];
     });
 }
