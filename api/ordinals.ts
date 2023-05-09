@@ -12,6 +12,24 @@ import {
 } from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
+export function parseOrdinalTextContentData(content: string): string {
+  try {
+    const contentData = JSON.parse(content);
+    if (contentData.p) {
+      // check for sns protocol
+      if (contentData.p === 'sns') {
+        return contentData.hasOwnProperty('name') ? contentData.name : content;
+      } else {
+        return content;
+      }
+    } else {
+      return content;
+    }
+  } catch (error) {
+    return content;
+  }
+}
+
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   if (prev.confirmationTime > next.confirmationTime) {
     return 1;
@@ -43,7 +61,7 @@ export async function fetchBtcOrdinalsData(
             utxo,
           });
         }
-        return Promise.resolve(ordinal);
+        return await Promise.resolve(ordinal);
       } catch (err) {}
     })
   );
@@ -56,7 +74,7 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
     const ordinal = await axios.get(ordinalContentUrl);
     if (ordinal) {
       if (ordinal.data.id) {
-        return Promise.resolve(ordinal.data.id);
+        return await Promise.resolve(ordinal.data.id);
       } else {
         return null;
       }
@@ -66,8 +84,8 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
   } catch (err) {}
 }
 
-export async function getTextOrdinalContent(content: string): Promise<string> {
-  const url = `${ORDINALS_URL}${content}`;
+export async function getTextOrdinalContent(inscriptionId: string): Promise<string> {
+  const url = ORDINALS_URL(inscriptionId);
   return axios
     .get<string>(url, {
       timeout: 30000,
@@ -77,24 +95,6 @@ export async function getTextOrdinalContent(content: string): Promise<string> {
     .catch((error) => {
       return '';
     });
-}
-
-export function parseOrdinalTextContentData(content: string): string {
-  try {
-    const contentData = JSON.parse(content);
-    if (contentData['p']) {
-      // check for sns protocol
-      if (contentData['p'] === 'sns') {
-        return contentData.hasOwnProperty('name') ? contentData['name'] : content;
-      } else {
-        return content;
-      }
-    } else {
-      return content;
-    }
-  } catch (error) {
-    return content;
-  }
 }
 
 export async function getNonOrdinalUtxo(
@@ -129,7 +129,7 @@ export async function getOrdinalsFtBalance(
     .then((response) => { 
       if(response.data.msg == "ok") {
         const responseTokensList = response!.data.data.detail;
-        var tokensList: Array<FungibleToken> = [];
+        const tokensList: Array<FungibleToken> = [];
         responseTokensList.forEach((responseToken: any) => {
           const token: FungibleToken = {
             name: responseToken.ticker,
