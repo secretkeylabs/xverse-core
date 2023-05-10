@@ -2,7 +2,7 @@ import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
 import { Recipient } from '../transactions/btc';
 import { NetworkType } from '../types';
 import {
-  getNestedSegwitAccountDataFromXpub,
+  getNativeSegwitAccountDataFromXpub,
   getPublicKeyFromXpubAtIndex,
   makeLedgerCompatibleUnsignedAuthResponsePayload,
   signStxJWTAuth,
@@ -12,16 +12,16 @@ import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import { StacksTransaction, AddressVersion } from '@stacks/transactions';
 import {
   getTransactionData,
-  createNestedSegwitPsbt,
   addSignitureToStxTransaction,
+  createNativeSegwitPsbt,
 } from './transaction';
 
 /**
- * This function is used to get the nested segwit account data from the ledger
+ * This function is used to get the native segwit account data from the ledger
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
-export async function importNestedSegwitAccountFromLedger(
+export async function importNativeSegwitAccountFromLedger(
   transport: Transport,
   network: NetworkType,
   accountIndex = 0,
@@ -32,10 +32,10 @@ export async function importNestedSegwitAccountFromLedger(
 
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
   const masterFingerPrint = await app.getMasterFingerprint();
-  const extendedPublicKey = await app.getExtendedPubkey(`m/49'/${btcNetwork}'/${accountIndex}'`);
+  const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
-    'sh(wpkh(@0/**))',
-    `[${masterFingerPrint}/49'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
+    'wpkh(@0/**)',
+    `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
   );
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
@@ -71,13 +71,13 @@ export async function importTaprootAccountFromLedger(
 }
 
 /**
- * This function is used to sign a Nested Segwit transaction with the ledger
+ * This function is used to sign a Native Segwit transaction with the ledger
  * @param transport - the transport object with connected ledger device
  * @param recipient - the recipient of the transaction
  * @returns the signed raw transaction in hex format
  * */
 
-export async function signLedgerNestedSegwitBtcTransaction(
+export async function signLedgerNativeSegwitBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
@@ -88,18 +88,17 @@ export async function signLedgerNestedSegwitBtcTransaction(
 
   //Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
-  const extendedPublicKey = await app.getExtendedPubkey(`m/49'/${coinType}'/0'`);
+  const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
-    'sh(wpkh(@0/**))',
-    `[${masterFingerPrint}/49'/${coinType}'/0']${extendedPublicKey}`
+    'wpkh(@0/**)',
+    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`
   );
 
   const {
     publicKey: senderPublicKey,
     address: senderAddress,
-    redeemScript,
     witnessScript,
-  } = getNestedSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
+  } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
@@ -109,21 +108,19 @@ export async function signLedgerNestedSegwitBtcTransaction(
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: Bip32Derivation = {
-    path: `m/49'/${coinType}'/0'/0/${addressIndex}`,
+    path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
     pubkey: senderPublicKey,
     masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
   };
-  const psbt = await createNestedSegwitPsbt(
+  const psbt = await createNativeSegwitPsbt(
     network,
     recipient,
     senderAddress,
     changeValue,
     selectedUTXOs,
     [inputDerivation],
-    redeemScript,
     witnessScript
   );
-
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
 
   for (const signature of signatures) {

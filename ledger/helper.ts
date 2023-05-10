@@ -26,13 +26,13 @@ export function getPublicKeyFromXpubAtIndex(
 }
 
 /**
- * This function is used to get the nested segwit account data from the xpub at a given index
+ * This function is used to get the native segwit account data from the xpub at a given index
  * @param xpub - the extended public key - compressed
  * @param index - the address index
  * @param network - the network type
- * @returns the public key in compressed format, the address, the witness script and the redeem script
+ * @returns the public key in compressed format, the address and the witness script
  * */
-export function getNestedSegwitAccountDataFromXpub(
+export function getNativeSegwitAccountDataFromXpub(
   xpub: string,
   index: number,
   network: NetworkType
@@ -40,26 +40,24 @@ export function getNestedSegwitAccountDataFromXpub(
   publicKey: Buffer;
   address: string;
   witnessScript: Buffer;
-  redeemScript: Buffer;
 } {
   const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const p2wpkh = payments.p2wpkh({ pubkey: publicKey, network: btcNetwork });
-  const p2sh = payments.p2sh({ redeem: p2wpkh, network: btcNetwork });
-  const address = p2sh.address;
+  const address = p2wpkh.address;
 
   if (!address) {
     throw new Error('Address is null');
   }
 
-  if (!p2sh.output || !p2sh.redeem?.output) {
-    throw new Error('p2sh output is null');
+  if (!p2wpkh.output) {
+    throw new Error('p2wpkh output is null');
   }
+
   return {
     publicKey,
     address,
-    witnessScript: p2sh.output,
-    redeemScript: p2sh.redeem.output,
+    witnessScript: p2wpkh.output,
   };
 }
 

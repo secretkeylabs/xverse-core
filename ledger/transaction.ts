@@ -77,19 +77,18 @@ export async function getTransactionData(
 }
 
 /**
- * This function is used to create a nested segwit transaction for the ledger
+ * This function is used to create a native segwit transaction for the ledger
  * @param inputUTXOs - the selected input utxos
  * @param inputDerivation - the derivation data for the sender address
  * @returns the psbt without any signatures
  * */
-export async function createNestedSegwitPsbt(
+export async function createNativeSegwitPsbt(
   network: NetworkType,
   recipient: Recipient,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
   inputDerivation: Bip32Derivation[] | undefined,
-  redeemScript: Buffer,
   witnessScript: Buffer
 ): Promise<Psbt> {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
@@ -109,7 +108,6 @@ export async function createNestedSegwitPsbt(
     psbt.addInput({
       hash: utxo.txid,
       index: utxo.vout,
-      redeemScript: redeemScript,
       // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
       witnessUtxo: {
         script: witnessScript,
