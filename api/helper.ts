@@ -9,8 +9,8 @@ import {
   TransferTransaction,
 } from '../types';
 
-import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
 import * as esplora from '../types/api/esplora';
+import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
 
 export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
   var total = 0;
@@ -346,3 +346,17 @@ export function parseStxTransactionData({
 export const getNetworkURL = (network: StacksNetwork): string => {
   return network.isMainnet() ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
 };
+
+export function getFetchableUrl(uri: string, protocol: string): string | null {
+  const publicIpfs = 'https://cf-ipfs.com/ipfs';
+  if (protocol === 'http') return uri;
+  if (protocol === 'ipfs') {
+    const url = uri.split('//');
+    return `${publicIpfs}/${url[1]}`;
+  }
+  return null;
+}
+
+export function getOrdinalImageUrl(content: string): string | null {
+  return getFetchableUrl(`${ORDINALS_URL}${content}`, 'http');
+}

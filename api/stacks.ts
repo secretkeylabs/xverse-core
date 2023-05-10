@@ -147,6 +147,7 @@ export async function getFtData(
         const index = key.indexOf('::');
         fungibleToken.assetName = key.substring(index + 2);
         fungibleToken.principal = key.substring(0, index);
+        fungibleToken.protocol = "stacks"
         tokens.push(fungibleToken);
       }
 
