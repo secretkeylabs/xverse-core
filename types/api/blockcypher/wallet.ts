@@ -1,6 +1,6 @@
 import { UTXO } from '../esplora';
-import { BtcTxInput, BtcTxOutput } from '../mempoolspace/btc';
 import { TransactionData } from '../xverse/transaction';
+import * as esplora from '../esplora';
 
 export type BtcUtxoDataResponse = {
   tx_hash: string;
@@ -63,8 +63,8 @@ export interface BtcTransactionData extends TransactionData {
   fees: number;
   size: number;
   confirmed: boolean;
-  inputs: BtcTxInput[];
-  outputs: BtcTxOutput[];
+  inputs: esplora.Vin[];
+  outputs: esplora.Vout[];
   isOrdinal: boolean;
 }
 
