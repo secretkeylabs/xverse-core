@@ -7,14 +7,12 @@ import {
   StxTransactionDataResponse,
   StxMempoolTransactionDataResponse,
   TransferTransaction,
-  BtcTxInput,
 } from '../types';
 
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
-import { BtcTransaction } from '../types/api/mempoolspace/btc';
-import { BtcTxOutput } from '../types/api/mempoolspace/btc';
+import * as esplora from '../types/api/esplora';
 
-export function sumOutputsForAddress(outputs: BtcTxOutput[], address: string): number {
+export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
   var total = 0;
   outputs.forEach((output) => {
     if (output.scriptpubkey_address) {
@@ -26,7 +24,7 @@ export function sumOutputsForAddress(outputs: BtcTxOutput[], address: string): n
   return total;
 }
 
-export function sumInputsForAddress(inputs: BtcTxInput[], address: string): number {
+export function sumInputsForAddress(inputs: esplora.Vin[], address: string): number {
   var total = 0;
   inputs.forEach((input) => {
     if (input.prevout.scriptpubkey_address === address) {
@@ -37,12 +35,12 @@ export function sumInputsForAddress(inputs: BtcTxInput[], address: string): numb
 }
 
 export function parseOrdinalsBtcTransactions(
-  responseTx: BtcTransaction,
+  responseTx: esplora.Transaction,
   ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
-    if (input.prevout.scriptpubkey_address !== null) {
+    if (input.prevout.scriptpubkey_address) {
       inputAddresses.push(input.prevout.scriptpubkey_address);
     }
   });
@@ -51,7 +49,7 @@ export function parseOrdinalsBtcTransactions(
 
   const outputAddresses: string[] = [];
   responseTx.vout.forEach((output) => {
-    if (output.scriptpubkey_address !== ordinalsAddress) {
+    if (output.scriptpubkey_address && output.scriptpubkey_address !== ordinalsAddress) {
       outputAddresses.push(output.scriptpubkey_address);
     }
   });
@@ -91,13 +89,13 @@ export function parseOrdinalsBtcTransactions(
 }
 
 export function parseBtcTransactionData(
-  responseTx: BtcTransaction,
+  responseTx: esplora.Transaction,
   btcAddress: string,
   ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
-    if (input.prevout.scriptpubkey_address !== null) {
+    if (input.prevout.scriptpubkey_address) {
       inputAddresses.push(input.prevout.scriptpubkey_address);
     }
   });
@@ -109,6 +107,7 @@ export function parseBtcTransactionData(
   const outputAddresses: string[] = [];
   responseTx.vout.forEach((output) => {
     if (
+      output.scriptpubkey_address &&
       output.scriptpubkey_address !== btcAddress &&
       output.scriptpubkey_address !== ordinalsAddress
     ) {

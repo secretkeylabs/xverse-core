@@ -50,4 +50,3 @@ export {
   BtcAddressMempool,
   FeeEstimates,
 } from './api/esplora';
-export { BtcTransaction, BtcTxInput, BtcTxOutput, BtcTxStatus } from './api/mempoolspace/btc';
