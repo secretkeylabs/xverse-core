@@ -10,6 +10,10 @@ export type Bip32Derivation = {
   pubkey: Buffer;
 };
 
+export interface TapBip32Derivation extends Bip32Derivation {
+  leafHashes: Buffer[];
+}
+
 export type TxPayload = {
   recipient: string;
   memo: string | undefined;
