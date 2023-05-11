@@ -14,7 +14,7 @@ import {
 } from '../transactions/btc';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import { Bip32Derivation } from './types';
+import { Bip32Derivation, TapBip32Derivation } from './types';
 import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './constants';
 import {
   createMessageSignature,
@@ -138,4 +138,51 @@ export function addSignitureToStxTransaction(transaction: string | Buffer, signa
   (deserialzedTx.auth.spendingCondition as SingleSigSpendingCondition).signature =
     spendingCondition;
   return deserialzedTx;
+}
+
+/**
+ * This function is used to create a taproot transaction for the ledger
+ * @param inputUTXOs - the selected input utxos
+ * @param inputDerivation - the derivation data for the sender address
+ * @returns the psbt without any signatures
+ * */
+export async function createTaprootPsbt(
+  network: NetworkType,
+  recipient: Recipient,
+  changeAddress: string,
+  changeValue: BigNumber,
+  inputUTXOs: UTXO[],
+  inputDerivation: TapBip32Derivation[] | undefined,
+  taprootScript: Buffer,
+  tapInternalKey: Buffer
+): Promise<Psbt> {
+  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
+  const psbt = new Psbt({ network: btcNetwork });
+  const { address: recipientAddress, amountSats } = recipient;
+
+  for (const utxo of inputUTXOs) {
+    psbt.addInput({
+      hash: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: taprootScript,
+        value: utxo.value,
+      },
+      tapBip32Derivation: inputDerivation,
+      tapInternalKey,
+    });
+  }
+
+  psbt.addOutputs([
+    {
+      address: recipientAddress,
+      value: amountSats.toNumber(),
+    },
+    {
+      address: changeAddress,
+      value: changeValue.toNumber(),
+    },
+  ]);
+
+  return psbt;
 }

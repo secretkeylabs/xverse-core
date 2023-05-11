@@ -112,3 +112,44 @@ export async function signStxJWTAuth(transport: Transport, accountIndex: number,
   const resultingSig = ecdsaFormat.derToJose(Buffer.from(response.signatureDER), 'ES256');
   return [payload, resultingSig].join('.');
 }
+
+/**
+ * This function is used to get the taproot account data from the xpub at a given index
+ * @param xpub - the extended public key - compressed
+ * @param index - the address index
+ * @param network - the network type
+ * @returns the public key in compressed format, the address, the internal public key and the taproot script
+ * */
+export function getTaprootAccountDataFromXpub(
+  xpub: string,
+  index: number,
+  network: NetworkType
+): {
+  publicKey: Buffer;
+  address: string;
+  internalPubkey: Buffer;
+  taprootScript: Buffer;
+} {
+  // TODO - use bitcoinjs-lib class once updated package to ^6.1.0
+  const BitcoinJs: any = {}; // import * as BitcoinJs from 'bitcoinjs-lib';
+  const ecc: any = {}; // import * as ecc from 'tiny-secp256k1';
+
+  BitcoinJs.initEccLib(ecc);
+
+  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
+  const p2tr = BitcoinJs.payments.p2tr({
+    internalPubkey: publicKey.slice(1),
+    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  });
+
+  if (!p2tr.output || !p2tr.address || !p2tr.internalPubkey) {
+    throw new Error('p2tr output, address or internalPubkey is null');
+  }
+
+  return {
+    publicKey,
+    address: p2tr.address,
+    internalPubkey: p2tr.internalPubkey,
+    taprootScript: p2tr.output,
+  };
+}
