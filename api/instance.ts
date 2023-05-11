@@ -12,8 +12,7 @@ export default class ApiInstance {
       const response = await this.bitcoinApi.get(url, { params });
       return response.data;
     } catch (e) {
-      Promise.reject(e);
-      return e.toJSON();
+      return Promise.reject(e);
     }
   }
 
@@ -22,8 +21,7 @@ export default class ApiInstance {
       const response = await this.bitcoinApi.post(url, data);
       return response.data;
     } catch (e) {
-      Promise.reject(e);
-      return e.toJSON();
+      return Promise.reject(e);
     }
   }
 }
