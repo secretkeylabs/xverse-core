@@ -17,6 +17,7 @@ import {
   createNativeSegwitPsbt,
   createTaprootPsbt,
 } from './transaction';
+import { Psbt } from 'bitcoinjs-lib';
 
 /**
  * This function is used to get the native segwit account data from the ledger
@@ -194,6 +195,66 @@ export async function signLedgerTaprootBtcTransaction(
     });
   }
   psbt.finalizeAllInputs();
+  return psbt.extractTransaction().toHex();
+}
+
+/**
+ * This function is used to sign an incoming Native Segwit Psbt with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param indexesToSign - the indexes of the inputs to sign
+ * @param base64Psbt - the incoming transaction in base64 format
+ * @returns the signed raw transaction in hex format
+ * */
+export async function signIncomingSingleSigNativeSegwitTransactionRequest(
+  transport: Transport,
+  network: NetworkType,
+  addressIndex: number,
+  indexesToSign: number[],
+  base64Psbt: string
+): Promise<string> {
+  const coinType = network === 'Mainnet' ? 0 : 1;
+  const app = new AppClient(transport);
+
+  //Get account details from ledger to not rely on state
+  const masterFingerPrint = await app.getMasterFingerprint();
+  const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
+  const accountPolicy = new DefaultWalletPolicy(
+    'wpkh(@0/**)',
+    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`
+  );
+
+  const { publicKey: senderPublicKey } = getNativeSegwitAccountDataFromXpub(
+    extendedPublicKey,
+    addressIndex,
+    network
+  );
+
+  const inputDerivation: Bip32Derivation = {
+    path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
+    pubkey: senderPublicKey,
+    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
+  };
+
+  const psbt = Psbt.fromBase64(base64Psbt);
+
+  // Ledger needs to know the derivation path of the inputs to sign
+  for (let i = 0; i < psbt.data.inputs.length; i++) {
+    if (indexesToSign.includes(i)) {
+      psbt.updateInput(i, {
+        bip32Derivation: [inputDerivation],
+      });
+    }
+  }
+
+  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+
+  for (const signature of signatures) {
+    psbt.updateInput(signature[0], {
+      partialSig: [signature[1]],
+    });
+  }
+  psbt.finalizeAllInputs();
+
   return psbt.extractTransaction().toHex();
 }
 
