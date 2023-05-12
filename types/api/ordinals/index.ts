@@ -13,12 +13,13 @@ export interface Inscription {
   value: string;
   offset: string;
   sat_ordinal: string;
-  sat_rarity: 'common';
+  sat_rarity: string;
   sat_coinbase_height: number;
-  mime_type: 'text/plain';
-  content_type: 'text/plain;charset=utf-8';
+  mime_type: string;
+  content_type: string;
   content_length: number;
   timestamp: number;
+  tx_id: string;
 }
 
 export interface InscriptionsList {
