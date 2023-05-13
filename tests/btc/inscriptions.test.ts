@@ -83,7 +83,6 @@ import { testSeed, walletAccounts } from '../mocks/restore.mock';
 describe('Inscription Txs', () => {
   it('generates a valid tx for inscriptions', async () => {
     const tx = await createInscriptionTx({
-      accountsList: walletAccounts,
       creatorAccount: walletAccounts[0],
       data: toUint8(
         Buffer.from(

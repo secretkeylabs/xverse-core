@@ -1,12 +1,10 @@
-import { Script, Transaction, p2tr } from '@scure/btc-signer';
-import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
+import { P2TROut, Script, Transaction, p2tr } from '@scure/btc-signer';
 import * as secp256k1 from '@noble/secp256k1';
 import BigNumber from 'bignumber.js';
-import { getSigningDerivationPath } from './psbt';
-import {  Account } from '../types';
+import {  Account, UTXO } from '../types';
 import BitcoinEsploraApiProvider from 'api/esplora/esploraAPiProvider';
 import { getBtcFeeRate, getFee, selectUnspentOutputs, sumUnspentOutputs } from './btc';
+import { getBtcTaprootPrivateKey } from '../wallet';
 
 export enum SupportedTypes {
   TEXT = '"text/plain;charset=utf-8"',
@@ -17,7 +15,6 @@ interface InscriptionTxArguments {
   data: Uint8Array;
   dataType: SupportedTypes;
   creatorAccount: Account;
-  accountsList: Account[];
   seedPhrase: string;
 }
 
@@ -49,10 +46,32 @@ const btcClient = new BitcoinEsploraApiProvider({
 
 const inscriptionAmount = new BigNumber(5500);
 
+
+const addInscriptionInputs = (
+  inputsToAdd: UTXO[],
+  tx: Transaction,
+  spend: P2TROut,
+  tapInternalKey: Uint8Array,
+  ordinalEnvelope: Uint8Array
+) => {
+  inputsToAdd.map((input) => {
+    tx.addInput({
+      txid: input.txid,
+      index: input.vout,
+      witnessUtxo: {
+        script: spend.script,
+        amount: BigInt(input.value),
+      },
+      witnessScript: input.vout === 0 ? ordinalEnvelope : undefined,
+      tapInternalKey,
+    });
+  });
+};
+
 export const createInscriptionTx = async (options: InscriptionTxArguments) => {
-  const { seedPhrase, accountsList, creatorAccount, data, dataType } = options;
+  const { seedPhrase, creatorAccount, data, dataType } = options;
   // get the user unspent outputs
-  const accountUtxos = await btcClient.getUnspentUtxos(creatorAccount.btcAddress);
+  const accountUtxos = await btcClient.getUnspentUtxos(creatorAccount.ordinalsAddress);
   // calculate the user balance and select utxos to spend
   const feeRate = await getBtcFeeRate();
   let selectedUnspentOutputs = selectUnspentOutputs(inscriptionAmount, accountUtxos);
@@ -66,9 +85,7 @@ export const createInscriptionTx = async (options: InscriptionTxArguments) => {
       amountSats: inscriptionAmount,
     },
   ];
-  const changeAddress = creatorAccount.btcAddress;
   // Calculate transaction fee
-  let calculatedFee: BigNumber = new BigNumber(0);
   const { newSelectedUnspentOutputs, fee } = await getFee(
     selectedUnspentOutputs,
     selectedUnspentOutputs,
@@ -76,43 +93,34 @@ export const createInscriptionTx = async (options: InscriptionTxArguments) => {
     inscriptionAmount,
     recipients,
     feeRate,
-    changeAddress,
-    'Mainnet'
-  );
-  calculatedFee = fee;
-  selectedUnspentOutputs = newSelectedUnspentOutputs;
-  const satsToSend = inscriptionAmount.plus(calculatedFee);
-
-  // derive user private keys to sign the tx input
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const master = bip32.fromSeed(seed);
-  const signingDerivationPath = getSigningDerivationPath(
-    accountsList,
     creatorAccount.ordinalsAddress,
     'Mainnet'
   );
-  const child = master.derivePath(signingDerivationPath);
+  selectedUnspentOutputs = newSelectedUnspentOutputs;
+  const satsToSend = inscriptionAmount.plus(fee);
 
+  // derive user private keys to sign the tx input
+  const taprootPrivateKey = await getBtcTaprootPrivateKey({
+    seedPhrase,
+    index: BigInt(creatorAccount.id),
+    network: 'Mainnet',
+  });
   // create Inscription tx
-  if (child.privateKey) {
-    const pk = secp256k1.schnorr.getPublicKey(child.privateKey);
+    const pk = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
     const tabLeaf = createInscriptionEnvelope(pk, data, dataType);
     const scriptPk = p2tr(pk);
     const inscribeTx = new Transaction();
-    inscribeTx.addInput({
-      witnessUtxo: {
-        script: scriptPk.script,
-        amount: BigInt(satsToSend.toNumber()),
-      },
-    });
+    addInscriptionInputs(selectedUnspentOutputs, inscribeTx, scriptPk, pk, tabLeaf);
+    inscribeTx.addOutputAddress(
+      creatorAccount.ordinalsAddress,
+      BigInt(inscriptionAmount.toNumber()),
+    );
     inscribeTx.addOutput({
-      amount: BigInt(99000),
+      amount: BigInt(inscriptionAmount.toNumber()),
       script: scriptPk.script,
     });
 
     return inscribeTx;
-  }
-  throw new Error('Invalid key');
 };
 
 export const signInscriptionTx = () => {};
