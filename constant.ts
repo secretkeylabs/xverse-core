@@ -28,7 +28,7 @@ export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
 
 export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
 
-export const XVERSE_API_BASE_URL = 'http://localhost:3000';
+export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app'; 
 
