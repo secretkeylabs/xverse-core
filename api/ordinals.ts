@@ -121,14 +121,14 @@ export async function getNonOrdinalUtxo(
 export async function getOrdinalsFtBalance(
   address: string,
 ): Promise<FungibleToken[]> {
-  const url = `${ORDINALS_FT_INDEXER_API_URL}/${address}/brc20/summary?start=0&limit=200`;
+  const url = `${XVERSE_API_BASE_URL}/v1/ordinals/token/balances/${address}`;
   return axios
     .get(url, {
       timeout: 30000,
     })
     .then((response) => { 
-      if(response.data.msg == "ok") {
-        const responseTokensList = response!.data.data.detail;
+      if(response.data) {
+        const responseTokensList = response!.data;
         const tokensList: Array<FungibleToken> = [];
         responseTokensList.forEach((responseToken: any) => {
           const token: FungibleToken = {
@@ -144,7 +144,7 @@ export async function getOrdinalsFtBalance(
             visible: true,
             supported: true,
             tokenFiatRate: null,
-            protocol: "brc-20",
+            protocol: responseToken.protocol,
           }
           tokensList.push(token)
         })
