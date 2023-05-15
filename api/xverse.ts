@@ -15,6 +15,9 @@ import {
   StackerInfo,
   SignedUrlResponse,
   OrdinalInfo,
+  UploadInscriptionFileResponse,
+  EstimateFeeResponse,
+  InscriptionRequest,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -183,4 +186,38 @@ export async function getAppConfig() {
     const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
     const appConfig = await axios.get(appConfigUrl);
     return appConfig;
+}
+
+export async function uploadInscriptionFile(file: string) {
+  const uploadContentUrl = `${XVERSE_API_BASE_URL}/v1/upload-inscription-content`;
+  const response: UploadInscriptionFileResponse = await axios.post(uploadContentUrl, {
+    file,
+  });
+  return response;
+}
+
+
+export async function estimateInscriptionFee(fileSize: number) {
+  const uploadContentUrl = `${XVERSE_API_BASE_URL}/v1/estimate-inscription-fee`;
+  const response: EstimateFeeResponse = await axios.post(uploadContentUrl, {
+    fileSize,
+  });
+  return response;
+}
+
+
+export async function createInscriptionRequest(
+  recipientAddress: string,
+  refundAddress: string,
+  totalFeeSats: number,
+  fileBase64: string,
+) {
+  const createInscriptionRequestUrl = `${XVERSE_API_BASE_URL}/v1/create-inscription-request`;
+  const response: InscriptionRequest = await axios.post(createInscriptionRequestUrl, {
+    recipientAddress,
+    refundAddress,
+    totalFeeSats,
+    fileBase64,
+  });
+  return response;
 }
