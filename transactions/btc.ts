@@ -225,8 +225,9 @@ export async function getBtcFees(
   recipients: Array<Recipient>,
   btcAddress: string,
   network: NetworkType,
-  feeMode?: string
-): Promise<BigNumber> {
+  feeMode?: string,
+  feeRateInput?: string,
+): Promise<{fee: BigNumber, selectedFeeRate?: BigNumber}> {
   try {
     const btcClient = new BitcoinEsploraApiProvider({
       network,
@@ -253,20 +254,20 @@ export async function getBtcFees(
     const changeAddress = btcAddress;
 
     // Calculate transaction fee
-    const { fee } = await getFee(
+    const { fee, selectedFeeRate } = await getFee(
       unspentOutputs,
       selectedUnspentOutputs,
       sumSelectedOutputs,
       satsToSend,
       recipients,
-      feeRate,
+      feeRateInput || feeRate,
       changeAddress,
       network,
       undefined,
       feeMode
     );
 
-    return fee;
+    return {fee, selectedFeeRate};
   } catch (error) {
     return Promise.reject(error.toString());
   }
@@ -392,7 +393,7 @@ export async function getFee(
   sumSelectedOutputs: BigNumber,
   satsToSend: BigNumber,
   recipients: Array<Recipient>,
-  feeRate: BtcFeeResponse,
+  feeRate: BtcFeeResponse | string,
   changeAddress: string,
   network: NetworkType,
   pinnedOutput?: UTXO,
@@ -404,9 +405,14 @@ export async function getFee(
 }> {
   let i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
 
-  let selectedFeeRate = feeRate.regular;
-  if (feeMode && feeMode === 'high') {
-    selectedFeeRate = feeRate.priority;
+  let selectedFeeRate = Number(feeRate);
+  
+  if (typeof feeRate === 'object') {
+    selectedFeeRate = feeRate.regular;
+
+    if (feeMode && feeMode === 'high') {
+      selectedFeeRate = feeRate.priority;
+    }
   }
 
   // Calculate fee
