@@ -15,9 +15,6 @@ import {
   StackerInfo,
   SignedUrlResponse,
   OrdinalInfo,
-  UploadInscriptionFileResponse,
-  EstimateFeeResponse,
-  InscriptionRequest,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -186,74 +183,4 @@ export async function getAppConfig() {
     const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
     const appConfig = await axios.get(appConfigUrl);
     return appConfig;
-}
-
-export async function uploadInscriptionFile(file: string) {
-  const uploadContentUrl = `${XVERSE_API_BASE_URL}/v1/upload-inscription-content`;
-  const response: UploadInscriptionFileResponse = await axios.post(uploadContentUrl, {
-    file,
-  });
-  return response;
-}
-
-
-export async function estimateInscriptionFee(fileSize: number) {
-  const estimateFeeUrl = `${XVERSE_API_BASE_URL}/v1/estimate-inscription-fee`;
-  const response = await axios.post<EstimateFeeResponse>(estimateFeeUrl, {
-    fileSize,
-  });
-  return response.data;
-}
-
-
-export async function createInscriptionRequest(
-  recipientAddress: string,
-  size: number,
-  totalFeeSats: number,
-  fileBase64: string,
-  tokenName: string,
-  amount: string,
-): Promise<{
-  charge: {
-    address: string,
-    amount: number
-  }
-}> {
-  const inscriptionRequestURL = 'https://ordinalsbot-api2.herokuapp.com/order';
-  const response = await axios.post(inscriptionRequestURL, {
-    fee: totalFeeSats,
-    files: [
-      {
-        dataURL: `data:plain/text;base64,${fileBase64}`,
-        name: `${tokenName}-${amount}-1.txt`,
-        size: size,
-        type: 'plain/text',
-        url: '',
-      },
-    ],
-    lowPostage: true,
-    receiveAddress: recipientAddress,
-    referral: '',
-  });
-  return response.data;
-
-  // const createInscriptionRequestUrl = `https://api-ordinals.gamma.io/inscription-request/v1/requests`;
-
-  //     const requestFormData = new FormData();
-  //     requestFormData.append('btc_ordinal_recipient_address', recipientAddress);
-  //     requestFormData.append('btc_refund_recipient_address', refundAddress);
-  //     requestFormData.append('network_fee_rate', '7');
-  //     requestFormData.append('expected_total_fee_sats', `${totalFeeSats}`);
-  //     requestFormData.append('keep_high_res', 'false');
-  //     requestFormData.append('file', fileBase64);
-  // const response = await axios.post<InscriptionRequest>(
-  //   createInscriptionRequestUrl,
-  //   requestFormData,
-  //   {
-  //     headers: {
-  //       'Content-Type': 'multipart/form-data',
-  //     },
-  //   }
-  // );
-  // return response;
 }

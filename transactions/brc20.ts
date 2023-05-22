@@ -1,5 +1,5 @@
 import { base64 } from '@scure/base';
-import { createInscriptionRequest, estimateInscriptionFee, uploadInscriptionFile } from '../api';
+import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const createTransferInscriptionContent = (token: string, amount: string) =>

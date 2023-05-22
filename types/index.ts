@@ -52,5 +52,5 @@ export {
   BtcAddressMempool,
   FeeEstimates,
 } from './api/esplora';
-export * from './api/xverse/inscriptions';
 export * from './api/ordinals';
+export * from './api/ordinalsbot'
