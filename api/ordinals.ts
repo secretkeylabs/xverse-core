@@ -3,7 +3,8 @@ import {
   BtcOrdinal,
   UTXO,
   FungibleToken,
-  InscriptionRequestResponse
+  InscriptionRequestResponse,
+  Inscription
 } from '../types';
 import axios from 'axios';
 import { 
@@ -186,3 +187,5 @@ export async function createInscriptionRequest(
   });
   return response.data;
 }
+
+export const isBrcTransferValid = (inscription: Inscription) => inscription.address === inscription.genesis_address
