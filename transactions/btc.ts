@@ -341,8 +341,9 @@ export async function getBtcFeesForNonOrdinalBtcSend(
   nonOrdinalUtxos: Array<UTXO>,
   btcAddress: string,
   network: NetworkType,
-  feeMode?: string
-): Promise<BigNumber> {
+  feeMode?: string,
+  feeRateInput?: string,
+  ): Promise<{fee: BigNumber; selectedFeeRate?: BigNumber}> {
   try {
     const unspentOutputs = nonOrdinalUtxos;
 
@@ -377,12 +378,12 @@ export async function getBtcFeesForNonOrdinalBtcSend(
       unspentOutputs,
       satsToSend,
       recipients,
-      new BigNumber(selectedFeeRate),
+      new BigNumber(feeRateInput || selectedFeeRate),
       changeAddress,
       network
     );
 
-    return calculatedFee;
+    return {fee: calculatedFee, selectedFeeRate: new BigNumber(feeRateInput || selectedFeeRate)};
   } catch (error) {
     return Promise.reject(error.toString());
   }
