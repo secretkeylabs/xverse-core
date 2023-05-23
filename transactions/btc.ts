@@ -280,8 +280,9 @@ export async function getBtcFeesForOrdinalSend(
   ordinalUtxo: UTXO,
   btcAddress: string,
   network: NetworkType,
-  feeMode?: string
-): Promise<BigNumber> {
+  feeMode?: string,
+  feeRateInput?: string,
+  ): Promise<{fee: BigNumber; selectedFeeRate?: BigNumber}> {
   try {
   const btcClient = new BitcoinEsploraApiProvider({
     network,
@@ -314,20 +315,20 @@ export async function getBtcFeesForOrdinalSend(
     const changeAddress = btcAddress;
 
     // Calculate transaction fee
-    const { fee } = await getFee(
+    const { fee, selectedFeeRate } = await getFee(
       unspentOutputs,
       selectedUnspentOutputs,
       sumSelectedOutputs,
       satsToSend,
       recipients,
-      feeRate,
+      feeRateInput || feeRate,
       changeAddress,
       network,
       ordinalUtxo,
       feeMode
     );
 
-    return fee;
+    return {fee, selectedFeeRate};
   } catch (error) {
     return Promise.reject(error.toString());
   }
@@ -600,7 +601,7 @@ export async function signBtcTransaction(
   // Calculate transaction fee
   let calculatedFee: BigNumber = new BigNumber(0);
   if (!fee) {
-    const { newSelectedUnspentOutputs, fee, selectedFeeRate } = await getFee(
+    const { newSelectedUnspentOutputs, fee: modifiedFee, selectedFeeRate } = await getFee(
       unspentOutputs,
       selectedUnspentOutputs,
       sumSelectedOutputs,
@@ -611,10 +612,10 @@ export async function signBtcTransaction(
       network
     );
 
-    calculatedFee = fee;
+    calculatedFee = modifiedFee;
     feePerVByte = selectedFeeRate as BigNumber;
     selectedUnspentOutputs = newSelectedUnspentOutputs;
-    satsToSend = satsToSend.plus(fee);
+    satsToSend = satsToSend.plus(modifiedFee);
   }
 
   try {
@@ -672,6 +673,7 @@ export async function signOrdinalSendTransaction(
   }
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
+  let feePerVByte: BigNumber = new BigNumber(0);
 
   if (!fee) {
     feeRate = await getBtcFeeRate();
@@ -720,7 +722,7 @@ export async function signOrdinalSendTransaction(
   // Calculate transaction fee
   let calculatedFee: BigNumber = new BigNumber(0);
   if (!fee) {
-    const { newSelectedUnspentOutputs, fee } = await getFee(
+    const { newSelectedUnspentOutputs, fee: modifiedFee, selectedFeeRate } = await getFee(
       filteredUnspentOutputs,
       selectedUnspentOutputs,
       sumSelectedOutputs,
@@ -732,9 +734,10 @@ export async function signOrdinalSendTransaction(
       ordinalUtxo
     );
 
-    calculatedFee = fee;
+    calculatedFee = modifiedFee;
     selectedUnspentOutputs = newSelectedUnspentOutputs;
-    satsToSend = satsToSend.plus(fee);
+    satsToSend = satsToSend.plus(modifiedFee);
+    feePerVByte = selectedFeeRate as BigNumber;
   }
 
   try {
@@ -764,9 +767,10 @@ export async function signOrdinalSendTransaction(
     tx.finalize();
 
     const signedBtcTx: SignedBtcTx = {
-      tx: tx,
+      tx,
       signedTx: tx.hex,
       fee: fee ?? calculatedFee,
+      feePerVByte,
       total: satsToSend,
     };
 
