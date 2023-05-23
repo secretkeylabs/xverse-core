@@ -2,13 +2,16 @@ import {
   NetworkType,
   BtcOrdinal,
   UTXO,
-  FungibleToken
+  FungibleToken,
+  InscriptionRequestResponse,
+  Inscription
 } from '../types';
 import axios from 'axios';
 import { 
   ORDINALS_URL, 
   XVERSE_API_BASE_URL,
-  ORDINALS_FT_INDEXER_API_URL
+  ORDINALS_FT_INDEXER_API_URL,
+  INSCRIPTION_REQUESTS_SERVICE_URL
 } from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
@@ -157,3 +160,32 @@ export async function getOrdinalsFtBalance(
       return [];
     });
 }
+
+
+export async function createInscriptionRequest(
+  recipientAddress: string,
+  size: number,
+  totalFeeSats: number,
+  fileBase64: string,
+  tokenName: string,
+  amount: string
+): Promise<InscriptionRequestResponse> {
+  const response = await axios.post(INSCRIPTION_REQUESTS_SERVICE_URL, {
+    fee: totalFeeSats,
+    files: [
+      {
+        dataURL: `data:plain/text;base64,${fileBase64}`,
+        name: `${tokenName}-${amount}-1.txt`,
+        size: size,
+        type: 'plain/text',
+        url: '',
+      },
+    ],
+    lowPostage: true,
+    receiveAddress: recipientAddress,
+    referral: '',
+  });
+  return response.data;
+}
+
+export const isBrcTransferValid = (inscription: Inscription) => inscription.address === inscription.genesis_address

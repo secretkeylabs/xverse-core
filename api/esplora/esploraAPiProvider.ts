@@ -79,6 +79,11 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
     };
   }
 
+  async getRecommendedFees(): Promise<esplora.RecommendedFeeResponse> {
+    const data: esplora.RecommendedFeeResponse = await this.httpGet('/v1/fees/recommended');
+    return data;
+  }
+
   async getLatestBlockHeight(): Promise<number> {
     const data: number = await this.httpGet('/blocks/tip/height');
     return data;
