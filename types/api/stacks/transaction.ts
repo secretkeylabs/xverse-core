@@ -136,6 +136,7 @@ export type FungibleToken = {
   visible?: boolean;
   supported?: boolean;
   tokenFiatRate?: number | null;
+  protocol?: string;
 };
 
 export type StxBalance = {
