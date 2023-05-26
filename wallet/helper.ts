@@ -1,5 +1,12 @@
-export function ecPairToHexString(secretKey: any) {
-  var ecPointHex = secretKey.privateKey.toString('hex');
+import { ECPairInterface } from 'bitcoinjs-lib';
+
+export function ecPairToHexString(secretKey: ECPairInterface): string {
+  if (!secretKey.privateKey) {
+    throw new Error('Unexpected: secretKey without privateKey provided for hex conversion');
+  }
+
+  const ecPointHex = secretKey.privateKey.toString('hex');
+
   if (secretKey.compressed) {
     return ecPointHex + '01';
   } else {
