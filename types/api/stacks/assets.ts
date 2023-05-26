@@ -1,6 +1,5 @@
 import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { hexToString } from "../../helper";
-import { BtcOrdinal } from "../blockcypher/wallet";
 
 export interface Attribute {
   value: string;
@@ -86,6 +85,7 @@ export interface CoreInfo {
   stable_burn_block_height: number;
   stacks_tip_height: number;
   stacks_tip: string;
+  network_id: number;
 }
 
 export function getBnsNftName(nft: NonFungibleToken) {

@@ -2,8 +2,8 @@ export interface Account {
   id: number;
   stxAddress: string;
   btcAddress: string;
-  dlcBtcAddress: string;
-  dlcBtcPublicKey: string;
+  mainBtcAddress: string;
+  mainBtcPublicKey: string;
   ordinalsAddress: string;
   masterPubKey: string;
   stxPublicKey: string;

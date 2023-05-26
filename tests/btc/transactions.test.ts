@@ -8,7 +8,7 @@ import {
   getBtcFees,
   getBtcFeesForOrdinalSend,
 } from '../../transactions/btc';
-import { getBtcPrivateKey } from '../../wallet';
+import { getBtcPrivateKey } from '../../wallet/utils/btc';
 import { testSeed } from '../mocks/restore.mock';
 import { UTXO } from '../../types';
 import BigNumber from 'bignumber.js';

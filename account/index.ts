@@ -90,8 +90,8 @@ export async function restoreWalletWithAccounts(
             id: index,
             stxAddress: response.stxAddress,
             btcAddress: response.btcAddress,
-            dlcBtcAddress: response.dlcBtcAddress,
-            dlcBtcPublicKey: response.dlcBtcPublicKey,
+            mainBtcAddress: response.mainBtcAddress,
+            mainBtcPublicKey: response.mainBtcPublicKey,
             ordinalsAddress: response.ordinalsAddress,
             masterPubKey: response.masterPubKey,
             stxPublicKey: response.stxPublicKey,
@@ -121,12 +121,21 @@ export async function createWalletAccount(
   walletAccounts: Account[]
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-   const { stxAddress, btcAddress, dlcBtcAddress, dlcBtcPublicKey, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey, ordinalsPublicKey } =
-    await walletFromSeedPhrase({
-      mnemonic: seedPhrase,
-      index: BigInt(accountIndex),
-      network: selectedNetwork.type,
-    });
+  const {
+    stxAddress,
+    btcAddress,
+    ordinalsAddress,
+    mainBtcAddress,
+    masterPubKey,
+    stxPublicKey,
+    btcPublicKey,
+    ordinalsPublicKey,
+    mainBtcPublicKey,
+  } = await walletFromSeedPhrase({
+    mnemonic: seedPhrase,
+    index: BigInt(accountIndex),
+    network: selectedNetwork.type,
+  });
   const bnsName = await getBnsName(stxAddress, networkObject);
   const updateAccountsList = [
     ...walletAccounts,
@@ -134,8 +143,8 @@ export async function createWalletAccount(
       id: accountIndex,
       stxAddress,
       btcAddress,
-      dlcBtcAddress,
-      dlcBtcPublicKey,
+      mainBtcAddress,
+      mainBtcPublicKey,
       ordinalsAddress,
       masterPubKey,
       stxPublicKey,
