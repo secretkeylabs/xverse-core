@@ -6,16 +6,21 @@ import { ecPairToHexString } from '../../wallet/helper';
 
 describe('Unit tests', () => {
   describe('ecPairToHexString', () => {
+    const privateKey = Buffer.from(
+      'b10393c8467727944413264495948c9c81229ac5796e910b53ad6b8e7093fbfb',
+      'hex'
+    );
+
     it('should convert ECPair to hex string', () => {
-      const ecPair = ECPair.makeRandom();
+      const ecPair = ECPair.fromPrivateKey(privateKey, { compressed: false });
       const result = ecPairToHexString(ecPair);
-      expect(result).toMatch(/[0-9a-fA-F]+/); // Check if the result is a valid hex string
+      expect(result).toEqual('b10393c8467727944413264495948c9c81229ac5796e910b53ad6b8e7093fbfb');
     });
 
     it('should convert compressed ECPair to hex string ending in "01"', () => {
-      const ecPair = ECPair.makeRandom({ compressed: true });
+      const ecPair = ECPair.fromPrivateKey(privateKey, { compressed: true });
       const result = ecPairToHexString(ecPair);
-      expect(result).toMatch(/[0-9a-fA-F]+01/); // Check if the result is a valid hex string that ends in 01
+      expect(result).toEqual('b10393c8467727944413264495948c9c81229ac5796e910b53ad6b8e7093fbfb01');
     });
   });
 
