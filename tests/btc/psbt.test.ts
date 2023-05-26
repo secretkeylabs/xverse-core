@@ -18,9 +18,11 @@ describe('Bitcoin PSBT tests', () => {
 
     const nativeSegwitAddress2 = 'bc1q8agphg8kkn8ndvd5am8f44n3uzedcuaz437qdu';
     const taprootAddress2 = 'bc1pzsm9pu47e7npkvxh9dcd0dc2qwqshxt2a9tt7aq3xe9krpl8e82sx6phdj';
+
     
     const wrappedSegwitAddress3 = '3Gve89xYfW9RZRgRdN7hzCjXAHMDc7QRDf';
     const taprootAddress3 = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+
     
     const accounts = [
       {
@@ -28,6 +30,8 @@ describe('Bitcoin PSBT tests', () => {
         stxAddress: 'STXADDRESS1',
         btcAddress: wrappedSegwitAddress1,
         ordinalsAddress: taprootAddress1,
+        mainBtcAddress: '',
+        mainBtcPublicKey: '',
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
@@ -38,6 +42,8 @@ describe('Bitcoin PSBT tests', () => {
         stxAddress: 'STXADDRESS2',
         btcAddress: nativeSegwitAddress2,
         ordinalsAddress: taprootAddress2,
+        mainBtcAddress: '',
+        mainBtcPublicKey: '',
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
@@ -48,6 +54,8 @@ describe('Bitcoin PSBT tests', () => {
         stxAddress: 'STXADDRESS3',
         btcAddress: wrappedSegwitAddress3,
         ordinalsAddress: taprootAddress3,
+        mainBtcAddress: '',
+        mainBtcPublicKey: '',
         masterPubKey: '12345',
         stxPublicKey: '123',
         btcPublicKey: '123',
@@ -77,7 +85,7 @@ describe('Bitcoin PSBT tests', () => {
       'Mainnet'
     );
 
-    expect(nativeSegwitPath).eq(`m/84'/0'/0'/0/1`);
+    expect(nativeSegwitPath).eq(`m/84'/0'/1'/0/0`);
 
     const taprootPath = getSigningDerivationPath(
       accounts,

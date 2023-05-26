@@ -1,10 +1,12 @@
 import { createSha2Hash } from '@stacks/encryption';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
-import { GAIA_HUB_URL } from '../constant';
-import { deriveStxAddressChain } from '../wallet/index';
 import * as bip39 from 'bip39';
 import { bip32 } from 'bitcoinjs-lib';
+import { hashMessage } from '@stacks/encryption';
+import { deriveStxAddressChain } from '../wallet/utils/stx';
+import { GAIA_HUB_URL } from '../constant';
+
 
 export async function createAuthResponse(
   seedPhrase: string,
@@ -50,3 +52,5 @@ export async function createAuthResponse(
 
   return;
 }
+
+export { hashMessage };

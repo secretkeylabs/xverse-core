@@ -3,7 +3,7 @@
 import BigNumber from 'bignumber.js';
 import { ErrorCodes, NetworkType, ResponseError, BtcFeeResponse, UTXO } from '../types';
 import { fetchBtcFeeRate } from '../api/xverse';
-import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
+import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet/utils/btc';
 import * as btc from '@scure/btc-signer';
 import { hex } from '@scure/base';
 import * as secp256k1 from '@noble/secp256k1';
