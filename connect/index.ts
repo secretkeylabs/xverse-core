@@ -1,15 +1,23 @@
 import { createSha2Hash } from '@stacks/encryption';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
-import { GAIA_HUB_URL } from '../constant';
-import { deriveStxAddressChain } from '../wallet/index';
 import * as bip39 from 'bip39';
 import { bip32 } from 'bitcoinjs-lib';
+import { GAIA_HUB_URL } from '../constant';
+import { deriveStxAddressChain } from '../wallet';
+
+type AuthRequest = {
+  payload: {
+    redirect_uri: string;
+    public_keys: string[];
+    scopes?: string[];
+  };
+};
 
 export async function createAuthResponse(
   seedPhrase: string,
   accountIndex: number,
-  authRequest: any
+  authRequest: AuthRequest
 ): Promise<string | undefined> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
@@ -30,23 +38,23 @@ export async function createAuthResponse(
   const dataPrivateKey = identityKeychain.privateKey?.toString('hex');
   const appsKey = identityKeychain.deriveHardened(0).toBase58();
 
-  const appURL = new URL(authRequest?.payload?.redirect_uri);
-
-  if (dataPrivateKey) {
-    return makeAuthResponse({
-      gaiaHubUrl: GAIA_HUB_URL,
-      appDomain: appURL.origin,
-      transitPublicKey: authRequest?.payload?.public_keys[0],
-      scopes: authRequest?.payload?.scopes,
-      account: {
-        stxPrivateKey: privateKey,
-        index: accountIndex,
-        salt,
-        dataPrivateKey,
-        appsKey,
-      },
-    });
+  if (!dataPrivateKey) {
+    return;
   }
 
-  return;
+  const appURL = new URL(authRequest.payload.redirect_uri);
+
+  return makeAuthResponse({
+    gaiaHubUrl: GAIA_HUB_URL,
+    appDomain: appURL.origin,
+    transitPublicKey: authRequest.payload.public_keys[0],
+    scopes: authRequest.payload.scopes,
+    account: {
+      stxPrivateKey: privateKey,
+      index: accountIndex,
+      salt,
+      dataPrivateKey,
+      appsKey,
+    },
+  });
 }
