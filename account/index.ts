@@ -1,13 +1,14 @@
 import { StacksMainnet, StacksNetwork } from '@stacks/network';
+import * as bip39 from 'bip39';
+import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
 import {
   connectToGaiaHubWithConfig,
+  createWalletGaiaConfig,
+  deriveWalletConfigKey,
   getHubInfo,
   getOrCreateWalletConfig,
-  deriveWalletConfigKey,
   updateWalletConfig,
-  createWalletGaiaConfig,
 } from '../gaia';
-import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
 import {
   Account,
   BtcTransactionData,
@@ -15,10 +16,9 @@ import {
   SettingsNetwork,
   StxTransactionListData,
 } from '../types';
+import { bip32 } from '../utils/bip32';
 import { walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
-import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
 
 export const fetchActiveAccounts = async (
   mnemonic: string,
@@ -148,21 +148,20 @@ export async function createWalletAccount(
     },
   ];
   try {
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const walletConfigKey = await deriveWalletConfigKey(rootNode);
-  const gaiaHubConfig = await createWalletGaiaConfig({
-    gaiaHubUrl: GAIA_HUB_URL,
-    configPrivateKey: walletConfigKey,
-  });
-  await updateWalletConfig({
-    walletAccounts: updateAccountsList,
-    gaiaHubConfig,
-    configPrivateKey: walletConfigKey,
-  });
-  return updateAccountsList;
-  } catch(err) {
+    const seed = await bip39.mnemonicToSeed(seedPhrase);
+    const rootNode = bip32.fromSeed(Buffer.from(seed));
+    const walletConfigKey = await deriveWalletConfigKey(rootNode);
+    const gaiaHubConfig = await createWalletGaiaConfig({
+      gaiaHubUrl: GAIA_HUB_URL,
+      configPrivateKey: walletConfigKey,
+    });
+    await updateWalletConfig({
+      walletAccounts: updateAccountsList,
+      gaiaHubConfig,
+      configPrivateKey: walletConfigKey,
+    });
+    return updateAccountsList;
+  } catch (err) {
     return updateAccountsList;
   }
-
 }

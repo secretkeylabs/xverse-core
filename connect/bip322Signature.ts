@@ -3,12 +3,13 @@ import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
-import { bip32, crypto } from 'bitcoinjs-lib';
+import { crypto } from 'bitcoinjs-lib';
 import { signAsync, verify } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
 import { Account, NetworkType } from '../types';
+import { bip32 } from '../utils/bip32';
 
 /**
  *

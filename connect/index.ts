@@ -2,8 +2,8 @@ import { createSha2Hash } from '@stacks/encryption';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
 import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
 import { GAIA_HUB_URL } from '../constant';
+import { bip32 } from '../utils/bip32';
 import { deriveStxAddressChain } from '../wallet';
 
 type AuthRequest = {

@@ -1,17 +1,17 @@
-import { NetworkType, Account } from '../types';
+import { Account, NetworkType } from '../types';
 
+import { base64, hex } from '@scure/base';
+import * as btc from '@scure/btc-signer';
+import { getAddressInfo } from 'bitcoin-address-validation';
 import {
   getBitcoinDerivationPath,
-  getTaprootDerivationPath,
   getSegwitDerivationPath,
+  getTaprootDerivationPath,
 } from '../wallet';
-import * as btc from '@scure/btc-signer';
-import { hex, base64 } from '@scure/base';
-import { getAddressInfo } from 'bitcoin-address-validation';
 
-import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
 import * as secp256k1 from '@noble/secp256k1';
+import * as bip39 from 'bip39';
+import { bip32 } from '../utils/bip32';
 
 import { getBtcNetwork } from './btcNetwork';
 
@@ -36,7 +36,7 @@ export function getSigningDerivationPath(
     throw new Error('Invalid accounts list');
   }
 
-  var path = '';
+  let path = '';
 
   accounts.forEach((account, index) => {
     if (type === 'p2sh') {
@@ -68,7 +68,7 @@ export async function signPsbt(
   accounts: Array<Account>,
   inputsToSign: Array<InputToSign>,
   psbtBase64: string,
-  finalize: boolean = false,
+  finalize = false,
   network?: NetworkType
 ): Promise<string> {
   if (psbtBase64.length <= 0) {
@@ -76,7 +76,7 @@ export async function signPsbt(
   }
 
   // decode raw tx
-  var psbt: btc.Transaction;
+  let psbt: btc.Transaction;
   try {
     psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
@@ -90,7 +90,7 @@ export async function signPsbt(
     // Get signing derivation path
     const networkType = network ?? 'Mainnet';
 
-    var addressPrivateKeyMap: PrivateKeyMap = {};
+    const addressPrivateKeyMap: PrivateKeyMap = {};
 
     inputsToSign.forEach((inputToSign) => {
       const address: string = inputToSign.address;
@@ -131,7 +131,7 @@ export function psbtBase64ToHex(psbtBase64: string): string {
   }
 
   // decode raw tx
-  var psbt: btc.Transaction;
+  let psbt: btc.Transaction;
   try {
     psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
@@ -195,7 +195,7 @@ export function parsePsbt(
   }
 
   // decode raw tx
-  var psbt: btc.Transaction;
+  let psbt: btc.Transaction;
   try {
     psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
   } catch (error) {
@@ -205,7 +205,7 @@ export function parsePsbt(
   const inputs: Array<PSBTInput> = [];
   // @ts-expect-error:
   psbt.inputs.forEach((input) => {
-    var value = 0n;
+    let value = 0n;
     if (!input.witnessUtxo) {
       value = input.nonWitnessUtxo.outputs[input.index].amount;
     } else {
@@ -236,7 +236,7 @@ export function parsePsbt(
   psbt.outputs.forEach((output) => {
     const outputScript = btc.OutScript.decode(output.script);
 
-    var outputAddress = '';
+    let outputAddress = '';
 
     if (outputScript.type === 'ms' || outputScript.type === 'tr') {
       // @ts-expect-error:
@@ -254,7 +254,7 @@ export function parsePsbt(
       });
     }
 
-    var userReceives = false;
+    let userReceives = false;
 
     if (account.btcAddress === outputAddress || account.ordinalsAddress === outputAddress) {
       userReceives = true;
@@ -267,7 +267,7 @@ export function parsePsbt(
     });
   });
 
-  var initialValue: bigint = 0n;
+  const initialValue = 0n;
 
   const totalInputs = inputs.reduce((accumulator: bigint, input) => {
     return accumulator + input.value;

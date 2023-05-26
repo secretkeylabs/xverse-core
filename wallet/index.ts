@@ -14,7 +14,7 @@ import {
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
 import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
-import { BIP32Interface, ECPair, bip32, networks, payments } from 'bitcoinjs-lib';
+import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
 import { Keychain } from 'types/api/xverse/wallet';
@@ -28,6 +28,8 @@ import {
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
 import { getBtcNetwork } from '../transactions/btcNetwork';
+import { BIP32Interface, bip32 } from '../utils/bip32';
+import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
 
 export const derivationPaths = {

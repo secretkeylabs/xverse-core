@@ -1,4 +1,4 @@
-import { ECPairInterface } from 'bitcoinjs-lib';
+import { ECPairInterface } from '../utils/ecpair';
 
 export function ecPairToHexString(secretKey: ECPairInterface): string {
   if (!secretKey.privateKey) {
