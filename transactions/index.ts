@@ -31,6 +31,7 @@ import {
   generateUnsignedRevokeTransaction,
 } from './stacking'
 import { ParsedPSBT, parsePsbt, PSBTInput, PSBTOutput } from './psbt';
+import { createBrc20TransferOrder} from './brc20';
 
 export {
   signBtcTransaction,
@@ -62,4 +63,5 @@ export {
   ParsedPSBT,
   PSBTOutput,
   PSBTInput,
+  createBrc20TransferOrder,
 };

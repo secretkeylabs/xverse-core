@@ -28,6 +28,7 @@ export type BtcAddressDataResponse = {
   final_n_tx: number;
   unconfirmed_txrefs: Array<BtcUtxoDataResponse>;
   txrefs: Array<BtcUtxoDataResponse>;
+  hasMore: boolean;
 };
 
 export interface BtcTransactionDataResponse {

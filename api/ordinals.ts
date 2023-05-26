@@ -2,15 +2,36 @@ import {
   NetworkType,
   BtcOrdinal,
   UTXO,
-  FungibleToken
+  FungibleToken,
+  InscriptionRequestResponse,
+  Inscription
 } from '../types';
 import axios from 'axios';
 import { 
   ORDINALS_URL, 
   XVERSE_API_BASE_URL,
-  ORDINALS_FT_INDEXER_API_URL
+  ORDINALS_FT_INDEXER_API_URL,
+  INSCRIPTION_REQUESTS_SERVICE_URL
 } from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+
+export function parseOrdinalTextContentData(content: string): string {
+  try {
+    const contentData = JSON.parse(content);
+    if (contentData.p) {
+      // check for sns protocol
+      if (contentData.p === 'sns') {
+        return contentData.hasOwnProperty('name') ? contentData.name : content;
+      } else {
+        return content;
+      }
+    } else {
+      return content;
+    }
+  } catch (error) {
+    return content;
+  }
+}
 
 const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   if (prev.confirmationTime > next.confirmationTime) {
@@ -43,7 +64,7 @@ export async function fetchBtcOrdinalsData(
             utxo,
           });
         }
-        return Promise.resolve(ordinal);
+        return await Promise.resolve(ordinal);
       } catch (err) {}
     })
   );
@@ -56,7 +77,7 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
     const ordinal = await axios.get(ordinalContentUrl);
     if (ordinal) {
       if (ordinal.data.id) {
-        return Promise.resolve(ordinal.data.id);
+        return await Promise.resolve(ordinal.data.id);
       } else {
         return null;
       }
@@ -66,8 +87,8 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
   } catch (err) {}
 }
 
-export async function getTextOrdinalContent(content: string): Promise<string> {
-  const url = `${ORDINALS_URL}${content}`;
+export async function getTextOrdinalContent(inscriptionId: string): Promise<string> {
+  const url = ORDINALS_URL(inscriptionId);
   return axios
     .get<string>(url, {
       timeout: 30000,
@@ -77,24 +98,6 @@ export async function getTextOrdinalContent(content: string): Promise<string> {
     .catch((error) => {
       return '';
     });
-}
-
-export function parseOrdinalTextContentData(content: string): string {
-  try {
-    const contentData = JSON.parse(content);
-    if (contentData['p']) {
-      // check for sns protocol
-      if (contentData['p'] === 'sns') {
-        return contentData.hasOwnProperty('name') ? contentData['name'] : content;
-      } else {
-        return content;
-      }
-    } else {
-      return content;
-    }
-  } catch (error) {
-    return content;
-  }
 }
 
 export async function getNonOrdinalUtxo(
@@ -121,15 +124,15 @@ export async function getNonOrdinalUtxo(
 export async function getOrdinalsFtBalance(
   address: string,
 ): Promise<FungibleToken[]> {
-  const url = `${ORDINALS_FT_INDEXER_API_URL}/${address}/brc20/summary?start=0&limit=200`;
+  const url = `${XVERSE_API_BASE_URL}/v1/ordinals/token/balances/${address}`;
   return axios
     .get(url, {
       timeout: 30000,
     })
     .then((response) => { 
-      if(response.data.msg == "ok") {
-        const responseTokensList = response!.data.data.detail;
-        var tokensList: Array<FungibleToken> = [];
+      if(response.data) {
+        const responseTokensList = response!.data;
+        const tokensList: Array<FungibleToken> = [];
         responseTokensList.forEach((responseToken: any) => {
           const token: FungibleToken = {
             name: responseToken.ticker,
@@ -144,7 +147,7 @@ export async function getOrdinalsFtBalance(
             visible: true,
             supported: true,
             tokenFiatRate: null,
-            protocol: "brc-20",
+            protocol: responseToken.protocol,
           }
           tokensList.push(token)
         })
@@ -157,3 +160,32 @@ export async function getOrdinalsFtBalance(
       return [];
     });
 }
+
+
+export async function createInscriptionRequest(
+  recipientAddress: string,
+  size: number,
+  totalFeeSats: number,
+  fileBase64: string,
+  tokenName: string,
+  amount: string
+): Promise<InscriptionRequestResponse> {
+  const response = await axios.post(INSCRIPTION_REQUESTS_SERVICE_URL, {
+    fee: totalFeeSats,
+    files: [
+      {
+        dataURL: `data:plain/text;base64,${fileBase64}`,
+        name: `${tokenName}-${amount}-1.txt`,
+        size: size,
+        type: 'plain/text',
+        url: '',
+      },
+    ],
+    lowPostage: true,
+    receiveAddress: recipientAddress,
+    referral: '',
+  });
+  return response.data;
+}
+
+export const isBrcTransferValid = (inscription: Inscription) => inscription.address === inscription.genesis_address
