@@ -32,7 +32,7 @@
     "build-debug": "webpack --mode development",
     "build": "webpack --mode production",
     "clean": "rimraf dist",
-    "build:esm": "npm run clean && tsc --build",
+    "build:esm": "npm run clean && tsc -p ./tsconfig.build.json",
     "test": "vitest run --coverage",
     "test-dev": "vitest"
   },

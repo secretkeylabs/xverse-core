@@ -39,7 +39,7 @@ module.exports = {
             loader: require.resolve('ts-loader'),
             options: {
               transpileOnly: true,
-              configFile: 'tsconfig.webpack.json',
+              configFile: 'tsconfig.build.json',
             },
           },
         ],
