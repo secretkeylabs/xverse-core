@@ -95,3 +95,12 @@ export interface FeesMultipliers {
   poolStackingTxMultiplier: number;
   otherTxMultiplier: number;
 }
+
+export interface AppInfo {
+  stxSendTxMultiplier: number;
+  poolStackingTxMultiplier: number;
+  otherTxMultiplier: number;
+  thresholdHighSatsFee: number;
+  thresholdHighSatsPerByteRatio: number;
+  thresholdHighStacksFee: number;
+}
