@@ -8,6 +8,9 @@ import {
   getBtcFees,
   getBtcFeesForOrdinalSend,
   defaultFeeRate,
+  selectUnspentOutputs,
+  getFee,
+  sumUnspentOutputs,
 } from '../../transactions/btc';
 import { getBtcPrivateKey } from '../../wallet';
 import { testSeed } from '../mocks/restore.mock';
@@ -712,6 +715,27 @@ describe('bitcoin transactions', () => {
     const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
     const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
+    const recipients = [
+      {
+        address: recipientAddress,
+        amountSats: new BigNumber(ordinalOutputs[0].value),
+      },
+    ];
+
+    const filteredUnspentOutputs = utxos.filter((unspentOutput) => {
+      return !(
+        unspentOutput.txid === ordinalOutputs[0].txid && unspentOutput.vout === ordinalOutputs[0].vout
+      );
+    });
+
+    let selectedUnspentOutputs = selectUnspentOutputs(
+      new BigNumber(ordinalOutputs[0].value),
+      filteredUnspentOutputs,
+      ordinalOutputs[0]
+    );
+
+    const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
       ordinalOutputs[0],
@@ -721,11 +745,23 @@ describe('bitcoin transactions', () => {
       network
     );
 
+    const { fee } = await getFee(
+      filteredUnspentOutputs,
+      selectedUnspentOutputs,
+      sumSelectedOutputs,
+      new BigNumber(ordinalOutputs[0].value),
+      recipients,
+      feeRate,
+      btcAddress,
+      network,
+      ordinalOutputs[0]
+    );
+
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
     expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
-    // expect(signedTx.signedTx).eq(expectedTx);
+
     // Needs a better transaction size calculator
-    expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize * feeRate.regular);
+    expect(signedTx.fee.toNumber()).eq(fee.toNumber());
   });
 
   it('can create and sign ordinal send with ordinal utxo in payment address', async () => {
@@ -751,17 +787,7 @@ describe('bitcoin transactions', () => {
     ];
 
     const utxos: Array<UTXO> = [
-      {
-        txid: ordinalUtxoHash,
-        vout: 2,
-        status: {
-          confirmed: true,
-          block_height: 123123,
-          block_time: 1677048365,
-          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
-        },
-        value: ordinalValue,
-      },
+      ordinalOutputs[0],
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
