@@ -47,4 +47,4 @@ export const ORDINALS_URL = (inscriptionId: string) =>
 
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
 
-export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://ordinalsbot-api2.herokuapp.com/order';
+export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://api2.ordinalsbot.com/order';
