@@ -6,7 +6,7 @@ export const BTC_PATH = `m/49'/0'/0'/0/0`;
 
 export const BTC_WRAPPED_SEGWIT_PATH_PURPOSE = `m/49'/`;
 
-export const BTC_SEGWIT_PATH_PURPOSE = `m/84'/`;
+export const BTC_SEGWIT_PATH_PURPOSE = `m/84'/0'`;
 
 export const BTC_TAPROOT_PATH_PURPOSE = `m/86'/`;
 

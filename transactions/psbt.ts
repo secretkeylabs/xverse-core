@@ -1,14 +1,12 @@
 import { NetworkType, Account } from '../types';
-
 import {
   getBitcoinDerivationPath,
   getTaprootDerivationPath,
   getSegwitDerivationPath,
-} from '../wallet';
+} from '../wallet/utils/btc';
 import * as btc from '@scure/btc-signer';
 import { hex, base64 } from '@scure/base';
 import { getAddressInfo } from 'bitcoin-address-validation';
-
 import * as bip39 from 'bip39';
 import { bip32 } from 'bitcoinjs-lib';
 import * as secp256k1 from '@noble/secp256k1';

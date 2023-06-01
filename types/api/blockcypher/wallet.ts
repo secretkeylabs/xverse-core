@@ -69,6 +69,10 @@ export interface BtcTransactionData extends TransactionData {
   isOrdinal: boolean;
 }
 
+export interface BtcTransactionDataHexIncluded extends BtcTransactionData {
+  hex: string;
+}
+
 export interface Input {
   addresses: string[];
   output_index: number;
