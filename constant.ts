@@ -6,7 +6,7 @@ export const BTC_PATH = `m/49'/0'/0'/0/0`;
 
 export const BTC_WRAPPED_SEGWIT_PATH_PURPOSE = `m/49'/`;
 
-export const BTC_SEGWIT_PATH_PURPOSE = `m/84'/`;
+export const BTC_SEGWIT_PATH_PURPOSE = `m/84'/0'`;
 
 export const BTC_TAPROOT_PATH_PURPOSE = `m/86'/`;
 
@@ -25,6 +25,8 @@ export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
 
 export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
+
+export const BTC_BASE_URI_REGTEST = 'https://dev-oracle.dlc.link/electrs';
 
 export const BLOCKCYPHER_BASE_URI_MAINNET = 'https://api.blockcypher.com/v1/btc/main';
 

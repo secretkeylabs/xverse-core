@@ -12,7 +12,7 @@ import {
   getFee,
   sumUnspentOutputs,
 } from '../../transactions/btc';
-import { getBtcPrivateKey } from '../../wallet';
+import { getBtcPrivateKey } from '../../wallet/utils/btc';
 import { testSeed } from '../mocks/restore.mock';
 import { BtcUtxoDataResponse, ErrorCodes, ResponseError, UTXO } from '../../types';
 import BigNumber from 'bignumber.js';

@@ -3,6 +3,7 @@ import {
   BLOCKCYPHER_BASE_URI_MAINNET,
   BLOCKCYPHER_BASE_URI_TESTNET,
   BTC_BASE_URI_MAINNET,
+  BTC_BASE_URI_REGTEST,
   BTC_BASE_URI_TESTNET,
 } from '../../constant';
 import {
@@ -29,7 +30,11 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
   constructor(options: EsploraApiProviderOptions) {
     const { url, network } = options;
     super({
-      baseURL: url || network == 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET,
+      baseURL: url || network === 'Mainnet'
+        ? BTC_BASE_URI_MAINNET
+        : network === 'Testnet'
+        ? BTC_BASE_URI_TESTNET
+        : BTC_BASE_URI_REGTEST
     });
     this._network = network;
 
@@ -157,6 +162,12 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
         hash: data,
       },
     };
+  }
+
+  async getRawTransaction(txHash: string): Promise<string> {
+    const data: string = await this.httpGet(`/tx/${txHash}/hex`);
+    return data;
+
   }
 
   async getRecommendedFees(): Promise<esplora.RecommendedFeeResponse> {

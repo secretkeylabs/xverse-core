@@ -44,7 +44,7 @@ import {
   getNonce as fetchNewNonce,
 } from '@stacks/transactions';
 import { PostConditionsOptions, StxMempoolTransactionData } from 'types';
-import { getStxAddressKeyChain } from '../wallet/index';
+import { getStxAddressKeyChain } from '../wallet/utils/stx';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import {
   UnsignedContractCallTransaction,
