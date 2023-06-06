@@ -12,7 +12,7 @@ import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 
-const defaultFeeRate = {
+export const defaultFeeRate = {
   limits: {
     min: 5,
     max: 10,

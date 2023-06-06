@@ -1,22 +1,19 @@
-import axios from 'axios';
-import { BtcTransactionsDataResponse, BtcTransactionData } from '../types/api/blockcypher/wallet';
+import { BtcTransactionData } from '../types/api/blockcypher/wallet';
 import { NetworkType } from '../types/network';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
+import BitcoinEsploraApiProvider from './esplora/esploraAPiProvider';
+import * as esplora from '../types/api/esplora';
 
 export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, network: NetworkType) {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${ordinalsAddress}/full?txlimit=3000`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${ordinalsAddress}/full?txlimit=3000`;
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  return axios.get<BtcTransactionsDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
-    const transactions: BtcTransactionData[] = [];
-    response.data.txs.forEach((tx) => {
-      transactions.push(parseOrdinalsBtcTransactions(tx, ordinalsAddress));
-    });
-    return transactions.filter((tx) => tx.incoming);
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
   });
+  const transactions: BtcTransactionData[] = [];
+  const txResponse: esplora.Transaction[] = await btcClient.getAddressTransactions(ordinalsAddress);
+  txResponse.forEach((tx) => {
+    transactions.push(parseOrdinalsBtcTransactions(tx, ordinalsAddress));
+  });
+  return transactions.filter((tx) => tx.incoming);
 }
 
 export async function fetchBtcPaymentTransactions(
@@ -24,19 +21,15 @@ export async function fetchBtcPaymentTransactions(
   ordinalsAddress: string,
   network: NetworkType
 ) {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?txlimit=3000`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?txlimit=3000`;
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
-  return axios.get<BtcTransactionsDataResponse>(apiUrl, { timeout: 45000 }).then((response) => {
-    const transactions: BtcTransactionData[] = [];
-    response.data.txs.forEach((tx) => {
-      transactions.push(parseBtcTransactionData(tx, btcAddress, ordinalsAddress));
-    });
-    return transactions;
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
   });
+  const transactions: BtcTransactionData[] = [];
+  const txResponse: esplora.Transaction[] = await btcClient.getAddressTransactions(btcAddress);
+  txResponse.forEach((tx) => {
+    transactions.push(parseBtcTransactionData(tx, btcAddress, ordinalsAddress));
+  });
+  return transactions;
 }
 
 export async function fetchBtcTransactionsData(
@@ -45,12 +38,6 @@ export async function fetchBtcTransactionsData(
   network: NetworkType,
   withOrdinals: boolean
 ): Promise<BtcTransactionData[]> {
-  const btcApiBaseUrl = `https://api.blockcypher.com/v1/btc/main/addrs/${btcAddress}/full?txlimit=3000`;
-  const btcApiBaseUrlTestnet = `https://api.blockcypher.com/v1/btc/test3/addrs/${btcAddress}/full?txlimit=3000`;
-  let apiUrl = btcApiBaseUrl;
-  if (network === 'Testnet') {
-    apiUrl = btcApiBaseUrlTestnet;
-  }
   if (withOrdinals) {
     const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, network);
     const paymentTransactions = await fetchBtcPaymentTransactions(
