@@ -34,7 +34,8 @@
     "clean": "rimraf dist",
     "build:esm": "npm run clean && tsc --build",
     "test": "vitest run",
-    "test-dev": "vitest"
+    "test-dev": "vitest",
+    "lint": "eslint . && prettier -c '**/*.{ts,tsx,js,jsx}'"
   },
   "repository": {
     "type": "git",
