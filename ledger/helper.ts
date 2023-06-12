@@ -1,5 +1,6 @@
 import { NetworkType } from '../types/network';
-import { networks, bip32, payments } from 'bitcoinjs-lib';
+import { networks, payments } from 'bitcoinjs-lib';
+import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, Transport } from './types';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
 import { uuid } from 'uuidv4';

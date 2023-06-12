@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const webpack = require('webpack');
 const path = require('path');
 
@@ -38,6 +39,7 @@ module.exports = {
             loader: require.resolve('ts-loader'),
             options: {
               transpileOnly: true,
+              configFile: 'tsconfig.build.json',
             },
           },
         ],

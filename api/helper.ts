@@ -1,10 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { StacksNetwork } from '@stacks/network';
 import {
-  Input,
-  Output,
   BtcTransactionData,
-  BtcTransactionDataResponse,
   StxTransactionData,
   StxMempoolTransactionData,
   StxTransactionDataResponse,
@@ -12,13 +9,14 @@ import {
   TransferTransaction,
 } from '../types';
 
+import * as esplora from '../types/api/esplora';
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
 
-export function sumOutputsForAddress(outputs: Output[], address: string): number {
+export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
   var total = 0;
   outputs.forEach((output) => {
-    if (output.addresses) {
-      if (output.addresses.indexOf(address) !== -1) {
+    if (output.scriptpubkey_address) {
+      if (output.scriptpubkey_address === address) {
         total += output.value;
       }
     }
@@ -26,69 +24,79 @@ export function sumOutputsForAddress(outputs: Output[], address: string): number
   return total;
 }
 
-export function sumInputsForAddress(inputs: Input[], address: string): number {
+export function sumInputsForAddress(inputs: esplora.Vin[], address: string): number {
   var total = 0;
   inputs.forEach((input) => {
-    if (input.addresses.indexOf(address) !== -1) {
-      total += input.output_value;
+    if (input.prevout.scriptpubkey_address === address) {
+      total += input.prevout.value;
     }
   });
   return total;
 }
 
 export function parseOrdinalsBtcTransactions(
-  responseTx: BtcTransactionDataResponse,
+  responseTx: esplora.Transaction,
   ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
-  responseTx.inputs.forEach((input) => {
-    if (input.addresses !== null && input.addresses.length > 0) {
-      inputAddresses = [...inputAddresses, ...input.addresses];
+  responseTx.vin.forEach((input) => {
+    if (input.prevout.scriptpubkey_address) {
+      inputAddresses.push(input.prevout.scriptpubkey_address);
     }
   });
   const inputAddressSet = new Set(inputAddresses);
   const incoming = !inputAddressSet.has(ordinalsAddress);
+
+  const outputAddresses: string[] = [];
+  responseTx.vout.forEach((output) => {
+    if (output.scriptpubkey_address && output.scriptpubkey_address !== ordinalsAddress) {
+      outputAddresses.push(output.scriptpubkey_address);
+    }
+  });
+  var amount = 0;
+  if (incoming) {
+    amount = sumOutputsForAddress(responseTx.vout, ordinalsAddress);
+  } else {
+    const inputAmount = sumInputsForAddress(responseTx.vin, ordinalsAddress);
+    const changeAmount = sumOutputsForAddress(responseTx.vout, ordinalsAddress);
+    amount = inputAmount - changeAmount;
+  }
+
+  const total = responseTx.fee + amount;
+
+  const date = new Date(0);
+  if (responseTx.status.block_time) date.setUTCSeconds(responseTx.status.block_time);
+
   const parsedTx: BtcTransactionData = {
-    blockHash: responseTx.block_hash,
-    blockHeight: responseTx.block_height,
-    blockIndex: responseTx.block_index,
-    txid: responseTx.hash,
-    addresses: responseTx.addresses,
-    total: responseTx.total,
-    fees: responseTx.fees,
+    blockHash: responseTx.status.block_hash ?? '',
+    blockHeight: responseTx.status.block_height ?? 0,
+    txid: responseTx.txid,
+    total,
+    fees: responseTx.fee,
     size: responseTx.size,
-    preference: responseTx.preference,
-    relayedBy: responseTx.relayed_by,
-    confirmed: responseTx.confirmed,
-    received: responseTx.received,
-    ver: responseTx.ver,
-    doubleSpend: responseTx.double_spend,
-    vinSz: responseTx.vin_sz,
-    voutSz: responseTx.vout_sz,
-    dataProtocol: responseTx.data_protocol,
-    confirmations: responseTx.confirmations,
-    confidence: responseTx.confirmations,
-    inputs: responseTx.inputs,
-    outputs: responseTx.outputs,
-    seenTime: new Date(responseTx.received),
-    incoming,
-    amount: new BigNumber(0),
+    confirmed: responseTx.status.confirmed,
+    inputs: responseTx.vin,
+    outputs: responseTx.vout,
+    seenTime: date,
+    incoming: incoming,
+    amount: new BigNumber(amount),
     txType: 'bitcoin',
-    txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
+    txStatus: responseTx.status.confirmed ? 'success' : 'pending',
     isOrdinal: true,
+    recipientAddress: outputAddresses[0],
   };
   return parsedTx;
 }
 
 export function parseBtcTransactionData(
-  responseTx: BtcTransactionDataResponse,
+  responseTx: esplora.Transaction,
   btcAddress: string,
   ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
-  responseTx.inputs.forEach((input) => {
-    if (input.addresses !== null && input.addresses.length > 0) {
-      inputAddresses = [...inputAddresses, ...input.addresses];
+  responseTx.vin.forEach((input) => {
+    if (input.prevout.scriptpubkey_address) {
+      inputAddresses.push(input.prevout.scriptpubkey_address);
     }
   });
   const inputAddressSet = new Set(inputAddresses);
@@ -96,44 +104,48 @@ export function parseBtcTransactionData(
   const incoming = !inputAddressSet.has(btcAddress);
   const isOrdinal = inputAddressSet.has(ordinalsAddress);
 
+  const outputAddresses: string[] = [];
+  responseTx.vout.forEach((output) => {
+    if (
+      output.scriptpubkey_address &&
+      output.scriptpubkey_address !== btcAddress &&
+      output.scriptpubkey_address !== ordinalsAddress
+    ) {
+      outputAddresses.push(output.scriptpubkey_address);
+    }
+  });
+
   // calculate sent/received amount from inputs/outputs
   var amount = 0;
   if (incoming) {
-    amount = sumOutputsForAddress(responseTx.outputs, btcAddress);
+    amount = sumOutputsForAddress(responseTx.vout, btcAddress);
   } else {
-    const inputAmount = sumInputsForAddress(responseTx.inputs, btcAddress);
-    const changeAmount = sumOutputsForAddress(responseTx.outputs, btcAddress);
+    const inputAmount = sumInputsForAddress(responseTx.vin, btcAddress);
+    const changeAmount = sumOutputsForAddress(responseTx.vout, btcAddress);
     amount = inputAmount - changeAmount;
   }
 
+  const total = responseTx.fee + amount;
+  const date = new Date(0);
+  if (responseTx.status.block_time) date.setUTCSeconds(responseTx.status.block_time);
+
   const parsedTx: BtcTransactionData = {
-    blockHash: responseTx.block_hash,
-    blockHeight: responseTx.block_height,
-    blockIndex: responseTx.block_index,
-    txid: responseTx.hash,
-    addresses: responseTx.addresses,
-    total: responseTx.total,
-    fees: responseTx.fees,
+    blockHash: responseTx.status.block_hash ?? '',
+    blockHeight: responseTx.status.block_height ?? 0,
+    txid: responseTx.txid,
+    total,
+    fees: responseTx.fee,
     size: responseTx.size,
-    preference: responseTx.preference,
-    relayedBy: responseTx.relayed_by,
-    confirmed: responseTx.confirmed,
-    received: responseTx.received,
-    ver: responseTx.ver,
-    doubleSpend: responseTx.double_spend,
-    vinSz: responseTx.vin_sz,
-    voutSz: responseTx.vout_sz,
-    dataProtocol: responseTx.data_protocol,
-    confirmations: responseTx.confirmations,
-    confidence: responseTx.confirmations,
-    inputs: responseTx.inputs,
-    outputs: responseTx.outputs,
-    seenTime: new Date(responseTx.received),
+    confirmed: responseTx.status.confirmed,
+    inputs: responseTx.vin,
+    outputs: responseTx.vout,
+    seenTime: date,
     incoming: incoming,
     amount: new BigNumber(amount),
     txType: 'bitcoin',
-    txStatus: responseTx.confirmations < 1 ? 'pending' : 'success',
+    txStatus: responseTx.status.confirmed ? 'success' : 'pending',
     isOrdinal,
+    recipientAddress: outputAddresses[0],
   };
 
   return parsedTx;

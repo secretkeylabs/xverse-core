@@ -37,9 +37,7 @@ export {
   StackingStateData,
   Pool,
 } from './api/xverse/stacking';
-export {
-  OrdinalInfo,
-} from './api/xverse/ordinals';
+export { OrdinalInfo } from './api/xverse/ordinals';
 export {
   Address,
   Block,
@@ -52,3 +50,5 @@ export {
   BtcAddressMempool,
   FeeEstimates,
 } from './api/esplora';
+export * from './api/ordinals';
+export * from './api/ordinalsbot'

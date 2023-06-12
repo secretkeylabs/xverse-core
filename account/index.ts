@@ -1,13 +1,14 @@
 import { StacksMainnet, StacksNetwork } from '@stacks/network';
+import * as bip39 from 'bip39';
+import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
 import {
   connectToGaiaHubWithConfig,
+  createWalletGaiaConfig,
+  deriveWalletConfigKey,
   getHubInfo,
   getOrCreateWalletConfig,
-  deriveWalletConfigKey,
   updateWalletConfig,
-  createWalletGaiaConfig,
 } from '../gaia';
-import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
 import {
   Account,
   BtcTransactionData,
@@ -15,10 +16,9 @@ import {
   SettingsNetwork,
   StxTransactionListData,
 } from '../types';
+import { bip32 } from '../utils/bip32';
 import { walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
-import * as bip39 from 'bip39';
-import { bip32 } from 'bitcoinjs-lib';
 
 export const fetchActiveAccounts = async (
   mnemonic: string,

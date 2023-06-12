@@ -112,6 +112,7 @@ export async function generateUnsignedDelegateTransaction(
         noneCV(),
         someCV(poolRewardAddressTuple),
         userRewardAddressTuple,
+        noneCV(),
       ],
       network,
       postConditions: [],

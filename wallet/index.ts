@@ -1,44 +1,47 @@
-import crypto from 'crypto';
-import * as bip39 from 'bip39';
+/* eslint-disable @typescript-eslint/no-use-before-define */
+import * as secp256k1 from '@noble/secp256k1';
+import { hex } from '@scure/base';
+import * as btc from '@scure/btc-signer';
 import { hashMessage } from '@stacks/encryption';
 import {
-  ENTROPY_BYTES,
-  STX_PATH_WITHOUT_INDEX,
-  BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
-  BTC_SEGWIT_PATH_PURPOSE,
-  BTC_TAPROOT_PATH_PURPOSE,
-} from '../constant';
-import {
+  AddressVersion,
   ChainID,
-  publicKeyToString,
-  getPublicKey,
+  TransactionVersion,
   createStacksPrivateKey,
   getAddressFromPrivateKey,
-  TransactionVersion,
-  AddressVersion,
+  getPublicKey,
+  publicKeyToString,
 } from '@stacks/transactions';
-import { payments, networks, ECPair, bip32, BIP32Interface } from 'bitcoinjs-lib';
-import { NetworkType } from 'types/network';
+import * as bip39 from 'bip39';
+import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
+import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
-import { ecPairToHexString } from './helper';
+import crypto from 'crypto';
 import { Keychain } from 'types/api/xverse/wallet';
+import { NetworkType } from 'types/network';
 import { BaseWallet } from 'types/wallet';
-import { validate, Network as btcAddressNetwork } from 'bitcoin-address-validation';
-import * as btc from '@scure/btc-signer';
-import { hex } from '@scure/base';
-import * as secp256k1 from '@noble/secp256k1';
+import {
+  BTC_SEGWIT_PATH_PURPOSE,
+  BTC_TAPROOT_PATH_PURPOSE,
+  BTC_WRAPPED_SEGWIT_PATH_PURPOSE,
+  ENTROPY_BYTES,
+  STX_PATH_WITHOUT_INDEX,
+} from '../constant';
 import { getBtcNetwork } from '../transactions/btcNetwork';
+import { BIP32Interface, bip32 } from '../utils/bip32';
+import { ECPair } from '../utils/ecpair';
+import { ecPairToHexString } from './helper';
 
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
   [ChainID.Testnet]: STX_PATH_WITHOUT_INDEX,
 };
 
-function getDerivationPath(chain: ChainID, index: BigInt) {
+function getDerivationPath(chain: ChainID, index: bigint) {
   return `${derivationPaths[chain]}${index.toString()}`;
 }
 
-export function deriveStxAddressChain(chain: ChainID, index: BigInt = BigInt(0)) {
+export function deriveStxAddressChain(chain: ChainID, index = 0n) {
   return (rootNode: BIP32Interface) => {
     const childKey = rootNode.derivePath(getDerivationPath(chain, index));
     if (!childKey.privateKey) {
@@ -68,7 +71,7 @@ export async function walletFromSeedPhrase({
   network,
 }: {
   mnemonic: string;
-  index: BigInt;
+  index: bigint;
   network: NetworkType;
 }): Promise<BaseWallet> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -126,8 +129,8 @@ export function getBitcoinDerivationPath({
   index,
   network,
 }: {
-  account?: BigInt;
-  index: BigInt;
+  account?: bigint;
+  index: bigint;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -141,8 +144,8 @@ export function getSegwitDerivationPath({
   index,
   network,
 }: {
-  account?: BigInt;
-  index: BigInt;
+  account?: bigint;
+  index: bigint;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -156,8 +159,8 @@ export function getTaprootDerivationPath({
   index,
   network,
 }: {
-  account?: BigInt;
-  index: BigInt;
+  account?: bigint;
+  index: bigint;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -172,7 +175,7 @@ export async function getBtcPrivateKey({
   network,
 }: {
   seedPhrase: string;
-  index: BigInt;
+  index: bigint;
   network: NetworkType;
 }): Promise<string> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
@@ -188,7 +191,7 @@ export async function getBtcTaprootPrivateKey({
   network,
 }: {
   seedPhrase: string;
-  index: BigInt;
+  index: bigint;
   network: NetworkType;
 }): Promise<string> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
@@ -249,6 +252,7 @@ export function validateBtcAddress({
     return false;
   }
 }
+
 interface EncryptMnemonicArgs {
   password: string;
   seed: string;
@@ -271,24 +275,20 @@ interface DecryptMnemonicArgs {
 
 export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
   const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
-  try {
-    const { hash } = await passwordHashGenerator(password);
-    const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
-    return encryptedSeedBuffer.toString('hex');
-  } catch (err) {
-    return Promise.reject(err);
-  }
+
+  const { hash } = await passwordHashGenerator(password);
+  const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
+
+  return encryptedSeedBuffer.toString('hex');
 }
 
 export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
   const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
-  try {
-    const { hash } = await passwordHashGenerator(password);
-    const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
-    return seedPhrase;
-  } catch (err) {
-    return Promise.reject(err);
-  }
+
+  const { hash } = await passwordHashGenerator(password);
+  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
+
+  return seedPhrase;
 }
 
 export async function getStxAddressKeyChain(

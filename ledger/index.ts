@@ -35,13 +35,18 @@ export async function importNativeSegwitAccountFromLedger(
 
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
   const masterFingerPrint = await app.getMasterFingerprint();
+  console.log('masterFingerPrint', masterFingerPrint);
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
+  console.log('extendedPublicKey', extendedPublicKey);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
     `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
   );
+  console.log('accountPolicy', accountPolicy);
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
+  console.log('address', address);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
+  console.log('publicKey', publicKey);
 
   return { address, publicKey: publicKey.toString('hex') };
 }
