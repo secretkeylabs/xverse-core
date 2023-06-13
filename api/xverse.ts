@@ -179,6 +179,12 @@ export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
   return ordinalInfo.data;
 }
 
+export async function getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/eth/${tokenContract}/${tokenId}`;
+  const erc721Metadata = await axios.get(requestUrl);
+  return erc721Metadata.data;
+}
+
 export async function getAppConfig() {
     const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
     const appConfig = await axios.get(appConfigUrl);
