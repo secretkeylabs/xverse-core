@@ -676,10 +676,7 @@ export async function signOrdinalSendTransaction(
   // This can be true if ordinal utxo is from the payment address
 
 
-  const filteredUnspentOutputs = [
-    ...filterUtxos(unspentOutputs, addressOrdinalsUtxos),
-    ...filterUtxos(addressOrdinalsUtxos, unspentOutputs),
-  ];
+  const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
 
   let ordinalUtxoInPaymentAddress = false;
   if (filteredUnspentOutputs.length < unspentOutputs.length) {
