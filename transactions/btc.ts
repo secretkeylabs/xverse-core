@@ -649,8 +649,10 @@ export async function signBtcTransaction(
   }
 }
 
-  function filterUtxos(array1: UTXO[], array2: UTXO[]) {
-    return array1.filter((object1) => !array2.some((object2) => object1.txid === object2.txid));
+  function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
+    return allUtxos.filter(
+      (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid)
+    );
   }
 
 
@@ -661,8 +663,8 @@ export async function signOrdinalSendTransaction(
   accountIndex: number,
   seedPhrase: string,
   network: NetworkType,
+  addressOrdinalsUtxos: UTXO[],
   fee?: BigNumber,
-  addressOrdinalsUtxos?: UTXO[]
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
   const btcClient = new BitcoinEsploraApiProvider({
@@ -675,8 +677,8 @@ export async function signOrdinalSendTransaction(
 
 
   const filteredUnspentOutputs = [
-    ...filterUtxos(unspentOutputs, addressOrdinalsUtxos!),
-    ...filterUtxos(addressOrdinalsUtxos!, unspentOutputs),
+    ...filterUtxos(unspentOutputs, addressOrdinalsUtxos),
+    ...filterUtxos(addressOrdinalsUtxos, unspentOutputs),
   ];
 
   let ordinalUtxoInPaymentAddress = false;
