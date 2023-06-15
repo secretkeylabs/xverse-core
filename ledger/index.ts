@@ -89,8 +89,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient,
-  ordinalUtxo?: UTXO
+  recipient: Recipient
 ): Promise<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
@@ -112,8 +111,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
     senderAddress,
-    recipient,
-    ordinalUtxo
+    recipient
   );
 
   const inputDerivation: Bip32Derivation = {
@@ -152,7 +150,9 @@ export async function signLedgerTaprootBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient
+  recipient: Recipient,
+  btcAddress: string,
+  ordinalUtxo?: UTXO
 ): Promise<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
@@ -173,8 +173,9 @@ export async function signLedgerTaprootBtcTransaction(
 
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
-    senderAddress,
-    recipient
+    btcAddress,
+    recipient,
+    ordinalUtxo
   );
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
@@ -187,7 +188,7 @@ export async function signLedgerTaprootBtcTransaction(
   const psbt = await createTaprootPsbt(
     network,
     recipient,
-    senderAddress,
+    btcAddress,
     changeValue,
     selectedUTXOs,
     [inputDerivation],
