@@ -742,7 +742,8 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
-      network
+      network,
+      [ordinalOutputs[0]]
     );
 
     const { fee } = await getFee(
@@ -821,7 +822,7 @@ describe('bitcoin transactions', () => {
       regular: 10,
       priority: 30,
     };
-    
+
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
     const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
@@ -838,7 +839,8 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
-      network
+      network,
+      [ordinalOutputs[0]]
     );
 
     const expectedTx =
@@ -919,7 +921,8 @@ describe('bitcoin transactions', () => {
       0,
       testSeed,
       network,
-      customFeeAmount
+      [ordinalOutputs[0]],
+      customFeeAmount,
     );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
