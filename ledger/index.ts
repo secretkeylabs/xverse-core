@@ -1,6 +1,6 @@
 import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
 import { Recipient } from '../transactions/btc';
-import { NetworkType } from '../types';
+import { NetworkType, UTXO } from '../types';
 import {
   getNativeSegwitAccountDataFromXpub,
   getPublicKeyFromXpubAtIndex,
@@ -89,7 +89,8 @@ export async function signLedgerNativeSegwitBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient
+  recipient: Recipient,
+  ordinalUtxo?: UTXO
 ): Promise<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
@@ -111,10 +112,10 @@ export async function signLedgerNativeSegwitBtcTransaction(
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
     senderAddress,
-    recipient
+    recipient,
+    ordinalUtxo
   );
 
-  // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: Bip32Derivation = {
     path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
     pubkey: senderPublicKey,

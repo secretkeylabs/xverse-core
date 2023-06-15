@@ -1,5 +1,5 @@
 import { NetworkType } from '../types/network';
-import { networks, payments } from 'bitcoinjs-lib';
+import { networks, payments, initEccLib } from 'bitcoinjs-lib';
 import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, Transport } from './types';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
@@ -8,6 +8,7 @@ import { makeDIDFromAddress } from '@stacks/auth';
 import base64url from 'base64url';
 import StacksApp from '@zondax/ledger-stacks';
 import ecdsaFormat from 'ecdsa-sig-formatter';
+import * as ecc from '@bitcoinerlab/secp256k1';
 
 /**
   This function is used to get the public key from the xpub at a given index
@@ -42,6 +43,8 @@ export function getNativeSegwitAccountDataFromXpub(
   address: string;
   witnessScript: Buffer;
 } {
+  initEccLib(ecc);
+
   const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const p2wpkh = payments.p2wpkh({ pubkey: publicKey, network: btcNetwork });
@@ -131,14 +134,10 @@ export function getTaprootAccountDataFromXpub(
   internalPubkey: Buffer;
   taprootScript: Buffer;
 } {
-  // TODO - use bitcoinjs-lib class once updated package to ^6.1.0
-  const BitcoinJs: any = {}; // import * as BitcoinJs from 'bitcoinjs-lib';
-  const ecc: any = {}; // import * as ecc from 'tiny-secp256k1';
-
-  BitcoinJs.initEccLib(ecc);
+  initEccLib(ecc);
 
   const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
-  const p2tr = BitcoinJs.payments.p2tr({
+  const p2tr = payments.p2tr({
     internalPubkey: publicKey.slice(1),
     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
   });

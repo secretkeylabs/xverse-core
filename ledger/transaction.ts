@@ -29,18 +29,19 @@ import {
 export async function getTransactionData(
   network: NetworkType,
   senderAddress: string,
-  recipient: Recipient
+  recipient: Recipient,
+  ordinalUtxo?: UTXO
 ) {
   // Get sender address unspent outputs
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
-  const allUTXOs = await btcClient.getUnspentUtxos(senderAddress);
+  const unspentOutputs = await btcClient.getUnspentUtxos(senderAddress);
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
   const { amountSats } = recipient;
 
-  let selectedUTXOs = selectUnspentOutputs(amountSats, allUTXOs);
+  let selectedUTXOs = selectUnspentOutputs(amountSats, unspentOutputs, ordinalUtxo);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
   if (sumOfSelectedUTXOs.isLessThan(amountSats)) {
@@ -50,14 +51,15 @@ export async function getTransactionData(
 
   feeRate = await fetchBtcFeeRate();
   const { newSelectedUnspentOutputs, fee } = await getFee(
-    allUTXOs,
+    unspentOutputs,
     selectedUTXOs,
     sumOfSelectedUTXOs,
     amountSats,
     [recipient],
     feeRate,
     senderAddress,
-    network
+    network,
+    ordinalUtxo
   );
 
   // Recalculate the sum of selected UTXOs if new UTXOs were selected
