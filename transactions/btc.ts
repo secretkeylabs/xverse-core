@@ -658,6 +658,12 @@ export async function signBtcTransaction(
   }
 }
 
+function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
+  return allUtxos.filter(
+    (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid)
+  );
+}
+
 export async function signOrdinalSendTransaction(
   recipientAddress: string,
   ordinalUtxo: UTXO,
@@ -665,6 +671,7 @@ export async function signOrdinalSendTransaction(
   accountIndex: number,
   seedPhrase: string,
   network: NetworkType,
+  addressOrdinalsUtxos: UTXO[],
   fee?: BigNumber
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
@@ -675,9 +682,8 @@ export async function signOrdinalSendTransaction(
 
   // Make sure ordinal utxo is removed from utxo set used for fees
   // This can be true if ordinal utxo is from the payment address
-  const filteredUnspentOutputs = unspentOutputs.filter((unspentOutput) => {
-    return !(unspentOutput.txid === ordinalUtxo.txid && unspentOutput.vout === ordinalUtxo.vout);
-  });
+
+  const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
 
   let ordinalUtxoInPaymentAddress = false;
   if (filteredUnspentOutputs.length < unspentOutputs.length) {

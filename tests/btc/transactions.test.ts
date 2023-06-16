@@ -725,7 +725,8 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
-      network
+      network,
+      [ordinalOutputs[0]]
     );
 
     const { fee } = await getFee(
@@ -821,7 +822,8 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
-      network
+      network,
+      [ordinalOutputs[0]]
     );
 
     const expectedTx =
@@ -902,7 +904,8 @@ describe('bitcoin transactions', () => {
       0,
       testSeed,
       network,
-      customFeeAmount
+      [ordinalOutputs[0]],
+      customFeeAmount,
     );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
