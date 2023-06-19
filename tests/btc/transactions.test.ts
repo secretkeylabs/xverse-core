@@ -562,19 +562,6 @@ describe('bitcoin transactions', () => {
           confirmed: true,
         },
         txid: '8b330459af5329c06f8950fda313bbf2e51afc868e3b31c0e1a7acbca2fdffe6',
-        value: 5700,
-        vout: 0,
-      },
-      {
-        address: '3Codr66EYyhkhWy1o2RLmrER7TaaHmtrZe',
-        blockHeight: 793556,
-        status: {
-          block_hash: '00000000000000000000a46de80f72757343c538d13be3a992aa733fe33bc4bb',
-          block_height: 793556,
-          block_time: 1686310361,
-          confirmed: true,
-        },
-        txid: '8b330459af5329c06f8950fda313bbf2e51afc868e3b31c0e1a7acbca2fdffe6',
         value: 3911,
         vout: 1,
       },
@@ -593,6 +580,19 @@ describe('bitcoin transactions', () => {
       },
       {
         address: '3Codr66EYyhkhWy1o2RLmrER7TaaHmtrZe',
+        blockHeight: 793556,
+        status: {
+          block_hash: '00000000000000000000a46de80f72757343c538d13be3a992aa733fe33bc4bb',
+          block_height: 793556,
+          block_time: 1686310361,
+          confirmed: true,
+        },
+        txid: '8b330459af5329c06f8950fda313bbf2e51afc868e3b31c0e1a7acbca2fdffe6',
+        value: 5700,
+        vout: 0,
+      },
+      {
+        address: '3Codr66EYyhkhWy1o2RLmrER7TaaHmtrZe',
         blockHeight: 792930,
         status: {
           block_hash: '0000000000000000000026351fde98eb0b9a3e6e3ea8feceef13186e719c91f5',
@@ -606,7 +606,7 @@ describe('bitcoin transactions', () => {
       },
     ];
 
-    const recipient1Amount = 6000;
+    const recipient1Amount = 60000;
     const recipient2Amount = 50000;
     const satsToSend = recipient1Amount + recipient2Amount;
 
@@ -628,9 +628,10 @@ describe('bitcoin transactions', () => {
     const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
     fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
 
+    //const signedBtc = await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
     await expect(async () => {
       await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
-    }).rejects.toThrowError(new Error('No inputs signed'));
+    }).rejects.toThrowError('601');
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
     expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
@@ -905,7 +906,7 @@ describe('bitcoin transactions', () => {
       testSeed,
       network,
       [ordinalOutputs[0]],
-      customFeeAmount,
+      customFeeAmount
     );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);

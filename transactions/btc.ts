@@ -577,62 +577,62 @@ export async function signBtcTransaction(
   network: NetworkType,
   fee?: BigNumber
 ): Promise<SignedBtcTx> {
-  // Get sender address unspent outputs
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
-  let feeRate: BtcFeeResponse = defaultFeeRate;
-  let feePerVByte: BigNumber = new BigNumber(0);
-
-  if (!fee) {
-    feeRate = await getBtcFeeRate();
-  }
-
-  // Get sender address payment private key
-  const privateKey = await getBtcPrivateKey({ seedPhrase, index: BigInt(accountIndex), network });
-
-  // Get total sats to send (including custom fee)
-  let satsToSend = fee ?? new BigNumber(0);
-  recipients.forEach((recipient) => {
-    satsToSend = satsToSend.plus(recipient.amountSats);
-  });
-
-  // Select unspent outputs
-  let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs);
-  const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
-
-  if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-  }
-
-  const changeAddress = btcAddress;
-
-  // Calculate transaction fee
-  let calculatedFee: BigNumber = new BigNumber(0);
-  if (!fee) {
-    const {
-      newSelectedUnspentOutputs,
-      fee: modifiedFee,
-      selectedFeeRate,
-    } = await getFee(
-      unspentOutputs,
-      selectedUnspentOutputs,
-      sumSelectedOutputs,
-      satsToSend,
-      recipients,
-      feeRate,
-      changeAddress,
-      network
-    );
-
-    calculatedFee = modifiedFee;
-    feePerVByte = selectedFeeRate as BigNumber;
-    selectedUnspentOutputs = newSelectedUnspentOutputs;
-    satsToSend = satsToSend.plus(modifiedFee);
-  }
-
   try {
+    // Get sender address unspent outputs
+    const btcClient = new BitcoinEsploraApiProvider({
+      network,
+    });
+    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+    let feeRate: BtcFeeResponse = defaultFeeRate;
+    let feePerVByte: BigNumber = new BigNumber(0);
+
+    if (!fee) {
+      feeRate = await getBtcFeeRate();
+    }
+
+    // Get sender address payment private key
+    const privateKey = await getBtcPrivateKey({ seedPhrase, index: BigInt(accountIndex), network });
+
+    // Get total sats to send (including custom fee)
+    let satsToSend = fee ?? new BigNumber(0);
+    recipients.forEach((recipient) => {
+      satsToSend = satsToSend.plus(recipient.amountSats);
+    });
+
+    // Select unspent outputs
+    let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs);
+    const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+    if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+    }
+
+    const changeAddress = btcAddress;
+
+    // Calculate transaction fee
+    let calculatedFee: BigNumber = new BigNumber(0);
+    if (!fee) {
+      const {
+        newSelectedUnspentOutputs,
+        fee: modifiedFee,
+        selectedFeeRate,
+      } = await getFee(
+        unspentOutputs,
+        selectedUnspentOutputs,
+        sumSelectedOutputs,
+        satsToSend,
+        recipients,
+        feeRate,
+        changeAddress,
+        network
+      );
+
+      calculatedFee = modifiedFee;
+      feePerVByte = selectedFeeRate as BigNumber;
+      selectedUnspentOutputs = newSelectedUnspentOutputs;
+      satsToSend = satsToSend.plus(modifiedFee);
+    }
+
     const tx = createTransaction(
       privateKey,
       selectedUnspentOutputs,
