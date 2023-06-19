@@ -11,10 +11,11 @@ import {
   selectUnspentOutputs,
   getFee,
   sumUnspentOutputs,
+  filterUtxos,
 } from '../../transactions/btc';
 import { getBtcPrivateKey } from '../../wallet';
 import { testSeed } from '../mocks/restore.mock';
-import { BtcUtxoDataResponse, ErrorCodes, ResponseError, UTXO } from '../../types';
+import { UTXO } from '../../types';
 import BigNumber from 'bignumber.js';
 import * as XverseAPIFunctions from '../../api/xverse';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
@@ -705,12 +706,7 @@ describe('bitcoin transactions', () => {
       },
     ];
 
-    const filteredUnspentOutputs = utxos.filter((unspentOutput) => {
-      return !(
-        unspentOutput.txid === ordinalOutputs[0].txid &&
-        unspentOutput.vout === ordinalOutputs[0].vout
-      );
-    });
+    const filteredUnspentOutputs = filterUtxos(utxos, [ordinalOutputs[0]]);
 
     let selectedUnspentOutputs = selectUnspentOutputs(
       new BigNumber(ordinalOutputs[0].value),
