@@ -91,7 +91,7 @@ export async function createNativeSegwitPsbt(
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
   inputDerivation: Bip32Derivation[] | undefined,
-  witnessScript: Buffer
+  witnessScript: Buffer,
 ): Promise<Psbt> {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
@@ -174,6 +174,76 @@ export async function createTaprootPsbt(
       tapInternalKey,
     });
   }
+
+  psbt.addOutputs([
+    {
+      address: recipientAddress,
+      value: amountSats.toNumber(),
+    },
+    {
+      address: changeAddress,
+      value: changeValue.toNumber(),
+    },
+  ]);
+
+  return psbt;
+}
+
+/**
+ * This function is used to create a native segwit transaction for the ledger
+ * @param inputUTXOs - the selected input utxos
+ * @param inputDerivation - the derivation data for the sender address
+ * @returns the psbt without any signatures
+ * */
+export async function createMixedPsbt(
+  network: NetworkType,
+  recipient: Recipient,
+  changeAddress: string,
+  changeValue: BigNumber,
+  inputUTXOs: UTXO[],
+  inputDerivation: Bip32Derivation[] | undefined,
+  witnessScript: Buffer,
+  taprootInputDerivation: TapBip32Derivation[] | undefined,
+  taprootScript: Buffer,
+  tapInternalKey: Buffer,
+): Promise<Psbt> {
+  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
+  const psbt = new Psbt({ network: btcNetwork });
+  const { address: recipientAddress, amountSats } = recipient;
+
+  const transactionMap = new Map<string, Buffer>();
+  for (const utxo of inputUTXOs) {
+    const txDataApiUrl = `${
+      network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI
+    }/${utxo.txid}/hex`;
+    const response = await axios.get(txDataApiUrl);
+    transactionMap.set(utxo.txid, Buffer.from(response.data, 'hex'));
+  }
+
+  // Adding Taproot input
+  psbt.addInput({
+    hash: inputUTXOs[0].txid,
+    index: inputUTXOs[0].vout,
+    witnessUtxo: {
+      script: taprootScript,
+      value: inputUTXOs[0].value,
+    },
+    tapBip32Derivation: taprootInputDerivation,
+    tapInternalKey,
+  });
+  
+  // Adding Segwit input
+  psbt.addInput({
+    hash: inputUTXOs[1].txid,
+    index: inputUTXOs[1].vout,
+    // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
+    witnessUtxo: {
+      script: witnessScript,
+      value: inputUTXOs[1].value,
+    },
+    nonWitnessUtxo: transactionMap.get(inputUTXOs[1].txid),
+    bip32Derivation: inputDerivation,
+  });
 
   psbt.addOutputs([
     {
