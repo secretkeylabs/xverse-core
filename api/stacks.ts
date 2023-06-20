@@ -134,22 +134,21 @@ export async function getFtData(
   stxAddress: string,
   network: StacksNetwork
 ): Promise<FungibleToken[]> {
-  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
-
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
   return axios
     .get<TokensResponse>(apiUrl, {
       timeout: 30000,
     })
     .then((response) => {
       const tokens: FungibleToken[] = [];
-      for (let key in response.data.fungible_tokens) {
-        var fungibleToken: FungibleToken = response.data.fungible_tokens[key];
+      for (const key in response.data.fungible_tokens) {
+        const fungibleToken: FungibleToken = response.data.fungible_tokens[key];
         const index = key.indexOf('::');
         fungibleToken.assetName = key.substring(index + 2);
         fungibleToken.principal = key.substring(0, index);
+        fungibleToken.protocol = "stacks"
         tokens.push(fungibleToken);
       }
-
       return tokens;
     });
 }

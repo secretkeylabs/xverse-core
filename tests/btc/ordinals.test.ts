@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { getOrdinalsFtBalance } from '../../api/ordinals'
 // import { signNonOrdinalBtcSendTransaction } from '../../transactions/btc';
 // import { UTXO } from '../../types';
 // import * as OrdinalsAPIFunctions from '../../api/ordinals';
