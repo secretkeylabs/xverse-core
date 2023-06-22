@@ -1,6 +1,6 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
@@ -34,7 +34,8 @@
     "clean": "rimraf dist",
     "build:esm": "npm run clean && tsc --build",
     "test": "vitest run",
-    "test-dev": "vitest"
+    "test-dev": "vitest",
+    "lint": "eslint . && prettier -c '**/*.{ts,tsx,js,jsx}'"
   },
   "repository": {
     "type": "git",
