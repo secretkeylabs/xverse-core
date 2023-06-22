@@ -641,7 +641,6 @@ describe('bitcoin transactions', () => {
     const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
     fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
 
-    //const signedBtc = await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
     await expect(async () => {
       await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
     }).rejects.toThrowError('601');
