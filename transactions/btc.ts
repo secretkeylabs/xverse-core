@@ -651,7 +651,7 @@ export async function signBtcTransaction(
 
   function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
     return allUtxos.filter(
-      (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid)
+      (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout)
     );
   }
 
