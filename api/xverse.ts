@@ -1,20 +1,16 @@
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import {
-  API_TIMEOUT_MILLI,
-  XVERSE_API_BASE_URL,
-  XVERSE_SPONSOR_URL
-} from '../constant';
+import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   BtcFeeResponse,
   TokenFiatRateResponse,
   SupportedCurrency,
   CoinsResponse,
-  FeesMultipliers,
   StackingPoolInfo,
   StackerInfo,
   SignedUrlResponse,
   OrdinalInfo,
+  AppInfo,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -45,7 +41,7 @@ export async function fetchBtcToCurrencyRate({
   return axios
     .get(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
-     return new BigNumber(response.data.btcFiatRate.toString());
+      return new BigNumber(response.data.btcFiatRate.toString());
     });
 }
 
@@ -62,7 +58,10 @@ export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Pro
     });
 }
 
-export async function getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse | null> {
+export async function getCoinsInfo(
+  contractids: string[],
+  fiatCurrency: string
+): Promise<CoinsResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/coins`;
 
   const requestBody = {
@@ -80,11 +79,11 @@ export async function getCoinsInfo(contractids: string[], fiatCurrency: string):
     });
 }
 
-export async function fetchAppInfo(): Promise<FeesMultipliers | null> {
+export async function fetchAppInfo(): Promise<AppInfo | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/info`;
 
   return axios
-    .get<FeesMultipliers>(url)
+    .get<AppInfo>(url)
     .then((response) => {
       return response.data;
     })
@@ -103,9 +102,7 @@ export async function fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
     });
 }
 
-export async function fetchPoolStackerInfo(
-  stxAddress: string,
-): Promise<StackerInfo> {
+export async function fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
   return fetch(`${XVERSE_API_BASE_URL}/v1/pool/${stxAddress}/status`, {
     method: 'GET',
   })
@@ -115,9 +112,7 @@ export async function fetchPoolStackerInfo(
     });
 }
 
-export async function getMoonPaySignedUrl(
-  unsignedUrl: string,
-): Promise<SignedUrlResponse | null> {
+export async function getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/sign-url`;
 
   const requestBody = {
@@ -134,9 +129,7 @@ export async function getMoonPaySignedUrl(
     });
 }
 
-export async function getBinaceSignature(
-  srcData: string,
-): Promise<SignedUrlResponse | null> {
+export async function getBinaceSignature(srcData: string): Promise<SignedUrlResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/binance/sign`;
 
   const requestBody = {
@@ -153,20 +146,16 @@ export async function getBinaceSignature(
     });
 }
 
-export async function sponsorTransaction(
-  signedTx: StacksTransaction
-): Promise<string> {
+export async function sponsorTransaction(signedTx: StacksTransaction): Promise<string> {
   const sponsorUrl = `${XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
     tx: signedTx.serialize().toString('hex'),
   };
 
-  return axios
-    .post(sponsorUrl, data, {timeout: 45000})
-    .then((response) => {
-      return response.data.txid;
-    });
+  return axios.post(sponsorUrl, data, { timeout: 45000 }).then((response) => {
+    return response.data.txid;
+  });
 }
 
 export async function getOrdinalsByAddress(ordinalsAddress: string) {
@@ -179,8 +168,14 @@ export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
   return ordinalInfo.data;
 }
 
+export async function getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/eth/${tokenContract}/${tokenId}`;
+  const erc721Metadata = await axios.get(requestUrl);
+  return erc721Metadata.data;
+}
+
 export async function getAppConfig() {
-    const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
-    const appConfig = await axios.get(appConfigUrl);
-    return appConfig;
+  const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
+  const appConfig = await axios.get(appConfigUrl);
+  return appConfig;
 }
