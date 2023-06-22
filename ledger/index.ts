@@ -89,7 +89,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient
+  recipient: Array<Recipient>
 ): Promise<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
@@ -150,7 +150,7 @@ export async function signLedgerTaprootBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient,
+  recipient: Array<Recipient>,
   btcAddress: string,
   ordinalUtxo?: UTXO
 ): Promise<string> {

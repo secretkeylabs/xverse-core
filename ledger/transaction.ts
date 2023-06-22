@@ -29,7 +29,7 @@ import {
 export async function getTransactionData(
   network: NetworkType,
   senderAddress: string,
-  recipient: Recipient,
+  recipient: Array<Recipient>,
   ordinalUtxo?: UTXO
 ) {
   // Get sender address unspent outputs
@@ -39,7 +39,12 @@ export async function getTransactionData(
   const unspentOutputs = await btcClient.getUnspentUtxos(senderAddress);
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
-  const { amountSats } = recipient;
+
+   // Get total sats to send (including custom fee)
+   let amountSats = new BigNumber(0);
+   recipient.forEach((value) => {
+    amountSats = amountSats.plus(value.amountSats);
+   });
 
   let selectedUTXOs = selectUnspentOutputs(amountSats, unspentOutputs, ordinalUtxo);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
@@ -55,7 +60,7 @@ export async function getTransactionData(
     selectedUTXOs,
     sumOfSelectedUTXOs,
     amountSats,
-    [recipient],
+    recipient,
     feeRate,
     senderAddress,
     network,
@@ -86,7 +91,7 @@ export async function getTransactionData(
  * */
 export async function createNativeSegwitPsbt(
   network: NetworkType,
-  recipient: Recipient,
+  recipient: Array<Recipient>,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
@@ -95,7 +100,6 @@ export async function createNativeSegwitPsbt(
 ): Promise<Psbt> {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
-  const { address: recipientAddress, amountSats } = recipient;
 
   const transactionMap = new Map<string, Buffer>();
   for (const utxo of inputUTXOs) {
@@ -119,17 +123,21 @@ export async function createNativeSegwitPsbt(
       bip32Derivation: inputDerivation,
     });
   }
+  recipient.forEach((value) => {
+    psbt.addOutputs([
+      {
+        address: value.address,
+        value: value.amountSats.toNumber(),
+      },
+    ]);
+  });
 
   psbt.addOutputs([
     {
-      address: recipientAddress,
-      value: amountSats.toNumber(),
-    },
-    {
       address: changeAddress,
       value: changeValue.toNumber(),
-    },
-  ]);
+    }]
+  );
 
   return psbt;
 }
@@ -150,7 +158,7 @@ export function addSignitureToStxTransaction(transaction: string | Buffer, signa
  * */
 export async function createTaprootPsbt(
   network: NetworkType,
-  recipient: Recipient,
+  recipient:  Array<Recipient>,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
@@ -160,7 +168,6 @@ export async function createTaprootPsbt(
 ): Promise<Psbt> {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
-  const { address: recipientAddress, amountSats } = recipient;
 
   for (const utxo of inputUTXOs) {
     psbt.addInput({
@@ -174,17 +181,21 @@ export async function createTaprootPsbt(
       tapInternalKey,
     });
   }
+  recipient.forEach((value) => {
+    psbt.addOutputs([
+      {
+        address: value.address,
+        value: value.amountSats.toNumber(),
+      },
+    ]);
+  });
 
   psbt.addOutputs([
     {
-      address: recipientAddress,
-      value: amountSats.toNumber(),
-    },
-    {
       address: changeAddress,
       value: changeValue.toNumber(),
-    },
-  ]);
+    }]
+  );
 
   return psbt;
 }
