@@ -69,9 +69,13 @@ export function selectUnspentOutputs(
   unspentOutputs.sort((a, b) => {
     if (a.status.block_time && b.status.block_time) {
       return a.status.block_time - b.status.block_time;
+    } else if (a.status.block_time) {
+      return 1;
+    } else if (b.status.block_time) {
+      return -1;
+    } else {
+      return a.value - b.value;
     }
-    // Handle cases where block time is missing
-    return 0;
   });
 
   unspentOutputs.forEach((unspentOutput) => {
