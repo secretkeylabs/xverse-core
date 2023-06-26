@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import * as secp256k1 from '@noble/secp256k1';
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
@@ -13,7 +14,7 @@ import {
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
 import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
-import { BIP32Interface, ECPair, bip32, networks, payments } from 'bitcoinjs-lib';
+import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
 import { Keychain } from 'types/api/xverse/wallet';
@@ -27,6 +28,8 @@ import {
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
 import { getBtcNetwork } from '../transactions/btcNetwork';
+import { BIP32Interface, bip32 } from '../utils/bip32';
+import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
 
 export const derivationPaths = {
@@ -38,7 +41,7 @@ function getDerivationPath(chain: ChainID, index: bigint) {
   return `${derivationPaths[chain]}${index.toString()}`;
 }
 
-export function deriveStxAddressChain(chain: ChainID, index = BigInt(0)) {
+export function deriveStxAddressChain(chain: ChainID, index = 0n) {
   return (rootNode: BIP32Interface) => {
     const childKey = rootNode.derivePath(getDerivationPath(chain, index));
     if (!childKey.privateKey) {
@@ -254,6 +257,7 @@ export function validateBtcAddress({
     return false;
   }
 }
+
 interface EncryptMnemonicArgs {
   password: string;
   seed: string;
@@ -276,24 +280,20 @@ interface DecryptMnemonicArgs {
 
 export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
   const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
-  try {
-    const { hash } = await passwordHashGenerator(password);
-    const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
-    return encryptedSeedBuffer.toString('hex');
-  } catch (err) {
-    return Promise.reject(err);
-  }
+
+  const { hash } = await passwordHashGenerator(password);
+  const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
+
+  return encryptedSeedBuffer.toString('hex');
 }
 
 export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
   const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
-  try {
-    const { hash } = await passwordHashGenerator(password);
-    const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
-    return seedPhrase;
-  } catch (err) {
-    return Promise.reject(err);
-  }
+
+  const { hash } = await passwordHashGenerator(password);
+  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
+
+  return seedPhrase;
 }
 
 export async function getStxAddressKeyChain(
