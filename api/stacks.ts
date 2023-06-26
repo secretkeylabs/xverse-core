@@ -35,7 +35,7 @@ import {
   tupleCV,
   UIntCV,
 } from '@stacks/transactions';
-import { AddressToBnsResponse, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
+import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import { getNetworkURL } from './helper';
 
 import {
@@ -481,5 +481,18 @@ export async function fetchDelegationState(
 
       return delegationInfo;
     }
+  });
+}
+
+export async function fetchCoinMetaData(contract: string, network: StacksNetwork) {
+  return axios
+  .get<CoinMetaData>(`${getNetworkURL(network)}/metadata/ft/${contract}`, {
+    timeout: 30000,
+  })
+  .then((response) => {
+    return response?.data;
+  })
+  .catch((error) => {
+    return undefined;
   });
 }

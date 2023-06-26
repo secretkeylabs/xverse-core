@@ -59,9 +59,15 @@ export function deriveStxAddressChain(chain: ChainID, index = 0n) {
   };
 }
 
-export async function newWallet(): Promise<BaseWallet> {
+export function generateMnemonic(): string {
   const entropy = crypto.randomBytes(ENTROPY_BYTES);
   const mnemonic = bip39.entropyToMnemonic(entropy);
+
+  return mnemonic;
+}
+
+export async function newWallet(): Promise<BaseWallet> {
+  const mnemonic = generateMnemonic();
   return walletFromSeedPhrase({ mnemonic, index: 0n, network: 'Mainnet' });
 }
 
