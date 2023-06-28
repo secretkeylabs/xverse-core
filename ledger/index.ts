@@ -36,18 +36,13 @@ export async function importNativeSegwitAccountFromLedger(
 
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
   const masterFingerPrint = await app.getMasterFingerprint();
-  console.log('masterFingerPrint', masterFingerPrint);
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
-  console.log('extendedPublicKey', extendedPublicKey);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
     `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
   );
-  console.log('accountPolicy', accountPolicy);
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
-  console.log('address', address);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
-  console.log('publicKey', publicKey);
 
   return { address, publicKey: publicKey.toString('hex') };
 }
@@ -238,7 +233,7 @@ export async function signLedgerMixedBtcTransaction(
     witnessScript,
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(
+  const { selectedUTXOs, changeValue, ordinalUtxoInPaymentAddress } = await getTransactionData(
     network,
     senderAddress,
     recipient,
@@ -253,7 +248,6 @@ export async function signLedgerMixedBtcTransaction(
 
   const taprootExtendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
   const {
-    address: taprootSenderAddress,
     internalPubkey,
     taprootScript,
   } = getTaprootAccountDataFromXpub(taprootExtendedPublicKey, addressIndex, network);
@@ -270,7 +264,16 @@ export async function signLedgerMixedBtcTransaction(
     `[${masterFingerPrint}/86'/${coinType}'/0']${taprootExtendedPublicKey}`
   );
 
-  const psbt = await createMixedPsbt(
+  // If the ordinal UTXO is in the payment address, we need to create a native segwit PSBT
+  const psbt = ordinalUtxoInPaymentAddress ? await createNativeSegwitPsbt(
+    network,
+    recipient,
+    senderAddress,
+    changeValue,
+    selectedUTXOs,
+    [inputDerivation],
+    witnessScript,
+  ) : await createMixedPsbt(
     network,
     recipient,
     senderAddress,
@@ -291,12 +294,14 @@ export async function signLedgerMixedBtcTransaction(
     });
   }
 
-  // Sign Taproot inputs
-  const taprootSignatures = await app.signPsbt(psbt.toBase64(), taprootAccountPolicy, null);
-  for (const signature of taprootSignatures) {
-    psbt.updateInput(signature[0], {
-      tapKeySig: signature[1].signature,
-    });
+  if (!ordinalUtxoInPaymentAddress) {
+    // Sign Taproot inputs
+    const taprootSignatures = await app.signPsbt(psbt.toBase64(), taprootAccountPolicy, null);
+    for (const signature of taprootSignatures) {
+      psbt.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
+    }
   }
 
   psbt.finalizeAllInputs();

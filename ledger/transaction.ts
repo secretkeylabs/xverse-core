@@ -11,6 +11,7 @@ import {
   sumUnspentOutputs,
   Recipient,
   getFee,
+  filterUtxos,
 } from '../transactions/btc';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -38,10 +39,17 @@ export async function getTransactionData(
   });
   const unspentOutputs = await btcClient.getUnspentUtxos(senderAddress);
 
+  const filteredUnspentOutputs = filterUtxos(unspentOutputs, [ordinalUtxo!]);
+
+  let ordinalUtxoInPaymentAddress = false;
+  if (filteredUnspentOutputs.length < unspentOutputs.length) {
+    ordinalUtxoInPaymentAddress = true;
+  }
+  
   let feeRate: BtcFeeResponse = defaultFeeRate;
   const { amountSats } = recipient;
-
-  let selectedUTXOs = selectUnspentOutputs(amountSats, unspentOutputs, ordinalUtxo);
+  
+  let selectedUTXOs = selectUnspentOutputs(amountSats, filteredUnspentOutputs, ordinalUtxo);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
   if (sumOfSelectedUTXOs.isLessThan(amountSats)) {
@@ -51,7 +59,7 @@ export async function getTransactionData(
 
   feeRate = await fetchBtcFeeRate();
   const { newSelectedUnspentOutputs, fee } = await getFee(
-    unspentOutputs,
+    filteredUnspentOutputs,
     selectedUTXOs,
     sumOfSelectedUTXOs,
     amountSats,
@@ -75,7 +83,7 @@ export async function getTransactionData(
 
   const changeValue = sumOfSelectedUTXOs.minus(amountSats).minus(fee);
 
-  return { selectedUTXOs, changeValue, fee };
+  return { selectedUTXOs, changeValue, fee, ordinalUtxoInPaymentAddress };
 }
 
 /**
