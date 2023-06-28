@@ -279,6 +279,7 @@ export async function getBtcFeesForOrdinalSend(
   ordinalUtxo: UTXO,
   btcAddress: string,
   network: NetworkType,
+  addressOrdinalsUtxos: UTXO[],
   feeMode?: string,
   feeRateInput?: string,
 ): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
@@ -287,7 +288,7 @@ export async function getBtcFeesForOrdinalSend(
       network,
     });
     const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
-
+    const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
     feeRate = await getBtcFeeRate();
@@ -296,7 +297,7 @@ export async function getBtcFeesForOrdinalSend(
     const satsToSend = new BigNumber(ordinalUtxo.value);
 
     // Select unspent outputs
-    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs, ordinalUtxo);
+    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
 
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
@@ -658,88 +659,88 @@ export async function signOrdinalSendTransaction(
   fee?: BigNumber,
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
-
-  // Make sure ordinal utxo is removed from utxo set used for fees
-  // This can be true if ordinal utxo is from the payment address
-
-  const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
-
-  let ordinalUtxoInPaymentAddress = false;
-  if (filteredUnspentOutputs.length < unspentOutputs.length) {
-    ordinalUtxoInPaymentAddress = true;
-  }
-
-  let feeRate: BtcFeeResponse = defaultFeeRate;
-  let feePerVByte: BigNumber = new BigNumber(0);
-
-  if (!fee) {
-    feeRate = await getBtcFeeRate();
-  }
-
-  // Get sender address payment and ordinals private key
-  const privateKey = await getBtcPrivateKey({
-    seedPhrase,
-    index: BigInt(accountIndex),
-    network,
-  });
-
-  const taprootPrivateKey = await getBtcTaprootPrivateKey({
-    seedPhrase,
-    index: BigInt(accountIndex),
-    network,
-  });
-
-  // Get total sats to send (including custom fee)
-  let satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) : new BigNumber(ordinalUtxo.value);
-
-  // Select unspent outputs
-  let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
-
-  const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
-
-  if (sumSelectedOutputs.isLessThan(satsToSend)) {
-    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-  }
-
-  const recipients = [
-    {
-      address: recipientAddress,
-      amountSats: new BigNumber(ordinalUtxo.value),
-    },
-  ];
-
-  const changeAddress = btcAddress;
-
-  // Calculate transaction fee
-  let calculatedFee: BigNumber = new BigNumber(0);
-  if (!fee) {
-    const {
-      newSelectedUnspentOutputs,
-      fee: modifiedFee,
-      selectedFeeRate,
-    } = await getFee(
-      filteredUnspentOutputs,
-      selectedUnspentOutputs,
-      sumSelectedOutputs,
-      satsToSend,
-      recipients,
-      feeRate,
-      changeAddress,
-      network,
-      ordinalUtxo,
-    );
-
-    calculatedFee = modifiedFee;
-    selectedUnspentOutputs = newSelectedUnspentOutputs;
-    satsToSend = satsToSend.plus(modifiedFee);
-    feePerVByte = selectedFeeRate as BigNumber;
-  }
-
   try {
+    const btcClient = new BitcoinEsploraApiProvider({
+      network,
+    });
+    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+
+    // Make sure ordinal utxo is removed from utxo set used for fees
+    // This can be true if ordinal utxo is from the payment address
+
+    const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
+
+    let ordinalUtxoInPaymentAddress = false;
+    if (filteredUnspentOutputs.length < unspentOutputs.length) {
+      ordinalUtxoInPaymentAddress = true;
+    }
+
+    let feeRate: BtcFeeResponse = defaultFeeRate;
+    let feePerVByte: BigNumber = new BigNumber(0);
+
+    if (!fee) {
+      feeRate = await getBtcFeeRate();
+    }
+
+    // Get sender address payment and ordinals private key
+    const privateKey = await getBtcPrivateKey({
+      seedPhrase,
+      index: BigInt(accountIndex),
+      network,
+    });
+
+    const taprootPrivateKey = await getBtcTaprootPrivateKey({
+      seedPhrase,
+      index: BigInt(accountIndex),
+      network,
+    });
+
+    // Get total sats to send (including custom fee)
+    let satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) : new BigNumber(ordinalUtxo.value);
+
+    // Select unspent outputs
+    let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
+
+    const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+
+    if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+    }
+
+    const recipients = [
+      {
+        address: recipientAddress,
+        amountSats: new BigNumber(ordinalUtxo.value),
+      },
+    ];
+
+    const changeAddress = btcAddress;
+
+    // Calculate transaction fee
+    let calculatedFee: BigNumber = new BigNumber(0);
+    if (!fee) {
+      const {
+        newSelectedUnspentOutputs,
+        fee: modifiedFee,
+        selectedFeeRate,
+      } = await getFee(
+        filteredUnspentOutputs,
+        selectedUnspentOutputs,
+        sumSelectedOutputs,
+        satsToSend,
+        recipients,
+        feeRate,
+        changeAddress,
+        network,
+        ordinalUtxo,
+      );
+
+      calculatedFee = modifiedFee;
+      selectedUnspentOutputs = newSelectedUnspentOutputs;
+      satsToSend = satsToSend.plus(modifiedFee);
+      feePerVByte = selectedFeeRate as BigNumber;
+    }
+
     const tx = createOrdinalTransaction(
       privateKey,
       ordinalUtxoInPaymentAddress ? '' : taprootPrivateKey,

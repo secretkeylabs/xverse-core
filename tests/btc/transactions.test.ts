@@ -277,7 +277,9 @@ describe('bitcoin transactions', () => {
     const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
     const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
-    const { fee } = await getBtcFeesForOrdinalSend(recipientAddress, ordinalOutputs[0], btcAddress, network);
+    const { fee } = await getBtcFeesForOrdinalSend(recipientAddress, ordinalOutputs[0], btcAddress, network, [
+      ordinalOutputs[0],
+    ]);
 
     // expect transaction size to be 260 bytes;
     const txSize = 260;
