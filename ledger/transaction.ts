@@ -37,9 +37,13 @@ export async function getTransactionData(
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
-  const unspentOutputs = await btcClient.getUnspentUtxos(senderAddress);
+  const unspentOutputs: UTXO[] = await btcClient.getUnspentUtxos(senderAddress);
 
-  const filteredUnspentOutputs = filterUtxos(unspentOutputs, [ordinalUtxo!]);
+  let filteredUnspentOutputs = unspentOutputs;
+  
+  if (ordinalUtxo) {
+    filteredUnspentOutputs = filterUtxos(unspentOutputs, [ordinalUtxo]);
+  }
 
   let ordinalUtxoInPaymentAddress = false;
   if (filteredUnspentOutputs.length < unspentOutputs.length) {
