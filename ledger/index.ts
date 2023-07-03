@@ -209,13 +209,13 @@ export async function signLedgerTaprootBtcTransaction(
  * @returns the signed raw transaction in hex format
  * */
 
-export async function signLedgerMixedBtcTransaction(
+export async function* signLedgerMixedBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
   recipient: Recipient,
   ordinalUtxo?: UTXO
-  ): Promise<string> {
+  ): AsyncGenerator<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
 
@@ -285,14 +285,7 @@ export async function signLedgerMixedBtcTransaction(
     taprootScript,
     internalPubkey
   );
-
-  // Sign Segwit inputs
-  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
-  for (const signature of signatures) {
-    psbt.updateInput(signature[0], {
-      partialSig: [signature[1]],
-    });
-  }
+  yield 'Psbt created';
 
   if (!ordinalUtxoInPaymentAddress) {
     // Sign Taproot inputs
@@ -302,6 +295,15 @@ export async function signLedgerMixedBtcTransaction(
         tapKeySig: signature[1].signature,
       });
     }
+    yield 'Taproot inputs signed';
+  }
+
+  // Sign Segwit inputs
+  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+  for (const signature of signatures) {
+    psbt.updateInput(signature[0], {
+      partialSig: [signature[1]],
+    });
   }
 
   psbt.finalizeAllInputs();
