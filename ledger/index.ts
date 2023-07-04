@@ -21,6 +21,15 @@ import {
 import { Psbt } from 'bitcoinjs-lib';
 
 /**
+ * This function is used to get the master fingerprint from the ledger
+ * */
+export async function getMasterFingerPrint(transport: Transport): Promise<string> {
+  const app = new AppClient(transport);
+  const masterFingerPrint = await app.getMasterFingerprint();
+  return masterFingerPrint;
+}
+
+/**
  * This function is used to get the native segwit account data from the ledger
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
