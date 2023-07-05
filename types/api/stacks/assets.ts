@@ -88,6 +88,26 @@ export interface CoreInfo {
   network_id: number;
 }
 
+export interface CoinMetaData {
+  name: string;
+  symbol: string;
+  decimals: number;
+  total_supply: string;
+  token_uri: string;
+  description: string;
+  image_uri: string;
+  image_canonical_uri: string;
+  tx_id: string;
+  sender_address: string;
+  metadata: {
+    sip: number;
+    name: string;
+    description: string;
+    image: string;
+    cached_image: string;
+  };
+}
+
 export function getBnsNftName(nft: NonFungibleToken) {
   const hex = nft.value.hex;
   const cv = cvToJSON(hexToCV(hex));

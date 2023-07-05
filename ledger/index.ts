@@ -21,6 +21,15 @@ import {
 import { Psbt } from 'bitcoinjs-lib';
 
 /**
+ * This function is used to get the master fingerprint from the ledger
+ * */
+export async function getMasterFingerPrint(transport: Transport): Promise<string> {
+  const app = new AppClient(transport);
+  const masterFingerPrint = await app.getMasterFingerprint();
+  return masterFingerPrint;
+}
+
+/**
  * This function is used to get the native segwit account data from the ledger
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
@@ -36,18 +45,13 @@ export async function importNativeSegwitAccountFromLedger(
 
   const btcNetwork = network === 'Mainnet' ? 0 : 1;
   const masterFingerPrint = await app.getMasterFingerprint();
-  console.log('masterFingerPrint', masterFingerPrint);
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
-  console.log('extendedPublicKey', extendedPublicKey);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
     `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
   );
-  console.log('accountPolicy', accountPolicy);
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
-  console.log('address', address);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
-  console.log('publicKey', publicKey);
 
   return { address, publicKey: publicKey.toString('hex') };
 }
@@ -214,13 +218,13 @@ export async function signLedgerTaprootBtcTransaction(
  * @returns the signed raw transaction in hex format
  * */
 
-export async function signLedgerMixedBtcTransaction(
+export async function* signLedgerMixedBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
   recipient: Recipient,
   ordinalUtxo?: UTXO
-  ): Promise<string> {
+  ): AsyncGenerator<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
 
@@ -238,7 +242,7 @@ export async function signLedgerMixedBtcTransaction(
     witnessScript,
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(
+  const { selectedUTXOs, changeValue, ordinalUtxoInPaymentAddress } = await getTransactionData(
     network,
     senderAddress,
     recipient,
@@ -253,7 +257,6 @@ export async function signLedgerMixedBtcTransaction(
 
   const taprootExtendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
   const {
-    address: taprootSenderAddress,
     internalPubkey,
     taprootScript,
   } = getTaprootAccountDataFromXpub(taprootExtendedPublicKey, addressIndex, network);
@@ -270,7 +273,16 @@ export async function signLedgerMixedBtcTransaction(
     `[${masterFingerPrint}/86'/${coinType}'/0']${taprootExtendedPublicKey}`
   );
 
-  const psbt = await createMixedPsbt(
+  // If the ordinal UTXO is in the payment address, we need to create a native segwit PSBT
+  const psbt = ordinalUtxoInPaymentAddress ? await createNativeSegwitPsbt(
+    network,
+    recipient,
+    senderAddress,
+    changeValue,
+    selectedUTXOs,
+    [inputDerivation],
+    witnessScript,
+  ) : await createMixedPsbt(
     network,
     recipient,
     senderAddress,
@@ -282,20 +294,24 @@ export async function signLedgerMixedBtcTransaction(
     taprootScript,
     internalPubkey
   );
+  yield 'Psbt created';
+
+  if (!ordinalUtxoInPaymentAddress) {
+    // Sign Taproot inputs
+    const taprootSignatures = await app.signPsbt(psbt.toBase64(), taprootAccountPolicy, null);
+    for (const signature of taprootSignatures) {
+      psbt.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
+    }
+    yield 'Taproot inputs signed';
+  }
 
   // Sign Segwit inputs
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
   for (const signature of signatures) {
     psbt.updateInput(signature[0], {
       partialSig: [signature[1]],
-    });
-  }
-
-  // Sign Taproot inputs
-  const taprootSignatures = await app.signPsbt(psbt.toBase64(), taprootAccountPolicy, null);
-  for (const signature of taprootSignatures) {
-    psbt.updateInput(signature[0], {
-      tapKeySig: signature[1].signature,
     });
   }
 
