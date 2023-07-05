@@ -56,8 +56,9 @@ jobs:
         env:
           SHA: ${{ steps.git-commit.outputs.sha }}
           CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+
       - id: publish
-        run: npm publish --dry-run
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
