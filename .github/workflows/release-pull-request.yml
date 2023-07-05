@@ -35,6 +35,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
