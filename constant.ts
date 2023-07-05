@@ -30,7 +30,7 @@ export const BLOCKCYPHER_BASE_URI_MAINNET = 'https://api.blockcypher.com/v1/btc/
 
 export const BLOCKCYPHER_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/test3';
 
-export const NFT_BASE_URI = 'https://gamma.io/api/v1/collections';
+export const NFT_BASE_URI = 'https://stacks.gamma.io/api/v1/collections';
 
 export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
 
