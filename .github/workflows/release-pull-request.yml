@@ -67,17 +67,25 @@ jobs:
         env:
           VERSION: ${{ steps.published-version.outputs.version }}
 
+      - name: Delete old bot comments
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: maheshrayas/action-pr-comment-delete@v3.0
+        with:
+          github_token: '${{ secrets.GITHUB_TOKEN }}'
+          org: '${{ github.repository_owner}}'
+          repo: '${{ github.event.repository.name }}'
+          user: 'github-actions[bot]'
+          issue: '${{github.event.number}}'
       - name: Post test package PR comment
         if: ${{ github.event_name == 'pull_request' }}
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
           VERSION: ${{ steps.published-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_URL: ${{ github.event.pull_request.comments_url }}
         run: |
           curl \
             -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments \
+            $GITHUB_URL \
             -d "{\"body\":\"> Test this PR with \`npm i @secretkeylabs/xverse-core@$VERSION\`\"}"
