@@ -60,7 +60,7 @@ jobs:
           CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
 
       - id: publish
-        run: npm publish
+        run: npm publish --tag pr
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
