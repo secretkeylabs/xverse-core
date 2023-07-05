@@ -1,0 +1,76 @@
+name: Release & Publish Package
+
+on:
+  pull_request:
+    branches: [develop]
+
+  workflow_dispatch:
+
+jobs:
+  fork-check:
+    runs-on: ubuntu-latest
+    outputs:
+      is-not-fork: ${{ steps.check.outputs.is_not_fork }}
+    steps:
+      - id: check
+        run: echo "::set-output name=is_not_fork::${{ github.repository == 'secretkeylabs/xverse-core' }}"
+
+  test:
+    needs: fork-check
+    if: needs.fork-check.outputs.is-not-fork == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+      # TODO: enable linting once ready
+      # - run: npm run lint
+      - run: npm test
+
+  publish-beta:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://npm.pkg.github.com/
+
+      - id: git-commit
+        run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+      - run: echo $SHA
+        env:
+          SHA: ${{ steps.git-commit.outputs.sha }}
+
+      - run: npm ci
+      - run: npm run build:esm
+
+      - id: tag-version
+        run: npm version prerelease --preid=$SHA --no-git-tag-version
+        env:
+          SHA: ${{ steps.git-commit.outputs.sha }}
+      - id: publish
+        run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - id: published-version
+        run: echo "::set-output name=version::$(npm pkg get version  | tr -d '"')"
+
+      - name: Post test package PR comment
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          curl \
+            -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments \
+            -d '{"body":"> Test this PR with `npm i @secretkeylabs/xverse-core@${{ steps.published-version.outputs.version }}`"}'
