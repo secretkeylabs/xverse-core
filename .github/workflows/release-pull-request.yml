@@ -74,15 +74,19 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          curl https://api.github.com/repos/secretkeylabs/xverse-core/issues/170/comments \
+          curl \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/$REPO/issues/$PR_ID/comments \
           | jq ".[] | select(.user.login==\"github-actions[bot]\") | .id" \
           | xargs -I %q curl \
             -L \
-            -X DELETE \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN"\
-            https://api.github.com/repos/secretkeylabs/xverse-core/issues/comments/%q -vvv
+            https://api.github.com/repos/$REPO/issues/comments/%q
       - name: Post test package PR comment
         if: ${{ github.event_name == 'pull_request' }}
         env:
