@@ -16,8 +16,6 @@ jobs:
         run: echo "::set-output name=is_not_fork::${{ github.repository == 'secretkeylabs/xverse-core' }}"
 
   test:
-    needs: fork-check
-    if: needs.fork-check.outputs.is-not-fork == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +29,10 @@ jobs:
       - run: npm test
 
   publish-beta:
-    needs: test
+    needs:
+      - test
+      - fork-check
+    if: needs.fork-check.outputs.is-not-fork == 'true'
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -84,6 +85,7 @@ jobs:
           | jq ".[] | select(.user.login==\"github-actions[bot]\") | .id" \
           | xargs -I %q curl \
             -L \
+            -X DELETE \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN"\
             https://api.github.com/repos/$REPO/issues/comments/%q
