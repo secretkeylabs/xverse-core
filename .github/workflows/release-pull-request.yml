@@ -77,13 +77,12 @@ jobs:
         run: |
           curl https://api.github.com/repos/secretkeylabs/xverse-core/issues/170/comments \
           | jq ".[] | select(.user.login==\"github-actions[bot]\") | .id" \
-          | xargs -n1 -I %q curl \
+          | xargs -I %q curl \
             -L \
             -X DELETE \
-            -H "Accept: application/vnd.github+json" \
+            -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/secretkeylabs/xverse-core/issues/comments/%q
+            https://api.github.com/repos/secretkeylabs/xverse-core/issues/comments/%q -vvv
       - name: Post test package PR comment
         if: ${{ github.event_name == 'pull_request' }}
         env:
