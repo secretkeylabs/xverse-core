@@ -659,125 +659,122 @@ export async function signOrdinalSendTransaction(
   fee?: BigNumber,
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
-  try {
-    const btcClient = new BitcoinEsploraApiProvider({
-      network,
-    });
-    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
 
-    // Make sure ordinal utxo is removed from utxo set used for fees
-    // This can be true if ordinal utxo is from the payment address
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
 
-    const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
+  // Make sure ordinal utxo is removed from utxo set used for fees
+  // This can be true if ordinal utxo is from the payment address
 
-    let ordinalUtxoInPaymentAddress = false;
-    if (filteredUnspentOutputs.length < unspentOutputs.length) {
-      ordinalUtxoInPaymentAddress = true;
-    }
+  const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
 
-    let feeRate: BtcFeeResponse = defaultFeeRate;
-    let feePerVByte: BigNumber = new BigNumber(0);
+  let ordinalUtxoInPaymentAddress = false;
+  if (filteredUnspentOutputs.length < unspentOutputs.length) {
+    ordinalUtxoInPaymentAddress = true;
+  }
 
-    if (!fee) {
-      feeRate = await getBtcFeeRate();
-    }
+  let feeRate: BtcFeeResponse = defaultFeeRate;
+  let feePerVByte: BigNumber = new BigNumber(0);
 
-    // Get sender address payment and ordinals private key
-    const privateKey = await getBtcPrivateKey({
-      seedPhrase,
-      index: BigInt(accountIndex),
-      network,
-    });
+  if (!fee) {
+    feeRate = await getBtcFeeRate();
+  }
 
-    const taprootPrivateKey = await getBtcTaprootPrivateKey({
-      seedPhrase,
-      index: BigInt(accountIndex),
-      network,
-    });
+  // Get sender address payment and ordinals private key
+  const privateKey = await getBtcPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network,
+  });
 
-    // Get total sats to send (including custom fee)
-    let satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) : new BigNumber(ordinalUtxo.value);
+  const taprootPrivateKey = await getBtcTaprootPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network,
+  });
 
-    // Select unspent outputs
-    let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
+  // Get total sats to send (including custom fee)
+  let satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) : new BigNumber(ordinalUtxo.value);
 
-    const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
+  // Select unspent outputs
+  let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
 
-    if (sumSelectedOutputs.isLessThan(satsToSend)) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-    }
+  const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
-    const recipients = [
-      {
-        address: recipientAddress,
-        amountSats: new BigNumber(ordinalUtxo.value),
-      },
-    ];
+  if (sumSelectedOutputs.isLessThan(satsToSend)) {
+    throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+  }
 
-    const changeAddress = btcAddress;
+  const recipients = [
+    {
+      address: recipientAddress,
+      amountSats: new BigNumber(ordinalUtxo.value),
+    },
+  ];
 
-    // Calculate transaction fee
-    let calculatedFee: BigNumber = new BigNumber(0);
-    if (!fee) {
-      const {
-        newSelectedUnspentOutputs,
-        fee: modifiedFee,
-        selectedFeeRate,
-      } = await getFee(
-        filteredUnspentOutputs,
-        selectedUnspentOutputs,
-        sumSelectedOutputs,
-        satsToSend,
-        recipients,
-        feeRate,
-        changeAddress,
-        network,
-        ordinalUtxo,
-      );
+  const changeAddress = btcAddress;
 
-      calculatedFee = modifiedFee;
-      selectedUnspentOutputs = newSelectedUnspentOutputs;
-      satsToSend = satsToSend.plus(modifiedFee);
-      feePerVByte = selectedFeeRate as BigNumber;
-    }
-
-    const tx = createOrdinalTransaction(
-      privateKey,
-      ordinalUtxoInPaymentAddress ? '' : taprootPrivateKey,
+  // Calculate transaction fee
+  let calculatedFee: BigNumber = new BigNumber(0);
+  if (!fee) {
+    const {
+      newSelectedUnspentOutputs,
+      fee: modifiedFee,
+      selectedFeeRate,
+    } = await getFee(
+      filteredUnspentOutputs,
       selectedUnspentOutputs,
+      sumSelectedOutputs,
       satsToSend,
       recipients,
+      feeRate,
       changeAddress,
       network,
+      ordinalUtxo,
     );
 
-    if (!ordinalUtxoInPaymentAddress) {
-      // Sign ordinal input at index 0
-      tx.signIdx(hex.decode(taprootPrivateKey), 0);
-
-      // Sign remaining inputs
-      for (let index = 1; index < selectedUnspentOutputs.length; index++) {
-        tx.signIdx(hex.decode(privateKey), index);
-      }
-    } else {
-      // Sign all inputs with same private key
-      tx.sign(hex.decode(privateKey));
-    }
-
-    tx.finalize();
-
-    const signedBtcTx: SignedBtcTx = {
-      tx,
-      signedTx: tx.hex,
-      fee: fee ?? calculatedFee,
-      feePerVByte,
-      total: satsToSend,
-    };
-
-    return await Promise.resolve(signedBtcTx);
-  } catch (error) {
-    return Promise.reject(error.toString());
+    calculatedFee = modifiedFee;
+    selectedUnspentOutputs = newSelectedUnspentOutputs;
+    satsToSend = satsToSend.plus(modifiedFee);
+    feePerVByte = selectedFeeRate as BigNumber;
   }
+
+  const tx = createOrdinalTransaction(
+    privateKey,
+    ordinalUtxoInPaymentAddress ? '' : taprootPrivateKey,
+    selectedUnspentOutputs,
+    satsToSend,
+    recipients,
+    changeAddress,
+    network,
+  );
+
+  if (!ordinalUtxoInPaymentAddress) {
+    // Sign ordinal input at index 0
+    tx.signIdx(hex.decode(taprootPrivateKey), 0);
+
+    // Sign remaining inputs
+    for (let index = 1; index < selectedUnspentOutputs.length; index++) {
+      tx.signIdx(hex.decode(privateKey), index);
+    }
+  } else {
+    // Sign all inputs with same private key
+    tx.sign(hex.decode(privateKey));
+  }
+
+  tx.finalize();
+
+  const signedBtcTx: SignedBtcTx = {
+    tx,
+    signedTx: tx.hex,
+    fee: fee ?? calculatedFee,
+    feePerVByte,
+    total: satsToSend,
+  };
+
+  return await Promise.resolve(signedBtcTx);
 }
 
 export async function signNonOrdinalBtcSendTransaction(
