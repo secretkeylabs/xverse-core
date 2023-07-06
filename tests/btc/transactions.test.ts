@@ -248,6 +248,17 @@ describe('bitcoin transactions', () => {
         },
         value: ordinalValue,
       },
+      {
+        status: {
+          block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
+          block_height: 797404,
+          block_time: 1688626274,
+          confirmed: true,
+        },
+        txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
+        value: 1347,
+        vout: 0,
+      },
     ];
 
     const utxos: Array<UTXO> = [
@@ -262,6 +273,7 @@ describe('bitcoin transactions', () => {
         },
         value: unspent1Value,
       },
+      ...ordinalOutputs,
     ];
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
@@ -279,8 +291,6 @@ describe('bitcoin transactions', () => {
 
     const ordinalUtxos = [
       {
-        address: '3BMxVoc3NVt8BHakAh28WZrpQqQKCxV28U',
-        blockHeight: 797404,
         status: {
           block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
           block_height: 797404,
