@@ -774,7 +774,7 @@ export async function signOrdinalSendTransaction(
     total: satsToSend,
   };
 
-  return await Promise.resolve(signedBtcTx);
+  return signedBtcTx;
 }
 
 export async function signNonOrdinalBtcSendTransaction(
