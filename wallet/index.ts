@@ -247,7 +247,7 @@ interface EncryptMnemonicArgs {
     salt: string;
     hash: string;
   }>;
-  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
+  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<string>;
 }
 
 interface DecryptMnemonicArgs {
@@ -257,23 +257,21 @@ interface DecryptMnemonicArgs {
     salt: string;
     hash: string;
   }>;
-  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
+  mnemonicDecryptionHandler: (seed: string, key: string) => Promise<string>;
 }
 
 export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
-  const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
+  const { mnemonicEncryptionHandler, password, seed } = cb;
 
-  const { hash } = await passwordHashGenerator(password);
-  const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
+  const encryptedSeed = await mnemonicEncryptionHandler(seed, password);
 
-  return encryptedSeedBuffer.toString('hex');
+  return encryptedSeed;
 }
 
 export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
-  const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
+  const { mnemonicDecryptionHandler, password, encryptedSeed } = cb;
 
-  const { hash } = await passwordHashGenerator(password);
-  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
+  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, password);
 
   return seedPhrase;
 }
