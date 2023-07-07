@@ -25,11 +25,6 @@ export function bip0322Hash(message: string) {
   return result.toString('hex');
 }
 
-const toUint8 = (buf: Buffer): Uint8Array => {
-  const uin = new Uint8Array(buf.length);
-  return uin.map((a, index, arr) => (arr[index] = buf[index]));
-};
-
 function encodeVarString(b: Uint8Array) {
   return Buffer.concat([encode(b.byteLength), b]);
 }
