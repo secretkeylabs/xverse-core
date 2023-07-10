@@ -30,7 +30,7 @@ import {
 export async function getTransactionData(
   network: NetworkType,
   senderAddress: string,
-  recipient: Array<Recipient>,
+  recipients: Array<Recipient>,
   ordinalUtxo?: UTXO
 ) {
   // Get sender address unspent outputs
@@ -54,7 +54,7 @@ export async function getTransactionData(
 
    // Get total sats to send (including custom fee)
    let amountSats = new BigNumber(0);
-   recipient.forEach((value) => {
+   recipients.forEach((value) => {
     amountSats = amountSats.plus(value.amountSats);
    });
 
@@ -72,7 +72,7 @@ export async function getTransactionData(
     selectedUTXOs,
     sumOfSelectedUTXOs,
     amountSats,
-    recipient,
+    recipients,
     feeRate,
     senderAddress,
     network,
@@ -103,7 +103,7 @@ export async function getTransactionData(
  * */
 export async function createNativeSegwitPsbt(
   network: NetworkType,
-  recipient: Array<Recipient>,
+  recipients: Array<Recipient>,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
@@ -135,7 +135,7 @@ export async function createNativeSegwitPsbt(
       bip32Derivation: inputDerivation,
     });
   }
-  recipient.forEach((value) => {
+  recipients.forEach((value) => {
     psbt.addOutputs([
       {
         address: value.address,
@@ -170,7 +170,7 @@ export function addSignitureToStxTransaction(transaction: string | Buffer, signa
  * */
 export async function createTaprootPsbt(
   network: NetworkType,
-  recipient:  Array<Recipient>,
+  recipients:  Array<Recipient>,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
@@ -193,7 +193,7 @@ export async function createTaprootPsbt(
       tapInternalKey,
     });
   }
-  recipient.forEach((value) => {
+  recipients.forEach((value) => {
     psbt.addOutputs([
       {
         address: value.address,
@@ -220,7 +220,7 @@ export async function createTaprootPsbt(
  * */
 export async function createMixedPsbt(
   network: NetworkType,
-  recipient: Recipient,
+  recipients: Array<Recipient>,
   changeAddress: string,
   changeValue: BigNumber,
   inputUTXOs: UTXO[],
@@ -232,7 +232,6 @@ export async function createMixedPsbt(
 ): Promise<Psbt> {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
-  const { address: recipientAddress, amountSats } = recipient;
 
   const transactionMap = new Map<string, Buffer>();
   for (const utxo of inputUTXOs) {
@@ -268,11 +267,16 @@ export async function createMixedPsbt(
     bip32Derivation: inputDerivation,
   });
 
+  recipients.forEach((value) => {
+    psbt.addOutputs([
+      {
+        address: value.address,
+        value: value.amountSats.toNumber(),
+      },
+    ]);
+  });
+
   psbt.addOutputs([
-    {
-      address: recipientAddress,
-      value: amountSats.toNumber(),
-    },
     {
       address: changeAddress,
       value: changeValue.toNumber(),
