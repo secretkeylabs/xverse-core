@@ -245,8 +245,12 @@ export function parsePsbt(
         // @ts-expect-error:
         pubkey: outputScript.pubkey,
       });
-    } else {
-      // @ts-expect-error:
+    } 
+    else if(outputScript.type === 'unknown'){
+      outputAddress = new TextDecoder().decode(outputScript.script).toString().replace(/[\x00-\x1F\x7F]/g, '');
+    }
+    else {
+       // @ts-expect-error:
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
         // @ts-expect-error:
