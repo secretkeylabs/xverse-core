@@ -232,30 +232,37 @@ export async function createMixedPsbt(
     transactionMap.set(utxo.txid, Buffer.from(response.data, 'hex'));
   }
 
-  // Adding Taproot input
-  psbt.addInput({
-    hash: inputUTXOs[0].txid,
-    index: inputUTXOs[0].vout,
-    witnessUtxo: {
-      script: taprootScript,
-      value: inputUTXOs[0].value,
-    },
-    tapBip32Derivation: taprootInputDerivation,
-    tapInternalKey,
-  });
-  
-  // Adding Segwit input
-  psbt.addInput({
-    hash: inputUTXOs[1].txid,
-    index: inputUTXOs[1].vout,
-    // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
-    witnessUtxo: {
-      script: witnessScript,
-      value: inputUTXOs[1].value,
-    },
-    nonWitnessUtxo: transactionMap.get(inputUTXOs[1].txid),
-    bip32Derivation: inputDerivation,
-  });
+  const segwitInputs = inputUTXOs.filter(utxo => utxo?.address === changeAddress);
+  const taprootInputs = inputUTXOs.filter(utxo => !segwitInputs.some(input => utxo.txid === input.txid));
+
+  // Adding Taproot inputs
+  for (const utxo of taprootInputs) {
+    psbt.addInput({
+      hash: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: taprootScript,
+        value: utxo.value,
+      },
+      tapBip32Derivation: taprootInputDerivation,
+      tapInternalKey,
+    });
+  }
+
+  // Adding Segwit inputs
+  for (const utxo of segwitInputs) {
+    psbt.addInput({
+      hash: utxo.txid,
+      index: utxo.vout,
+      // both nonWitnessUtxo and witnessUtxo are required or the ledger displays warning message
+      witnessUtxo: {
+        script: witnessScript,
+        value: utxo.value,
+      },
+      nonWitnessUtxo: transactionMap.get(utxo.txid),
+      bip32Derivation: inputDerivation,
+    });
+  }
 
   psbt.addOutputs([
     {
