@@ -94,7 +94,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient,
+  recipients: Array<Recipient>,
   ): Promise<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
   const app = new AppClient(transport);
@@ -116,7 +116,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
     senderAddress,
-    recipient,
+    recipients,
   );
 
   const inputDerivation: Bip32Derivation = {
@@ -127,7 +127,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
 
   const psbt = await createNativeSegwitPsbt(
     network,
-    recipient,
+    recipients,
     senderAddress,
     changeValue,
     selectedUTXOs,
@@ -155,7 +155,7 @@ export async function signLedgerTaprootBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient,
+  recipients: Array<Recipient>,
   btcAddress: string,
   ordinalUtxo?: UTXO
   ): Promise<string> {
@@ -179,7 +179,7 @@ export async function signLedgerTaprootBtcTransaction(
   const { selectedUTXOs, changeValue } = await getTransactionData(
     network,
     btcAddress,
-    recipient,
+    recipients,
     ordinalUtxo
   );
 
@@ -192,7 +192,7 @@ export async function signLedgerTaprootBtcTransaction(
   };
   const psbt = await createTaprootPsbt(
     network,
-    recipient,
+    recipients,
     senderAddress,
     changeValue,
     selectedUTXOs,
@@ -222,7 +222,7 @@ export async function* signLedgerMixedBtcTransaction(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  recipient: Recipient,
+  recipients: Array<Recipient>,
   ordinalUtxo?: UTXO
   ): AsyncGenerator<string> {
   const coinType = network === 'Mainnet' ? 0 : 1;
@@ -245,7 +245,7 @@ export async function* signLedgerMixedBtcTransaction(
   const { selectedUTXOs, changeValue, ordinalUtxoInPaymentAddress } = await getTransactionData(
     network,
     senderAddress,
-    recipient,
+    recipients,
     ordinalUtxo
   );
 
@@ -276,7 +276,7 @@ export async function* signLedgerMixedBtcTransaction(
   // If the ordinal UTXO is in the payment address, we need to create a native segwit PSBT
   const psbt = ordinalUtxoInPaymentAddress ? await createNativeSegwitPsbt(
     network,
-    recipient,
+    recipients,
     senderAddress,
     changeValue,
     selectedUTXOs,
@@ -284,7 +284,7 @@ export async function* signLedgerMixedBtcTransaction(
     witnessScript,
   ) : await createMixedPsbt(
     network,
-    recipient,
+    recipients,
     senderAddress,
     changeValue,
     selectedUTXOs,
