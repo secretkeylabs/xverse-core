@@ -121,16 +121,10 @@ export async function signPsbt(
         // If input is taproot type and didn't set tapInternalKey,
         // assume it is implied to be the account's publicKey
         const input = psbt.getInput(signingIndex);
-        const witnessOutputScript = input.witnessUtxo?.script;
+        const witnessOutputScript = input.witnessUtxo?.script &&
+          btc.OutScript.decode(input.witnessUtxo.script);
 
-        // checking if witnessOutputScript matches: OP_1 OP_PUSH_32 <32 bytes>
-        if (
-          !input.tapInternalKey &&
-          witnessOutputScript &&
-          witnessOutputScript.length === 34 &&
-          witnessOutputScript[0] === 0x51 &&
-          witnessOutputScript[1] === 32
-        ) {
+        if (!input.tapInternalKey && witnessOutputScript?.type === 'tr') {
           input.tapInternalKey = toXOnly(Buffer.from(publicKey, 'hex'));
         }
 
