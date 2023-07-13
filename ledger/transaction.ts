@@ -45,11 +45,8 @@ export async function getTransactionData(
     filteredUnspentOutputs = filterUtxos(unspentOutputs, [ordinalUtxo]);
   }
 
-  let ordinalUtxoInPaymentAddress = false;
-  if (filteredUnspentOutputs.length < unspentOutputs.length) {
-    ordinalUtxoInPaymentAddress = true;
-  }
-  
+  const ordinalUtxoInPaymentAddress = filteredUnspentOutputs.length < unspentOutputs.length;
+
   let feeRate: BtcFeeResponse = defaultFeeRate;
 
    // Get total sats to send (including custom fee)

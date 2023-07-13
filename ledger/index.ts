@@ -20,6 +20,8 @@ import {
 } from './transaction';
 import { Psbt } from 'bitcoinjs-lib';
 
+const getCoinType = (network: NetworkType) => network === 'Mainnet' ? 0 : 1;
+
 /**
  * This function is used to get the master fingerprint from the ledger
  * */
@@ -43,7 +45,7 @@ export async function importNativeSegwitAccountFromLedger(
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
-  const btcNetwork = network === 'Mainnet' ? 0 : 1;
+  const btcNetwork = getCoinType(network);
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -70,7 +72,7 @@ export async function importTaprootAccountFromLedger(
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
-  const btcNetwork = network === 'Mainnet' ? 0 : 1;
+  const btcNetwork = getCoinType(network);
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -96,7 +98,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   addressIndex: number,
   recipients: Array<Recipient>,
   ): Promise<string> {
-  const coinType = network === 'Mainnet' ? 0 : 1;
+  const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
   //Get account details from ledger to not rely on state
@@ -159,7 +161,7 @@ export async function signLedgerTaprootBtcTransaction(
   btcAddress: string,
   ordinalUtxo?: UTXO
   ): Promise<string> {
-  const coinType = network === 'Mainnet' ? 0 : 1;
+  const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
   //Get account details from ledger to not rely on state
@@ -225,7 +227,7 @@ export async function* signLedgerMixedBtcTransaction(
   recipients: Array<Recipient>,
   ordinalUtxo?: UTXO
   ): AsyncGenerator<string> {
-  const coinType = network === 'Mainnet' ? 0 : 1;
+  const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
   //Get account details from ledger to not rely on state
@@ -333,7 +335,7 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   indexesToSign: number[],
   base64Psbt: string
 ): Promise<string> {
-  const coinType = network === 'Mainnet' ? 0 : 1;
+  const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
   //Get account details from ledger to not rely on state

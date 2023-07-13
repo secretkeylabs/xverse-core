@@ -1,4 +1,6 @@
-export interface OldAccount {
+export type AccountType = 'ledger' | 'software';
+
+export interface Account {
   id: number;
   stxAddress: string;
   btcAddress: string;
@@ -8,10 +10,6 @@ export interface OldAccount {
   btcPublicKey: string;
   ordinalsPublicKey: string;
   bnsName?: string;
-}
-
-export type AccountType = 'ledger' | 'software';
-export interface Account extends OldAccount {
   accountType?: AccountType;
   accountName?: string;
 }
