@@ -6,6 +6,7 @@ export enum ErrorCodes {
 
 export class ResponseError extends Error {
   public statusCode: number;
+
   constructor(code: number) {
     super(code.toString());
     this.name = 'ResponseError';

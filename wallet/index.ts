@@ -49,8 +49,7 @@ export function deriveStxAddressChain(chain: ChainID, index = 0n) {
     }
     const ecPair = ECPair.fromPrivateKey(childKey.privateKey);
     const privateKey = ecPairToHexString(ecPair);
-    const txVersion =
-      chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
+    const txVersion = chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
     return {
       childKey,
       address: getAddressFromPrivateKey(privateKey, txVersion),
@@ -85,7 +84,7 @@ export async function walletFromSeedPhrase({
 
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
-    index
+    index,
   );
 
   const { address, privateKey } = deriveStxAddressKeychain(rootNode);
@@ -206,31 +205,19 @@ export async function getBtcTaprootPrivateKey({
   return btcChild.privateKey!.toString('hex');
 }
 
-export function validateStxAddress({
-  stxAddress,
-  network,
-}: {
-  stxAddress: string;
-  network: NetworkType;
-}) {
+export function validateStxAddress({ stxAddress, network }: { stxAddress: string; network: NetworkType }) {
   try {
     const result = c32addressDecode(stxAddress);
     if (result[0] && result[1]) {
       const addressVersion = result[0];
       if (network === 'Mainnet') {
         if (
-          !(
-            addressVersion === AddressVersion.MainnetSingleSig ||
-            addressVersion === AddressVersion.MainnetMultiSig
-          )
+          !(addressVersion === AddressVersion.MainnetSingleSig || addressVersion === AddressVersion.MainnetMultiSig)
         ) {
           return false;
         }
       } else {
-        if (
-          result[0] !== AddressVersion.TestnetSingleSig &&
-          result[0] !== AddressVersion.TestnetMultiSig
-        ) {
+        if (result[0] !== AddressVersion.TestnetSingleSig && result[0] !== AddressVersion.TestnetMultiSig) {
           return false;
         }
       }
@@ -243,13 +230,7 @@ export function validateStxAddress({
   }
 }
 
-export function validateBtcAddress({
-  btcAddress,
-  network,
-}: {
-  btcAddress: string;
-  network: NetworkType;
-}): boolean {
+export function validateBtcAddress({ btcAddress, network }: { btcAddress: string; network: NetworkType }): boolean {
   const btcNetwork = network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
   try {
     return validate(btcAddress, btcNetwork);
@@ -299,7 +280,7 @@ export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
-  accountIndex: number
+  accountIndex: number,
 ): Promise<Keychain> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
