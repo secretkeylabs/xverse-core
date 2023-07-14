@@ -35,6 +35,7 @@ export async function getTransactionData(
   network: NetworkType,
   senderAddress: string,
   recipients: Array<Recipient>,
+  feeRateInput?: string,
   ordinalUtxo?: UTXO
 ) {
   // Get sender address unspent outputs
@@ -71,7 +72,7 @@ export async function getTransactionData(
     sumOfSelectedUTXOs,
     amountSats,
     recipients,
-    feeRate,
+    feeRateInput || feeRate,
     senderAddress,
     network,
     ordinalUtxo

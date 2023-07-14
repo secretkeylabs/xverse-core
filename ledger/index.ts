@@ -105,11 +105,12 @@ export async function signLedgerNativeSegwitBtcTransaction(
   network: NetworkType,
   addressIndex: number,
   recipients: Array<Recipient>,
-  ): Promise<string> {
+  feeRateInput?: string,
+): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
-  //Get account details from ledger to not rely on state
+  // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -127,6 +128,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
     network,
     senderAddress,
     recipients,
+    feeRateInput,
   );
 
   const inputDerivation: Bip32Derivation = {
@@ -173,7 +175,7 @@ export async function signLedgerTaprootBtcTransaction(
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
-  //Get account details from ledger to not rely on state
+  // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -235,6 +237,7 @@ export async function* signLedgerMixedBtcTransaction(
   network: NetworkType,
   addressIndex: number,
   recipients: Array<Recipient>,
+  feeRateInput?: string,
   ordinalUtxo?: UTXO
   ): AsyncGenerator<string> {
   const coinType = getCoinType(network);
@@ -258,6 +261,7 @@ export async function* signLedgerMixedBtcTransaction(
     network,
     senderAddress,
     recipients,
+    feeRateInput,
     ordinalUtxo
   );
 
@@ -350,7 +354,7 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
-  //Get account details from ledger to not rely on state
+  // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
