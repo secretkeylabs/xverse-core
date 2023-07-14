@@ -53,11 +53,8 @@ export async function getTransactionData(
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
 
-   // Get total sats to send (including custom fee)
-   let amountSats = new BigNumber(0);
-   recipients.forEach((value) => {
-    amountSats = amountSats.plus(value.amountSats);
-   });
+  // Get total sats to send (including custom fee)
+  const amountSats = recipients.reduce((acc, value) => acc.plus(value.amountSats), new BigNumber(0));
 
   let selectedUTXOs = selectUnspentOutputs(amountSats, filteredUnspentOutputs, ordinalUtxo);
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
