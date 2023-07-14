@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.0.2",
+    "@noble/secp256k1": "^1.7.1",
     "@scure/base": "^1.1.1",
     "@scure/btc-signer": "^1.0.0",
     "@stacks/encryption": "6.1.1",
@@ -54,6 +55,7 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-prettier": "^4.2.1",
+    "fork-ts-checker-webpack-plugin": "^8.0.0",
     "prettier": "^2.8.7",
     "rimraf": "^3.0.2",
     "ts-loader": "^9.4.1",
