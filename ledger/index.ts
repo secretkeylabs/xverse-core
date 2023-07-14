@@ -24,6 +24,8 @@ const getCoinType = (network: NetworkType) => network === 'Mainnet' ? 0 : 1;
 
 /**
  * This function is used to get the master fingerprint from the ledger
+ * @param transport - the transport object with connected ledger device
+ * @returns master fingerprint in a string format
  * */
 export async function getMasterFingerPrint(transport: Transport): Promise<string> {
   const app = new AppClient(transport);
@@ -33,6 +35,8 @@ export async function getMasterFingerPrint(transport: Transport): Promise<string
 
 /**
  * This function is used to get the native segwit account data from the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param network - the network type (Mainnet or Testnet)
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
@@ -60,6 +64,8 @@ export async function importNativeSegwitAccountFromLedger(
 
 /**
  * This function is used to get the taproot account data from the ledger
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to import
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
@@ -88,7 +94,9 @@ export async function importTaprootAccountFromLedger(
 /**
  * This function is used to sign a Native Segwit transaction with the ledger
  * @param transport - the transport object with connected ledger device
- * @param recipient - the recipient of the transaction
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
+ * @param recipients - an array of recipients of the transaction
  * @returns the signed raw transaction in hex format
  * */
 
@@ -150,7 +158,9 @@ export async function signLedgerNativeSegwitBtcTransaction(
 /**
  * This function is used to sign a Taproot transaction with the ledger
  * @param transport - the transport object with connected ledger device
- * @param recipient - the recipient of the transaction
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
+ * @param recipients - an array of recipients of the transaction
  * @returns the signed raw transaction in hex format
  * */
 export async function signLedgerTaprootBtcTransaction(
@@ -159,8 +169,7 @@ export async function signLedgerTaprootBtcTransaction(
   addressIndex: number,
   recipients: Array<Recipient>,
   btcAddress: string,
-  ordinalUtxo?: UTXO
-  ): Promise<string> {
+): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
@@ -182,7 +191,6 @@ export async function signLedgerTaprootBtcTransaction(
     network,
     btcAddress,
     recipients,
-    ordinalUtxo
   );
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
@@ -215,7 +223,9 @@ export async function signLedgerTaprootBtcTransaction(
 /**
  * This function is used to sign a Native Segwit and Taproot transaction with the ledger
  * @param transport - the transport object with connected ledger device
- * @param recipient - the recipient of the transaction
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
+ * @param recipients - an array of recipients of the transaction
  * @param ordinalUtxo - the UTXO to send
  * @returns the signed raw transaction in hex format
  * */
@@ -230,7 +240,7 @@ export async function* signLedgerMixedBtcTransaction(
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
-  //Get account details from ledger to not rely on state
+  // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -324,6 +334,8 @@ export async function* signLedgerMixedBtcTransaction(
 /**
  * This function is used to sign an incoming Native Segwit Psbt with the ledger
  * @param transport - the transport object with connected ledger device
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
  * @param indexesToSign - the indexes of the inputs to sign
  * @param base64Psbt - the incoming transaction in base64 format
  * @returns the signed raw transaction in hex format

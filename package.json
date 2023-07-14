@@ -30,7 +30,6 @@
     "ecpair": "^2.1.0",
     "jsontokens": "^4.0.1",
     "ledger-bitcoin": "^0.2.1",
-    "micro-btc-signer": "^0.4.2",
     "process": "^0.11.10",
     "util": "^0.12.4",
     "uuidv4": "^6.2.13",
