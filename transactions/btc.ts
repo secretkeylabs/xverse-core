@@ -279,6 +279,7 @@ export async function getBtcFeesForOrdinalSend(
   ordinalUtxo: UTXO,
   btcAddress: string,
   network: NetworkType,
+  addressOrdinalsUtxos: UTXO[],
   feeMode?: string,
   feeRateInput?: string,
 ): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
@@ -287,7 +288,7 @@ export async function getBtcFeesForOrdinalSend(
       network,
     });
     const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
-
+    const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
     feeRate = await getBtcFeeRate();
@@ -296,7 +297,7 @@ export async function getBtcFeesForOrdinalSend(
     const satsToSend = new BigNumber(ordinalUtxo.value);
 
     // Select unspent outputs
-    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs, ordinalUtxo);
+    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
 
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
@@ -658,6 +659,7 @@ export async function signOrdinalSendTransaction(
   fee?: BigNumber,
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
+
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
@@ -739,44 +741,40 @@ export async function signOrdinalSendTransaction(
     feePerVByte = selectedFeeRate as BigNumber;
   }
 
-  try {
-    const tx = createOrdinalTransaction(
-      privateKey,
-      ordinalUtxoInPaymentAddress ? '' : taprootPrivateKey,
-      selectedUnspentOutputs,
-      satsToSend,
-      recipients,
-      changeAddress,
-      network,
-    );
+  const tx = createOrdinalTransaction(
+    privateKey,
+    ordinalUtxoInPaymentAddress ? '' : taprootPrivateKey,
+    selectedUnspentOutputs,
+    satsToSend,
+    recipients,
+    changeAddress,
+    network,
+  );
 
-    if (!ordinalUtxoInPaymentAddress) {
-      // Sign ordinal input at index 0
-      tx.signIdx(hex.decode(taprootPrivateKey), 0);
+  if (!ordinalUtxoInPaymentAddress) {
+    // Sign ordinal input at index 0
+    tx.signIdx(hex.decode(taprootPrivateKey), 0);
 
-      // Sign remaining inputs
-      for (let index = 1; index < selectedUnspentOutputs.length; index++) {
-        tx.signIdx(hex.decode(privateKey), index);
-      }
-    } else {
-      // Sign all inputs with same private key
-      tx.sign(hex.decode(privateKey));
+    // Sign remaining inputs
+    for (let index = 1; index < selectedUnspentOutputs.length; index++) {
+      tx.signIdx(hex.decode(privateKey), index);
     }
-
-    tx.finalize();
-
-    const signedBtcTx: SignedBtcTx = {
-      tx,
-      signedTx: tx.hex,
-      fee: fee ?? calculatedFee,
-      feePerVByte,
-      total: satsToSend,
-    };
-
-    return await Promise.resolve(signedBtcTx);
-  } catch (error) {
-    return Promise.reject(error.toString());
+  } else {
+    // Sign all inputs with same private key
+    tx.sign(hex.decode(privateKey));
   }
+
+  tx.finalize();
+
+  const signedBtcTx: SignedBtcTx = {
+    tx,
+    signedTx: tx.hex,
+    fee: fee ?? calculatedFee,
+    feePerVByte,
+    total: satsToSend,
+  };
+
+  return signedBtcTx;
 }
 
 export async function signNonOrdinalBtcSendTransaction(
