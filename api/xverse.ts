@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
@@ -13,7 +13,6 @@ import {
   AppInfo,
   SponsorInfoResponse,
   SponsorTransactionResponse,
-  SponsorTransactionErrorResponse,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -29,11 +28,9 @@ export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
 }
 
 export async function fetchStxToBtcRate(): Promise<BigNumber> {
-  return axios
-    .get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
-    .then((response) => {
-      return new BigNumber(response.data.stxBtcRate.toString());
-    });
+  return axios.get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI }).then((response) => {
+    return new BigNumber(response.data.stxBtcRate.toString());
+  });
 }
 
 export async function fetchBtcToCurrencyRate({
@@ -61,10 +58,7 @@ export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Pro
     });
 }
 
-export async function getCoinsInfo(
-  contractids: string[],
-  fiatCurrency: string
-): Promise<CoinsResponse | null> {
+export async function getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/coins`;
 
   const requestBody = {
@@ -90,7 +84,7 @@ export async function fetchAppInfo(): Promise<AppInfo | null> {
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
@@ -127,7 +121,7 @@ export async function getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUr
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
@@ -144,7 +138,7 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
