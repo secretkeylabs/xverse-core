@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.0.2",
+    "@noble/secp256k1": "^1.7.1",
     "@scure/base": "^1.1.1",
     "@scure/btc-signer": "^1.0.0",
     "@stacks/auth": "^6.5.1",
