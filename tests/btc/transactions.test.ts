@@ -265,6 +265,7 @@ describe('bitcoin transactions', () => {
         txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
         value: 1347,
         vout: 0,
+        address: ordinalAddress,
       },
     ];
 
@@ -292,10 +293,6 @@ describe('bitcoin transactions', () => {
 
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
-
-    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
-    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const ordinalUtxos = [
       {
@@ -666,7 +663,6 @@ describe('bitcoin transactions', () => {
     ];
 
     const recipient1Amount = 60000;
-    const recipient2Amount = 50000;
 
     const recipients: Array<Recipient> = [
       {
