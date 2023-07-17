@@ -4,7 +4,8 @@ import {
   UTXO,
   FungibleToken,
   InscriptionRequestResponse,
-  Inscription
+  Inscription,
+  Account
 } from '../types';
 import axios from 'axios';
 import { 
@@ -189,3 +190,6 @@ export async function createInscriptionRequest(
 }
 
 export const isBrcTransferValid = (inscription: Inscription) => inscription.address === inscription.genesis_address
+
+export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
+  inscription.address === account.ordinalsAddress;

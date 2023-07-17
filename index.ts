@@ -6,4 +6,5 @@ export * from './api';
 export * from './connect';
 export * from './account';
 export * from './gaia';
+export * from './ledger';
 export * from './coins';

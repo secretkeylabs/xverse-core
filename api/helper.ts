@@ -158,7 +158,13 @@ export function deDuplicatePendingTx({
   confirmedTransactions: StxTransactionData[];
   pendingTransactions: StxMempoolTransactionData[];
 }): StxMempoolTransactionData[] {
-  return pendingTransactions.filter((pt) => confirmedTransactions.some((ct) => pt.txid !== ct.txid));
+  const txArray: StxMempoolTransactionData[] = [];
+  for (const tx of [...confirmedTransactions, ...pendingTransactions]) {
+    if (!txArray.find((t) => t.txid === tx.txid)) {
+      txArray.push(tx as StxMempoolTransactionData);
+    }
+  }
+  return txArray;
 }
 
 export function mapTransferTransactionData({
