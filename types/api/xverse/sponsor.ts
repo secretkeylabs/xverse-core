@@ -1,5 +1,4 @@
 // TODO generate these with api schema
-
 export type SponsorInfoResponse = {
   active: boolean;
   sponsor_addresses: string[];

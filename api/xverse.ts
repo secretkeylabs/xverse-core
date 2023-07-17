@@ -143,15 +143,25 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
     });
 }
 
-export async function sponsorTransaction(signedTx: StacksTransaction): Promise<string | null> {
-  const sponsorUrl = `${XVERSE_SPONSOR_URL}/v1/sponsor`;
+/**
+ * Return the sponsored signed transaction
+ *
+ * @param {StacksTransaction} signedTx
+ * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
+ * @returns {Promise<string | null>}
+ */
+export async function sponsorTransaction(
+  signedTx: StacksTransaction,
+  sponsorHost?: string,
+): Promise<string | null> {
+  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
     tx: signedTx.serialize().toString('hex'),
   };
 
   return axios
-    .post(sponsorUrl, data, { timeout: 45000 })
+    .post(url, data, { timeout: 45000 })
     .then((response: AxiosResponse<SponsorTransactionResponse>) => {
       return response.data.txid;
     })
@@ -160,8 +170,16 @@ export async function sponsorTransaction(signedTx: StacksTransaction): Promise<s
     });
 }
 
-export async function getSponsorInfo(): Promise<boolean | null> {
-  const url = `${XVERSE_SPONSOR_URL}/v1/info`;
+/**
+ * Get whether sponsor service is active
+ *
+ * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
+ * @returns {Promise<boolean | null>}
+ */
+export async function getSponsorInfo(
+  sponsorHost?: string,
+): Promise<boolean | null> {
+  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/info`;
 
   return axios
     .get(url)
