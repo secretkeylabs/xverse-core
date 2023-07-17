@@ -399,6 +399,12 @@ export async function getBtcFees(
   }
 }
 
+export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
+  return allUtxos.filter(
+    (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout),
+  );
+}
+
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
@@ -654,12 +660,6 @@ export async function signBtcTransaction(
   } catch (error) {
     return Promise.reject(error.toString());
   }
-}
-
-export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
-  return allUtxos.filter(
-    (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout),
-  );
 }
 
 export async function signOrdinalSendTransaction(
