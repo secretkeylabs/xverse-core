@@ -255,6 +255,17 @@ describe('bitcoin transactions', () => {
         value: ordinalValue,
         address: ordinalAddress,
       },
+      {
+        status: {
+          block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
+          block_height: 797404,
+          block_time: 1688626274,
+          confirmed: true,
+        },
+        txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
+        value: 1347,
+        vout: 0,
+      },
     ];
 
     const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
@@ -270,6 +281,7 @@ describe('bitcoin transactions', () => {
         value: unspent1Value,
         address: btcAddress,
       },
+      ...ordinalOutputs,
     ];
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
@@ -281,7 +293,31 @@ describe('bitcoin transactions', () => {
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const { fee } = await getBtcFeesForOrdinalSend(recipientAddress, ordinalOutputs[0], btcAddress, network);
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const ordinalUtxos = [
+      {
+        status: {
+          block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
+          block_height: 797404,
+          block_time: 1688626274,
+          confirmed: true,
+        },
+        txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
+        value: 1347,
+        vout: 0,
+      },
+    ];
+
+    const { fee } = await getBtcFeesForOrdinalSend(
+      recipientAddress,
+      ordinalOutputs[0],
+      btcAddress,
+      network,
+      ordinalUtxos,
+    );
 
     // expect transaction size to be 260 bytes;
     const txSize = 260;
