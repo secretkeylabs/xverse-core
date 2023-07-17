@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const webpack = require('webpack');
 const path = require('path');
-const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 const NODE_ENV_PRODUCTION = 'production';
 const NODE_ENV_DEVELOPMENT = 'development';
@@ -25,7 +24,6 @@ module.exports = {
       process: require.resolve('process/browser'),
       Buffer: ['buffer', 'Buffer'],
     }),
-    new ForkTsCheckerWebpackPlugin(),
   ],
   optimization: {
     minimize: isProduction,
