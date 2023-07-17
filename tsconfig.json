@@ -12,7 +12,7 @@
       "wallet/*": ["./wallet"],
       "stacking/*": ["./stacking"],
       "account/*": ["./account"],
-      "gaia/*": ["./gaia"],
+      "gaia/*": ["./gaia"]
     },
     "declaration": true,
     "sourceMap": true,

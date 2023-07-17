@@ -669,11 +669,7 @@ export async function signOrdinalSendTransaction(
   // This can be true if ordinal utxo is from the payment address
 
   const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
-
-  let ordinalUtxoInPaymentAddress = false;
-  if (filteredUnspentOutputs.length < unspentOutputs.length) {
-    ordinalUtxoInPaymentAddress = true;
-  }
+  const ordinalUtxoInPaymentAddress = filteredUnspentOutputs.length < unspentOutputs.length;
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
   let feePerVByte: BigNumber = new BigNumber(0);
