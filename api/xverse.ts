@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
@@ -11,6 +11,9 @@ import {
   SignedUrlResponse,
   OrdinalInfo,
   AppInfo,
+  SponsorInfoResponse,
+  SponsorTransactionResponse,
+  SponsorTransactionErrorResponse,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -146,16 +149,34 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
     });
 }
 
-export async function sponsorTransaction(signedTx: StacksTransaction): Promise<string> {
+export async function sponsorTransaction(signedTx: StacksTransaction): Promise<string | null> {
   const sponsorUrl = `${XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
     tx: signedTx.serialize().toString('hex'),
   };
 
-  return axios.post(sponsorUrl, data, { timeout: 45000 }).then((response) => {
-    return response.data.txid;
-  });
+  return axios
+    .post(sponsorUrl, data, { timeout: 45000 })
+    .then((response: AxiosResponse<SponsorTransactionResponse>) => {
+      return response.data.txid;
+    })
+    .catch(() => {
+      return null;
+    });
+}
+
+export async function getSponsorInfo(): Promise<boolean | null> {
+  const url = `${XVERSE_SPONSOR_URL}/v1/info`;
+
+  return axios
+    .get(url)
+    .then((response: AxiosResponse<SponsorInfoResponse>) => {
+      return response.data.active;
+    })
+    .catch(() => {
+      return null;
+    });
 }
 
 export async function getOrdinalsByAddress(ordinalsAddress: string) {
