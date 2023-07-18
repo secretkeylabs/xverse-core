@@ -1,41 +1,47 @@
-import {
-  TransactionType,
-  TransactionStatus,
-  TransactionPostCondition,
-  ContractCall,
-} from '../shared/transaction';
-import { AnchorMode, ClarityValue, cvToHex, PostCondition, PostConditionMode, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
-import { StxMempoolTransactionData } from 'types/network';
 import { StacksNetwork } from '@stacks/network';
-export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
+import type { TokenTransferPayload } from '@stacks/transactions';
+import {
+  AnchorMode,
+  ClarityValue,
+  PostCondition,
+  PostConditionMode,
+  StacksTransaction,
+  cvToHex,
+  uintCV,
+} from '@stacks/transactions';
+import { StxMempoolTransactionData } from 'types/network';
+import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared/transaction';
+
+export { cvToHex, uintCV };
+export type { StacksTransaction, TokenTransferPayload };
 
 export type UnsignedStacksTransation = {
-  amount: string,
-  senderAddress: string,
-  recipientAddress: string,
-  contractAddress: string,
-  contractName: string,
-  assetName: string,
-  publicKey: string,
-  network: StacksNetwork,
-  pendingTxs: StxMempoolTransactionData[],
-  memo?: string,
-  isNFT?: boolean,
-}
+  amount: string;
+  senderAddress: string;
+  recipientAddress: string;
+  contractAddress: string;
+  contractName: string;
+  assetName: string;
+  publicKey: string;
+  network: StacksNetwork;
+  pendingTxs: StxMempoolTransactionData[];
+  memo?: string;
+  isNFT?: boolean;
+};
 
 export type UnsignedContractCallTransaction = {
-  publicKey: string,
-  contractAddress: string,
-  contractName: string,
-  functionName: string,
-  functionArgs: ClarityValue[],
-  network: StacksNetwork,
-  nonce?: bigint,
-  postConditions: PostCondition[],
-  sponsored?: boolean,
-  postConditionMode?: number,
-  anchorMode?: AnchorMode,
-}
+  publicKey: string;
+  contractAddress: string;
+  contractName: string;
+  functionName: string;
+  functionArgs: ClarityValue[];
+  network: StacksNetwork;
+  nonce?: bigint;
+  postConditions: PostCondition[];
+  sponsored?: boolean;
+  postConditionMode?: number;
+  anchorMode?: AnchorMode;
+};
 
 export type StxMempoolResponse = {
   limit: number;

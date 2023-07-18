@@ -1,24 +1,25 @@
+/* eslint-disable max-len */
+import BigNumber from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
+import * as XverseAPIFunctions from '../../api/xverse';
 import {
   Recipient,
-  createTransaction,
   calculateFee,
-  signBtcTransaction,
-  signOrdinalSendTransaction,
+  createTransaction,
+  defaultFeeRate,
+  filterUtxos,
   getBtcFees,
   getBtcFeesForOrdinalSend,
-  defaultFeeRate,
-  selectUnspentOutputs,
   getFee,
+  selectUnspentOutputs,
+  signBtcTransaction,
+  signOrdinalSendTransaction,
   sumUnspentOutputs,
-  filterUtxos,
 } from '../../transactions/btc';
+import { UTXO } from '../../types';
 import { getBtcPrivateKey } from '../../wallet';
 import { testSeed } from '../mocks/restore.mock';
-import { UTXO } from '../../types';
-import BigNumber from 'bignumber.js';
-import * as XverseAPIFunctions from '../../api/xverse';
-import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 
 describe('bitcoin transactions', () => {
   afterEach(() => {
@@ -67,10 +68,10 @@ describe('bitcoin transactions', () => {
       network,
     );
 
-    expect(signedTx.inputs.length).eq(1);
-    expect(signedTx.outputs.length).eq(2);
-    expect(signedTx.outputs[0].amount).eq(BigInt(recipient1Amount.toNumber()));
-    expect(signedTx.outputs[1].amount).eq(BigInt(new BigNumber(unspent1Value).minus(satsToSend)));
+    expect(signedTx.inputsLength).eq(1);
+    expect(signedTx.outputsLength).eq(2);
+    expect(signedTx.getOutput(0).amount).eq(BigInt(recipient1Amount.toNumber()));
+    expect(signedTx.getOutput(1).amount).eq(BigInt(new BigNumber(unspent1Value).minus(satsToSend).toNumber()));
   });
 
   it('can create a wrapped segwit transaction multi recipient', async () => {
@@ -147,11 +148,11 @@ describe('bitcoin transactions', () => {
       network,
     );
 
-    expect(signedTx.inputs.length).eq(3);
-    expect(signedTx.outputs.length).eq(3);
-    expect(signedTx.outputs[0].amount).eq(BigInt(recipient1Amount.toNumber()));
-    expect(signedTx.outputs[1].amount).eq(BigInt(recipient2Amount.toNumber()));
-    expect(signedTx.outputs[2].amount).eq(BigInt(totalUnspentValue - satsToSend));
+    expect(signedTx.inputsLength).eq(3);
+    expect(signedTx.outputsLength).eq(3);
+    expect(signedTx.getOutput(0).amount).eq(BigInt(recipient1Amount.toNumber()));
+    expect(signedTx.getOutput(1).amount).eq(BigInt(recipient2Amount.toNumber()));
+    expect(signedTx.getOutput(2).amount).eq(BigInt(totalUnspentValue - satsToSend.toNumber()));
   });
 
   it('can calculate transaction fee legacy function', async () => {
@@ -160,9 +161,10 @@ describe('bitcoin transactions', () => {
     const unspent1Value = 100000;
     const unspent2Value = 200000;
     const unspent3Value = 250000;
-    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
 
-    const utxos: Array<UTXO> = [
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         vout: 2,
@@ -173,6 +175,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent1Value,
+        address: changeAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -184,6 +187,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent2Value,
+        address: changeAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
@@ -195,12 +199,12 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent3Value,
+        address: changeAddress,
       },
     ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
@@ -212,8 +216,6 @@ describe('bitcoin transactions', () => {
         amountSats: new BigNumber(recipient2Amount),
       },
     ];
-
-    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = defaultFeeRate;
@@ -235,8 +237,12 @@ describe('bitcoin transactions', () => {
     const ordinalValue = 80000;
     const unspent1Value = 10000;
 
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+
     const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
-    const ordinalOutputs: Array<UTXO> = [
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: ordinalUtxoHash,
         vout: 2,
@@ -247,10 +253,23 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: ordinalValue,
+        address: ordinalAddress,
+      },
+      {
+        status: {
+          block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
+          block_height: 797404,
+          block_time: 1688626274,
+          confirmed: true,
+        },
+        txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
+        value: 1347,
+        vout: 0,
+        address: ordinalAddress,
       },
     ];
 
-    const utxos: Array<UTXO> = [
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         vout: 2,
@@ -261,7 +280,9 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent1Value,
+        address: btcAddress,
       },
+      ...ordinalOutputs,
     ];
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
@@ -273,11 +294,27 @@ describe('bitcoin transactions', () => {
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
-    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+    const ordinalUtxos = [
+      {
+        status: {
+          block_hash: '00000000000000000003e6c56ae100b34fcc2967bc1deb53de1a4b9c29ba448f',
+          block_height: 797404,
+          block_time: 1688626274,
+          confirmed: true,
+        },
+        txid: 'd0dfe638a5be4f220f6435616edb5909a2f93540a7d6975ed0bdf305fb8bf51c',
+        value: 1347,
+        vout: 0,
+      },
+    ];
 
-    const { fee } = await getBtcFeesForOrdinalSend(recipientAddress, ordinalOutputs[0], btcAddress, network);
+    const { fee } = await getBtcFeesForOrdinalSend(
+      recipientAddress,
+      ordinalOutputs[0],
+      btcAddress,
+      network,
+      ordinalUtxos,
+    );
 
     // expect transaction size to be 260 bytes;
     const txSize = 260;
@@ -290,9 +327,10 @@ describe('bitcoin transactions', () => {
     const unspent1Value = 100000;
     const unspent2Value = 200000;
     const unspent3Value = 250000;
-    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value;
 
-    const utxos: Array<UTXO> = [
+    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         vout: 2,
@@ -303,6 +341,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent1Value,
+        address: changeAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -314,6 +353,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent2Value,
+        address: changeAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
@@ -325,6 +365,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent3Value,
+        address: changeAddress,
       },
     ];
 
@@ -342,8 +383,6 @@ describe('bitcoin transactions', () => {
         amountSats: new BigNumber(recipient2Amount),
       },
     ];
-
-    const changeAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const feeRate = defaultFeeRate;
 
@@ -370,9 +409,10 @@ describe('bitcoin transactions', () => {
     const unspent2Value = 200000;
     const unspent3Value = 1000;
     const unspent4Value = 1000;
-    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value + unspent4Value;
 
-    const utxos: Array<UTXO> = [
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         vout: 2,
@@ -383,6 +423,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent1Value,
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -394,6 +435,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent2Value,
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
@@ -405,6 +447,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent3Value,
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
@@ -416,12 +459,12 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent4Value,
+        address: btcAddress,
       },
     ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
@@ -433,8 +476,6 @@ describe('bitcoin transactions', () => {
         amountSats: new BigNumber(recipient2Amount),
       },
     ];
-
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = {
@@ -467,9 +508,10 @@ describe('bitcoin transactions', () => {
     const unspent2Value = 200000;
     const unspent3Value = 1000;
     const unspent4Value = 1000;
-    const totalUnspentValue = unspent1Value + unspent2Value + unspent3Value + unspent4Value;
 
-    const utxos: Array<UTXO> = [
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         vout: 2,
@@ -480,6 +522,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent1Value,
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -491,6 +534,7 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: unspent2Value,
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8e',
@@ -502,6 +546,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8f',
@@ -513,12 +558,12 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
     ];
 
     const recipient1Amount = 200000;
     const recipient2Amount = 100000;
-    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
@@ -530,8 +575,6 @@ describe('bitcoin transactions', () => {
         amountSats: new BigNumber(recipient2Amount),
       },
     ];
-
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
     const feeRate = defaultFeeRate;
@@ -620,8 +663,6 @@ describe('bitcoin transactions', () => {
     ];
 
     const recipient1Amount = 60000;
-    const recipient2Amount = 50000;
-    const satsToSend = recipient1Amount + recipient2Amount;
 
     const recipients: Array<Recipient> = [
       {
@@ -656,8 +697,12 @@ describe('bitcoin transactions', () => {
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
     const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
-    const ordinalOutputs: Array<UTXO> = [
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: ordinalUtxoHash,
         value: ordinalValue,
@@ -668,10 +713,11 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: ordinalAddress,
       },
     ];
 
-    const utxos: Array<UTXO> = [
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
@@ -682,6 +728,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -693,6 +740,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
     ];
 
@@ -706,10 +754,6 @@ describe('bitcoin transactions', () => {
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
 
-    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
-    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
-
     const recipients = [
       {
         address: recipientAddress,
@@ -719,7 +763,7 @@ describe('bitcoin transactions', () => {
 
     const filteredUnspentOutputs = filterUtxos(utxos, [ordinalOutputs[0]]);
 
-    let selectedUnspentOutputs = selectUnspentOutputs(
+    const selectedUnspentOutputs = selectUnspentOutputs(
       new BigNumber(ordinalOutputs[0].value),
       filteredUnspentOutputs,
       ordinalOutputs[0],
@@ -763,8 +807,12 @@ describe('bitcoin transactions', () => {
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
     const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
-    const ordinalOutputs: Array<UTXO> = [
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: ordinalUtxoHash,
         vout: 2,
@@ -775,10 +823,11 @@ describe('bitcoin transactions', () => {
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
         value: ordinalValue,
+        address: ordinalAddress,
       },
     ];
 
-    const utxos: Array<UTXO> = [
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       ordinalOutputs[0],
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
@@ -790,6 +839,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -801,6 +851,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
     ];
 
@@ -820,9 +871,6 @@ describe('bitcoin transactions', () => {
 
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
-
-    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
@@ -850,8 +898,13 @@ describe('bitcoin transactions', () => {
     const unspent1Value = 1000;
     const unspent2Value = 10000;
 
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+    const customFeeAmount = new BigNumber(2000);
+
     const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
-    const ordinalOutputs: Array<UTXO> = [
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: ordinalUtxoHash,
         value: ordinalValue,
@@ -862,10 +915,11 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: ordinalAddress,
       },
     ];
 
-    const utxos: Array<UTXO> = [
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
         value: unspent1Value,
@@ -876,6 +930,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
       {
         txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
@@ -887,6 +942,7 @@ describe('bitcoin transactions', () => {
           block_time: 1677048365,
           block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
         },
+        address: btcAddress,
       },
     ];
 
@@ -899,11 +955,6 @@ describe('bitcoin transactions', () => {
 
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
     fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
-
-    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
-    const ordinalAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
-    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
-    const customFeeAmount = new BigNumber(2000);
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,

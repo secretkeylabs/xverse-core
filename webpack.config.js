@@ -30,6 +30,7 @@ module.exports = {
   },
   devtool: 'source-map',
   module: {
+    strictExportPresence: true,
     rules: [
       {
         test: /\.[jt]sx?$/,

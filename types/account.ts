@@ -1,3 +1,5 @@
+export type AccountType = 'ledger' | 'software';
+
 export interface Account {
   id: number;
   stxAddress: string;
@@ -8,4 +10,6 @@ export interface Account {
   btcPublicKey: string;
   ordinalsPublicKey: string;
   bnsName?: string;
+  accountType?: AccountType;
+  accountName?: string;
 }
