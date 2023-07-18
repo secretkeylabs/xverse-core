@@ -16,6 +16,7 @@ import {
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
+import { handleAxiosError } from './error';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -148,12 +149,10 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
  *
  * @param {StacksTransaction} signedTx
  * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
- * @returns {Promise<string | null>}
+ * @returns {Promise<string>}
+ * @throws {ApiResponseError} - if api responded with an error status
  */
-export async function sponsorTransaction(
-  signedTx: StacksTransaction,
-  sponsorHost?: string,
-): Promise<string | null> {
+export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHost?: string): Promise<string> {
   const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
@@ -165,9 +164,7 @@ export async function sponsorTransaction(
     .then((response: AxiosResponse<SponsorTransactionResponse>) => {
       return response.data.txid;
     })
-    .catch(() => {
-      return null;
-    });
+    .catch(handleAxiosError);
 }
 
 /**
@@ -175,10 +172,9 @@ export async function sponsorTransaction(
  *
  * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
  * @returns {Promise<boolean | null>}
+ * @throws {ApiResponseError} - if api responded with an error status
  */
-export async function getSponsorInfo(
-  sponsorHost?: string,
-): Promise<boolean | null> {
+export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
   const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/info`;
 
   return axios
@@ -186,9 +182,7 @@ export async function getSponsorInfo(
     .then((response: AxiosResponse<SponsorInfoResponse>) => {
       return response.data.active;
     })
-    .catch(() => {
-      return null;
-    });
+    .catch(handleAxiosError);
 }
 
 export async function getOrdinalsByAddress(ordinalsAddress: string) {
