@@ -7,12 +7,10 @@ import {
   StxTransactionDataResponse,
   StxMempoolTransactionDataResponse,
   TransferTransaction,
-  ApiResponseError,
 } from '../types';
 
 import * as esplora from '../types/api/esplora';
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
-import { AxiosError } from 'axios';
 
 export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
   var total = 0;
@@ -38,7 +36,7 @@ export function sumInputsForAddress(inputs: esplora.Vin[], address: string): num
 
 export function parseOrdinalsBtcTransactions(
   responseTx: esplora.Transaction,
-  ordinalsAddress: string,
+  ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
@@ -93,7 +91,7 @@ export function parseOrdinalsBtcTransactions(
 export function parseBtcTransactionData(
   responseTx: esplora.Transaction,
   btcAddress: string,
-  ordinalsAddress: string,
+  ordinalsAddress: string
 ): BtcTransactionData {
   let inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
@@ -218,7 +216,7 @@ export function mapTransferTransactionData({
     amount: new BigNumber(
       post_conditions.find((x) => x !== undefined)?.type === 'fungible'
         ? post_conditions.find((x) => x !== undefined)?.amount ?? 0
-        : 0,
+        : 0
     ),
     post_conditions: [],
     assetId: post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1),
@@ -265,10 +263,14 @@ export function parseMempoolStxTransactionsData({
   if (responseTx.post_conditions && responseTx.post_conditions.length > 0) {
     parsedTx.tokenType = responseTx.post_conditions.find((x) => x !== undefined)?.type;
     if (responseTx.post_conditions.find((x) => x !== undefined)?.asset_value)
-      parsedTx.assetId = responseTx.post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1);
+      parsedTx.assetId = responseTx.post_conditions
+        .find((x) => x !== undefined)
+        ?.asset_value?.repr.substring(1);
     if (parsedTx.tokenType === 'fungible') {
       if (responseTx.contract_call?.function_name === 'transfer') {
-        parsedTx.amount = new BigNumber(responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0);
+        parsedTx.amount = new BigNumber(
+          responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0
+        );
       }
     }
   }
@@ -322,10 +324,16 @@ export function parseStxTransactionData({
     if (responseTx.contract_call?.function_name === 'transfer') {
       if (responseTx.post_conditions && responseTx.post_conditions.length > 0) {
         parsedTx.tokenType = responseTx.post_conditions.find((x) => x !== undefined)?.type;
-        parsedTx.amount = new BigNumber(responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0);
-        parsedTx.tokenName = responseTx.post_conditions.find((x) => x !== undefined)?.asset.asset_name;
+        parsedTx.amount = new BigNumber(
+          responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0
+        );
+        parsedTx.tokenName = responseTx.post_conditions.find(
+          (x) => x !== undefined
+        )?.asset.asset_name;
         if (responseTx.post_conditions.find((x) => x !== undefined)?.asset_value)
-          parsedTx.assetId = responseTx.post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1);
+          parsedTx.assetId = responseTx.post_conditions
+            .find((x) => x !== undefined)
+            ?.asset_value?.repr.substring(1);
       }
     }
   }
