@@ -57,11 +57,12 @@ class SeedVault {
     this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
   };
 
-  getSeed = async (password: string) => {
+  getSeed = async (password?: string) => {
     let passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
-    if (!passwordHash) {
-      const salt = await this._commonStorageAdapter.get('salt');
+    if (!passwordHash && password) {
+      const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
       if (salt) passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
+      this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
     }
     const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
     if (!encryptedSeed) throw new Error('Seed not set');
@@ -78,4 +79,3 @@ class SeedVault {
   };
 }
 export default SeedVault;
-export * from './encryptionUtils';

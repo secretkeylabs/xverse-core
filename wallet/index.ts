@@ -240,42 +240,6 @@ export function validateBtcAddress({ btcAddress, network }: { btcAddress: string
   }
 }
 
-interface EncryptMnemonicArgs {
-  password: string;
-  seed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<string>;
-}
-
-interface DecryptMnemonicArgs {
-  password: string;
-  encryptedSeed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicDecryptionHandler: (seed: string, key: string) => Promise<string>;
-}
-
-export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
-  const { mnemonicEncryptionHandler, password, seed } = cb;
-
-  const encryptedSeed = await mnemonicEncryptionHandler(seed, password);
-
-  return encryptedSeed;
-}
-
-export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
-  const { mnemonicDecryptionHandler, password, encryptedSeed } = cb;
-
-  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, password);
-
-  return seedPhrase;
-}
-
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
