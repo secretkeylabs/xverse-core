@@ -20,21 +20,22 @@ Issue Link: #[issue_number]
 Context Link (if applicable):
 
 # 🔄 Changes
-Enumerate the changes made in this pull request, detailing what has been modified, added, or removed. Include technical details and implications if necessary.
-
-Impact:
-- Explain the broader impact of these changes.
-- How it improves performance, fixes bugs, adds functionality, etc.
-
-# 🖼 Screenshot / 📹 Video
-
-# Does this PR introduce a breaking change?
+Does this PR introduce a breaking change?
 
 - [ ] Yes, Incompatible API changes
 - [ ] No, Adds functionality (backwards compatible)
 - [ ] No, Bug fixes (backwards compatible)
 
-<!-- If this PR contains a breaking change, please describe the impact and link to issues for existing applications below. -->
+Changes:
+- What has been modified, added, or removed
+- Which are breaking changes
+
+Impact:
+- How it improves performance, fixes bugs, adds functionality, etc.
+- Impact on downstream apps, link to issues or PRs for migration
+- What to test
+
+# 🖼 Screenshot / 📹 Video
 
 # ✅ Review checklist
 Please ensure the following are true before merging:
