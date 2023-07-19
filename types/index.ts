@@ -40,6 +40,7 @@ export type {
 export * from './api/stacks/transaction';
 export * from './api/xverse/coins';
 export type { OrdinalInfo } from './api/xverse/ordinals';
+export * from './api/xverse/sponsor';
 export type { Pool, StackerInfo, StackingData, StackingPoolInfo, StackingStateData } from './api/xverse/stacking';
 export * from './api/xverse/transaction';
 export * from './api/xverse/wallet';
