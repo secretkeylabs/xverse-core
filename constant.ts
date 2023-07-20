@@ -32,7 +32,7 @@ export const BLOCKCYPHER_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/
 
 export const NFT_BASE_URI = 'https://stacks.gamma.io/api/v1/collections';
 
-export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
+export const XVERSE_API_BASE_URL = 'https://wallet-api-pr-190.onrender.com';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
