@@ -27,6 +27,7 @@ export type UnsignedStacksTransation = {
   pendingTxs: StxMempoolTransactionData[];
   memo?: string;
   isNFT?: boolean;
+  sponsored?: boolean;
 };
 
 export type UnsignedContractCallTransaction = {
