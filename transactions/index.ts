@@ -25,7 +25,12 @@ import {
   signTransaction,
 } from './stx';
 
-import { createBrc20TransferOrder } from './brc20';
+import {
+  Brc20TransferCreateOrder,
+  Brc20TransferExecuteOrder,
+  brc20TransferEstimateFees,
+  createBrc20TransferOrder,
+} from './brc20';
 import type { PSBTInput, PSBTOutput, ParsedPSBT } from './psbt';
 import { parsePsbt } from './psbt';
 import {
@@ -35,7 +40,10 @@ import {
 } from './stacking';
 
 export {
+  Brc20TransferCreateOrder,
+  Brc20TransferExecuteOrder,
   addressToString,
+  brc20TransferEstimateFees,
   broadcastSignedTransaction,
   createBrc20TransferOrder,
   createContractCallPromises,
