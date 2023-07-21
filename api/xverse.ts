@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
@@ -11,9 +11,12 @@ import {
   SignedUrlResponse,
   OrdinalInfo,
   AppInfo,
+  SponsorInfoResponse,
+  SponsorTransactionResponse,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
+import { handleAxiosError } from './error';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios
@@ -26,11 +29,9 @@ export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
 }
 
 export async function fetchStxToBtcRate(): Promise<BigNumber> {
-  return axios
-    .get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
-    .then((response) => {
-      return new BigNumber(response.data.stxBtcRate.toString());
-    });
+  return axios.get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI }).then((response) => {
+    return new BigNumber(response.data.stxBtcRate.toString());
+  });
 }
 
 export async function fetchBtcToCurrencyRate({
@@ -58,10 +59,7 @@ export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Pro
     });
 }
 
-export async function getCoinsInfo(
-  contractids: string[],
-  fiatCurrency: string
-): Promise<CoinsResponse | null> {
+export async function getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse | null> {
   const url = `${XVERSE_API_BASE_URL}/v1/coins`;
 
   const requestBody = {
@@ -87,7 +85,7 @@ export async function fetchAppInfo(): Promise<AppInfo | null> {
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
@@ -124,7 +122,7 @@ export async function getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUr
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
@@ -141,21 +139,50 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
     .then((response) => {
       return response.data;
     })
-    .catch((error) => {
+    .catch(() => {
       return null;
     });
 }
 
-export async function sponsorTransaction(signedTx: StacksTransaction): Promise<string> {
-  const sponsorUrl = `${XVERSE_SPONSOR_URL}/v1/sponsor`;
+/**
+ * Return the sponsored signed transaction
+ *
+ * @param {StacksTransaction} signedTx
+ * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
+ * @returns {Promise<string>}
+ * @throws {ApiResponseError} - if api responded with an error status
+ */
+export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHost?: string): Promise<string> {
+  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
     tx: signedTx.serialize().toString('hex'),
   };
 
-  return axios.post(sponsorUrl, data, { timeout: 45000 }).then((response) => {
-    return response.data.txid;
-  });
+  return axios
+    .post(url, data, { timeout: 45000 })
+    .then((response: AxiosResponse<SponsorTransactionResponse>) => {
+      return response.data.txid;
+    })
+    .catch(handleAxiosError);
+}
+
+/**
+ * Get whether sponsor service is active
+ *
+ * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
+ * @returns {Promise<boolean | null>}
+ * @throws {ApiResponseError} - if api responded with an error status
+ */
+export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
+  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/info`;
+
+  return axios
+    .get(url)
+    .then((response: AxiosResponse<SponsorInfoResponse>) => {
+      return response.data.active;
+    })
+    .catch(handleAxiosError);
 }
 
 export async function getOrdinalsByAddress(ordinalsAddress: string) {
