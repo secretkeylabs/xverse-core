@@ -15,14 +15,23 @@ import { bip32 } from '../utils/bip32';
 
 import { getBtcNetwork } from './btcNetwork';
 
+function toXOnly(pubKey: Buffer) {
+  return pubKey.length === 32 ? pubKey : pubKey.subarray(1, 33);
+}
+
 export interface InputToSign {
   address: string;
   signingIndexes: Array<number>;
   sigHash?: number;
 }
 
-export interface PrivateKeyMap {
-  [address: string]: string;
+export interface PrivateKeyPair {
+  privateKey: string;
+  publicKey: string;
+}
+
+export interface PrivateKeyPairMap {
+  [address: string]: PrivateKeyPair;
 }
 
 export function getSigningDerivationPath(
@@ -90,22 +99,35 @@ export async function signPsbt(
     // Get signing derivation path
     const networkType = network ?? 'Mainnet';
 
-    const addressPrivateKeyMap: PrivateKeyMap = {};
+    const addressPrivateKeyPairMap: PrivateKeyPairMap = {};
 
     inputsToSign.forEach((inputToSign) => {
       const address: string = inputToSign.address;
-      if (!(address in addressPrivateKeyMap)) {
+      if (!(address in addressPrivateKeyPairMap)) {
         const signingDerivationPath = getSigningDerivationPath(accounts, address, networkType);
         const child = master.derivePath(signingDerivationPath);
-        const privateKey = child.privateKey!.toString('hex');
-        addressPrivateKeyMap[address] = privateKey;
+        addressPrivateKeyPairMap[address] = {
+          privateKey: child.privateKey!.toString('hex'),
+          publicKey: child.publicKey.toString('hex'),
+        };
       }
     });
 
     // Sign inputs at indexes
     inputsToSign.forEach((inputToSign) => {
-      const privateKey = addressPrivateKeyMap[inputToSign.address];
+      const { privateKey, publicKey } = addressPrivateKeyPairMap[inputToSign.address];
+
       inputToSign.signingIndexes.forEach((signingIndex) => {
+        // If input is taproot type and didn't set tapInternalKey,
+        // assume it is implied to be the account's publicKey
+        const input = psbt.getInput(signingIndex);
+        const witnessOutputScript = input.witnessUtxo?.script &&
+          btc.OutScript.decode(input.witnessUtxo.script);
+
+        if (!input.tapInternalKey && witnessOutputScript?.type === 'tr') {
+          input.tapInternalKey = toXOnly(Buffer.from(publicKey, 'hex'));
+        }
+
         if (inputToSign.sigHash) {
           psbt.signIdx(hex.decode(privateKey), signingIndex, [inputToSign.sigHash]);
         } else {
