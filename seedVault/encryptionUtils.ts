@@ -3,10 +3,6 @@ import { mnemonicToEntropy, wordlists } from 'bip39';
 interface EncryptMnemonicArgs {
   password: string;
   seed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
   mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
 }
 
@@ -19,10 +15,6 @@ export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
 interface DecryptMnemonicArgs {
   password: string;
   encryptedSeed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
   mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
 }
 
