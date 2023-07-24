@@ -97,7 +97,7 @@ export enum ExecuteTransferProgressCodes {
   Finalizing = 'Finalizing',
 }
 
-export async function* Brc20TransferExecute(
+export async function* brc20TransferExecute(
   privateKey: string,
   selectedUtxos: Array<UTXO>,
   tick: string,
