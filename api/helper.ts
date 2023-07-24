@@ -165,7 +165,7 @@ export function parseBrc20TransactionData(responseTx: OrdinalTokenTransaction): 
     seenTime: date,
     incoming,
     txType: 'brc20',
-    txStatus: 'success',
+    txStatus: responseTx?.blocktime === 0 ? 'pending' : 'success',
   };
   return parsedTx;
 }
