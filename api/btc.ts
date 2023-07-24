@@ -54,3 +54,26 @@ export async function fetchBtcTransactionsData(
   );
   return paymentTransactions;
 }
+
+export async function fetchBtcTransaction(
+  id: string,
+  btcAddress: string,
+  ordinalsAddress: string,
+  network: NetworkType,
+) {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const txResponse: esplora.Transaction = await btcClient.getBtcTransaction(id);
+  const transaction: BtcTransactionData = parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);
+  return transaction;
+}
+
+export async function fetchOrdinalTransaction(id: string, ordinalsAddress: string, network: NetworkType) {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const txResponse: esplora.Transaction = await btcClient.getBtcTransaction(id);
+  const transaction: BtcTransactionData = parseOrdinalsBtcTransactions(txResponse, ordinalsAddress);
+  return transaction;
+}
