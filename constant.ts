@@ -36,7 +36,7 @@ export const XVERSE_API_BASE_URL = 'https://api.xverse.app';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
-export const GAIA_HUB_URL = 'https://hub.blockstack.org';
+export const GAIA_HUB_URL = 'https://hub.hiro.so';
 
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 
