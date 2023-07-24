@@ -126,6 +126,7 @@ export async function walletFromSeedPhrase({
     btcPublicKey,
     ordinalsPublicKey: hex.encode(taprootInternalPubKey),
     seedPhrase: mnemonic,
+    accountType: 'software'
   };
 }
 

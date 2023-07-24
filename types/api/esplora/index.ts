@@ -19,6 +19,7 @@ export type TxStatus = {
 };
 
 export type UTXO = {
+  address: string;
   txid: string;
   vout: number;
   status: TxStatus;

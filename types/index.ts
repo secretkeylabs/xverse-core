@@ -1,55 +1,50 @@
-export * from './wallet';
 export * from './account';
-export * from './network';
-export * from './error';
-export * from './api/xverse/wallet';
-export * from './api/xverse/transaction';
-export * from './api/xverse/coins';
-export * from './api/stacks/transaction';
-export {
+export type {
+  BtcAddressData,
   BtcAddressDataResponse,
-  BtcUtxoDataResponse,
-  BtcTransactionBroadcastResponse,
   BtcBalance,
-  Input,
-  Output,
+  BtcOrdinal,
+  BtcTransactionBroadcastResponse,
   BtcTransactionData,
   BtcTransactionDataResponse,
-  BtcAddressData,
   BtcTransactionsDataResponse,
-  BtcOrdinal,
+  BtcUtxoDataResponse,
+  Input,
+  Output,
 } from './api/blockcypher/wallet';
-export {
-  AccountAssetsListData,
-  NftsListData,
-  NonFungibleToken,
-  NftEventsResponse,
-  CoreInfo,
-  CoinMetaData,
-  AddressToBnsResponse,
-  getBnsNftName,
-} from './api/stacks/assets';
-export { NftDetailResponse } from './api/gamma/currency';
-export { SupportedCurrency } from './currency';
-export {
-  StackerInfo,
-  StackingData,
-  StackingPoolInfo,
-  StackingStateData,
-  Pool,
-} from './api/xverse/stacking';
-export { OrdinalInfo } from './api/xverse/ordinals';
-export {
+export type {
   Address,
   Block,
-  UTXO,
-  Transaction,
-  Vin,
-  Vout,
-  TxStatus,
-  MempoolInput,
   BtcAddressMempool,
   FeeEstimates,
+  MempoolInput,
+  Transaction,
+  TxStatus,
+  UTXO,
+  Vin,
+  Vout,
 } from './api/esplora';
+export type { NftDetailResponse } from './api/gamma/currency';
 export * from './api/ordinals';
-export * from './api/ordinalsbot'
+export * from './api/ordinalsbot';
+export { getBnsNftName } from './api/stacks/assets';
+export type {
+  AccountAssetsListData,
+  AddressToBnsResponse,
+  CoinMetaData,
+  CoreInfo,
+  NftEventsResponse,
+  NftsListData,
+  NonFungibleToken,
+} from './api/stacks/assets';
+export * from './api/stacks/transaction';
+export * from './api/xverse/coins';
+export type { OrdinalInfo } from './api/xverse/ordinals';
+export * from './api/xverse/sponsor';
+export type { Pool, StackerInfo, StackingData, StackingPoolInfo, StackingStateData } from './api/xverse/stacking';
+export * from './api/xverse/transaction';
+export * from './api/xverse/wallet';
+export type { SupportedCurrency } from './currency';
+export * from './error';
+export * from './network';
+export * from './wallet';
