@@ -21,6 +21,7 @@ const getBrc20TransferFees = async (
   amount: number,
   revealAddress: string,
   feeRate: number,
+  inscriptionValue?: number,
 ): Promise<Brc20CostEstimateResponse> => {
   const requestBody: Brc20CostEstimateRequest = {
     operation: 'transfer',
@@ -28,6 +29,7 @@ const getBrc20TransferFees = async (
     amount,
     revealAddress,
     feeRate,
+    inscriptionValue,
   };
   const response = await apiClient.post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody);
   return response.data;
@@ -39,6 +41,7 @@ const createBrc20TransferOrder = async (
   revealAddress: string,
   feeRate: number,
   network: NetworkType,
+  inscriptionValue?: number,
 ): Promise<Brc20CreateOrderResponse> => {
   const requestBody: Brc20CreateOrderRequest = {
     operation: 'transfer',
@@ -47,6 +50,7 @@ const createBrc20TransferOrder = async (
     revealAddress,
     feeRate,
     network,
+    inscriptionValue,
   };
   const response = await apiClient.post<Brc20CreateOrderResponse>('/v1/brc20/cost-estimate', requestBody);
   return response.data;

@@ -16,6 +16,7 @@ type Brc20DeployRequest = {
 export type Brc20CostEstimateRequest = (Brc20TransferOrMintRequest | Brc20DeployRequest) & {
   revealAddress: string;
   feeRate: number;
+  inscriptionValue?: number;
 };
 
 export type Brc20CostEstimateResponse = {
@@ -29,6 +30,7 @@ export type Brc20CreateOrderRequest = (Brc20TransferOrMintRequest | Brc20DeployR
   revealAddress: string;
   feeRate: number;
   network: NetworkType;
+  inscriptionValue?: number;
 };
 
 export type Brc20CreateOrderResponse = {
