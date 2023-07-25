@@ -146,7 +146,7 @@ export async function* brc20TransferExecute(
 
   yield ExecuteTransferProgressCodes.CreatingCommitTransaction;
 
-  const selectedUtxos = selectUnspentOutputs(commitValue, addressUtxos);
+  const selectedUtxos = selectUnspentOutputs(new BigNumber(commitValue), addressUtxos);
 
   const commitChainFees = await calculateFee(
     selectedUtxos,
