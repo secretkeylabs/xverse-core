@@ -4,7 +4,7 @@ import { NetworkType, UTXO } from 'types';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
-import { calculateFee, generateSignedBtcTransaction } from './btc';
+import { calculateFee, generateSignedBtcTransaction, selectUnspentOutputs } from './btc';
 
 const RECIPIENT_SATS_VALUE = 1000;
 
@@ -41,7 +41,7 @@ export const createBrc20TransferOrder = async (token: string, amount: string, re
 };
 
 export const brc20TransferEstimateFees = async (
-  selectedUtxos: Array<UTXO>,
+  addressUtxos: UTXO[],
   tick: string,
   amount: number,
   revealAddress: string,
@@ -49,7 +49,17 @@ export const brc20TransferEstimateFees = async (
 ) => {
   const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
   const transferFeeEstimate = await calculateFee(
-    [{ address: revealAddress, status: { confirmed: false }, txid: '', vout: 0, value: RECIPIENT_SATS_VALUE }],
+    [
+      {
+        address: revealAddress,
+        status: {
+          confirmed: false,
+        },
+        txid: '0000000000000000000000000000000000000000000000000000000000000000',
+        vout: 0,
+        value: RECIPIENT_SATS_VALUE,
+      },
+    ],
     finalRecipientUtxoValue,
     [{ address: revealAddress, amountSats: finalRecipientUtxoValue }],
     new BigNumber(feeRate),
@@ -68,10 +78,12 @@ export const brc20TransferEstimateFees = async (
   );
 
   const commitValue = inscriptionValue.plus(revealChainFee).plus(revealServiceFee);
+  const selectedUtxos = selectUnspentOutputs(commitValue, addressUtxos);
+
   const commitChainFees = await calculateFee(
     selectedUtxos,
     commitValue,
-    [{ address: revealAddress, amountSats: finalRecipientUtxoValue }],
+    [{ address: revealAddress, amountSats: commitValue }],
     new BigNumber(feeRate),
     revealAddress,
     'Mainnet',
@@ -99,7 +111,7 @@ export enum ExecuteTransferProgressCodes {
 
 export async function* brc20TransferExecute(
   privateKey: string,
-  selectedUtxos: Array<UTXO>,
+  addressUtxos: UTXO[],
   tick: string,
   amount: number,
   revealAddress: string,
@@ -133,6 +145,8 @@ export async function* brc20TransferExecute(
   );
 
   yield ExecuteTransferProgressCodes.CreatingCommitTransaction;
+
+  const selectedUtxos = selectUnspentOutputs(commitValue, addressUtxos);
 
   const commitChainFees = await calculateFee(
     selectedUtxos,
