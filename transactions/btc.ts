@@ -159,7 +159,7 @@ export async function generateSignedBtcTransaction(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  const changeSats = sumValue.minus(satsToSend);
+  const changeSats = sumValue.minus(satsToSend).minus(feeSats);
 
   addInputs(tx, selectedUnspentOutputs, p2sh);
 
