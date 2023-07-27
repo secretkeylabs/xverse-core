@@ -189,7 +189,10 @@ export async function createInscriptionRequest(
   return response.data;
 }
 
-export const isBrcTransferValid = (inscription: Inscription) => inscription.address === inscription.genesis_address
+export const isBrcTransferValid = (inscription: Inscription) => {
+  const output: string = inscription.output.split(':')[0];
+  return output === inscription.genesis_tx_id;
+};
 
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
