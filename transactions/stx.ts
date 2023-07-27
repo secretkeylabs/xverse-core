@@ -143,7 +143,7 @@ export async function generateUnsignedSTXTokenTransfer(
     memo: memo ?? '',
     network: txNetwork,
     fee: 0,
-    sponsored: sponsored,
+    sponsored,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
     postConditionMode,
     postConditions,
@@ -280,7 +280,7 @@ export async function estimateContractCallFees(
 export async function generateUnsignedTransaction(
   unsginedTx: UnsignedStacksTransation
 ): Promise<StacksTransaction> {
-  var unsignedTx;
+  let unsignedTx;
   const functionName = 'transfer';
   let functionArgs: ClarityValue[];
 
@@ -296,6 +296,7 @@ export async function generateUnsignedTransaction(
     publicKey,
     network,
     pendingTxs,
+    sponsored,
   } = unsginedTx;
 
   const postConditionOptions: PostConditionsOptions = {
@@ -338,6 +339,7 @@ export async function generateUnsignedTransaction(
       network,
       nonce: undefined,
       postConditions: postConditions,
+      sponsored,
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
