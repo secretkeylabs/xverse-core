@@ -195,6 +195,7 @@ export interface PSBTOutput {
   address: string;
   amount: bigint;
   userReceives: boolean;
+  outputScript?: any;
 }
 
 export interface ParsedPSBT {
@@ -259,6 +260,7 @@ export function parsePsbt(
     const outputScript = btc.OutScript.decode(output.script);
 
     let outputAddress = '';
+    let script = undefined;
 
     if (outputScript.type === 'ms' || outputScript.type === 'tr') {
       // @ts-expect-error:
@@ -269,7 +271,8 @@ export function parsePsbt(
       });
     } 
     else if(outputScript.type === 'unknown'){
-      outputAddress = new TextDecoder().decode(outputScript.script).toString().replace(/[\x00-\x1F\x7F]/g, '');
+      //for script outputs
+      script = btc.Script.decode(outputScript.script);
     }
     else {
        // @ts-expect-error:
@@ -290,6 +293,7 @@ export function parsePsbt(
       address: outputAddress,
       amount: output.amount,
       userReceives,
+      outputScript: script,
     });
   });
 
