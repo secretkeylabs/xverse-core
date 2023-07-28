@@ -4,7 +4,8 @@ import { NetworkType, UTXO } from 'types';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
-import { calculateFee, generateSignedBtcTransaction, selectUnspentOutputs } from './btc';
+import { getBtcPrivateKey } from '../wallet';
+import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
 
 const RECIPIENT_SATS_VALUE = 1000;
 
@@ -47,25 +48,27 @@ export const brc20TransferEstimateFees = async (
   revealAddress: string,
   feeRate: number,
 ) => {
+  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
   const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
-  const transferFeeEstimate = await calculateFee(
+  const { tx } = await signNonOrdinalBtcSendTransaction(
+    dummyAddress,
     [
       {
         address: revealAddress,
         status: {
           confirmed: false,
         },
-        txid: '0000000000000000000000000000000000000000000000000000000000000000',
+        txid: '0000000000000000000000000000000000000000000000000000000000000001',
         vout: 0,
         value: RECIPIENT_SATS_VALUE,
       },
     ],
-    finalRecipientUtxoValue,
-    [{ address: revealAddress, amountSats: finalRecipientUtxoValue }],
-    new BigNumber(feeRate),
-    revealAddress,
+    0,
+    'action action action action action action action action action action action action',
     'Mainnet',
   );
+
+  const transferFeeEstimate = tx.vsize * feeRate;
 
   const inscriptionValue = finalRecipientUtxoValue.plus(transferFeeEstimate);
 
@@ -78,24 +81,27 @@ export const brc20TransferEstimateFees = async (
   );
 
   const commitValue = inscriptionValue.plus(revealChainFee).plus(revealServiceFee);
-  const selectedUtxos = selectUnspentOutputs(commitValue, addressUtxos);
 
-  const commitChainFees = await calculateFee(
-    selectedUtxos,
-    commitValue,
-    [{ address: revealAddress, amountSats: commitValue }],
-    new BigNumber(feeRate),
-    revealAddress,
-    'Mainnet',
+  const bestUtxoData = selectUtxosForSend(
+    dummyAddress,
+    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    addressUtxos,
+    feeRate,
   );
+
+  if (!bestUtxoData) {
+    throw new Error('Not enough funds at selected fee rate');
+  }
+
+  const commitChainFees = bestUtxoData.fee;
 
   return {
     commitValue: commitValue.plus(commitChainFees).toNumber(),
     valueBreakdown: {
-      commitChainFee: commitChainFees.toNumber(),
+      commitChainFee: commitChainFees,
       revealChainFee,
       revealServiceFee,
-      transferChainFee: transferFeeEstimate.toNumber(),
+      transferChainFee: transferFeeEstimate,
       transferUtxoValue: finalRecipientUtxoValue.toNumber(),
     },
   };
@@ -110,28 +116,47 @@ export enum ExecuteTransferProgressCodes {
 }
 
 export async function* brc20TransferExecute(
-  privateKey: string,
+  seedPhrase: string,
+  accountIndex: number,
   addressUtxos: UTXO[],
   tick: string,
   amount: number,
   revealAddress: string,
+  changeAddress: string,
   recipientAddress: string,
-  feeRate: BigNumber,
+  feeRate: number,
   network: NetworkType,
 ): AsyncGenerator<ExecuteTransferProgressCodes, string, never> {
+  const privateKey = await getBtcPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network: 'Mainnet',
+  });
+
   const esploraClient = new BitcoinEsploraApiProvider({ network });
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
   const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
-  const transferFeeEstimate = await calculateFee(
-    [{ address: revealAddress, status: { confirmed: false }, txid: '', vout: 0, value: RECIPIENT_SATS_VALUE }],
-    finalRecipientUtxoValue,
-    [{ address: recipientAddress, amountSats: finalRecipientUtxoValue }],
-    feeRate,
-    revealAddress,
-    network,
+  const { tx } = await await signNonOrdinalBtcSendTransaction(
+    recipientAddress,
+    [
+      {
+        address: revealAddress,
+        status: {
+          confirmed: false,
+        },
+        txid: '0000000000000000000000000000000000000000000000000000000000000001',
+        vout: 0,
+        value: RECIPIENT_SATS_VALUE,
+      },
+    ],
+    accountIndex,
+    seedPhrase,
+    'Mainnet',
   );
+
+  const transferFeeEstimate = tx.vsize * feeRate;
 
   const inscriptionValue = finalRecipientUtxoValue.plus(transferFeeEstimate);
 
@@ -139,55 +164,52 @@ export async function* brc20TransferExecute(
     tick,
     amount,
     revealAddress,
-    feeRate.toNumber(),
+    feeRate,
     network,
     inscriptionValue.toNumber(),
   );
 
   yield ExecuteTransferProgressCodes.CreatingCommitTransaction;
 
-  const selectedUtxos = selectUnspentOutputs(new BigNumber(commitValue), addressUtxos);
-
-  const commitChainFees = await calculateFee(
-    selectedUtxos,
-    new BigNumber(commitValue),
-    [{ address: recipientAddress, amountSats: finalRecipientUtxoValue }],
+  const bestUtxoData = selectUtxosForSend(
+    changeAddress,
+    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    addressUtxos,
     feeRate,
-    revealAddress,
-    network,
   );
 
-  // This should be:
-  // final transfer value that the recipient will receive in their UTXO + final transfer fees
-  // + reveal service fees + reveal chain fees
-  // + commit chain fees
-  const totalCommitValueSats = new BigNumber(commitValue).plus(commitChainFees);
+  if (!bestUtxoData) {
+    throw new Error('Not enough funds at selected fee rate');
+  }
+
+  const commitChainFees = bestUtxoData.fee;
 
   const commitTransaction = await generateSignedBtcTransaction(
     privateKey,
-    selectedUtxos,
-    totalCommitValueSats,
+    bestUtxoData.selectedUtxos,
+    new BigNumber(commitValue),
     [
       {
         address: commitAddress,
-        amountSats: totalCommitValueSats,
+        amountSats: new BigNumber(commitValue),
       },
     ],
-    revealAddress,
-    commitChainFees,
+    changeAddress,
+    new BigNumber(commitChainFees),
     network,
   );
 
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;
 
-  const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20TransferOrder(
+  const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20Order(
     commitAddress,
     commitTransaction.hex,
   );
 
   yield ExecuteTransferProgressCodes.CreatingTransferTransaction;
-  const transferTransaction = await generateSignedBtcTransaction(
-    privateKey,
+
+  const transferTransaction = await signNonOrdinalBtcSendTransaction(
+    recipientAddress,
     [
       {
         address: revealAddress,
@@ -199,21 +221,31 @@ export async function* brc20TransferExecute(
         value: revealUTXOValue,
       },
     ],
-    finalRecipientUtxoValue,
-    [
-      {
-        address: recipientAddress,
-        amountSats: finalRecipientUtxoValue,
-      },
-    ],
-    revealAddress,
-    transferFeeEstimate,
-    network,
+    accountIndex,
+    seedPhrase,
+    'Mainnet',
+    new BigNumber(transferFeeEstimate),
   );
 
   yield ExecuteTransferProgressCodes.Finalizing;
 
-  const response = await esploraClient.sendRawTransaction(transferTransaction.hex);
+  // we sleep here to give the reveal transaction time to propagate
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
-  return response.tx.hash;
+  const MAX_RETRIES = 2;
+  let error: Error | undefined;
+
+  for (let i = 0; i <= MAX_RETRIES; i++) {
+    try {
+      const response = await esploraClient.sendRawTransaction(transferTransaction.signedTx);
+
+      return response.tx.hash;
+    } catch (err) {
+      error = err as Error;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-loop-func
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw error!;
 }
