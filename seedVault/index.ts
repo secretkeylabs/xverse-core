@@ -59,7 +59,7 @@ class SeedVault {
 
   getSeed = async (password?: string) => {
     let passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
-    if (!passwordHash && password) {
+    if (password) {
       const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
       if (salt) passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
       this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
@@ -69,6 +69,17 @@ class SeedVault {
     const seed = await this._cryptoUtilsAdapter.decrypt(encryptedSeed, passwordHash);
     if (!seed) throw new Error('Wrong passphrase');
     return seed;
+  };
+
+  changePassword = async (oldPassword: string, newPassword: string) => {
+    const seedPhrase = await this.getSeed(oldPassword);
+    await this.init(newPassword);
+    await this.storeSeed(seedPhrase);
+  };
+
+  hasSeed = async () => {
+    const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
+    return !!encryptedSeed;
   };
 
   lockVault = async (passPhrase: string) => {
