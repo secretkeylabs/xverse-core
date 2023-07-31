@@ -247,5 +247,5 @@ export async function* brc20TransferExecute(
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  throw error!;
+  throw error ?? new Error('Failed to broadcast transfer transaction');
 }
