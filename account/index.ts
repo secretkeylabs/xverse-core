@@ -14,7 +14,7 @@ import { BIP32Interface, bip32 } from '../utils/bip32';
 import { getWalletFromRootNode, walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
 
-export const getActiveAccountsFromRootNode = async ({
+const getActiveAccountsFromRootNode = async ({
   networkObject,
   currentAccounts,
   rootNode,
@@ -115,6 +115,7 @@ export async function restoreWalletWithAccountsMobile(
           btcPublicKey: response.btcPublicKey,
           ordinalsPublicKey: response.ordinalsPublicKey,
           bnsName: username,
+          accountType: response.accountType,
         };
         newAccounts.push(existingAccount);
       } else {
