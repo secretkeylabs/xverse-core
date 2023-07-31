@@ -49,8 +49,7 @@ export function deriveStxAddressChain(chain: ChainID, index = 0n) {
     }
     const ecPair = ECPair.fromPrivateKey(childKey.privateKey);
     const privateKey = ecPairToHexString(ecPair);
-    const txVersion =
-      chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
+    const txVersion = chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
     return {
       childKey,
       address: getAddressFromPrivateKey(privateKey, txVersion),
@@ -71,6 +70,73 @@ export async function newWallet(): Promise<BaseWallet> {
   return walletFromSeedPhrase({ mnemonic, index: 0n, network: 'Mainnet' });
 }
 
+const waitFrame = () => (requestAnimationFrame ? new Promise(requestAnimationFrame) : Promise.resolve());
+
+export async function getWalletFromRootNode({
+  index,
+  network,
+  rootNode,
+  master,
+}: {
+  index: bigint;
+  network: NetworkType;
+  rootNode: BIP32Interface;
+  master: BIP32Interface;
+}): Promise<Omit<BaseWallet, 'masterPubKey' | 'seedPhrase'>> {
+  const deriveStxAddressKeychain = deriveStxAddressChain(
+    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
+    index,
+  );
+
+  await waitFrame();
+  const { address, privateKey } = await deriveStxAddressKeychain(rootNode);
+  const stxAddress = address;
+
+  const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
+
+  // derive segwit btc address
+  await waitFrame();
+  const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
+
+  await waitFrame();
+  const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
+
+  // derive taproot btc address
+  const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
+
+  await waitFrame();
+  const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
+  const btcNetwork = getBtcNetwork(network);
+  const ordinalsAddress = btc.getAddress('tr', privKey, btcNetwork)!;
+
+  await waitFrame();
+  const segwitBtcAddress = payments.p2sh({
+    redeem: payments.p2wpkh({
+      pubkey: keyPair.publicKey,
+      network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+    }),
+    pubkey: keyPair.publicKey,
+    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  });
+  const btcAddress = segwitBtcAddress.address!;
+  const btcPublicKey = keyPair.publicKey.toString('hex');
+  await waitFrame();
+  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
+
+  await waitFrame();
+  const ordinalsPublicKey = hex.encode(taprootInternalPubKey);
+
+  return {
+    stxAddress,
+    btcAddress,
+    ordinalsAddress,
+    stxPublicKey,
+    btcPublicKey,
+    ordinalsPublicKey,
+    accountType: 'software',
+  };
+}
+
 export async function walletFromSeedPhrase({
   mnemonic,
   index,
@@ -83,50 +149,26 @@ export async function walletFromSeedPhrase({
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
 
-  const deriveStxAddressKeychain = deriveStxAddressChain(
-    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
-    index
-  );
-
-  const { address, privateKey } = deriveStxAddressKeychain(rootNode);
-  const stxAddress = address;
-
   const master = bip32.fromSeed(seed);
   const masterPubKey = master.publicKey.toString('hex');
-  const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
-  // derive segwit btc address
-  const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
-  const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
-
-  // derive taproot btc address
-  const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
-  const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
-  const btcNetwork = getBtcNetwork(network);
-  const ordinalsAddress = btc.getAddress('tr', privKey, btcNetwork)!;
-
-  const segwitBtcAddress = payments.p2sh({
-    redeem: payments.p2wpkh({
-      pubkey: keyPair.publicKey,
-      network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
-    }),
-    pubkey: keyPair.publicKey,
-    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+  const wallet = await getWalletFromRootNode({
+    index,
+    network,
+    rootNode,
+    master,
   });
-  const btcAddress = segwitBtcAddress.address!;
-  const btcPublicKey = keyPair.publicKey.toString('hex');
-  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
 
   return {
-    stxAddress,
-    btcAddress,
-    ordinalsAddress,
+    stxAddress: wallet.stxAddress,
+    btcAddress: wallet.btcAddress,
+    ordinalsAddress: wallet.ordinalsAddress,
     masterPubKey,
-    stxPublicKey,
-    btcPublicKey,
-    ordinalsPublicKey: hex.encode(taprootInternalPubKey),
+    stxPublicKey: wallet.stxPublicKey,
+    btcPublicKey: wallet.btcPublicKey,
+    ordinalsPublicKey: wallet.ordinalsPublicKey,
     seedPhrase: mnemonic,
-    accountType: 'software'
+    accountType: wallet.accountType,
   };
 }
 
@@ -207,31 +249,19 @@ export async function getBtcTaprootPrivateKey({
   return btcChild.privateKey!.toString('hex');
 }
 
-export function validateStxAddress({
-  stxAddress,
-  network,
-}: {
-  stxAddress: string;
-  network: NetworkType;
-}) {
+export function validateStxAddress({ stxAddress, network }: { stxAddress: string; network: NetworkType }) {
   try {
     const result = c32addressDecode(stxAddress);
     if (result[0] && result[1]) {
       const addressVersion = result[0];
       if (network === 'Mainnet') {
         if (
-          !(
-            addressVersion === AddressVersion.MainnetSingleSig ||
-            addressVersion === AddressVersion.MainnetMultiSig
-          )
+          !(addressVersion === AddressVersion.MainnetSingleSig || addressVersion === AddressVersion.MainnetMultiSig)
         ) {
           return false;
         }
       } else {
-        if (
-          result[0] !== AddressVersion.TestnetSingleSig &&
-          result[0] !== AddressVersion.TestnetMultiSig
-        ) {
+        if (result[0] !== AddressVersion.TestnetSingleSig && result[0] !== AddressVersion.TestnetMultiSig) {
           return false;
         }
       }
@@ -244,13 +274,7 @@ export function validateStxAddress({
   }
 }
 
-export function validateBtcAddress({
-  btcAddress,
-  network,
-}: {
-  btcAddress: string;
-  network: NetworkType;
-}): boolean {
+export function validateBtcAddress({ btcAddress, network }: { btcAddress: string; network: NetworkType }): boolean {
   const btcNetwork = network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
   try {
     return validate(btcAddress, btcNetwork);
@@ -300,7 +324,7 @@ export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
-  accountIndex: number
+  accountIndex: number,
 ): Promise<Keychain> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));

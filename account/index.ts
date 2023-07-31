@@ -9,26 +9,22 @@ import {
   getOrCreateWalletConfig,
   updateWalletConfig,
 } from '../gaia';
-import {
-  Account,
-  BtcTransactionData,
-  NetworkType,
-  SettingsNetwork,
-  StxTransactionListData,
-} from '../types';
-import { bip32 } from '../utils/bip32';
-import { walletFromSeedPhrase } from '../wallet';
+import { Account, BtcTransactionData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
+import { BIP32Interface, bip32 } from '../utils/bip32';
+import { getWalletFromRootNode, walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
 
-export const fetchActiveAccounts = async (
-  mnemonic: string,
-  networkObject: StacksNetwork,
-  currentAccounts: Account[]
-) => {
+export const getActiveAccountsFromRootNode = async ({
+  networkObject,
+  currentAccounts,
+  rootNode,
+}: {
+  networkObject: StacksNetwork;
+  currentAccounts: Account[];
+  rootNode: BIP32Interface;
+}) => {
   const networkFetch = networkObject.fetchFn;
   const hubInfo = await getHubInfo(GAIA_HUB_URL, networkFetch);
-  const seed = await bip39.mnemonicToSeed(mnemonic);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
   const walletConfigKey = await deriveWalletConfigKey(rootNode);
   const currentGaiaConfig = connectToGaiaHubWithConfig({
     hubInfo,
@@ -43,11 +39,26 @@ export const fetchActiveAccounts = async (
   });
 };
 
+export const fetchActiveAccounts = async (
+  mnemonic: string,
+  networkObject: StacksNetwork,
+  currentAccounts: Account[],
+) => {
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+  const accounts = await getActiveAccountsFromRootNode({
+    networkObject,
+    currentAccounts,
+    rootNode,
+  });
+  return accounts;
+};
+
 export async function checkAccountActivity(
   stxAddress: string,
   btcAddress: string,
   ordinalsAddress: string,
-  selectedNetwork: StacksNetwork
+  selectedNetwork: StacksNetwork,
 ) {
   const stxTxHistory: StxTransactionListData = await getConfirmedTransactions({
     stxAddress,
@@ -59,27 +70,78 @@ export async function checkAccountActivity(
     btcAddress,
     ordinalsAddress,
     networkType,
-    true
+    true,
   );
   return btcTxHistory.length !== 0;
+}
+
+export async function restoreWalletWithAccountsMobile(
+  mnemonic: string,
+  selectedNetwork: SettingsNetwork,
+  networkObject: StacksNetwork,
+  currentAccounts: Account[],
+): Promise<Account[]> {
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+
+  const walletConfig = await getActiveAccountsFromRootNode({
+    networkObject,
+    currentAccounts,
+    rootNode,
+  });
+  if (walletConfig && walletConfig.accounts.length > 0) {
+    const newAccounts: Account[] = [];
+    for (let i = 0; i < walletConfig.accounts.length; i++) {
+      const index = i;
+      let existingAccount: Account = currentAccounts[index];
+      if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
+        const master = bip32.fromSeed(seed);
+        const masterPubKey = master.publicKey.toString('hex');
+
+        const response = await getWalletFromRootNode({
+          index: BigInt(index),
+          network: selectedNetwork.type,
+          rootNode,
+          master,
+        });
+        const username = await getBnsName(response.stxAddress, networkObject);
+        existingAccount = {
+          id: index,
+          stxAddress: response.stxAddress,
+          btcAddress: response.btcAddress,
+          ordinalsAddress: response.ordinalsAddress,
+          masterPubKey,
+          stxPublicKey: response.stxPublicKey,
+          btcPublicKey: response.btcPublicKey,
+          ordinalsPublicKey: response.ordinalsPublicKey,
+          bnsName: username,
+        };
+        newAccounts.push(existingAccount);
+      } else {
+        const userName = await getBnsName(existingAccount.stxAddress, networkObject);
+        newAccounts.push({
+          ...existingAccount,
+          bnsName: userName,
+        });
+      }
+    }
+    return newAccounts;
+  }
+  return currentAccounts;
 }
 
 export async function restoreWalletWithAccounts(
   mnemonic: string,
   selectedNetwork: SettingsNetwork,
   networkObject: StacksNetwork,
-  currentAccounts: Account[]
+  currentAccounts: Account[],
 ): Promise<Account[]> {
   const walletConfig = await fetchActiveAccounts(mnemonic, networkObject, currentAccounts);
   if (walletConfig && walletConfig.accounts.length > 0) {
     const newAccounts: Account[] = await Promise.all(
       walletConfig.accounts.map(async (_, index) => {
         let existingAccount: Account = currentAccounts[index];
-        if (
-          !existingAccount ||
-          !existingAccount.ordinalsAddress ||
-          !existingAccount.ordinalsPublicKey
-        ) {
+        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
           const response = await walletFromSeedPhrase({
             mnemonic,
             index: BigInt(index),
@@ -96,7 +158,7 @@ export async function restoreWalletWithAccounts(
             btcPublicKey: response.btcPublicKey,
             ordinalsPublicKey: response.ordinalsPublicKey,
             bnsName: username,
-            accountType: 'software',
+            accountType: response.accountType,
           };
           return existingAccount;
         } else {
@@ -106,7 +168,7 @@ export async function restoreWalletWithAccounts(
             bnsName: userName,
           };
         }
-      })
+      }),
     );
     return newAccounts;
   }
@@ -117,22 +179,15 @@ export async function createWalletAccount(
   seedPhrase: string,
   selectedNetwork: SettingsNetwork,
   networkObject: StacksNetwork,
-  walletAccounts: Account[]
+  walletAccounts: Account[],
 ): Promise<Account[]> {
   const accountIndex = walletAccounts.length;
-  const {
-    stxAddress,
-    btcAddress,
-    ordinalsAddress,
-    masterPubKey,
-    stxPublicKey,
-    btcPublicKey,
-    ordinalsPublicKey,
-  } = await walletFromSeedPhrase({
-    mnemonic: seedPhrase,
-    index: BigInt(accountIndex),
-    network: selectedNetwork.type,
-  });
+  const { stxAddress, btcAddress, ordinalsAddress, masterPubKey, stxPublicKey, btcPublicKey, ordinalsPublicKey } =
+    await walletFromSeedPhrase({
+      mnemonic: seedPhrase,
+      index: BigInt(accountIndex),
+      network: selectedNetwork.type,
+    });
   const bnsName = await getBnsName(stxAddress, networkObject);
   const newAccount: Account = {
     id: accountIndex,
