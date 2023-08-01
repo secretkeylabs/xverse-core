@@ -7,7 +7,7 @@ import xverseInscribeApi from '../api/xverseInscribe';
 import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
 
-const RECIPIENT_SATS_VALUE = 1000;
+const FINAL_SATS_VALUE = 1000;
 
 const createTransferInscriptionContent = (token: string, amount: string) => ({
   p: 'brc-20',
@@ -41,6 +41,107 @@ export const createBrc20TransferOrder = async (token: string, amount: string, re
   };
 };
 
+export const brc20MintEstimateFees = async (
+  addressUtxos: UTXO[],
+  tick: string,
+  amount: number,
+  revealAddress: string,
+  feeRate: number,
+) => {
+  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+
+  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
+    tick,
+    amount,
+    revealAddress,
+    feeRate,
+    FINAL_SATS_VALUE,
+  );
+
+  const commitValue = new BigNumber(FINAL_SATS_VALUE).plus(revealChainFee).plus(revealServiceFee);
+
+  const bestUtxoData = selectUtxosForSend(
+    dummyAddress,
+    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    addressUtxos,
+    feeRate,
+  );
+
+  if (!bestUtxoData) {
+    throw new Error('Not enough funds at selected fee rate');
+  }
+
+  const commitChainFees = bestUtxoData.fee;
+
+  return {
+    commitValue: commitValue.plus(commitChainFees).toNumber(),
+    valueBreakdown: {
+      commitChainFee: commitChainFees,
+      revealChainFee,
+      revealServiceFee,
+    },
+  };
+};
+
+export async function brc20MintExecute(
+  seedPhrase: string,
+  accountIndex: number,
+  addressUtxos: UTXO[],
+  tick: string,
+  amount: number,
+  revealAddress: string,
+  changeAddress: string,
+  feeRate: number,
+  network: NetworkType,
+): Promise<string> {
+  const privateKey = await getBtcPrivateKey({
+    seedPhrase,
+    index: BigInt(accountIndex),
+    network: 'Mainnet',
+  });
+
+  const { commitAddress, commitValue } = await xverseInscribeApi.createBrc20MintOrder(
+    tick,
+    amount,
+    revealAddress,
+    feeRate,
+    network,
+    FINAL_SATS_VALUE,
+  );
+
+  const bestUtxoData = selectUtxosForSend(
+    changeAddress,
+    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    addressUtxos,
+    feeRate,
+  );
+
+  if (!bestUtxoData) {
+    throw new Error('Not enough funds at selected fee rate');
+  }
+
+  const commitChainFees = bestUtxoData.fee;
+
+  const commitTransaction = await generateSignedBtcTransaction(
+    privateKey,
+    bestUtxoData.selectedUtxos,
+    new BigNumber(commitValue),
+    [
+      {
+        address: commitAddress,
+        amountSats: new BigNumber(commitValue),
+      },
+    ],
+    changeAddress,
+    new BigNumber(commitChainFees),
+    network,
+  );
+
+  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(commitAddress, commitTransaction.hex);
+
+  return revealTransactionId;
+}
+
 export const brc20TransferEstimateFees = async (
   addressUtxos: UTXO[],
   tick: string,
@@ -49,7 +150,7 @@ export const brc20TransferEstimateFees = async (
   feeRate: number,
 ) => {
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
-  const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
+  const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
   const { tx } = await signNonOrdinalBtcSendTransaction(
     dummyAddress,
     [
@@ -60,7 +161,7 @@ export const brc20TransferEstimateFees = async (
         },
         txid: '0000000000000000000000000000000000000000000000000000000000000001',
         vout: 0,
-        value: RECIPIENT_SATS_VALUE,
+        value: FINAL_SATS_VALUE,
       },
     ],
     0,
@@ -137,7 +238,7 @@ export async function* brc20TransferExecute(
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
-  const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
+  const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
   const { tx } = await signNonOrdinalBtcSendTransaction(
     recipientAddress,
     [
@@ -148,7 +249,7 @@ export async function* brc20TransferExecute(
         },
         txid: '0000000000000000000000000000000000000000000000000000000000000001',
         vout: 0,
-        value: RECIPIENT_SATS_VALUE,
+        value: FINAL_SATS_VALUE,
       },
     ],
     accountIndex,
@@ -232,7 +333,7 @@ export async function* brc20TransferExecute(
   // we sleep here to give the reveal transaction time to propagate
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 5;
   let error: Error | undefined;
 
   for (let i = 0; i <= MAX_RETRIES; i++) {
@@ -243,8 +344,10 @@ export async function* brc20TransferExecute(
     } catch (err) {
       error = err as Error;
     }
-    // eslint-disable-next-line @typescript-eslint/no-loop-func
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // we do exponential back-off here to give the reveal transaction time to propagate
+    // sleep times are 500ms, 1000ms, 2000ms, 4000ms, 8000ms
+    // eslint-disable-next-line @typescript-eslint/no-loop-func -- exponential back-off sleep between retries
+    await new Promise((resolve) => setTimeout(resolve, 500 * Math.pow(2, i)));
   }
 
   throw error ?? new Error('Failed to broadcast transfer transaction');
