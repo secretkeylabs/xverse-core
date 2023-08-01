@@ -615,7 +615,11 @@ function selectOptimalUtxos(
   // if there is a valid selection, adding more UTXOs would only make the fees higher, so just return
   if (currentSelectionData) return currentSelectionData;
 
-  if (availableUtxos.length === 0 || currentBestUtxoCount === selectedUtxos.length - 1) {
+  // if we have a current best selection, we want to check if adding another UTXO would make the fees higher
+  // and skip if it does since it would be a worse selection
+  const wouldIncreaseFees = currentBestUtxoCount === selectedUtxos.length - 1;
+
+  if (availableUtxos.length === 0 || wouldIncreaseFees) {
     // we either have no more UTXOs to add or adding would make an existing outer selection worse, so we bail
     return undefined;
   }
