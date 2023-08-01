@@ -1,19 +1,19 @@
-import BigNumber from 'bignumber.js';
 import { StacksNetwork } from '@stacks/network';
+import BigNumber from 'bignumber.js';
 import {
   BtcTransactionData,
-  StxTransactionData,
   StxMempoolTransactionData,
-  StxTransactionDataResponse,
   StxMempoolTransactionDataResponse,
+  StxTransactionData,
+  StxTransactionDataResponse,
   TransferTransaction,
 } from '../types';
 
-import * as esplora from '../types/api/esplora';
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
+import * as esplora from '../types/api/esplora';
 
 export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
-  var total = 0;
+  let total = 0;
   outputs.forEach((output) => {
     if (output.scriptpubkey_address) {
       if (output.scriptpubkey_address === address) {
@@ -25,7 +25,7 @@ export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): 
 }
 
 export function sumInputsForAddress(inputs: esplora.Vin[], address: string): number {
-  var total = 0;
+  let total = 0;
   inputs.forEach((input) => {
     if (input.prevout.scriptpubkey_address === address) {
       total += input.prevout.value;
@@ -36,9 +36,9 @@ export function sumInputsForAddress(inputs: esplora.Vin[], address: string): num
 
 export function parseOrdinalsBtcTransactions(
   responseTx: esplora.Transaction,
-  ordinalsAddress: string
+  ordinalsAddress: string,
 ): BtcTransactionData {
-  let inputAddresses: string[] = [];
+  const inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
     if (input.prevout.scriptpubkey_address) {
       inputAddresses.push(input.prevout.scriptpubkey_address);
@@ -53,7 +53,7 @@ export function parseOrdinalsBtcTransactions(
       outputAddresses.push(output.scriptpubkey_address);
     }
   });
-  var amount = 0;
+  let amount = 0;
   if (incoming) {
     amount = sumOutputsForAddress(responseTx.vout, ordinalsAddress);
   } else {
@@ -91,9 +91,9 @@ export function parseOrdinalsBtcTransactions(
 export function parseBtcTransactionData(
   responseTx: esplora.Transaction,
   btcAddress: string,
-  ordinalsAddress: string
+  ordinalsAddress: string,
 ): BtcTransactionData {
-  let inputAddresses: string[] = [];
+  const inputAddresses: string[] = [];
   responseTx.vin.forEach((input) => {
     if (input.prevout.scriptpubkey_address) {
       inputAddresses.push(input.prevout.scriptpubkey_address);
@@ -116,7 +116,7 @@ export function parseBtcTransactionData(
   });
 
   // calculate sent/received amount from inputs/outputs
-  var amount = 0;
+  let amount = 0;
   if (incoming) {
     amount = sumOutputsForAddress(responseTx.vout, btcAddress);
   } else {
@@ -158,7 +158,6 @@ export function deDuplicatePendingTx({
   confirmedTransactions: StxTransactionData[];
   pendingTransactions: StxMempoolTransactionData[];
 }): StxMempoolTransactionData[] {
-
   const txArray: StxMempoolTransactionData[] = [];
   for (const tx of [...confirmedTransactions, ...pendingTransactions]) {
     if (!txArray.find((t) => t.txid === tx.txid)) {
@@ -176,52 +175,52 @@ export function mapTransferTransactionData({
   stxAddress: string;
 }): StxTransactionData {
   const {
-    block_hash,
-    block_height,
-    burn_block_time,
-    burn_block_time_iso,
+    block_hash: blockHash,
+    block_height: blockHeight,
+    burn_block_time: burnBlockTime,
+    burn_block_time_iso: burnBlockTimeIsoStr,
     canonical,
-    fee_rate,
+    fee_rate: feeRate,
     nonce,
-    post_condition_mode,
-    sender_address,
+    post_condition_mode: postConditionMode,
+    sender_address: senderAddress,
     sponsored,
-    tx_id,
-    tx_index,
-    tx_result,
-    tx_status,
-    tx_type,
-    post_conditions,
-    contract_call,
+    tx_id: txid,
+    tx_index: txIndex,
+    tx_result: txResult,
+    tx_status: txStatus,
+    tx_type: txType,
+    post_conditions: postConditions,
+    contract_call: contractCall,
   } = responseTx;
 
   return {
-    blockHash: block_hash,
-    blockHeight: block_height,
-    burnBlockTime: burn_block_time,
-    burnBlockTimeIso: new Date(burn_block_time_iso),
-    canonical: canonical,
-    fee: new BigNumber(fee_rate),
+    blockHash,
+    blockHeight,
+    burnBlockTime,
+    burnBlockTimeIso: new Date(burnBlockTimeIsoStr),
+    canonical,
+    fee: new BigNumber(feeRate),
     nonce,
-    postConditionMode: post_condition_mode,
-    senderAddress: sender_address,
+    postConditionMode,
+    senderAddress,
     sponsored,
-    txid: tx_id,
-    txIndex: tx_index,
-    txResults: JSON.stringify(tx_result),
-    txStatus: tx_status,
-    txType: tx_type,
-    seenTime: new Date(burn_block_time_iso),
-    incoming: sender_address !== stxAddress,
+    txid,
+    txIndex,
+    txResults: JSON.stringify(txResult),
+    txStatus,
+    txType,
+    seenTime: new Date(burnBlockTimeIsoStr),
+    incoming: senderAddress !== stxAddress,
     amount: new BigNumber(
-      post_conditions.find((x) => x !== undefined)?.type === 'fungible'
-        ? post_conditions.find((x) => x !== undefined)?.amount ?? 0
-        : 0
+      postConditions.find((x) => x !== undefined)?.type === 'fungible'
+        ? postConditions.find((x) => x !== undefined)?.amount ?? 0
+        : 0,
     ),
     post_conditions: [],
-    assetId: post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1),
-    tokenType: post_conditions.find((x) => x !== undefined)?.type,
-    contractCall: tx_type === 'contract_call' ? contract_call : undefined,
+    assetId: postConditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1),
+    tokenType: postConditions.find((x) => x !== undefined)?.type,
+    contractCall: txType === 'contract_call' ? contractCall : undefined,
   };
 }
 
@@ -263,14 +262,10 @@ export function parseMempoolStxTransactionsData({
   if (responseTx.post_conditions && responseTx.post_conditions.length > 0) {
     parsedTx.tokenType = responseTx.post_conditions.find((x) => x !== undefined)?.type;
     if (responseTx.post_conditions.find((x) => x !== undefined)?.asset_value)
-      parsedTx.assetId = responseTx.post_conditions
-        .find((x) => x !== undefined)
-        ?.asset_value?.repr.substring(1);
+      parsedTx.assetId = responseTx.post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1);
     if (parsedTx.tokenType === 'fungible') {
       if (responseTx.contract_call?.function_name === 'transfer') {
-        parsedTx.amount = new BigNumber(
-          responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0
-        );
+        parsedTx.amount = new BigNumber(responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0);
       }
     }
   }
@@ -324,16 +319,10 @@ export function parseStxTransactionData({
     if (responseTx.contract_call?.function_name === 'transfer') {
       if (responseTx.post_conditions && responseTx.post_conditions.length > 0) {
         parsedTx.tokenType = responseTx.post_conditions.find((x) => x !== undefined)?.type;
-        parsedTx.amount = new BigNumber(
-          responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0
-        );
-        parsedTx.tokenName = responseTx.post_conditions.find(
-          (x) => x !== undefined
-        )?.asset.asset_name;
+        parsedTx.amount = new BigNumber(responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0);
+        parsedTx.tokenName = responseTx.post_conditions.find((x) => x !== undefined)?.asset.asset_name;
         if (responseTx.post_conditions.find((x) => x !== undefined)?.asset_value)
-          parsedTx.assetId = responseTx.post_conditions
-            .find((x) => x !== undefined)
-            ?.asset_value?.repr.substring(1);
+          parsedTx.assetId = responseTx.post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1);
       }
     }
   }

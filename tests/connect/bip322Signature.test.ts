@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getPublicKey, recoverPublicKey, verify as secpVerify } from '@noble/secp256k1';
@@ -92,7 +93,7 @@ describe('signBip322Message', () => {
     expect(signAsync).not.toHaveBeenCalled();
     expect(result).toBeDefined();
     expect(result).toBe(
-      'AkgwRQIhAJqtIE5QYZCwE4+AaERx/ZhbWz9stWJLuD70bMGYBFQ8AiBenMfPaiQ+hzKmTQj5zb6PLqh32zVfpbttKvQoQWTAdgEhAyIV2BIoLAeSyFNcNwLMqZT149qc2FAsPhkNQi8AZv3/'
+      'AkgwRQIhAJqtIE5QYZCwE4+AaERx/ZhbWz9stWJLuD70bMGYBFQ8AiBenMfPaiQ+hzKmTQj5zb6PLqh32zVfpbttKvQoQWTAdgEhAyIV2BIoLAeSyFNcNwLMqZT149qc2FAsPhkNQi8AZv3/',
     );
   });
 
@@ -152,13 +153,13 @@ describe('verifySignature', () => {
     expect(recoverPublicKey).toHaveBeenCalledWith(
       '540afc386b9cefbea3d48b0cf0dbc532eab94b68d6fc27959f3fc6bf49fd426a',
       expect.any(Uint8Array),
-      1
+      1,
     );
     expect(secpVerify).toHaveBeenCalledWith(
       expect.any(Uint8Array),
       '540afc386b9cefbea3d48b0cf0dbc532eab94b68d6fc27959f3fc6bf49fd426a',
       mockPublicKey,
-      { strict: false }
+      { strict: false },
     );
   });
 

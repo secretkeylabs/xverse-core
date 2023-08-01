@@ -43,7 +43,8 @@
     "build:esm": "npm run clean && tsc -p ./tsconfig.build.json",
     "test": "vitest run --coverage",
     "test-dev": "vitest",
-    "lint": "eslint . && prettier -c '**/*.{ts,tsx,js,jsx}'"
+    "lint": "eslint .",
+    "lint:prettier": "echo 'TODO: move to lint script' && prettier -c '**/*.{ts,tsx,js,jsx}'"
   },
   "repository": {
     "type": "git",

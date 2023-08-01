@@ -1,6 +1,13 @@
-import { hashMessage } from "@stacks/encryption";
-import { bytesToHex, ClarityValue, createStacksPrivateKey, getPublicKey, publicKeyToString, signMessageHashRsv, signStructuredData, StacksPrivateKey } from "@stacks/transactions";
-
+import { hashMessage } from '@stacks/encryption';
+import {
+  bytesToHex,
+  ClarityValue,
+  createStacksPrivateKey,
+  getPublicKey,
+  publicKeyToString,
+  signMessageHashRsv,
+  signStructuredData,
+} from '@stacks/transactions';
 
 export interface SignatureData {
   signature: string;
@@ -22,7 +29,7 @@ export function signMessage(message: string, privateKey: string): SignatureData 
 export function signStructuredDataMessage(
   message: ClarityValue,
   domain: ClarityValue,
-  privateKey: string
+  privateKey: string,
 ): SignatureData {
   const sk = createStacksPrivateKey(privateKey);
   const signature = signStructuredData({
