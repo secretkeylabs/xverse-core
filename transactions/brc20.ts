@@ -138,7 +138,7 @@ export async function* brc20TransferExecute(
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
   const finalRecipientUtxoValue = new BigNumber(RECIPIENT_SATS_VALUE);
-  const { tx } = await await signNonOrdinalBtcSendTransaction(
+  const { tx } = await signNonOrdinalBtcSendTransaction(
     recipientAddress,
     [
       {
