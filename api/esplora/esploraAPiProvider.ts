@@ -146,7 +146,7 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
     return this.httpGet<esplora.Transaction[]>(`/address/${address}/txs`);
   }
 
-  async getBtcTransaction(txid: string): Promise<esplora.Transaction> {
+  async getTransaction(txid: string): Promise<esplora.Transaction> {
     return this.httpGet<esplora.Transaction>(`/tx/${txid}`);
   }
 

@@ -60,20 +60,14 @@ export async function fetchBtcTransaction(
   btcAddress: string,
   ordinalsAddress: string,
   network: NetworkType,
+  isOrdinal?: boolean,
 ) {
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
-  const txResponse: esplora.Transaction = await btcClient.getBtcTransaction(id);
-  const transaction: BtcTransactionData = parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);
-  return transaction;
-}
-
-export async function fetchOrdinalTransaction(id: string, ordinalsAddress: string, network: NetworkType) {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const txResponse: esplora.Transaction = await btcClient.getBtcTransaction(id);
-  const transaction: BtcTransactionData = parseOrdinalsBtcTransactions(txResponse, ordinalsAddress);
+  const txResponse: esplora.Transaction = await btcClient.getTransaction(id);
+  const transaction: BtcTransactionData = isOrdinal
+    ? parseOrdinalsBtcTransactions(txResponse, ordinalsAddress)
+    : parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);
   return transaction;
 }
