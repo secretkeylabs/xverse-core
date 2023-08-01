@@ -156,6 +156,8 @@ export async function generateSignedBtcTransaction(
   const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumValue.isLessThan(satsToSend.plus(feeSats))) {
+    // TODO: Throw error and not just the code
+    // eslint-disable-next-line @typescript-eslint/no-throw-literal
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
@@ -173,6 +175,46 @@ export async function generateSignedBtcTransaction(
 
   tx.sign(privKey);
   tx.finalize();
+  return tx;
+}
+
+export function createTransaction(
+  privateKey: string,
+  selectedUnspentOutputs: Array<UTXO>,
+  totalSatsToSend: BigNumber,
+  recipients: Array<Recipient>,
+  changeAddress: string,
+  network: NetworkType,
+  skipChange = false,
+): btc.Transaction {
+  // Create Bitcoin transaction
+  const tx = new btc.Transaction();
+  const btcNetwork = getBtcNetwork(network);
+
+  // Create wrapped segwit spend
+  const privKey = hex.decode(privateKey);
+  const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privKey, true), btcNetwork);
+  const p2sh = btc.p2sh(p2wpkh, btcNetwork);
+
+  // Calculate utxo sum
+  const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
+
+  // Calculate change
+  const changeSats = sumValue.minus(totalSatsToSend);
+
+  // Add inputs
+  addInputs(tx, selectedUnspentOutputs, p2sh);
+
+  // Add outputs
+  recipients.forEach((recipient) => {
+    addOutput(tx, recipient.address, recipient.amountSats, btcNetwork);
+  });
+
+  // Add change output
+  if (!skipChange && changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
+    addOutput(tx, changeAddress, changeSats, btcNetwork);
+  }
+
   return tx;
 }
 
@@ -195,6 +237,90 @@ export async function calculateFee(
   const txSize = tx.vsize;
 
   return new BigNumber(feeRate).multipliedBy(txSize);
+}
+
+export async function getFee(
+  unspentOutputs: Array<UTXO>,
+  selectedUnspentOutputs: Array<UTXO>,
+  sumSelectedOutputs: BigNumber,
+  satsToSend: BigNumber,
+  recipients: Array<Recipient>,
+  feeRate: BtcFeeResponse | string,
+  changeAddress: string,
+  network: NetworkType,
+  pinnedOutput?: UTXO,
+  feeMode?: string,
+): Promise<{
+  newSelectedUnspentOutputs: Array<UTXO>;
+  fee: BigNumber;
+  selectedFeeRate?: BigNumber;
+}> {
+  let iSelectedUnspentOutputs = selectedUnspentOutputs.slice();
+
+  let selectedFeeRate = Number(feeRate);
+
+  if (typeof feeRate === 'object') {
+    selectedFeeRate = feeRate.regular;
+
+    if (feeMode && feeMode === 'high') {
+      selectedFeeRate = feeRate.priority;
+    }
+  }
+
+  // Calculate fee
+  let calculatedFee = await calculateFee(
+    selectedUnspentOutputs,
+    satsToSend,
+    recipients,
+    new BigNumber(selectedFeeRate),
+    changeAddress,
+    network,
+  );
+
+  let lastSelectedUnspentOutputCount = iSelectedUnspentOutputs.length;
+
+  let count = 0;
+  while (sumSelectedOutputs.isLessThan(satsToSend.plus(calculatedFee))) {
+    const newSatsToSend = satsToSend.plus(calculatedFee);
+
+    // Select unspent outputs
+    iSelectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, unspentOutputs, pinnedOutput);
+    sumSelectedOutputs = sumUnspentOutputs(iSelectedUnspentOutputs);
+
+    // Check if select output count has changed since last iteration
+    // If it hasn't, there is insufficient balance
+    if (lastSelectedUnspentOutputCount >= unspentOutputs.length + (pinnedOutput ? 1 : 0)) {
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+    }
+
+    lastSelectedUnspentOutputCount = iSelectedUnspentOutputs.length;
+
+    // Re-calculate fee
+    calculatedFee = await calculateFee(
+      iSelectedUnspentOutputs,
+      satsToSend,
+      recipients,
+      new BigNumber(selectedFeeRate),
+      changeAddress,
+      network,
+    );
+
+    count++;
+    if (count > 500) {
+      // Exit after max 500 iterations
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
+      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
+    }
+  }
+
+  return {
+    newSelectedUnspentOutputs: iSelectedUnspentOutputs,
+    fee: calculatedFee,
+    selectedFeeRate: new BigNumber(selectedFeeRate),
+  };
 }
 
 export async function calculateOrdinalSendFee(
@@ -247,6 +373,8 @@ export async function getBtcFees(
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
@@ -270,6 +398,12 @@ export async function getBtcFees(
   } catch (error) {
     return Promise.reject(error.toString());
   }
+}
+
+export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
+  return allUtxos.filter(
+    (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout),
+  );
 }
 
 // Used to calculate fees for setting low/high fee settings
@@ -302,6 +436,8 @@ export async function getBtcFeesForOrdinalSend(
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
@@ -355,6 +491,8 @@ export async function getBtcFeesForNonOrdinalBtcSend(
     const satsToSend = sumSelectedOutputs;
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
@@ -387,126 +525,6 @@ export async function getBtcFeesForNonOrdinalBtcSend(
   } catch (error) {
     return Promise.reject(error.toString());
   }
-}
-
-export async function getFee(
-  unspentOutputs: Array<UTXO>,
-  selectedUnspentOutputs: Array<UTXO>,
-  sumSelectedOutputs: BigNumber,
-  satsToSend: BigNumber,
-  recipients: Array<Recipient>,
-  feeRate: BtcFeeResponse | string,
-  changeAddress: string,
-  network: NetworkType,
-  pinnedOutput?: UTXO,
-  feeMode?: string,
-): Promise<{
-  newSelectedUnspentOutputs: Array<UTXO>;
-  fee: BigNumber;
-  selectedFeeRate?: BigNumber;
-}> {
-  let i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
-
-  let selectedFeeRate = Number(feeRate);
-
-  if (typeof feeRate === 'object') {
-    selectedFeeRate = feeRate.regular;
-
-    if (feeMode && feeMode === 'high') {
-      selectedFeeRate = feeRate.priority;
-    }
-  }
-
-  // Calculate fee
-  let calculatedFee = await calculateFee(
-    selectedUnspentOutputs,
-    satsToSend,
-    recipients,
-    new BigNumber(selectedFeeRate),
-    changeAddress,
-    network,
-  );
-
-  let lastSelectedUnspentOutputCount = i_selectedUnspentOutputs.length;
-
-  let count = 0;
-  while (sumSelectedOutputs.isLessThan(satsToSend.plus(calculatedFee))) {
-    const newSatsToSend = satsToSend.plus(calculatedFee);
-
-    // Select unspent outputs
-    i_selectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, unspentOutputs, pinnedOutput);
-    sumSelectedOutputs = sumUnspentOutputs(i_selectedUnspentOutputs);
-
-    // Check if select output count has changed since last iteration
-    // If it hasn't, there is insufficient balance
-    if (lastSelectedUnspentOutputCount >= unspentOutputs.length + (pinnedOutput ? 1 : 0)) {
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-    }
-
-    lastSelectedUnspentOutputCount = i_selectedUnspentOutputs.length;
-
-    // Re-calculate fee
-    calculatedFee = await calculateFee(
-      i_selectedUnspentOutputs,
-      satsToSend,
-      recipients,
-      new BigNumber(selectedFeeRate),
-      changeAddress,
-      network,
-    );
-
-    count++;
-    if (count > 500) {
-      // Exit after max 500 iterations
-      throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
-    }
-  }
-
-  return {
-    newSelectedUnspentOutputs: i_selectedUnspentOutputs,
-    fee: calculatedFee,
-    selectedFeeRate: new BigNumber(selectedFeeRate),
-  };
-}
-
-export function createTransaction(
-  privateKey: string,
-  selectedUnspentOutputs: Array<UTXO>,
-  totalSatsToSend: BigNumber,
-  recipients: Array<Recipient>,
-  changeAddress: string,
-  network: NetworkType,
-  skipChange = false,
-): btc.Transaction {
-  // Create Bitcoin transaction
-  const tx = new btc.Transaction();
-  const btcNetwork = getBtcNetwork(network);
-
-  // Create wrapped segwit spend
-  const privKey = hex.decode(privateKey);
-  const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privKey, true), btcNetwork);
-  const p2sh = btc.p2sh(p2wpkh, btcNetwork);
-
-  // Calculate utxo sum
-  const sumValue = sumUnspentOutputs(selectedUnspentOutputs);
-
-  // Calculate change
-  const changeSats = sumValue.minus(totalSatsToSend);
-
-  // Add inputs
-  addInputs(tx, selectedUnspentOutputs, p2sh);
-
-  // Add outputs
-  recipients.forEach((recipient) => {
-    addOutput(tx, recipient.address, recipient.amountSats, btcNetwork);
-  });
-
-  // Add change output
-  if (!skipChange && changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
-    addOutput(tx, changeAddress, changeSats, btcNetwork);
-  }
-
-  return tx;
 }
 
 function getTransactionMetadataForUtxos(
@@ -725,19 +743,19 @@ export function createOrdinalTransaction(
   // Calculate change
   const changeSats = sumValue.minus(totalSatsToSend);
 
-  let i_selectedUnspentOutputs = selectedUnspentOutputs;
+  let iSelectedUnspentOutputs = selectedUnspentOutputs;
 
   if (taprootPrivateKey) {
     // Assume first input is taproot ordinal utxo
-    i_selectedUnspentOutputs = selectedUnspentOutputs.slice();
+    iSelectedUnspentOutputs = selectedUnspentOutputs.slice();
     const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
     const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);
-    const ordinalUnspentOutput = i_selectedUnspentOutputs.shift();
+    const ordinalUnspentOutput = iSelectedUnspentOutputs.shift();
     addInputsTaproot(tx, [ordinalUnspentOutput!], taprootInternalPubKey, p2tr);
   }
 
   // Add remaining inputs
-  addInputs(tx, i_selectedUnspentOutputs, p2sh);
+  addInputs(tx, iSelectedUnspentOutputs, p2sh);
 
   // Add outputs
   recipients.forEach((recipient) => {
@@ -787,6 +805,8 @@ export async function signBtcTransaction(
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
+      // TODO: Throw error and not just the code
+      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
     }
 
@@ -832,12 +852,6 @@ export async function signBtcTransaction(
   } catch (error) {
     return Promise.reject(error.toString());
   }
-}
-
-export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
-  return allUtxos.filter(
-    (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout),
-  );
 }
 
 export async function signOrdinalSendTransaction(
@@ -892,6 +906,8 @@ export async function signOrdinalSendTransaction(
   const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
   if (sumSelectedOutputs.isLessThan(satsToSend)) {
+    // TODO: Throw error and not just the code
+    // eslint-disable-next-line @typescript-eslint/no-throw-literal
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 

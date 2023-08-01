@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { makeAuthResponse } from '@stacks/wallet-sdk';
 import { describe, expect, it, vi } from 'vitest';
 

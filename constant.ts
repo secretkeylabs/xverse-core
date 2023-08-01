@@ -40,6 +40,8 @@ export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 
+export const XORD_MAINNET_URL = 'https://inscribe.xverse.app';
+
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 
 export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
@@ -90,8 +92,7 @@ export const supportedCoins = [
     name: 'SLIME',
   },
 ];
-export const ORDINALS_URL = (inscriptionId: string) =>
-  `https://api.hiro.so/ordinals/v1/inscriptions/${inscriptionId}/content`;
+export const ORDINALS_URL = (inscriptionId: string) => `https://ord.xverse.app/content/${inscriptionId}`;
 
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
 
