@@ -3,11 +3,7 @@ import { Account, NetworkType } from '../types';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import { getAddressInfo } from 'bitcoin-address-validation';
-import {
-  getBitcoinDerivationPath,
-  getSegwitDerivationPath,
-  getTaprootDerivationPath,
-} from '../wallet';
+import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../wallet';
 
 import * as secp256k1 from '@noble/secp256k1';
 import * as bip39 from 'bip39';
@@ -34,11 +30,7 @@ export interface PrivateKeyPairMap {
   [address: string]: PrivateKeyPair;
 }
 
-export function getSigningDerivationPath(
-  accounts: Array<Account>,
-  address: string,
-  network: NetworkType
-): string {
+export function getSigningDerivationPath(accounts: Array<Account>, address: string, network: NetworkType): string {
   const { type } = getAddressInfo(address);
 
   if (accounts.length <= 0) {
@@ -78,7 +70,7 @@ export async function signPsbt(
   inputsToSign: Array<InputToSign>,
   psbtBase64: string,
   finalize = false,
-  network?: NetworkType
+  network?: NetworkType,
 ): Promise<string> {
   if (psbtBase64.length <= 0) {
     throw new Error('Invalid transaction');
@@ -168,7 +160,7 @@ export async function signBip340(
   accounts: Array<Account>,
   address: string,
   messageHash: string,
-  network?: NetworkType
+  network?: NetworkType,
 ): Promise<string> {
   const networkType = network ?? 'Mainnet';
 
@@ -208,7 +200,7 @@ export function parsePsbt(
   account: Account,
   inputsToSign: Array<InputToSign>,
   psbtBase64: string,
-  network?: NetworkType
+  network?: NetworkType,
 ): ParsedPSBT {
   const btcNetwork = getBtcNetwork(network ?? 'Mainnet');
 
@@ -225,7 +217,7 @@ export function parsePsbt(
   }
 
   const inputs: Array<PSBTInput> = [];
-  // @ts-expect-error:
+  // @ts-expect-error: accessing private property. JS allows this though it's not ideal
   psbt.inputs.forEach((input) => {
     let value = 0n;
     if (!input.witnessUtxo) {
@@ -254,24 +246,24 @@ export function parsePsbt(
   });
 
   const outputs: Array<PSBTOutput> = [];
-  // @ts-expect-error:
+  // @ts-expect-error: accessing private property. JS allows this even though it's not ideal.
   psbt.outputs.forEach((output) => {
     const outputScript = btc.OutScript.decode(output.script);
 
     let outputAddress = '';
 
     if (outputScript.type === 'ms' || outputScript.type === 'tr') {
-      // @ts-expect-error:
+      // @ts-expect-error: accessing private property
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
-        // @ts-expect-error:
+        // @ts-expect-error: accessing private property
         pubkey: outputScript.pubkey,
       });
     } else {
-      // @ts-expect-error:
+      // @ts-expect-error: accessing private property
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
-        // @ts-expect-error:
+        // @ts-expect-error: accessing private property
         hash: outputScript.hash,
       });
     }
