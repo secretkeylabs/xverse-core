@@ -187,6 +187,7 @@ export interface PSBTOutput {
   address: string;
   amount: bigint;
   userReceives: boolean;
+  outputScript?: any;
 }
 
 export interface ParsedPSBT {
@@ -251,6 +252,7 @@ export function parsePsbt(
     const outputScript = btc.OutScript.decode(output.script);
 
     let outputAddress = '';
+    let script = undefined;
 
     if (outputScript.type === 'ms' || outputScript.type === 'tr') {
       // @ts-expect-error: accessing private property
@@ -259,8 +261,13 @@ export function parsePsbt(
         // @ts-expect-error: accessing private property
         pubkey: outputScript.pubkey,
       });
-    } else {
-      // @ts-expect-error: accessing private property
+    } 
+    else if(outputScript.type === 'unknown'){
+      //for script outputs
+      script = btc.Script.decode(outputScript.script);
+    }
+    else {
+       // @ts-expect-error: accessing private property
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
         // @ts-expect-error: accessing private property
@@ -278,6 +285,7 @@ export function parsePsbt(
       address: outputAddress,
       amount: output.amount,
       userReceives,
+      outputScript: script,
     });
   });
 
