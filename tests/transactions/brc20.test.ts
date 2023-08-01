@@ -12,6 +12,8 @@ import { getBtcPrivateKey } from '../../wallet';
 
 import BigNumber from 'bignumber.js';
 import {
+  brc20MintEstimateFees,
+  brc20MintExecute,
   brc20TransferEstimateFees,
   brc20TransferExecute,
   ExecuteTransferProgressCodes,
@@ -22,13 +24,169 @@ vi.mock('../../api/esplora/esploraAPiProvider');
 vi.mock('../../transactions/btc');
 vi.mock('../../wallet');
 
+describe('brc20MintEstimateFees', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('should estimate BRC20 mint fees correctly', async () => {
+    const mockedAddressUtxos: UTXO[] = [];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    vi.mocked(xverseInscribeApi.getBrc20MintFees).mockResolvedValue({
+      chainFee: 1080,
+      serviceFee: 2000,
+      inscriptionValue: 1000,
+      vSize: 150,
+    });
+
+    vi.mocked(selectUtxosForSend).mockReturnValueOnce({
+      change: 2070,
+      fee: 1070,
+      feeRate: 12,
+      selectedUtxos: [],
+    });
+
+    const result = await brc20MintEstimateFees(
+      mockedAddressUtxos,
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedFeeRate,
+    );
+
+    expect(result).toEqual({
+      commitValue: 1070 + 1080 + 2000 + 1000,
+      valueBreakdown: {
+        commitChainFee: 1070,
+        revealChainFee: 1080,
+        revealServiceFee: 2000,
+        inscriptionValue: 1000,
+      },
+    });
+
+    expect(xverseInscribeApi.getBrc20MintFees).toHaveBeenCalledWith(
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedFeeRate,
+      1000,
+    );
+
+    expect(selectUtxosForSend).toHaveBeenCalledWith(
+      'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh',
+      [{ address: mockedRevealAddress, amountSats: new BigNumber(4080) }],
+      mockedAddressUtxos,
+      mockedFeeRate,
+    );
+  });
+});
+
+describe('brc20MintExecute', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('should mint BRC20 successfully', async () => {
+    const mockedSeedPhrase = 'seed_phrase';
+    const mockedAccountIndex = 0;
+    const mockedAddressUtxos: UTXO[] = [];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'reveal_address';
+    const mockedChangeAddress = 'change_address';
+    const mockedFeeRate = 12;
+    const mockedNetwork = 'Mainnet';
+    const mockedSelectedUtxos: UTXO[] = [];
+
+    vi.mocked(getBtcPrivateKey).mockResolvedValueOnce('private_key');
+
+    vi.mocked(xverseInscribeApi.createBrc20MintOrder).mockResolvedValue({
+      commitAddress: 'commit_address',
+      commitValue: 1000,
+    } as any);
+
+    vi.mocked(selectUtxosForSend).mockReturnValueOnce({
+      change: 2070,
+      fee: 1070,
+      feeRate: 12,
+      selectedUtxos: mockedSelectedUtxos,
+    });
+
+    vi.mocked(generateSignedBtcTransaction).mockResolvedValueOnce({ hex: 'commit_hex' } as any);
+
+    vi.mocked(xverseInscribeApi.executeBrc20Order).mockResolvedValueOnce({
+      revealTransactionId: 'revealId',
+      revealUTXOVOut: 0,
+      revealUTXOValue: 3000,
+    });
+
+    const result = await brc20MintExecute(
+      mockedSeedPhrase,
+      mockedAccountIndex,
+      mockedAddressUtxos,
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedChangeAddress,
+      mockedFeeRate,
+      mockedNetwork,
+    );
+
+    expect(result).toEqual('revealId');
+
+    expect(getBtcPrivateKey).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seedPhrase: mockedSeedPhrase,
+        index: BigInt(mockedAccountIndex),
+        network: 'Mainnet',
+      }),
+    );
+
+    expect(xverseInscribeApi.createBrc20MintOrder).toHaveBeenCalledWith(
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedFeeRate,
+      'Mainnet',
+      1000,
+    );
+
+    expect(selectUtxosForSend).toHaveBeenCalledWith(
+      'change_address',
+      [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+      mockedAddressUtxos,
+      mockedFeeRate,
+    );
+
+    expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
+      'private_key',
+      mockedSelectedUtxos,
+      new BigNumber(1000),
+      [
+        {
+          address: 'commit_address',
+          amountSats: new BigNumber(1000),
+        },
+      ],
+      mockedChangeAddress,
+      new BigNumber(1070),
+      'Mainnet',
+    );
+
+    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex');
+  });
+});
+
 describe('brc20TransferEstimateFees', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
   it('should estimate BRC20 transfer fees correctly', async () => {
-    // Mock the dependencies or external modules if necessary
     const mockedAddressUtxos: UTXO[] = [];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
@@ -96,7 +254,6 @@ describe('brc20TransferExecute', () => {
   });
 
   it('should execute BRC20 transfer correctly', async () => {
-    // Mock the dependencies or external modules if necessary
     const mockedSeedPhrase = 'seed_phrase';
     const mockedAccountIndex = 0;
     const mockedAddressUtxos: UTXO[] = [];

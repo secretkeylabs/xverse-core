@@ -79,6 +79,7 @@ export const brc20MintEstimateFees = async (
       commitChainFee: commitChainFees,
       revealChainFee,
       revealServiceFee,
+      inscriptionValue: FINAL_SATS_VALUE,
     },
   };
 };
