@@ -267,7 +267,7 @@ export function parsePsbt(
       script = btc.Script.decode(outputScript.script);
     }
     else {
-       // @ts-expect-error:
+       // @ts-expect-error: accessing private property
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
         // @ts-expect-error: accessing private property
