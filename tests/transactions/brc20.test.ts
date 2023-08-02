@@ -50,13 +50,13 @@ describe('brc20MintEstimateFees', () => {
       selectedUtxos: [],
     });
 
-    const result = await brc20MintEstimateFees(
-      mockedAddressUtxos,
-      mockedTick,
-      mockedAmount,
-      mockedRevealAddress,
-      mockedFeeRate,
-    );
+    const result = await brc20MintEstimateFees({
+      addressUtxos: mockedAddressUtxos,
+      tick: mockedTick,
+      amount: mockedAmount,
+      revealAddress: mockedRevealAddress,
+      feeRate: mockedFeeRate,
+    });
 
     expect(result).toEqual({
       commitValue: 1070 + 1080 + 2000 + 1000,
@@ -124,17 +124,17 @@ describe('brc20MintExecute', () => {
       revealUTXOValue: 3000,
     });
 
-    const result = await brc20MintExecute(
-      mockedSeedPhrase,
-      mockedAccountIndex,
-      mockedAddressUtxos,
-      mockedTick,
-      mockedAmount,
-      mockedRevealAddress,
-      mockedChangeAddress,
-      mockedFeeRate,
-      mockedNetwork,
-    );
+    const result = await brc20MintExecute({
+      seedPhrase: mockedSeedPhrase,
+      accountIndex: mockedAccountIndex,
+      addressUtxos: mockedAddressUtxos,
+      tick: mockedTick,
+      amount: mockedAmount,
+      revealAddress: mockedRevealAddress,
+      changeAddress: mockedChangeAddress,
+      feeRate: mockedFeeRate,
+      network: mockedNetwork,
+    });
 
     expect(result).toEqual('revealId');
 
@@ -212,13 +212,13 @@ describe('brc20TransferEstimateFees', () => {
       selectedUtxos: [],
     });
 
-    const result = await brc20TransferEstimateFees(
-      mockedAddressUtxos,
-      mockedTick,
-      mockedAmount,
-      mockedRevealAddress,
-      mockedFeeRate,
-    );
+    const result = await brc20TransferEstimateFees({
+      addressUtxos: mockedAddressUtxos,
+      tick: mockedTick,
+      amount: mockedAmount,
+      revealAddress: mockedRevealAddress,
+      feeRate: mockedFeeRate,
+    });
 
     expect(result).toEqual({
       commitValue: 1070 + 1080 + 2000 + 1800 + 1000,
@@ -303,18 +303,18 @@ describe('brc20TransferExecute', () => {
     );
 
     // Execute the generator function
-    const generator = brc20TransferExecute(
-      mockedSeedPhrase,
-      mockedAccountIndex,
-      mockedAddressUtxos,
-      mockedTick,
-      mockedAmount,
-      mockedRevealAddress,
-      mockedChangeAddress,
-      mockedRecipientAddress,
-      mockedFeeRate,
-      mockedNetwork,
-    );
+    const generator = brc20TransferExecute({
+      seedPhrase: mockedSeedPhrase,
+      accountIndex: mockedAccountIndex,
+      addressUtxos: mockedAddressUtxos,
+      tick: mockedTick,
+      amount: mockedAmount,
+      revealAddress: mockedRevealAddress,
+      changeAddress: mockedChangeAddress,
+      recipientAddress: mockedRecipientAddress,
+      feeRate: mockedFeeRate,
+      network: mockedNetwork,
+    });
 
     let result;
     let done;

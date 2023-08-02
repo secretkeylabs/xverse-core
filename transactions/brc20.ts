@@ -9,6 +9,26 @@ import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSend
 
 const FINAL_SATS_VALUE = 1000;
 
+type EstimateProps = {
+  addressUtxos: UTXO[];
+  tick: string;
+  amount: number;
+  revealAddress: string;
+  feeRate: number;
+};
+
+type ExecuteProps = {
+  seedPhrase: string;
+  accountIndex: number;
+  addressUtxos: UTXO[];
+  tick: string;
+  amount: number;
+  revealAddress: string;
+  changeAddress: string;
+  feeRate: number;
+  network: NetworkType;
+};
+
 const createTransferInscriptionContent = (token: string, amount: string) => ({
   p: 'brc-20',
   op: 'transfer',
@@ -41,13 +61,8 @@ export const createBrc20TransferOrder = async (token: string, amount: string, re
   };
 };
 
-export const brc20MintEstimateFees = async (
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  revealAddress: string,
-  feeRate: number,
-) => {
+export const brc20MintEstimateFees = async (estimateProps: EstimateProps) => {
+  const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
 
   const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
@@ -84,17 +99,10 @@ export const brc20MintEstimateFees = async (
   };
 };
 
-export async function brc20MintExecute(
-  seedPhrase: string,
-  accountIndex: number,
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  revealAddress: string,
-  changeAddress: string,
-  feeRate: number,
-  network: NetworkType,
-): Promise<string> {
+export async function brc20MintExecute(executeProps: ExecuteProps): Promise<string> {
+  const { seedPhrase, accountIndex, addressUtxos, tick, amount, revealAddress, changeAddress, feeRate, network } =
+    executeProps;
+
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
@@ -143,13 +151,9 @@ export async function brc20MintExecute(
   return revealTransactionId;
 }
 
-export const brc20TransferEstimateFees = async (
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  revealAddress: string,
-  feeRate: number,
-) => {
+export const brc20TransferEstimateFees = async (estimateProps: EstimateProps) => {
+  const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
+
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
   const { tx } = await signNonOrdinalBtcSendTransaction(
@@ -218,17 +222,21 @@ export enum ExecuteTransferProgressCodes {
 }
 
 export async function* brc20TransferExecute(
-  seedPhrase: string,
-  accountIndex: number,
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  revealAddress: string,
-  changeAddress: string,
-  recipientAddress: string,
-  feeRate: number,
-  network: NetworkType,
+  executeProps: ExecuteProps & { recipientAddress: string },
 ): AsyncGenerator<ExecuteTransferProgressCodes, string, never> {
+  const {
+    seedPhrase,
+    accountIndex,
+    addressUtxos,
+    tick,
+    amount,
+    revealAddress,
+    changeAddress,
+    feeRate,
+    recipientAddress,
+    network,
+  } = executeProps;
+
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
