@@ -65,7 +65,7 @@ const useBrc20TransferFees = (
 
     const runEstimate = async () => {
       try {
-        const result = await brc20TransferEstimateFees(addressUtxos, tick, amount, revealAddress, feeRate);
+        const result = await brc20TransferEstimateFees({ addressUtxos, tick, amount, revealAddress, feeRate });
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {

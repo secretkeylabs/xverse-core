@@ -84,7 +84,7 @@ const useBrc20TransferExecute = (
 
     const runTransfer = async () => {
       try {
-        const transferGenerator = await brc20TransferExecute(
+        const transferGenerator = await brc20TransferExecute({
           seedPhrase,
           accountIndex,
           addressUtxos,
@@ -95,7 +95,7 @@ const useBrc20TransferExecute = (
           recipientAddress,
           feeRate,
           network,
-        );
+        });
 
         let done = false;
         do {
