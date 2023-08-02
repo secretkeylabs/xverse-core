@@ -1,6 +1,6 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "",
   "main": "dist/index.js",
   "dependencies": {
@@ -17,7 +17,7 @@
     "@zondax/ledger-stacks": "^1.0.4",
     "axios": "0.27.2",
     "base64url": "^3.0.1",
-    "bignumber.js": "9.1.0",
+    "bignumber.js": "9.1.1",
     "bip32": "^4.0.0",
     "bip39": "3.0.3",
     "bitcoin-address-validation": "^2.2.1",
@@ -43,7 +43,8 @@
     "build:esm": "npm run clean && tsc -p ./tsconfig.build.json",
     "test": "vitest run --coverage",
     "test-dev": "vitest",
-    "lint": "eslint . && prettier -c '**/*.{ts,tsx,js,jsx}'"
+    "lint": "eslint .",
+    "lint:prettier": "echo 'TODO: move to lint script' && prettier -c '**/*.{ts,tsx,js,jsx}'"
   },
   "repository": {
     "type": "git",

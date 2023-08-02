@@ -12,17 +12,11 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import BN from 'bn.js';
 import { address } from 'bitcoinjs-lib';
+import BN from 'bn.js';
 import { StacksNetwork, StacksTransaction, StxMempoolTransactionData } from 'types';
 import { getNewNonce } from './helper';
-import {
-  estimateContractCallFees,
-  generateUnsignedContractCall,
-  getNonce,
-  setFee,
-  setNonce,
-} from './stx';
+import { estimateContractCallFees, generateUnsignedContractCall, getNonce, setFee, setNonce } from './stx';
 
 function getAddressHashMode(btcAddress: string) {
   if (btcAddress.startsWith('bc1') || btcAddress.startsWith('tb1')) {
@@ -78,11 +72,11 @@ export function addressToVersionHashbyteTupleCV(btcAddress: string): TupleCV<Tup
   const { hashMode, data } = decodeBtcAddress(btcAddress);
   const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
   const hashbytes: BufferCV = bufferCV(data);
-  const address: TupleCV<TupleData<BufferCV>> = tupleCV({
+  const addressTupleCV: TupleCV<TupleData<BufferCV>> = tupleCV({
     hashbytes,
     version: hashModeBuffer,
   });
-  return address;
+  return addressTupleCV;
 }
 
 export async function generateUnsignedDelegateTransaction(
@@ -94,9 +88,9 @@ export async function generateUnsignedDelegateTransaction(
   pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
   network: StacksNetwork,
-  poolPoxAddress: string
+  poolPoxAddress: string,
 ): Promise<StacksTransaction> {
-  var unsignedTx;
+  let unsignedTx;
   const poolRewardAddressTuple = addressToVersionHashbyteTupleCV(poolPoxAddress);
   const userRewardAddressTuple = addressToVersionHashbyteTupleCV(rewardAddress);
 
@@ -123,7 +117,7 @@ export async function generateUnsignedDelegateTransaction(
 
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce + 1n);
-    return Promise.resolve(unsignedTx);
+    return await Promise.resolve(unsignedTx);
   } catch (err: any) {
     return Promise.reject(err.toString());
   }
@@ -136,9 +130,9 @@ export async function generateUnsignedAllowContractCallerTransaction(
   publicKey: string,
   network: StacksNetwork,
   poxContractAddress: string,
-  poxContractName: string
+  poxContractName: string,
 ): Promise<StacksTransaction> {
-  var unsignedTx;
+  let unsignedTx;
   try {
     unsignedTx = await generateUnsignedContractCall({
       publicKey,
@@ -155,7 +149,7 @@ export async function generateUnsignedAllowContractCallerTransaction(
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
 
-    return Promise.resolve(unsignedTx);
+    return await Promise.resolve(unsignedTx);
   } catch (err: any) {
     return Promise.reject(err.toString());
   }
@@ -166,9 +160,9 @@ export async function generateUnsignedRevokeTransaction(
   publicKey: string,
   network: StacksNetwork,
   poxContractAddress: string,
-  poxContractName: string
+  poxContractName: string,
 ): Promise<StacksTransaction> {
-  var unsignedTx;
+  let unsignedTx;
   try {
     unsignedTx = await generateUnsignedContractCall({
       publicKey,
@@ -185,7 +179,7 @@ export async function generateUnsignedRevokeTransaction(
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     setNonce(unsignedTx, nonce);
 
-    return Promise.resolve(unsignedTx);
+    return await Promise.resolve(unsignedTx);
   } catch (err: any) {
     return Promise.reject(err.toString());
   }
