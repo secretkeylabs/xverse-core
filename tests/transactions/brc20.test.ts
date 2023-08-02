@@ -351,6 +351,7 @@ describe('brc20TransferExecute', () => {
             0,
             mockedSeedPhrase,
             'Mainnet',
+            new BigNumber(1),
           );
 
           expect(xverseInscribeApi.createBrc20TransferOrder).toHaveBeenCalledWith(
