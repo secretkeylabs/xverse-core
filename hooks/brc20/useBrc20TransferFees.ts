@@ -12,6 +12,7 @@ type CommitValueBreakdown = {
 };
 
 export enum ErrorCode {
+  UTXOS_MISSING = 'UTXOS_MISSING',
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
   INVALID_TICK = 'INVALID_TICK',
   INVALID_AMOUNT = 'INVALID_AMOUNT',
@@ -20,7 +21,7 @@ export enum ErrorCode {
 }
 
 type Props = {
-  addressUtxos: UTXO[];
+  addressUtxos: UTXO[] | undefined;
   tick: string;
   amount: number;
   feeRate: number;
@@ -29,6 +30,10 @@ type Props = {
 
 const validateProps = (props: Props) => {
   const { addressUtxos, tick, amount, feeRate } = props;
+
+  if (!addressUtxos) {
+    return ErrorCode.UTXOS_MISSING;
+  }
 
   if (!addressUtxos.length) {
     return ErrorCode.INSUFFICIENT_FUNDS;
@@ -61,6 +66,7 @@ const useBrc20TransferFees = (props: Props) => {
   const { addressUtxos, tick, amount, feeRate, revealAddress } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
+  const [isInitialised, setIsInitialised] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
 
@@ -69,15 +75,27 @@ const useBrc20TransferFees = (props: Props) => {
 
     if (validationErrorCode) {
       setErrorCode(validationErrorCode);
+
+      if (validationErrorCode !== ErrorCode.UTXOS_MISSING) {
+        setIsInitialised(true);
+      }
+
       return;
     }
 
+    setIsInitialised(true);
     setIsLoading(true);
     setErrorCode(undefined);
 
     const runEstimate = async () => {
       try {
-        const result = await brc20TransferEstimateFees({ addressUtxos, tick, amount, revealAddress, feeRate });
+        const result = await brc20TransferEstimateFees({
+          addressUtxos: addressUtxos!,
+          tick,
+          amount,
+          revealAddress,
+          feeRate,
+        });
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {
@@ -94,7 +112,7 @@ const useBrc20TransferFees = (props: Props) => {
     runEstimate();
   }, [addressUtxos, tick, amount, revealAddress, feeRate]);
 
-  return { commitValue, commitValueBreakdown, isLoading, errorCode };
+  return { commitValue, commitValueBreakdown, isLoading, errorCode, isInitialised };
 };
 
 export default useBrc20TransferFees;
