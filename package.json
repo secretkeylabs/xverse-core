@@ -72,7 +72,7 @@
     "webpack-cli": "^4.10.0"
   },
   "peerDependencies": {
-    "bignumber.js": ">9.0.0",
+    "bignumber.js": "^9.0.0",
     "react": ">18.0.0"
   }
 }
