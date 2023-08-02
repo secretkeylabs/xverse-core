@@ -34,10 +34,10 @@ const useBrc20TransferFees = (
   feeRate: number,
   revealAddress: string,
 ) => {
-  const [commitValue, setCommitValue] = useState<number | undefined>(undefined);
-  const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>(undefined);
+  const [commitValue, setCommitValue] = useState<number | undefined>();
+  const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isLoading, setIsLoading] = useState(false);
-  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>(undefined);
+  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
 
   useEffect(() => {
     if (!addressUtxos.length) {
@@ -82,7 +82,7 @@ const useBrc20TransferFees = (
     runEstimate();
   }, [addressUtxos, tick, amount, revealAddress, feeRate]);
 
-  return { commitValue, commitValueBreakdown, isLoading, error: errorCode };
+  return { commitValue, commitValueBreakdown, isLoading, errorCode };
 };
 
 export default useBrc20TransferFees;
