@@ -12,6 +12,20 @@ export enum ErrorCode {
   SERVER_ERROR = 'SERVER_ERROR',
 }
 
+/**
+ *
+ * @param seedPhrase - The seed phrase of the wallet
+ * @param accountIndex - The account index of the seed phrase to use
+ * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
+ * @param tick - The 4 letter BRC-20 token name
+ * @param amount - The amount of the BRC-20 token to transfer
+ * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
+ * @param changeAddress - The address where change SATS will be sent to. Should be the Bitcoin address of the wallet.
+ * @param recipientAddress - The address where the BRC-20 tokens will be sent to.
+ * @param feeRate - The desired fee rate for the transactions
+ * @param network - The network to broadcast the transactions on (Mainnet or Testnet)
+ * @returns
+ */
 const useBrc20TransferExecute = (
   seedPhrase: string,
   accountIndex: number,
