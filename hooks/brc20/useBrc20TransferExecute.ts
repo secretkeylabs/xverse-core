@@ -75,7 +75,6 @@ const useBrc20TransferExecute = (props: Props) => {
   } = props;
   const [executed, setExecuted] = useState(false);
   const [running, setRunning] = useState(false);
-  const [complete, setComplete] = useState(false);
   const [transferTransactionId, setTransferTransactionId] = useState<string | undefined>();
   const [progress, setProgress] = useState<ExecuteTransferProgressCodes | undefined>();
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
@@ -128,7 +127,6 @@ const useBrc20TransferExecute = (props: Props) => {
             setProgress(itt.value as ExecuteTransferProgressCodes);
           }
         } while (!done);
-        setComplete(true);
       } catch (e) {
         if (e.message === 'Failed to broadcast transfer transaction') {
           setErrorCode(ErrorCode.TRANSFER_BROADCAST_FAILED);
@@ -143,7 +141,7 @@ const useBrc20TransferExecute = (props: Props) => {
     runTransfer();
   }, [executed, running]);
 
-  return { executeTransfer, transferTransactionId, complete, progress, error: errorCode };
+  return { executeTransfer, transferTransactionId, complete: !!transferTransactionId, progress, error: errorCode };
 };
 
 export default useBrc20TransferExecute;
