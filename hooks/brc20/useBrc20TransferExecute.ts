@@ -131,7 +131,18 @@ const useBrc20TransferExecute = (props: Props) => {
     };
 
     runTransfer();
-  }, [running]);
+  }, [
+    seedPhrase,
+    accountIndex,
+    addressUtxos,
+    tick,
+    amount,
+    revealAddress,
+    changeAddress,
+    recipientAddress,
+    feeRate,
+    network,
+  ]);
 
   return { executeTransfer, transferTransactionId, complete: !!transferTransactionId, progress, error: errorCode };
 };
