@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { NetworkType, UTXO } from 'types';
 import { ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
@@ -43,7 +43,7 @@ const validateProps = (props: Props) => {
   if (feeRate <= 0) {
     return ErrorCode.INVALID_FEE_RATE;
   }
-  return null;
+  return undefined;
 };
 
 /**
@@ -73,32 +73,24 @@ const useBrc20TransferExecute = (props: Props) => {
     feeRate,
     network,
   } = props;
-  const [executed, setExecuted] = useState(false);
   const [running, setRunning] = useState(false);
   const [transferTransactionId, setTransferTransactionId] = useState<string | undefined>();
   const [progress, setProgress] = useState<ExecuteTransferProgressCodes | undefined>();
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
 
-  const executeTransfer = () => {
-    setExecuted(true);
-  };
-
-  useEffect(() => {
-    if (!executed) return;
+  const executeTransfer = useCallback(() => {
     if (running) return;
 
     const validationErrorCode = validateProps(props);
+    setErrorCode(validationErrorCode);
 
     if (validationErrorCode) {
-      setErrorCode(validationErrorCode);
-      setExecuted(false);
       return;
     }
 
     // if we get to here, that means that the transfer is valid and we can try to execute it but we don't want to
     // be able to accidentally execute it again if something goes wrong, so we set the running flag
     setRunning(true);
-    setErrorCode(undefined);
 
     const runTransfer = async () => {
       try {
@@ -139,7 +131,7 @@ const useBrc20TransferExecute = (props: Props) => {
     };
 
     runTransfer();
-  }, [executed, running]);
+  }, [running]);
 
   return { executeTransfer, transferTransactionId, complete: !!transferTransactionId, progress, error: errorCode };
 };
