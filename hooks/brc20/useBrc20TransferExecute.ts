@@ -12,6 +12,18 @@ export enum ErrorCode {
   SERVER_ERROR = 'SERVER_ERROR',
 }
 
+type Props = {
+  seedPhrase: string;
+  accountIndex: number;
+  addressUtxos: UTXO[];
+  tick: string;
+  amount: number;
+  revealAddress: string;
+  changeAddress: string;
+  recipientAddress: string;
+  feeRate: number;
+  network: NetworkType;
+};
 /**
  *
  * @param seedPhrase - The seed phrase of the wallet
@@ -26,18 +38,19 @@ export enum ErrorCode {
  * @param network - The network to broadcast the transactions on (Mainnet or Testnet)
  * @returns
  */
-const useBrc20TransferExecute = (
-  seedPhrase: string,
-  accountIndex: number,
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  revealAddress: string,
-  changeAddress: string,
-  recipientAddress: string,
-  feeRate: number,
-  network: NetworkType,
-) => {
+const useBrc20TransferExecute = (props: Props) => {
+  const {
+    seedPhrase,
+    accountIndex,
+    addressUtxos,
+    tick,
+    amount,
+    revealAddress,
+    changeAddress,
+    recipientAddress,
+    feeRate,
+    network,
+  } = props;
   const [executed, setExecuted] = useState(false);
   const [running, setRunning] = useState(false);
   const [complete, setComplete] = useState(false);

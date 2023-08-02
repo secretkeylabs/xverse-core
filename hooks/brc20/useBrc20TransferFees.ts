@@ -19,6 +19,14 @@ export enum ErrorCode {
   SERVER_ERROR = 'SERVER_ERROR',
 }
 
+type Props = {
+  addressUtxos: UTXO[];
+  tick: string;
+  amount: number;
+  feeRate: number;
+  revealAddress: string;
+};
+
 /**
  * Estimates the fees for a BRC-20 1-step transfer
  * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
@@ -27,13 +35,8 @@ export enum ErrorCode {
  * @param feeRate - The desired fee rate for the transactions
  * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
  */
-const useBrc20TransferFees = (
-  addressUtxos: UTXO[],
-  tick: string,
-  amount: number,
-  feeRate: number,
-  revealAddress: string,
-) => {
+const useBrc20TransferFees = (props: Props) => {
+  const { addressUtxos, tick, amount, feeRate, revealAddress } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isLoading, setIsLoading] = useState(false);
