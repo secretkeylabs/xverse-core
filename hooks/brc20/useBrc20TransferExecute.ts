@@ -88,9 +88,10 @@ const useBrc20TransferExecute = (props: Props) => {
     if (!executed) return;
     if (running) return;
 
-    const validationError = validateProps(props);
-    if (validationError) {
-      setErrorCode(validationError);
+    const validationErrorCode = validateProps(props);
+
+    if (validationErrorCode) {
+      setErrorCode(validationErrorCode);
       setExecuted(false);
       return;
     }

@@ -27,6 +27,28 @@ type Props = {
   revealAddress: string;
 };
 
+const validateProps = (props: Props) => {
+  const { addressUtxos, tick, amount, feeRate } = props;
+
+  if (!addressUtxos.length) {
+    return ErrorCode.INSUFFICIENT_FUNDS;
+  }
+
+  if (tick.length !== 4) {
+    return ErrorCode.INVALID_TICK;
+  }
+
+  if (amount <= 0) {
+    return ErrorCode.INVALID_AMOUNT;
+  }
+
+  if (feeRate <= 0) {
+    return ErrorCode.INVALID_FEE_RATE;
+  }
+
+  return null;
+};
+
 /**
  * Estimates the fees for a BRC-20 1-step transfer
  * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
@@ -43,23 +65,10 @@ const useBrc20TransferFees = (props: Props) => {
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
 
   useEffect(() => {
-    if (!addressUtxos.length) {
-      setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-      return;
-    }
+    const validationErrorCode = validateProps(props);
 
-    if (tick.length !== 4) {
-      setErrorCode(ErrorCode.INVALID_TICK);
-      return;
-    }
-
-    if (amount <= 0) {
-      setErrorCode(ErrorCode.INVALID_AMOUNT);
-      return;
-    }
-
-    if (feeRate <= 0) {
-      setErrorCode(ErrorCode.INVALID_FEE_RATE);
+    if (validationErrorCode) {
+      setErrorCode(validationErrorCode);
       return;
     }
 
