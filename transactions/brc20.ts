@@ -172,6 +172,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps) =>
     0,
     'action action action action action action action action action action action action',
     'Mainnet',
+    new BigNumber(1),
   );
 
   const transferFeeEstimate = tx.vsize * feeRate;
@@ -264,6 +265,7 @@ export async function* brc20TransferExecute(
     accountIndex,
     seedPhrase,
     'Mainnet',
+    new BigNumber(1),
   );
 
   const transferFeeEstimate = tx.vsize * feeRate;
