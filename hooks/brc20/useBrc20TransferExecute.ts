@@ -24,6 +24,28 @@ type Props = {
   feeRate: number;
   network: NetworkType;
 };
+
+const validateProps = (props: Props) => {
+  const { addressUtxos, tick, amount, feeRate } = props;
+
+  if (!addressUtxos.length) {
+    return ErrorCode.INSUFFICIENT_FUNDS;
+  }
+
+  if (tick.length !== 4) {
+    return ErrorCode.INVALID_TICK;
+  }
+
+  if (amount <= 0) {
+    return ErrorCode.INVALID_AMOUNT;
+  }
+
+  if (feeRate <= 0) {
+    return ErrorCode.INVALID_FEE_RATE;
+  }
+  return null;
+};
+
 /**
  *
  * @param seedPhrase - The seed phrase of the wallet
@@ -66,26 +88,9 @@ const useBrc20TransferExecute = (props: Props) => {
     if (!executed) return;
     if (running) return;
 
-    if (!addressUtxos.length) {
-      setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-      setExecuted(false);
-      return;
-    }
-
-    if (tick.length !== 4) {
-      setErrorCode(ErrorCode.INVALID_TICK);
-      setExecuted(false);
-      return;
-    }
-
-    if (amount <= 0) {
-      setErrorCode(ErrorCode.INVALID_AMOUNT);
-      setExecuted(false);
-      return;
-    }
-
-    if (feeRate <= 0) {
-      setErrorCode(ErrorCode.INVALID_FEE_RATE);
+    const validationError = validateProps(props);
+    if (validationError) {
+      setErrorCode(validationError);
       setExecuted(false);
       return;
     }
