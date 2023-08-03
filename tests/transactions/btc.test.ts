@@ -10,7 +10,7 @@ const dummyChangeAddress = 'bc1pzsm9pu47e7npkvxh9dcd0dc2qwqshxt2a9tt7aq3xe9krpl8
 describe('selectUtxosForSend', () => {
   it.each(selectUtxosForSendSuccessFixtures)(
     'should select utxos for send: %s',
-    (_testName, recipients, feeRate, expected) => {
+    (_testName, { recipients, feeRate, expected }) => {
       const selectedUtxoData = selectUtxosForSend({
         changeAddress: dummyChangeAddress,
         recipients,
