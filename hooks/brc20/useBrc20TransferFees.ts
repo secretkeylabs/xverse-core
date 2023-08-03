@@ -112,7 +112,13 @@ const useBrc20TransferFees = (props: Props) => {
     runEstimate();
   }, [addressUtxos, tick, amount, revealAddress, feeRate]);
 
-  return { commitValue, commitValueBreakdown, isLoading, errorCode, isInitialised };
+  return {
+    commitValue,
+    commitValueBreakdown,
+    isLoading,
+    errorCode: isInitialised ? errorCode : undefined,
+    isInitialised,
+  };
 };
 
 export default useBrc20TransferFees;
