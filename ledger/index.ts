@@ -19,8 +19,9 @@ import {
   createMixedPsbt,
 } from './transaction';
 import { Psbt } from 'bitcoinjs-lib';
+import { base64 } from '@scure/base';
 
-const getCoinType = (network: NetworkType) => network === 'Mainnet' ? 0 : 1;
+const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 : 1);
 
 /**
  * This function is used to get the master fingerprint from the ledger
@@ -45,7 +46,7 @@ export async function importNativeSegwitAccountFromLedger(
   network: NetworkType,
   accountIndex = 0,
   addressIndex = 0,
-  showAddress = false
+  showAddress = false,
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
@@ -54,7 +55,7 @@ export async function importNativeSegwitAccountFromLedger(
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
+    `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`,
   );
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
@@ -74,7 +75,7 @@ export async function importTaprootAccountFromLedger(
   network: NetworkType,
   accountIndex = 0,
   addressIndex = 0,
-  showAddress = false
+  showAddress = false,
 ): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
@@ -83,7 +84,7 @@ export async function importTaprootAccountFromLedger(
   const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${btcNetwork}'/${accountIndex}'`);
   const accountPolicy = new DefaultWalletPolicy(
     'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`
+    `[${masterFingerPrint}/86'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`,
   );
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
   const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
@@ -115,7 +116,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`
+    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
   );
 
   const {
@@ -124,12 +125,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
     witnessScript,
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(
-    network,
-    senderAddress,
-    recipients,
-    feeRateInput,
-  );
+  const { selectedUTXOs, changeValue } = await getTransactionData(network, senderAddress, recipients, feeRateInput);
 
   const inputDerivation: Bip32Derivation = {
     path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
@@ -144,7 +140,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
     changeValue,
     selectedUTXOs,
     [inputDerivation],
-    witnessScript
+    witnessScript,
   );
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
   for (const signature of signatures) {
@@ -180,7 +176,7 @@ export async function signLedgerTaprootBtcTransaction(
   const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
     'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`
+    `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
   );
 
   const {
@@ -189,11 +185,7 @@ export async function signLedgerTaprootBtcTransaction(
     taprootScript,
   } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(
-    network,
-    btcAddress,
-    recipients,
-  );
+  const { selectedUTXOs, changeValue } = await getTransactionData(network, btcAddress, recipients);
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: TapBip32Derivation = {
@@ -210,7 +202,7 @@ export async function signLedgerTaprootBtcTransaction(
     selectedUTXOs,
     [inputDerivation],
     taprootScript,
-    internalPubkey
+    internalPubkey,
   );
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
   for (const signature of signatures) {
@@ -238,8 +230,8 @@ export async function* signLedgerMixedBtcTransaction(
   addressIndex: number,
   recipients: Array<Recipient>,
   feeRateInput?: string,
-  ordinalUtxo?: UTXO
-  ): AsyncGenerator<string> {
+  ordinalUtxo?: UTXO,
+): AsyncGenerator<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
@@ -248,7 +240,7 @@ export async function* signLedgerMixedBtcTransaction(
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`
+    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
   );
 
   const {
@@ -262,7 +254,7 @@ export async function* signLedgerMixedBtcTransaction(
     senderAddress,
     recipients,
     feeRateInput,
-    ordinalUtxo
+    ordinalUtxo,
   );
 
   const inputDerivation: Bip32Derivation = {
@@ -272,10 +264,11 @@ export async function* signLedgerMixedBtcTransaction(
   };
 
   const taprootExtendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
-  const {
-    internalPubkey,
-    taprootScript,
-  } = getTaprootAccountDataFromXpub(taprootExtendedPublicKey, addressIndex, network);
+  const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(
+    taprootExtendedPublicKey,
+    addressIndex,
+    network,
+  );
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const taprootInputDerivation: TapBip32Derivation = {
     path: `m/86'/${coinType}'/0'/0/${addressIndex}`,
@@ -286,30 +279,32 @@ export async function* signLedgerMixedBtcTransaction(
 
   const taprootAccountPolicy = new DefaultWalletPolicy(
     'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${coinType}'/0']${taprootExtendedPublicKey}`
+    `[${masterFingerPrint}/86'/${coinType}'/0']${taprootExtendedPublicKey}`,
   );
 
   // If the ordinal UTXO is in the payment address, we need to create a native segwit PSBT
-  const psbt = ordinalUtxoInPaymentAddress ? await createNativeSegwitPsbt(
-    network,
-    recipients,
-    senderAddress,
-    changeValue,
-    selectedUTXOs,
-    [inputDerivation],
-    witnessScript,
-  ) : await createMixedPsbt(
-    network,
-    recipients,
-    senderAddress,
-    changeValue,
-    selectedUTXOs,
-    [inputDerivation],
-    witnessScript,
-    [taprootInputDerivation],
-    taprootScript,
-    internalPubkey
-  );
+  const psbt = ordinalUtxoInPaymentAddress
+    ? await createNativeSegwitPsbt(
+        network,
+        recipients,
+        senderAddress,
+        changeValue,
+        selectedUTXOs,
+        [inputDerivation],
+        witnessScript,
+      )
+    : await createMixedPsbt(
+        network,
+        recipients,
+        senderAddress,
+        changeValue,
+        selectedUTXOs,
+        [inputDerivation],
+        witnessScript,
+        [taprootInputDerivation],
+        taprootScript,
+        internalPubkey,
+      );
   yield 'Psbt created';
 
   if (!ordinalUtxoInPaymentAddress) {
@@ -349,7 +344,7 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   network: NetworkType,
   addressIndex: number,
   indexesToSign: number[],
-  base64Psbt: string
+  base64Psbt: string,
 ): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
@@ -359,14 +354,10 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   const extendedPublicKey = await app.getExtendedPubkey(`m/84'/${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`
+    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
   );
 
-  const { publicKey: senderPublicKey } = getNativeSegwitAccountDataFromXpub(
-    extendedPublicKey,
-    addressIndex,
-    network
-  );
+  const { publicKey: senderPublicKey } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
   const inputDerivation: Bip32Derivation = {
     path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
@@ -397,6 +388,65 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   return psbt.extractTransaction().toHex();
 }
 
+/**
+ * This function is used to sign an incoming Native Segwit Psbt with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param network - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
+ * @param indexesToSign - the indexes of the inputs to sign
+ * @param message - the incoming message in string format to sign
+ * @returns the signed raw transaction in hex format
+ * */
+export async function signIncomingSingleSigTaprootTransactionRequest(
+  transport: Transport,
+  network: NetworkType,
+  addressIndex: number,
+  indexesToSign: number[],
+  message: string,
+): Promise<string> {
+  const bufferMessage = Buffer.from(message);
+  const base64Psbt = base64.encode(bufferMessage);
+  const coinType = getCoinType(network);
+  const app = new AppClient(transport);
+
+  // Get account details from ledger to not rely on state
+  const masterFingerPrint = await app.getMasterFingerprint();
+  const extendedPublicKey = await app.getExtendedPubkey(`m/86'/${coinType}'/0'`);
+  const accountPolicy = new DefaultWalletPolicy(
+    'tr(@0/**)',
+    `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
+  );
+
+  const { internalPubkey } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, network);
+
+  const inputDerivation: TapBip32Derivation = {
+    path: `m/86'/${coinType}'/0'/0/${addressIndex}`,
+    pubkey: internalPubkey,
+    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
+    leafHashes: [],
+  };
+
+  const psbt = Psbt.fromBase64(base64Psbt);
+
+  // Ledger needs to know the derivation path of the inputs to sign
+  for (let i = 0; i < psbt.data.inputs.length; i++) {
+    if (indexesToSign.includes(i)) {
+      psbt.updateInput(i, {
+        tapBip32Derivation: [inputDerivation],
+      });
+    }
+  }
+
+  const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+  for (const signature of signatures) {
+    psbt.updateInput(signature[0], {
+      tapKeySig: signature[1].signature,
+    });
+  }
+  psbt.finalizeAllInputs();
+  return psbt.extractTransaction().toHex();
+}
+
 //================================================================================================
 // STX
 //================================================================================================
@@ -410,13 +460,13 @@ export async function importStacksAccountFromLedger(
   transport: Transport,
   network: NetworkType,
   accountIndex = 0,
-  addressIndex = 0
+  addressIndex = 0,
 ): Promise<{ address: string; publicKey: string }> {
   const appStacks = new StacksApp(transport);
 
   const { address, publicKey } = await appStacks.getAddressAndPubKey(
     `m/44'/5757'/${accountIndex}'/0/${addressIndex}`,
-    network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig
+    network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig,
   );
 
   return { address, publicKey: publicKey.toString('hex') };
@@ -432,7 +482,7 @@ export async function importStacksAccountFromLedger(
 export async function signLedgerStxTransaction(
   transport: Transport,
   transaction: StacksTransaction,
-  addressIndex: number
+  addressIndex: number,
 ): Promise<StacksTransaction> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
@@ -455,7 +505,7 @@ export async function signStxMessage(
   transport: Transport,
   message: string,
   accountIndex = 0,
-  addressIndex = 0
+  addressIndex = 0,
 ): Promise<ResponseSign> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
@@ -474,14 +524,11 @@ export async function signStxMessage(
 export async function handleLedgerStxJWTAuth(
   transport: Transport,
   accountIndex: number,
-  profile: LedgerStxJWTAuthProfile
+  profile: LedgerStxJWTAuthProfile,
 ): Promise<string> {
   const appStacks = new StacksApp(transport);
   const { publicKey } = await appStacks.getIdentityPubKey(`m/888'/0'/${accountIndex}'`);
 
-  const inputToSign = await makeLedgerCompatibleUnsignedAuthResponsePayload(
-    publicKey.toString('hex'),
-    profile
-  );
+  const inputToSign = await makeLedgerCompatibleUnsignedAuthResponsePayload(publicKey.toString('hex'), profile);
   return signStxJWTAuth(transport, accountIndex, inputToSign);
 }
