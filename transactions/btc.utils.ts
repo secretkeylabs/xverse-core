@@ -4,6 +4,67 @@ import { UTXO } from '../types';
 import type { Recipient, TransactionUtxoSelectionMetadata } from './btc';
 import { createTransaction } from './btc';
 
+// these are conservative estimates
+const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
+const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
+const BITCOIN_DUST_VALUE = 1000;
+
+function buildTransactionAndGetMetadata(props: {
+  recipients: Recipient[];
+  selectedUtxos: UTXO[];
+  changeAddress: string;
+  feeRate: number;
+  privateKey: string;
+  recipientTotal: BigNumber;
+  withChange: boolean;
+}): TransactionUtxoSelectionMetadata | undefined {
+  const { privateKey, selectedUtxos, recipientTotal, recipients, changeAddress, feeRate, withChange } = props;
+  // try transaction with change
+  const tx = createTransaction(
+    privateKey,
+    selectedUtxos,
+    recipientTotal,
+    recipients,
+    changeAddress,
+    'Mainnet',
+    !withChange,
+  );
+
+  tx.sign(hex.decode(privateKey));
+  tx.finalize();
+
+  const txSize = tx.vsize;
+  let sentSats = new BigNumber(0);
+
+  for (let i = 0; i < tx.outputsLength; i++) {
+    const output = tx.getOutput(i);
+    sentSats = sentSats.plus(new BigNumber((output.amount ?? 0n).toString()));
+  }
+
+  let change: BigNumber, fee: BigNumber, isValid: boolean;
+  if (withChange) {
+    fee = new BigNumber(txSize).times(feeRate);
+    change = sentSats.minus(recipientTotal).minus(fee);
+    isValid = change.gt(BITCOIN_DUST_VALUE);
+  } else {
+    const inputSum = selectedUtxos.reduce<BigNumber>((sum, utxo) => sum.plus(utxo.value), new BigNumber(0));
+
+    change = new BigNumber(0);
+    fee = inputSum.minus(sentSats);
+    isValid = fee.div(txSize).gt(feeRate);
+  }
+
+  // check if there is change and if the change is greater than the vsize*feeRate + dust rate
+  if (isValid) {
+    return {
+      selectedUtxos,
+      fee: fee.toNumber(),
+      feeRate,
+      change: change.toNumber(),
+    };
+  }
+}
+
 export function getTransactionMetadataForUtxos(
   recipients: Recipient[],
   selectedUtxos: UTXO[],
@@ -18,83 +79,39 @@ export function getTransactionMetadataForUtxos(
     new BigNumber(0),
   );
 
-  // these are conservative estimates
-  const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
-  const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
-  const BITCOIN_DUST_VALUE = 1000;
-
   const estimatedFees = new BigNumber(feeRate).times(
     ESTIMATED_VBYTES_PER_OUTPUT * recipients.length + ESTIMATED_VBYTES_PER_INPUT * selectedUtxos.length,
   );
   // ensure that the UTXOs can cover the expected outputs
   if (!inputSum.gt(recipientTotal.plus(estimatedFees))) return undefined;
 
-  {
-    // try transaction with change
-    const tx = createTransaction(dummyPrivateKey, selectedUtxos, recipientTotal, recipients, changeAddress, 'Mainnet');
+  // We first try the transaction with change because if there is change with the
+  // desired fee rate, then we want to return it to the user
+  const metaDataWithChange = buildTransactionAndGetMetadata({
+    recipients,
+    selectedUtxos,
+    changeAddress,
+    feeRate,
+    privateKey: dummyPrivateKey,
+    recipientTotal,
+    withChange: true,
+  });
 
-    tx.sign(hex.decode(dummyPrivateKey));
-    tx.finalize();
+  if (metaDataWithChange) return metaDataWithChange;
 
-    const txSize = tx.vsize;
-    let sentSats = new BigNumber(0);
+  // the attempt with change above could've resulted in a change that is just below dust, or removing the change output
+  // could bring the fees low enough to get to the desired fee rate, so we try it again without change
+  const metaDataWithoutChange = buildTransactionAndGetMetadata({
+    recipients,
+    selectedUtxos,
+    changeAddress,
+    feeRate,
+    privateKey: dummyPrivateKey,
+    recipientTotal,
+    withChange: false,
+  });
 
-    for (let i = 0; i < tx.outputsLength; i++) {
-      const output = tx.getOutput(i);
-      sentSats = sentSats.plus(new BigNumber((output.amount ?? 0n).toString()));
-    }
-
-    const change = sentSats.minus(recipientTotal);
-    const fee = new BigNumber(txSize).times(feeRate);
-
-    // check if there is change and if the change is greater than the vsize*feeRate + dust rate
-    if (change.gt(fee.plus(BITCOIN_DUST_VALUE))) {
-      const changeWithoutFee = change.minus(fee);
-      return {
-        selectedUtxos,
-        fee: fee.toNumber(),
-        feeRate: feeRate,
-        change: changeWithoutFee.toNumber(),
-      };
-    }
-  }
-
-  {
-    // try txn without change
-    const txNoChange = createTransaction(
-      dummyPrivateKey,
-      selectedUtxos,
-      recipientTotal,
-      recipients,
-      changeAddress,
-      'Mainnet',
-      true,
-    );
-
-    txNoChange.sign(hex.decode(dummyPrivateKey));
-    txNoChange.finalize();
-
-    const txSize = txNoChange.vsize;
-    let sentSats = new BigNumber(0);
-
-    for (let i = 0; i < txNoChange.outputsLength; i++) {
-      const output = txNoChange.getOutput(i);
-      sentSats = sentSats.plus(new BigNumber((output.amount ?? 0n).toString()));
-    }
-
-    const fee = inputSum.minus(sentSats);
-
-    if (fee.div(txSize).gt(feeRate)) {
-      return {
-        selectedUtxos,
-        fee: fee.toNumber(),
-        feeRate: fee.div(txSize).toNumber(),
-        change: 0,
-      };
-    }
-  }
-
-  return undefined;
+  return metaDataWithoutChange;
 }
 
 type SelectOptimalUtxosProps = {
