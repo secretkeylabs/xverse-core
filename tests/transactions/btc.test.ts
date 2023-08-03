@@ -11,7 +11,12 @@ describe('selectUtxosForSend', () => {
   it.each(selectUtxosForSendSuccessFixtures)(
     'should select utxos for send: %s',
     (_testName, recipients, feeRate, expected) => {
-      const selectedUtxoData = selectUtxosForSend(dummyChangeAddress, recipients, utxos, feeRate);
+      const selectedUtxoData = selectUtxosForSend({
+        changeAddress: dummyChangeAddress,
+        recipients,
+        availableUtxos: utxos,
+        feeRate,
+      });
 
       expect(selectedUtxoData).toBeDefined();
 
@@ -22,13 +27,13 @@ describe('selectUtxosForSend', () => {
   );
 
   it('should force select pinned UTXOs', () => {
-    const selectedUtxoData = selectUtxosForSend(
-      dummyChangeAddress,
-      [{ address: recipientAddress1, amountSats: new BigNumber(50000) }],
-      utxos,
-      10,
-      [utxo3k],
-    );
+    const selectedUtxoData = selectUtxosForSend({
+      changeAddress: dummyChangeAddress,
+      recipients: [{ address: recipientAddress1, amountSats: new BigNumber(50000) }],
+      availableUtxos: utxos,
+      feeRate: 10,
+      pinnedUtxos: [utxo3k],
+    });
 
     expect(selectedUtxoData).toEqual({
       selectedUtxos: [utxo3k, utxo792k],
@@ -39,38 +44,50 @@ describe('selectUtxosForSend', () => {
   });
 
   it('should return undefined if no utxos', () => {
-    const selectedUtxoData = selectUtxosForSend(
-      dummyChangeAddress,
-      [{ address: recipientAddress1, amountSats: new BigNumber(1000) }],
-      [],
-      10,
-    );
+    const selectedUtxoData = selectUtxosForSend({
+      changeAddress: dummyChangeAddress,
+      recipients: [{ address: recipientAddress1, amountSats: new BigNumber(1000) }],
+      availableUtxos: [],
+      feeRate: 10,
+    });
 
     expect(selectedUtxoData).toBeUndefined();
   });
 
   it('should return undefined if not enough value in utxos', () => {
-    const selectedUtxoData = selectUtxosForSend(
-      dummyChangeAddress,
-      [{ address: recipientAddress1, amountSats: new BigNumber(10000000) }],
-      utxos,
-      10,
-    );
+    const selectedUtxoData = selectUtxosForSend({
+      changeAddress: dummyChangeAddress,
+      recipients: [{ address: recipientAddress1, amountSats: new BigNumber(10000000) }],
+      availableUtxos: utxos,
+      feeRate: 10,
+    });
 
     expect(selectedUtxoData).toBeUndefined();
   });
 
   it('should throw if no recipients', () => {
-    expect(() => selectUtxosForSend(dummyChangeAddress, [], utxos, 10)).toThrow('Must have at least one recipient');
+    expect(() =>
+      selectUtxosForSend({ changeAddress: dummyChangeAddress, recipients: [], availableUtxos: utxos, feeRate: 10 }),
+    ).toThrow('Must have at least one recipient');
   });
 
   it('should throw if fee rate not a positive number', () => {
     const recipients = [{ address: recipientAddress1, amountSats: new BigNumber(10000000) }];
-    expect(() => selectUtxosForSend(dummyChangeAddress, recipients, utxos, 0)).toThrow(
-      'Fee rate must be a positive number',
-    );
-    expect(() => selectUtxosForSend(dummyChangeAddress, recipients, utxos, -1)).toThrow(
-      'Fee rate must be a positive number',
-    );
+    expect(() =>
+      selectUtxosForSend({
+        changeAddress: dummyChangeAddress,
+        recipients: recipients,
+        availableUtxos: utxos,
+        feeRate: 0,
+      }),
+    ).toThrow('Fee rate must be a positive number');
+    expect(() =>
+      selectUtxosForSend({
+        changeAddress: dummyChangeAddress,
+        recipients: recipients,
+        availableUtxos: utxos,
+        feeRate: -1,
+      }),
+    ).toThrow('Fee rate must be a positive number');
   });
 });

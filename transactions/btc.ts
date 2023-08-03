@@ -620,14 +620,22 @@ function getTransactionMetadataForUtxos(
   return undefined;
 }
 
-function selectOptimalUtxos(
-  recipients: Recipient[],
-  selectedUtxos: UTXO[],
-  availableUtxos: UTXO[],
-  changeAddress: string,
-  feeRate: number,
-  currentBestUtxoCount: number | undefined = undefined,
-): TransactionUtxoSelectionMetadata | undefined {
+type SelectOptimalUtxosProps = {
+  recipients: Recipient[];
+  selectedUtxos: UTXO[];
+  availableUtxos: UTXO[];
+  changeAddress: string;
+  feeRate: number;
+  currentBestUtxoCount?: number;
+};
+function selectOptimalUtxos({
+  recipients,
+  selectedUtxos,
+  availableUtxos,
+  changeAddress,
+  feeRate,
+  currentBestUtxoCount,
+}: SelectOptimalUtxosProps): TransactionUtxoSelectionMetadata | undefined {
   const currentSelectionData = getTransactionMetadataForUtxos(recipients, selectedUtxos, changeAddress, feeRate);
 
   // if there is a valid selection, adding more UTXOs would only make the fees higher, so just return
@@ -646,18 +654,18 @@ function selectOptimalUtxos(
   const sortedUtxos = [...availableUtxos];
   sortedUtxos.sort((a, b) => a.value - b.value);
 
-  let bestSelectionData: TransactionUtxoSelectionMetadata | undefined = undefined;
+  let bestSelectionData: TransactionUtxoSelectionMetadata | undefined;
   while (sortedUtxos.length > 0) {
     const utxo = sortedUtxos.pop() as UTXO;
 
-    const nextSelectionData = selectOptimalUtxos(
+    const nextSelectionData = selectOptimalUtxos({
       recipients,
-      [...selectedUtxos, utxo],
-      sortedUtxos,
+      selectedUtxos: [...selectedUtxos, utxo],
+      availableUtxos: sortedUtxos,
       changeAddress,
       feeRate,
-      currentBestUtxoCount ?? bestSelectionData?.selectedUtxos.length,
-    );
+      currentBestUtxoCount: currentBestUtxoCount ?? bestSelectionData?.selectedUtxos.length,
+    });
 
     if (!nextSelectionData) return bestSelectionData;
 
@@ -683,24 +691,31 @@ function selectOptimalUtxos(
   return bestSelectionData;
 }
 
+type SelectUtxosForSendProps = {
+  changeAddress: string;
+  recipients: Recipient[];
+  availableUtxos: UTXO[];
+  feeRate: number;
+  pinnedUtxos?: UTXO[];
+};
+
 type TransactionUtxoSelectionMetadata = {
   selectedUtxos: UTXO[];
   fee: number;
   feeRate: number;
   change: number;
 };
-
 /**
  * Finds the optimal combination of UTXOs to send the given amount to the given recipients while minimizing fees,
  * yet staying above the desired fee rate.
  */
-export function selectUtxosForSend(
-  changeAddress: string,
-  recipients: Recipient[],
-  availableUtxos: UTXO[],
-  feeRate: number,
-  pinnedUtxos: UTXO[] = [],
-): TransactionUtxoSelectionMetadata | undefined {
+export function selectUtxosForSend({
+  changeAddress,
+  recipients,
+  availableUtxos,
+  feeRate,
+  pinnedUtxos = [],
+}: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
   if (recipients.length === 0) {
     throw new Error('Must have at least one recipient');
   }
@@ -717,7 +732,13 @@ export function selectUtxosForSend(
   });
   sortedUtxos.sort((a, b) => a.value - b.value);
 
-  const selectedUtxoData = selectOptimalUtxos(recipients, pinnedUtxos, sortedUtxos, changeAddress, feeRate);
+  const selectedUtxoData = selectOptimalUtxos({
+    recipients,
+    selectedUtxos: pinnedUtxos,
+    availableUtxos: sortedUtxos,
+    changeAddress,
+    feeRate,
+  });
 
   return selectedUtxoData;
 }
