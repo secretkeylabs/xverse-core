@@ -656,6 +656,7 @@ function selectOptimalUtxos({
 
   let bestSelectionData: TransactionUtxoSelectionMetadata | undefined;
   while (sortedUtxos.length > 0) {
+    // We know at this point that the sortedUtxos array has a value, so we can safely pop and type to a UTXO
     const utxo = sortedUtxos.pop() as UTXO;
 
     const nextSelectionData = selectOptimalUtxos({
