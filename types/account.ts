@@ -12,4 +12,5 @@ export interface Account {
   bnsName?: string;
   accountType?: AccountType;
   accountName?: string;
+  deviceAccountIndex?: number;
 }
