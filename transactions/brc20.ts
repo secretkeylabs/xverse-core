@@ -7,6 +7,7 @@ import xverseInscribeApi from '../api/xverseInscribe';
 import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
 
+// This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
 
 type EstimateProps = {
@@ -15,6 +16,28 @@ type EstimateProps = {
   amount: number;
   revealAddress: string;
   feeRate: number;
+};
+
+type BaseEstimateResult = {
+  commitValue: number;
+  valueBreakdown: {
+    commitChainFee: number;
+    revealChainFee: number;
+    revealServiceFee: number;
+  };
+};
+
+type EstimateResult = BaseEstimateResult & {
+  valueBreakdown: {
+    inscriptionValue: number;
+  };
+};
+
+type TransferEstimateResult = BaseEstimateResult & {
+  valueBreakdown: {
+    transferChainFee: number;
+    transferUtxoValue: number;
+  };
 };
 
 type ExecuteProps = {
@@ -61,7 +84,7 @@ export const createBrc20TransferOrder = async (token: string, amount: string, re
   };
 };
 
-export const brc20MintEstimateFees = async (estimateProps: EstimateProps) => {
+export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
   const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
 
@@ -151,7 +174,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
   return revealTransactionId;
 }
 
-export const brc20TransferEstimateFees = async (estimateProps: EstimateProps) => {
+export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
   const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
