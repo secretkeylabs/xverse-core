@@ -4,6 +4,9 @@ import { UTXO } from '../types';
 import type { Recipient, TransactionUtxoSelectionMetadata } from './btc';
 import { createTransaction } from './btc';
 
+// we import the file into itself to enable mocking of recursive functions in the tests
+import * as self from './btc.utils';
+
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
 const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
@@ -19,7 +22,6 @@ function buildTransactionAndGetMetadata(props: {
   withChange: boolean;
 }): TransactionUtxoSelectionMetadata | undefined {
   const { privateKey, selectedUtxos, recipientTotal, recipients, changeAddress, feeRate, withChange } = props;
-  // try transaction with change
   const tx = createTransaction(
     privateKey,
     selectedUtxos,
@@ -45,16 +47,19 @@ function buildTransactionAndGetMetadata(props: {
   if (withChange) {
     fee = new BigNumber(txSize).times(feeRate);
     change = sentSats.minus(recipientTotal).minus(fee);
+
+    // a transaction with change is valid if the change is greater than the dust value of a UTXO
     isValid = change.gt(BITCOIN_DUST_VALUE);
   } else {
     const inputSum = selectedUtxos.reduce<BigNumber>((sum, utxo) => sum.plus(utxo.value), new BigNumber(0));
 
     change = new BigNumber(0);
     fee = inputSum.minus(sentSats);
+
+    // a transaction without change is valid if the resulting fee rate is greater than the desired fee rate
     isValid = fee.div(txSize).gt(feeRate);
   }
 
-  // check if there is change and if the change is greater than the vsize*feeRate + dust rate
   if (isValid) {
     return {
       selectedUtxos,
@@ -130,7 +135,7 @@ export function selectOptimalUtxos({
   feeRate,
   currentBestUtxoCount,
 }: SelectOptimalUtxosProps): TransactionUtxoSelectionMetadata | undefined {
-  const currentSelectionData = getTransactionMetadataForUtxos(recipients, selectedUtxos, changeAddress, feeRate);
+  const currentSelectionData = self.getTransactionMetadataForUtxos(recipients, selectedUtxos, changeAddress, feeRate);
 
   // if there is a valid selection, adding more UTXOs would only make the fees higher, so just return
   if (currentSelectionData) return currentSelectionData;
@@ -153,7 +158,7 @@ export function selectOptimalUtxos({
     // We know at this point that the sortedUtxos array has a value, so we can safely pop and type to a UTXO
     const utxo = sortedUtxos.pop() as UTXO;
 
-    const nextSelectionData = selectOptimalUtxos({
+    const nextSelectionData = self.selectOptimalUtxos({
       recipients,
       selectedUtxos: [...selectedUtxos, utxo],
       availableUtxos: sortedUtxos,
