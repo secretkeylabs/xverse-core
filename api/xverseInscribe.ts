@@ -7,6 +7,8 @@ import {
   Brc20CreateOrderResponse,
   Brc20ExecuteOrderRequest,
   Brc20ExecuteOrderResponse,
+  Brc20FinalizeTransferOrderRequest,
+  Brc20FinalizeTransferOrderResponse,
   NetworkType,
 } from 'types';
 
@@ -143,12 +145,26 @@ const createBrc20DeployOrder = async (
 const executeBrc20Order = async (
   commitAddress: string,
   commitTransactionHex: string,
+  skipFinalize?: boolean,
 ): Promise<Brc20ExecuteOrderResponse> => {
   const requestBody: Brc20ExecuteOrderRequest = {
     commitAddress,
     commitTransactionHex,
+    skipFinalize,
   };
   const response = await apiClient.post<Brc20ExecuteOrderResponse>('/v1/brc20/execute-order', requestBody);
+  return response.data;
+};
+
+const finalizeBrc20TransferOrder = async (
+  commitAddress: string,
+  transferTransactionHex: string,
+): Promise<Brc20FinalizeTransferOrderResponse> => {
+  const requestBody: Brc20FinalizeTransferOrderRequest = {
+    commitAddress,
+    transferTransactionHex,
+  };
+  const response = await apiClient.post<Brc20FinalizeTransferOrderResponse>('/v1/brc20/finalize-order', requestBody);
   return response.data;
 };
 
@@ -160,4 +176,5 @@ export default {
   getBrc20DeployFees,
   createBrc20DeployOrder,
   executeBrc20Order,
+  finalizeBrc20TransferOrder,
 };

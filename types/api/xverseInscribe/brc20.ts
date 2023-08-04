@@ -46,10 +46,22 @@ export type Brc20CreateOrderResponse = {
 export type Brc20ExecuteOrderRequest = {
   commitAddress: string;
   commitTransactionHex: string;
+  skipFinalize?: boolean;
 };
 
 export type Brc20ExecuteOrderResponse = {
   revealTransactionId: string;
   revealUTXOVOut: 0;
   revealUTXOValue: number;
+};
+
+export type Brc20FinalizeTransferOrderRequest = {
+  commitAddress: string;
+  transferTransactionHex: string;
+};
+
+export type Brc20FinalizeTransferOrderResponse = {
+  commitTransactionId: string;
+  revealTransactionId: string;
+  transferTransactionId: string;
 };
