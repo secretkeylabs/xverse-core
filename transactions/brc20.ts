@@ -245,9 +245,15 @@ export enum ExecuteTransferProgressCodes {
   Finalizing = 'Finalizing',
 }
 
-export async function* brc20TransferExecute(
-  executeProps: ExecuteProps & { recipientAddress: string },
-): AsyncGenerator<ExecuteTransferProgressCodes, string, never> {
+export async function* brc20TransferExecute(executeProps: ExecuteProps & { recipientAddress: string }): AsyncGenerator<
+  ExecuteTransferProgressCodes,
+  {
+    revealTransactionId: string;
+    commitTransactionId: string;
+    transferTransactionId: string;
+  },
+  never
+> {
   const {
     seedPhrase,
     accountIndex,
@@ -266,8 +272,6 @@ export async function* brc20TransferExecute(
     index: BigInt(accountIndex),
     network: 'Mainnet',
   });
-
-  const esploraClient = new BitcoinEsploraApiProvider({ network });
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
@@ -339,6 +343,7 @@ export async function* brc20TransferExecute(
   const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20Order(
     commitAddress,
     commitTransaction.hex,
+    true,
   );
 
   yield ExecuteTransferProgressCodes.CreatingTransferTransaction;
@@ -372,9 +377,9 @@ export async function* brc20TransferExecute(
 
   for (let i = 0; i <= MAX_RETRIES; i++) {
     try {
-      const response = await esploraClient.sendRawTransaction(transferTransaction.signedTx);
+      const response = await xverseInscribeApi.finalizeBrc20TransferOrder(commitAddress, transferTransaction.signedTx);
 
-      return response.tx.hash;
+      return response;
     } catch (err) {
       error = err as Error;
     }

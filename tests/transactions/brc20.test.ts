@@ -302,6 +302,12 @@ describe('brc20TransferExecute', () => {
         } as any),
     );
 
+    vi.mocked(xverseInscribeApi.finalizeBrc20TransferOrder).mockResolvedValueOnce({
+      revealTransactionId: 'revealId',
+      commitTransactionId: 'commitId',
+      transferTransactionId: 'transferId',
+    });
+
     // Execute the generator function
     const generator = brc20TransferExecute({
       seedPhrase: mockedSeedPhrase,
@@ -389,7 +395,7 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingTransferTransaction:
-          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex');
+          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex', true);
           break;
 
         case ExecuteTransferProgressCodes.Finalizing:
@@ -417,6 +423,10 @@ describe('brc20TransferExecute', () => {
       }
     } while (!done);
 
-    expect(result).toEqual('tx_hash');
+    expect(result).toEqual({
+      revealTransactionId: 'revealId',
+      commitTransactionId: 'commitId',
+      transferTransactionId: 'transferId',
+    });
   });
 });
