@@ -1,15 +1,16 @@
 import { useCallback, useState } from 'react';
 
 import { NetworkType, UTXO } from 'types';
+import { CoreError } from 'utils/coreError';
 
-import { ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
+import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
 
 export enum ErrorCode {
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
   INVALID_TICK = 'INVALID_TICK',
   INVALID_AMOUNT = 'INVALID_AMOUNT',
   INVALID_FEE_RATE = 'INVALID_FEE_RATE',
-  TRANSFER_BROADCAST_FAILED = 'TRANSFER_BROADCAST_FAILED',
+  BROADCAST_FAILED = 'BROADCAST_FAILED',
   SERVER_ERROR = 'SERVER_ERROR',
 }
 
@@ -75,6 +76,8 @@ const useBrc20TransferExecute = (props: Props) => {
     network,
   } = props;
   const [running, setRunning] = useState(false);
+  const [commitTransactionId, setCommitTransactionId] = useState<string | undefined>();
+  const [revealTransactionId, setRevealTransactionId] = useState<string | undefined>();
   const [transferTransactionId, setTransferTransactionId] = useState<string | undefined>();
   const [progress, setProgress] = useState<ExecuteTransferProgressCodes | undefined>();
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
@@ -114,19 +117,35 @@ const useBrc20TransferExecute = (props: Props) => {
           done = itt.done ?? false;
 
           if (done) {
-            setTransferTransactionId(itt.value as string);
+            const result = itt.value as {
+              revealTransactionId: string;
+              commitTransactionId: string;
+              transferTransactionId: string;
+            };
+            setCommitTransactionId(result.commitTransactionId);
+            setRevealTransactionId(result.revealTransactionId);
+            setTransferTransactionId(result.transferTransactionId);
             setProgress(undefined);
           } else {
             setProgress(itt.value as ExecuteTransferProgressCodes);
           }
         } while (!done);
       } catch (e) {
-        if (e.message === 'Failed to broadcast transfer transaction') {
-          setErrorCode(ErrorCode.TRANSFER_BROADCAST_FAILED);
-        } else if (e.message === 'Not enough funds at selected fee rate') {
-          setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-        } else {
-          setErrorCode(ErrorCode.SERVER_ERROR);
+        let finalErrorCode: string | undefined;
+        if (CoreError.isCoreError(e)) {
+          finalErrorCode = e.code;
+        }
+
+        switch (finalErrorCode) {
+          case BRC20ErrorCode.FAILED_TO_FINALIZE:
+            setErrorCode(ErrorCode.BROADCAST_FAILED);
+            break;
+          case BRC20ErrorCode.INSUFFICIENT_FUNDS:
+            setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
+            break;
+          default:
+            setErrorCode(ErrorCode.SERVER_ERROR);
+            break;
         }
       }
     };
@@ -145,7 +164,15 @@ const useBrc20TransferExecute = (props: Props) => {
     network,
   ]);
 
-  return { executeTransfer, transferTransactionId, complete: !!transferTransactionId, progress, error: errorCode };
+  return {
+    executeTransfer,
+    transferTransactionId,
+    commitTransactionId,
+    revealTransactionId,
+    complete: !!transferTransactionId,
+    progress,
+    errorCode,
+  };
 };
 
 export default useBrc20TransferExecute;

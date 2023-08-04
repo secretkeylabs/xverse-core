@@ -1,6 +1,7 @@
 import { base64 } from '@scure/base';
 import BigNumber from 'bignumber.js';
 import { NetworkType, UTXO } from 'types';
+import { CoreError } from 'utils/coreError';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
@@ -9,6 +10,11 @@ import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSend
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
+
+export enum BRC20ErrorCode {
+  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
+  FAILED_TO_FINALIZE = 'FAILED_TO_FINALIZE',
+}
 
 type EstimateProps = {
   addressUtxos: UTXO[];
@@ -106,7 +112,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
   );
 
   if (!bestUtxoData) {
-    throw new Error('Not enough funds at selected fee rate');
+    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
   }
 
   const commitChainFees = bestUtxoData.fee;
@@ -149,7 +155,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
   );
 
   if (!bestUtxoData) {
-    throw new Error('Not enough funds at selected fee rate');
+    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
   }
 
   const commitChainFees = bestUtxoData.fee;
@@ -220,7 +226,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
   );
 
   if (!bestUtxoData) {
-    throw new Error('Not enough funds at selected fee rate');
+    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
   }
 
   const commitChainFees = bestUtxoData.fee;
@@ -318,7 +324,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   );
 
   if (!bestUtxoData) {
-    throw new Error('Not enough funds at selected fee rate');
+    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
   }
 
   const commitChainFees = bestUtxoData.fee;
@@ -389,5 +395,5 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     await new Promise((resolve) => setTimeout(resolve, 500 * Math.pow(2, i)));
   }
 
-  throw error ?? new Error('Failed to broadcast transfer transaction');
+  throw new CoreError('Failed to finalize order', BRC20ErrorCode.FAILED_TO_FINALIZE, error);
 }
