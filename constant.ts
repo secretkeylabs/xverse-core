@@ -95,3 +95,5 @@ export const ORDINALS_URL = (inscriptionId: string) => `https://ord.xverse.app/c
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
 
 export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://api2.ordinalsbot.com/order';
+
+export const ALEX_SPONSOR_STATUS_URL = "https://sponsor-tx.alexlab.co/healthz";

@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
-import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
+import { ALEX_SPONSOR_STATUS_URL, API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   BtcFeeResponse,
   TokenFiatRateResponse,
@@ -11,8 +11,6 @@ import {
   SignedUrlResponse,
   OrdinalInfo,
   AppInfo,
-  SponsorInfoResponse,
-  SponsorTransactionResponse,
 } from 'types';
 import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -145,42 +143,16 @@ export async function getBinaceSignature(srcData: string): Promise<SignedUrlResp
 }
 
 /**
- * Return the sponsored signed transaction
+ * Get whether alex sponsor service is active
  *
- * @param {StacksTransaction} signedTx
- * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
  * @returns {Promise<string>}
  * @throws {ApiResponseError} - if api responded with an error status
  */
-export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHost?: string): Promise<string> {
-  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
-
-  const data = {
-    tx: signedTx.serialize().toString('hex'),
-  };
-
+export async function getSponsorInfo(): Promise<string> {
   return axios
-    .post(url, data, { timeout: 45000 })
-    .then((response: AxiosResponse<SponsorTransactionResponse>) => {
-      return response.data.txid;
-    })
-    .catch(handleAxiosError);
-}
-
-/**
- * Get whether sponsor service is active
- *
- * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
- * @returns {Promise<boolean | null>}
- * @throws {ApiResponseError} - if api responded with an error status
- */
-export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
-  const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/info`;
-
-  return axios
-    .get(url)
-    .then((response: AxiosResponse<SponsorInfoResponse>) => {
-      return response.data.active;
+    .get(ALEX_SPONSOR_STATUS_URL)
+    .then((response: AxiosResponse<string>) => {
+      return response.data;
     })
     .catch(handleAxiosError);
 }
