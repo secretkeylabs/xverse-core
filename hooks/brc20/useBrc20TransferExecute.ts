@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { NetworkType, UTXO } from 'types';
-import { CoreError } from 'utils/coreError';
+import { CoreError } from '../../utils/coreError';
 
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
 
