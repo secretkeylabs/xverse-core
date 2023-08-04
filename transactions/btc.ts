@@ -6,7 +6,7 @@ import * as btc from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { fetchBtcFeeRate } from '../api/xverse';
-import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
+import { BtcFeeResponse, ErrorCodes, Inscription, NetworkType, ResponseError, UTXO } from '../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
 import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
 
@@ -404,6 +404,27 @@ export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
     (utxo) => !filterUtxoSet.some((filterUtxo) => utxo.txid === filterUtxo.txid && utxo.vout === filterUtxo.vout),
   );
 }
+export async function getBtcFeesForOrdinalTransaction(
+  recipientAddress: string,
+  btcAddress: string,
+  ordinalsAddress: string,
+  network: NetworkType,
+  ordinal: Inscription,
+  isRecover?: boolean,
+  feeMode?: string,
+  feeRateInput?: string,
+) {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const address = isRecover ? btcAddress : ordinalsAddress;
+  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const ordUtxo = addressUtxos.find((utx) => `${utx.txid}:${utx.vout}` === ordinal.output);
+  if (!ordUtxo) {
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+  }
+  return getBtcFeesForOrdinalSend(recipientAddress, ordUtxo!, btcAddress, network, addressUtxos, feeMode, feeRateInput);
+}
 
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
@@ -660,6 +681,38 @@ export async function signBtcTransaction(
   } catch (error) {
     return Promise.reject(error.toString());
   }
+}
+
+export async function signOrdinalTransaction(
+  recipientAddress: string,
+  btcAddress: string,
+  ordinalsAddress: string,
+  accountIndex: number,
+  seedPhrase: string,
+  network: NetworkType,
+  ordinal: Inscription,
+  fee?: BigNumber,
+  isRecover?: boolean,
+): Promise<SignedBtcTx> {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const address = isRecover ? btcAddress : ordinalsAddress;
+  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const ordUtxo = addressUtxos.find((utx) => `${utx.txid}:${utx.vout}` === ordinal.output);
+  if (!ordUtxo) {
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+  }
+  return signOrdinalSendTransaction(
+    recipientAddress,
+    ordUtxo,
+    btcAddress,
+    accountIndex,
+    seedPhrase,
+    network,
+    addressUtxos,
+    fee,
+  );
 }
 
 export async function signOrdinalSendTransaction(
