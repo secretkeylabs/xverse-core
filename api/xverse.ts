@@ -12,7 +12,6 @@ import {
   OrdinalInfo,
   AppInfo,
 } from 'types';
-import { StacksTransaction } from '@stacks/transactions';
 import { fetchBtcOrdinalsData } from './ordinals';
 import { handleAxiosError } from './error';
 
