@@ -12,7 +12,7 @@ const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
 const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
 const BITCOIN_DUST_VALUE = 1000;
 
-function buildTransactionAndGetMetadata(props: {
+export function buildTransactionAndGetMetadata(props: {
   recipients: Recipient[];
   selectedUtxos: UTXO[];
   changeAddress: string;
@@ -33,7 +33,15 @@ function buildTransactionAndGetMetadata(props: {
   );
 
   tx.sign(hex.decode(privateKey));
-  tx.finalize();
+
+  try {
+    tx.finalize();
+  } catch (e) {
+    if (e.message === 'Outputs spends more than inputs amount') {
+      return undefined;
+    }
+    throw e;
+  }
 
   const txSize = tx.vsize;
   let sentSats = new BigNumber(0);
@@ -43,10 +51,11 @@ function buildTransactionAndGetMetadata(props: {
     sentSats = sentSats.plus(new BigNumber((output.amount ?? 0n).toString()));
   }
 
-  let change: BigNumber, fee: BigNumber, isValid: boolean;
+  let change: BigNumber, fee: BigNumber, isValid: boolean, actualFeeRate: number;
   if (withChange) {
     fee = new BigNumber(txSize).times(feeRate);
     change = sentSats.minus(recipientTotal).minus(fee);
+    actualFeeRate = feeRate;
 
     // a transaction with change is valid if the change is greater than the dust value of a UTXO
     isValid = change.gt(BITCOIN_DUST_VALUE);
@@ -55,6 +64,7 @@ function buildTransactionAndGetMetadata(props: {
 
     change = new BigNumber(0);
     fee = inputSum.minus(sentSats);
+    actualFeeRate = fee.div(txSize).toNumber();
 
     // a transaction without change is valid if the resulting fee rate is greater than the desired fee rate
     isValid = fee.div(txSize).gt(feeRate);
@@ -64,7 +74,7 @@ function buildTransactionAndGetMetadata(props: {
     return {
       selectedUtxos,
       fee: fee.toNumber(),
-      feeRate,
+      feeRate: actualFeeRate,
       change: change.toNumber(),
     };
   }
@@ -92,7 +102,7 @@ export function getTransactionMetadataForUtxos(
 
   // We first try the transaction with change because if there is change with the
   // desired fee rate, then we want to return it to the user
-  const metaDataWithChange = buildTransactionAndGetMetadata({
+  const metaDataWithChange = self.buildTransactionAndGetMetadata({
     recipients,
     selectedUtxos,
     changeAddress,
@@ -106,7 +116,7 @@ export function getTransactionMetadataForUtxos(
 
   // the attempt with change above could've resulted in a change that is just below dust, or removing the change output
   // could bring the fees low enough to get to the desired fee rate, so we try it again without change
-  const metaDataWithoutChange = buildTransactionAndGetMetadata({
+  const metaDataWithoutChange = self.buildTransactionAndGetMetadata({
     recipients,
     selectedUtxos,
     changeAddress,
@@ -140,8 +150,8 @@ export function selectOptimalUtxos({
   // if there is a valid selection, adding more UTXOs would only make the fees higher, so just return
   if (currentSelectionData) return currentSelectionData;
 
-  // if we have a current best selection, we want to check if adding another UTXO would make the fees higher
-  // and skip if it does since it would be a worse selection
+  // if we have a current best selection, adding another UTXO would only decrease fees if there was no change generated
+  // so we test with a max of 1 more UTXO. Adding 2 or more would always increase fees.
   const wouldIncreaseFees = currentBestUtxoCount === selectedUtxos.length - 1;
 
   if (availableUtxos.length === 0 || wouldIncreaseFees) {

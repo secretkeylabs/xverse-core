@@ -1,13 +1,19 @@
 import BigNumber from 'bignumber.js';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { utxo10k, utxo384k, utxo3k, utxo792k } from './btc.data';
 
 import * as self from '../../transactions/btc.utils';
 
 const dummyChangeAddress = 'bc1pzsm9pu47e7npkvxh9dcd0dc2qwqshxt2a9tt7aq3xe9krpl8e82sx6phdj';
+const dummyRecipientAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
 
 describe('selectOptimalUtxos', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should return immediately if inputs result in valid metadata', () => {
     const mockedResponse = {
       fee: 10,
@@ -248,5 +254,174 @@ describe('selectOptimalUtxos', () => {
     });
     // expect to have been called once per UTXO
     expect(selectOptimalUtxosMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('getTransactionMetadataForUtxos', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns undefined if UTXOs cannot cover recipient values + fees', async () => {
+    const buildMetaDataMock = vi.spyOn(self, 'buildTransactionAndGetMetadata');
+
+    const result = self.getTransactionMetadataForUtxos(
+      [{ address: '', amountSats: new BigNumber(10000) }],
+      [utxo10k],
+      dummyChangeAddress,
+      1,
+    );
+
+    expect(result).toBeUndefined();
+    expect(buildMetaDataMock).not.toHaveBeenCalled();
+  });
+
+  it('returns meta data with change', async () => {
+    const buildMetaDataMock = vi.spyOn(self, 'buildTransactionAndGetMetadata');
+    const mockResponse = {
+      fee: 1,
+      change: 100,
+      feeRate: 1,
+      selectedUtxos: [utxo10k],
+    };
+    buildMetaDataMock.mockReturnValueOnce(mockResponse);
+
+    const result = self.getTransactionMetadataForUtxos(
+      [{ address: '', amountSats: new BigNumber(100) }],
+      [utxo10k],
+      dummyChangeAddress,
+      1,
+    );
+
+    expect(result).toEqual(mockResponse);
+    expect(buildMetaDataMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns meta data without change if with change did not work', async () => {
+    const buildMetaDataMock = vi.spyOn(self, 'buildTransactionAndGetMetadata');
+    const mockResponse = {
+      fee: 1,
+      change: 0,
+      feeRate: 1,
+      selectedUtxos: [utxo10k],
+    };
+    buildMetaDataMock.mockReturnValueOnce(undefined);
+    buildMetaDataMock.mockReturnValueOnce(mockResponse);
+
+    const result = self.getTransactionMetadataForUtxos(
+      [{ address: '', amountSats: new BigNumber(100) }],
+      [utxo10k],
+      dummyChangeAddress,
+      1,
+    );
+
+    expect(result).toEqual(mockResponse);
+    expect(buildMetaDataMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('buildTransactionAndGetMetadata with change', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('builds a valid transaction', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(1000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 10,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(1000),
+      withChange: true,
+    });
+
+    expect(result).toEqual({
+      fee: 1880,
+      change: 7120,
+      feeRate: 10,
+      selectedUtxos: [utxo10k],
+    });
+  });
+
+  it('returns undefined if not enough sats in UTXOs for output', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(11000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 10,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(11000),
+      withChange: true,
+    });
+
+    expect(result).toEqual(undefined);
+  });
+
+  it('returns undefined if change is below dust', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(8000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 10,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(8000),
+      withChange: true,
+    });
+
+    expect(result).toEqual(undefined);
+  });
+});
+
+describe('buildTransactionAndGetMetadata without change', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('builds a valid transaction', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(1000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 10,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(1000),
+      withChange: false,
+    });
+
+    expect(result).toEqual({
+      fee: 9000,
+      change: 0,
+      feeRate: 62.06896551724138,
+      selectedUtxos: [utxo10k],
+    });
+  });
+
+  it('returns undefined if not enough sats in UTXOs for output', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(11000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 10,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(11000),
+      withChange: false,
+    });
+
+    expect(result).toEqual(undefined);
+  });
+
+  it('returns undefined if fee rate is below desired', async () => {
+    const result = self.buildTransactionAndGetMetadata({
+      recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(8000) }],
+      selectedUtxos: [utxo10k],
+      changeAddress: dummyChangeAddress,
+      feeRate: 65,
+      privateKey: dummyPrivateKey,
+      recipientTotal: new BigNumber(8000),
+      withChange: false,
+    });
+
+    expect(result).toEqual(undefined);
   });
 });
