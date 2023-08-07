@@ -18,7 +18,7 @@ import {
   createTaprootPsbt,
   createMixedPsbt,
 } from './transaction';
-import { Psbt, Transaction, address as addressObj, networks } from 'bitcoinjs-lib';
+import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { base64 } from '@scure/base';
 import { bip0322Hash } from '../connect/bip322Signature';
 import { encode } from 'varuint-bitcoin';
@@ -455,7 +455,7 @@ export async function signIncomingSingleSigTaprootTransactionRequest(
  * @param networkType - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
  * @param message - the incoming message in string format to sign
- * @returns the signed raw transaction in hex format
+ * @returns the signature in string (base64) format
  * */
 export async function signSimpleBip322Message({
   transport,
@@ -470,7 +470,6 @@ export async function signSimpleBip322Message({
 }) {
   const app = new AppClient(transport);
   const coinType = getCoinType(networkType);
-  const network = networkType === 'Mainnet' ? networks.bitcoin : networks.testnet;
 
   // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
@@ -480,12 +479,7 @@ export async function signSimpleBip322Message({
     `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
   );
 
-  const { address: senderAddress, internalPubkey } = getTaprootAccountDataFromXpub(
-    extendedPublicKey,
-    addressIndex,
-    networkType,
-  );
-  const outputScript = addressObj.toOutputScript(senderAddress, network);
+  const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, networkType);
 
   const prevoutHash = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
   const prevoutIndex = 0xffffffff;
@@ -495,7 +489,7 @@ export async function signSimpleBip322Message({
   const txToSpend = new Transaction();
   txToSpend.version = 0;
   txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
-  txToSpend.addOutput(outputScript, 0);
+  txToSpend.addOutput(taprootScript, 0);
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: TapBip32Derivation = {
@@ -514,13 +508,18 @@ export async function signSimpleBip322Message({
     tapBip32Derivation: [inputDerivation],
     tapInternalKey: internalPubkey,
     witnessUtxo: {
-      script: outputScript,
+      script: taprootScript,
       value: 0,
     },
   });
   psbtToSign.addOutput({ script: Buffer.from('6a', 'hex'), value: 0 });
 
-  await app.signPsbt(psbtToSign.toBase64(), accountPolicy, null);
+  const signatures = await app.signPsbt(psbtToSign.toBase64(), accountPolicy, null);
+  for (const signature of signatures) {
+    psbtToSign.updateInput(signature[0], {
+      tapKeySig: signature[1].signature,
+    });
+  }
 
   psbtToSign.finalizeAllInputs();
   const txToSign = psbtToSign.extractTransaction();

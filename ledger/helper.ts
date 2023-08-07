@@ -17,11 +17,7 @@ import * as ecc from '@bitcoinerlab/secp256k1';
   @param network - the network type
   @returns the public key in compressed format
 **/
-export function getPublicKeyFromXpubAtIndex(
-  xpub: string,
-  index: number,
-  network: NetworkType
-): Buffer {
+export function getPublicKeyFromXpubAtIndex(xpub: string, index: number, network: NetworkType): Buffer {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const { publicKey } = bip32.fromBase58(xpub, btcNetwork).derivePath(`0/${index}`);
   return publicKey;
@@ -37,7 +33,7 @@ export function getPublicKeyFromXpubAtIndex(
 export function getNativeSegwitAccountDataFromXpub(
   xpub: string,
   index: number,
-  network: NetworkType
+  network: NetworkType,
 ): {
   publicKey: Buffer;
   address: string;
@@ -73,7 +69,7 @@ export function getNativeSegwitAccountDataFromXpub(
  * */
 export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
   dataPublicKey: string,
-  profile: LedgerStxJWTAuthProfile
+  profile: LedgerStxJWTAuthProfile,
 ): Promise<string> {
   const address = publicKeyToBtcAddress(dataPublicKey);
 
@@ -127,7 +123,7 @@ export async function signStxJWTAuth(transport: Transport, accountIndex: number,
 export function getTaprootAccountDataFromXpub(
   xpub: string,
   index: number,
-  network: NetworkType
+  network: NetworkType,
 ): {
   publicKey: Buffer;
   address: string;
