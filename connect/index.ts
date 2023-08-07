@@ -17,7 +17,7 @@ type AuthRequest = {
 export async function createAuthResponse(
   seedPhrase: string,
   accountIndex: number,
-  authRequest: AuthRequest
+  authRequest: AuthRequest,
 ): Promise<string | undefined> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
