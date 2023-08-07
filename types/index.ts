@@ -1,4 +1,5 @@
 export * from './account';
+export * from './api/alex';
 export type {
   BtcAddressData,
   BtcAddressDataResponse,

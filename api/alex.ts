@@ -1,17 +1,18 @@
 import axios, { AxiosResponse } from 'axios';
-import { ALEX_SPONSOR_HOST } from '../constant';
+import { AlexSupportedToken } from 'types/api/alex';
+import { ALEX_TOKEN_LIST_HOST } from '../constant';
 import { handleAxiosError } from './error';
 
 /**
- * Get whether alex sponsor service is active
+ * Get alex lab token list
  *
- * @returns {Promise<string>}
+ * @returns {Promise<AlexSupportedToken[]>}
  * @throws {ApiResponseError} - if api responded with an error status
  */
-export async function getAlexSponsorInfo(): Promise<string> {
+export async function getAlexTokenList(): Promise<AlexSupportedToken[]> {
   return axios
-    .get(`${ALEX_SPONSOR_HOST}/healthz`)
-    .then((response: AxiosResponse<string>) => {
+    .get(ALEX_TOKEN_LIST_HOST)
+    .then((response: AxiosResponse<AlexSupportedToken[]>) => {
       return response.data;
     })
     .catch(handleAxiosError);

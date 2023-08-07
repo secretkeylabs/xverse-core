@@ -96,4 +96,4 @@ export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/addre
 
 export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://api2.ordinalsbot.com/order';
 
-export const ALEX_SPONSOR_HOST = "https://sponsor-tx.alexlab.co";
+export const ALEX_TOKEN_LIST_HOST = "https://token-list.alexlab.co";
