@@ -104,12 +104,12 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
 
   const commitValue = new BigNumber(FINAL_SATS_VALUE).plus(revealChainFee).plus(revealServiceFee);
 
-  const bestUtxoData = selectUtxosForSend(
-    dummyAddress,
-    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    addressUtxos,
+  const bestUtxoData = selectUtxosForSend({
+    changeAddress: dummyAddress,
+    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    availableUtxos: addressUtxos,
     feeRate,
-  );
+  });
 
   if (!bestUtxoData) {
     throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
@@ -147,12 +147,12 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
     FINAL_SATS_VALUE,
   );
 
-  const bestUtxoData = selectUtxosForSend(
+  const bestUtxoData = selectUtxosForSend({
     changeAddress,
-    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    addressUtxos,
+    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    availableUtxos: addressUtxos,
     feeRate,
-  );
+  });
 
   if (!bestUtxoData) {
     throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
@@ -218,12 +218,12 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
 
   const commitValue = inscriptionValue.plus(revealChainFee).plus(revealServiceFee);
 
-  const bestUtxoData = selectUtxosForSend(
-    dummyAddress,
-    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    addressUtxos,
+  const bestUtxoData = selectUtxosForSend({
+    changeAddress: dummyAddress,
+    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    availableUtxos: addressUtxos,
     feeRate,
-  );
+  });
 
   if (!bestUtxoData) {
     throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
@@ -316,12 +316,12 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
 
   yield ExecuteTransferProgressCodes.CreatingCommitTransaction;
 
-  const bestUtxoData = selectUtxosForSend(
+  const bestUtxoData = selectUtxosForSend({
     changeAddress,
-    [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    addressUtxos,
+    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    availableUtxos: addressUtxos,
     feeRate,
-  );
+  });
 
   if (!bestUtxoData) {
     throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);

@@ -76,12 +76,12 @@ describe('brc20MintEstimateFees', () => {
       1000,
     );
 
-    expect(selectUtxosForSend).toHaveBeenCalledWith(
-      'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh',
-      [{ address: mockedRevealAddress, amountSats: new BigNumber(4080) }],
-      mockedAddressUtxos,
-      mockedFeeRate,
-    );
+    expect(selectUtxosForSend).toHaveBeenCalledWith({
+      changeAddress: 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh',
+      recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(4080) }],
+      availableUtxos: mockedAddressUtxos,
+      feeRate: mockedFeeRate,
+    });
   });
 });
 
@@ -155,12 +155,12 @@ describe('brc20MintExecute', () => {
       1000,
     );
 
-    expect(selectUtxosForSend).toHaveBeenCalledWith(
-      'change_address',
-      [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
-      mockedAddressUtxos,
-      mockedFeeRate,
-    );
+    expect(selectUtxosForSend).toHaveBeenCalledWith({
+      changeAddress: 'change_address',
+      recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+      availableUtxos: mockedAddressUtxos,
+      feeRate: mockedFeeRate,
+    });
 
     expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
       'private_key',
@@ -239,12 +239,12 @@ describe('brc20TransferEstimateFees', () => {
       2800,
     );
 
-    expect(selectUtxosForSend).toHaveBeenCalledWith(
-      'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh',
-      [{ address: mockedRevealAddress, amountSats: new BigNumber(5880) }],
-      mockedAddressUtxos,
-      mockedFeeRate,
-    );
+    expect(selectUtxosForSend).toHaveBeenCalledWith({
+      changeAddress: 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh',
+      recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(5880) }],
+      availableUtxos: mockedAddressUtxos,
+      feeRate: mockedFeeRate,
+    });
   });
 });
 
@@ -371,12 +371,12 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.ExecutingInscriptionOrder:
-          expect(selectUtxosForSend).toHaveBeenCalledWith(
-            mockedChangeAddress,
-            [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
-            mockedAddressUtxos,
-            mockedFeeRate,
-          );
+          expect(selectUtxosForSend).toHaveBeenCalledWith({
+            changeAddress: mockedChangeAddress,
+            recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+            availableUtxos: mockedAddressUtxos,
+            feeRate: mockedFeeRate,
+          });
 
           expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
             'private_key',
