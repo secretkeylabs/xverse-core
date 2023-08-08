@@ -47,21 +47,23 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   const ordinals: BtcOrdinal[] = [];
 
   await Promise.all(
-    unspentUTXOS.map(async (utxo: UTXO) => {
-      const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+    unspentUTXOS
+      .filter((utxo) => utxo.status.confirmed) // we can only detect ordinals from confirmed utxos
+      .map(async (utxo: UTXO) => {
+        const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
 
-      const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
+        const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
 
-      if (ordinalIds.data.length > 0) {
-        ordinalIds.data.forEach((ordinalId) => {
-          ordinals.push({
-            id: ordinalId,
-            confirmationTime: utxo.status.block_time || 0,
-            utxo,
+        if (ordinalIds.data.length > 0) {
+          ordinalIds.data.forEach((ordinalId) => {
+            ordinals.push({
+              id: ordinalId,
+              confirmationTime: utxo.status.block_time || 0,
+              utxo,
+            });
           });
-        });
-      }
-    }),
+        }
+      }),
   );
 
   return ordinals.sort(sortOrdinalsByConfirmationTime);
