@@ -347,6 +347,7 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   addressIndex: number,
   indexesToSign: number[],
   base64Psbt: string,
+  finalize = false,
 ): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
@@ -379,15 +380,17 @@ export async function signIncomingSingleSigNativeSegwitTransactionRequest(
   }
 
   const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
-
   for (const signature of signatures) {
     psbt.updateInput(signature[0], {
       partialSig: [signature[1]],
     });
   }
-  psbt.finalizeAllInputs();
 
-  return psbt.extractTransaction().toHex();
+  if (finalize) {
+    psbt.finalizeAllInputs();
+  }
+
+  return psbt.toBase64();
 }
 
 /**
