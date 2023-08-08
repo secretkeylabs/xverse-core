@@ -45,22 +45,25 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   });
   const unspentUTXOS = await btcClient.getUnspentUtxos(btcAddress);
   const ordinals: BtcOrdinal[] = [];
+
   await Promise.all(
     unspentUTXOS.map(async (utxo: UTXO) => {
-      const ordinalContentUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/output/${utxo.txid}/${utxo.vout}`;
-      try {
-        const ordinal = await axios.get(ordinalContentUrl);
-        if (ordinal) {
+      const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+
+      const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
+
+      if (ordinalIds.data.length > 0) {
+        ordinalIds.data.forEach((ordinalId) => {
           ordinals.push({
-            id: ordinal.data.id,
+            id: ordinalId,
             confirmationTime: utxo.status.block_time || 0,
             utxo,
           });
-        }
-        return await Promise.resolve(ordinal);
-      } catch (err) {}
+        });
+      }
     }),
   );
+
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }
 
@@ -69,7 +72,7 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
 
   const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
   if (ordinalIds.data.length > 0) {
-    return Promise.resolve(ordinalIds.data.at(-1));
+    return ordinalIds.data.at(-1);
   } else {
     return null;
   }
