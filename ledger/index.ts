@@ -585,3 +585,5 @@ export async function handleLedgerStxJWTAuth(
   const inputToSign = await makeLedgerCompatibleUnsignedAuthResponsePayload(publicKey.toString('hex'), profile);
   return signStxJWTAuth(transport, accountIndex, inputToSign);
 }
+
+export { getMasterFingerPrint } from './helper';
