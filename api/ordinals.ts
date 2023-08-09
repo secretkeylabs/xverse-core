@@ -5,7 +5,9 @@ import {
   FungibleToken,
   InscriptionRequestResponse,
   Inscription,
-  Account
+  Account,
+  Brc20HistoryTransactionData,
+  OrdinalTokenTransaction
 } from '../types';
 import axios from 'axios';
 import { 
@@ -15,6 +17,7 @@ import {
   INSCRIPTION_REQUESTS_SERVICE_URL
 } from '../constant';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import { parseBrc20TransactionData } from './helper';
 
 export function parseOrdinalTextContentData(content: string): string {
   try {
@@ -162,6 +165,24 @@ export async function getOrdinalsFtBalance(
     });
 }
 
+export async function getBrc20History(address: string, token: string): Promise<Brc20HistoryTransactionData[]> {
+  const url = `${XVERSE_API_BASE_URL}/v1/ordinals/token/${token}/history/${address}`;
+  return axios
+    .get(url, {
+      timeout: 30000,
+    })
+    .then((response) => {
+      const data: OrdinalTokenTransaction[] = response.data;
+      const transactions: Brc20HistoryTransactionData[] = [];
+      data.forEach((tx) => {
+        transactions.push(parseBrc20TransactionData(tx));
+      });
+      return transactions;
+    })
+    .catch((error) => {
+      return [];
+    });
+}
 
 export async function createInscriptionRequest(
   recipientAddress: string,

@@ -7,6 +7,8 @@ import {
   StxTransactionData,
   StxTransactionDataResponse,
   TransferTransaction,
+  Brc20HistoryTransactionData,
+  OrdinalTokenTransaction,
 } from '../types';
 
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
@@ -151,20 +153,41 @@ export function parseBtcTransactionData(
   return parsedTx;
 }
 
-export function deDuplicatePendingTx({
+export function parseBrc20TransactionData(responseTx: OrdinalTokenTransaction): Brc20HistoryTransactionData {
+  const incoming = responseTx.type === 'receive';
+
+  const date = new Date(0);
+  if (responseTx.blocktime) date.setUTCSeconds(responseTx.blocktime);
+
+  const parsedTx: Brc20HistoryTransactionData = {
+    ...responseTx,
+    amount: new BigNumber(responseTx.amount),
+    seenTime: date,
+    incoming,
+    txType: 'brc20',
+    txStatus: responseTx?.blocktime === 0 ? 'pending' : 'success',
+  };
+  return parsedTx;
+}
+
+export function getUniquePendingTx({
   confirmedTransactions,
   pendingTransactions,
 }: {
   confirmedTransactions: StxTransactionData[];
   pendingTransactions: StxMempoolTransactionData[];
 }): StxMempoolTransactionData[] {
-  const txArray: StxMempoolTransactionData[] = [];
-  for (const tx of [...confirmedTransactions, ...pendingTransactions]) {
-    if (!txArray.find((t) => t.txid === tx.txid)) {
-      txArray.push(tx as StxMempoolTransactionData);
-    }
+  if (!pendingTransactions.length) {
+    return pendingTransactions;
   }
-  return txArray;
+  return [
+    ...new Map(
+      pendingTransactions
+        .filter((pendingTx) => pendingTx.incoming !== true)
+        .filter((pendingTx) => !confirmedTransactions.find((confirmedTx) => confirmedTx.txid === pendingTx.txid))
+        .map((m) => [m.txid, m]),
+    ).values(),
+  ];
 }
 
 export function mapTransferTransactionData({
