@@ -67,6 +67,7 @@ export function selectUnspentOutputs(
   }
 
   // Sort UTXOs based on value from largest to smallest
+  // This will give close to the optimal spend of UTXOs to minimise fees
   unspentOutputs.sort((a, b) => b.value - a.value);
 
   unspentOutputs.forEach((unspentOutput) => {
