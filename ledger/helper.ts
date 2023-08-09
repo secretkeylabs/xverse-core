@@ -1,5 +1,6 @@
 import { NetworkType } from '../types/network';
 import { networks, payments, initEccLib } from 'bitcoinjs-lib';
+import { AppClient } from 'ledger-bitcoin';
 import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, Transport } from './types';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
@@ -9,6 +10,24 @@ import base64url from 'base64url';
 import StacksApp from '@zondax/ledger-stacks';
 import ecdsaFormat from 'ecdsa-sig-formatter';
 import * as ecc from '@bitcoinerlab/secp256k1';
+
+/**
+  This function is used to get the coin type depending on network type
+  @param network - the network type
+  @returns coin type in number format
+**/
+export const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 : 1);
+
+/**
+ * This function is used to get the master fingerprint from the ledger
+ * @param transport - the transport object with connected ledger device
+ * @returns master key fingerprint as a string of 8 hexadecimal digits
+ * */
+export async function getMasterFingerPrint(transport: Transport): Promise<string> {
+  const app = new AppClient(transport);
+  const masterFingerPrint = await app.getMasterFingerprint();
+  return masterFingerPrint;
+}
 
 /**
   This function is used to get the public key from the xpub at a given index

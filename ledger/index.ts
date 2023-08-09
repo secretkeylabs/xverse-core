@@ -2,6 +2,7 @@ import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
 import { Recipient } from '../transactions/btc';
 import { NetworkType, UTXO } from '../types';
 import {
+  getCoinType,
   getNativeSegwitAccountDataFromXpub,
   getPublicKeyFromXpubAtIndex,
   getTaprootAccountDataFromXpub,
@@ -23,19 +24,6 @@ import { bip0322Hash } from '../connect/bip322Signature';
 import { encode } from 'varuint-bitcoin';
 import { InputToSign } from '../transactions/psbt';
 import { getAddressInfo } from 'bitcoin-address-validation';
-
-const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 : 1);
-
-/**
- * This function is used to get the master fingerprint from the ledger
- * @param transport - the transport object with connected ledger device
- * @returns master fingerprint in a string format
- * */
-export async function getMasterFingerPrint(transport: Transport): Promise<string> {
-  const app = new AppClient(transport);
-  const masterFingerPrint = await app.getMasterFingerprint();
-  return masterFingerPrint;
-}
 
 /**
  * This function is used to get the native segwit account data from the ledger
