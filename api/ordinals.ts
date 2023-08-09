@@ -43,11 +43,11 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
-  const unspentUTXOS = await btcClient.getUnspentUtxos(btcAddress);
+  const addressUTXOs = await btcClient.getUnspentUtxos(btcAddress);
   const ordinals: BtcOrdinal[] = [];
 
   await Promise.all(
-    unspentUTXOS
+    addressUTXOs
       .filter((utxo) => utxo.status.confirmed) // we can only detect ordinals from confirmed utxos
       .map(async (utxo: UTXO) => {
         const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
