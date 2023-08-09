@@ -162,7 +162,7 @@ export async function generateSignedBtcTransaction(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  const changeSats = sumValue.minus(satsToSend);
+  const changeSats = sumValue.minus(satsToSend).minus(feeSats);
 
   addInputs(tx, selectedUnspentOutputs, p2sh);
 
@@ -897,34 +897,30 @@ export async function signNonOrdinalBtcSendTransaction(
     calculatedFee = fee;
   }
 
-  try {
-    const tx = new btc.Transaction();
-    const btcNetwork = getBtcNetwork(network);
+  const tx = new btc.Transaction();
+  const btcNetwork = getBtcNetwork(network);
 
-    // Create spend
-    const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
-    const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);
+  // Create spend
+  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
+  const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);
 
-    addInputsTaproot(tx, selectedUnspentOutputs, taprootInternalPubKey, p2tr);
+  addInputsTaproot(tx, selectedUnspentOutputs, taprootInternalPubKey, p2tr);
 
-    // Add outputs
-    recipients.forEach((recipient) => {
-      addOutput(tx, recipient.address, recipient.amountSats.minus(calculatedFee), btcNetwork);
-    });
+  // Add outputs
+  recipients.forEach((recipient) => {
+    addOutput(tx, recipient.address, recipient.amountSats.minus(calculatedFee), btcNetwork);
+  });
 
-    // Sign inputs
-    tx.sign(hex.decode(taprootPrivateKey));
-    tx.finalize();
+  // Sign inputs
+  tx.sign(hex.decode(taprootPrivateKey));
+  tx.finalize();
 
-    const signedBtcTx: SignedBtcTx = {
-      tx: tx,
-      signedTx: tx.hex,
-      fee: fee ?? calculatedFee,
-      total: sumSelectedOutputs,
-    };
+  const signedBtcTx: SignedBtcTx = {
+    tx: tx,
+    signedTx: tx.hex,
+    fee: fee ?? calculatedFee,
+    total: sumSelectedOutputs,
+  };
 
-    return await Promise.resolve(signedBtcTx);
-  } catch (error) {
-    return Promise.reject(error.toString());
-  }
+  return signedBtcTx;
 }
