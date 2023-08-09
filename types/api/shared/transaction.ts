@@ -5,7 +5,8 @@ export type TransactionType =
   | 'coinbase'
   | 'poison_microblock'
   | 'bitcoin'
-  | 'unsupported';
+  | 'unsupported'
+  | 'brc20';
 
 export type TransactionStatus =
   | 'pending'
