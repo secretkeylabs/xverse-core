@@ -75,7 +75,7 @@ export async function checkAccountActivity(
   return btcTxHistory.length !== 0;
 }
 
-export async function restoreWalletWithAccountsMobile(
+export async function restoreWalletWithAccounts(
   mnemonic: string,
   selectedNetwork: SettingsNetwork,
   networkObject: StacksNetwork,
@@ -126,51 +126,6 @@ export async function restoreWalletWithAccountsMobile(
         });
       }
     }
-    return newAccounts;
-  }
-  return currentAccounts;
-}
-
-export async function restoreWalletWithAccounts(
-  mnemonic: string,
-  selectedNetwork: SettingsNetwork,
-  networkObject: StacksNetwork,
-  currentAccounts: Account[],
-): Promise<Account[]> {
-  const walletConfig = await fetchActiveAccounts(mnemonic, networkObject, currentAccounts);
-  if (walletConfig && walletConfig.accounts.length > 0) {
-    const newAccounts: Account[] = await Promise.all(
-      walletConfig.accounts.map(async (_, index) => {
-        let existingAccount: Account = currentAccounts[index];
-        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
-          const response = await walletFromSeedPhrase({
-            mnemonic,
-            index: BigInt(index),
-            network: selectedNetwork.type,
-          });
-          const username = await getBnsName(response.stxAddress, networkObject);
-          existingAccount = {
-            id: index,
-            stxAddress: response.stxAddress,
-            btcAddress: response.btcAddress,
-            ordinalsAddress: response.ordinalsAddress,
-            masterPubKey: response.masterPubKey,
-            stxPublicKey: response.stxPublicKey,
-            btcPublicKey: response.btcPublicKey,
-            ordinalsPublicKey: response.ordinalsPublicKey,
-            bnsName: username,
-            accountType: response.accountType,
-          };
-          return existingAccount;
-        } else {
-          const userName = await getBnsName(existingAccount.stxAddress, networkObject);
-          return {
-            ...existingAccount,
-            bnsName: userName,
-          };
-        }
-      }),
-    );
     return newAccounts;
   }
   return currentAccounts;

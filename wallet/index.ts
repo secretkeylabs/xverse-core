@@ -70,8 +70,6 @@ export async function newWallet(): Promise<BaseWallet> {
   return walletFromSeedPhrase({ mnemonic, index: 0n, network: 'Mainnet' });
 }
 
-const waitFrame = () => (requestAnimationFrame ? new Promise(requestAnimationFrame) : Promise.resolve());
-
 export async function getWalletFromRootNode({
   index,
   network,
@@ -88,28 +86,21 @@ export async function getWalletFromRootNode({
     index,
   );
 
-  await waitFrame();
   const { address, privateKey } = await deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
   // derive segwit btc address
-  await waitFrame();
   const btcChild = master.derivePath(getBitcoinDerivationPath({ index, network }));
-
-  await waitFrame();
   const keyPair = ECPair.fromPrivateKey(btcChild.privateKey!);
 
   // derive taproot btc address
   const taprootBtcChild = master.derivePath(getTaprootDerivationPath({ index, network }));
-
-  await waitFrame();
   const privKey = hex.decode(taprootBtcChild.privateKey!.toString('hex'));
   const btcNetwork = getBtcNetwork(network);
   const ordinalsAddress = btc.getAddress('tr', privKey, btcNetwork)!;
 
-  await waitFrame();
   const segwitBtcAddress = payments.p2sh({
     redeem: payments.p2wpkh({
       pubkey: keyPair.publicKey,
@@ -120,10 +111,7 @@ export async function getWalletFromRootNode({
   });
   const btcAddress = segwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
-  await waitFrame();
   const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
-
-  await waitFrame();
   const ordinalsPublicKey = hex.encode(taprootInternalPubKey);
 
   return {
