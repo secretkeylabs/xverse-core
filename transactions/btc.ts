@@ -6,8 +6,9 @@ import * as btc from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { fetchBtcFeeRate } from '../api/xverse';
-import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
+import { BtcFeeResponse, ErrorCodes, Inscription, NetworkType, ResponseError, UTXO } from '../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
+import { selectOptimalUtxos } from './btc.utils';
 import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
@@ -161,7 +162,7 @@ export async function generateSignedBtcTransaction(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  const changeSats = sumValue.minus(satsToSend);
+  const changeSats = sumValue.minus(satsToSend).minus(feeSats);
 
   addInputs(tx, selectedUnspentOutputs, p2sh);
 
@@ -185,6 +186,7 @@ export function createTransaction(
   recipients: Array<Recipient>,
   changeAddress: string,
   network: NetworkType,
+  skipChange = false,
 ): btc.Transaction {
   // Create Bitcoin transaction
   const tx = new btc.Transaction();
@@ -210,7 +212,7 @@ export function createTransaction(
   });
 
   // Add change output
-  if (changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
+  if (!skipChange && changeSats.gt(new BigNumber(MINIMUM_CHANGE_OUTPUT_SATS))) {
     addOutput(tx, changeAddress, changeSats, btcNetwork);
   }
 
@@ -405,6 +407,11 @@ export function filterUtxos(allUtxos: UTXO[], filterUtxoSet: UTXO[]) {
   );
 }
 
+// get correct ordinal utxo to send from address utxos
+export function getOrdinalUtxo(addressUtxos: UTXO[], ordinal: Inscription): UTXO | undefined {
+  return addressUtxos.find((utxo) => `${utxo.txid}:${utxo.vout}` === ordinal.output);
+}
+
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
@@ -469,6 +476,32 @@ export async function getBtcFeesForOrdinalSend(
   }
 }
 
+export async function getBtcFeesForOrdinalTransaction(feeParams: {
+  recipientAddress: string;
+  btcAddress: string;
+  ordinalsAddress: string;
+  network: NetworkType;
+  ordinal: Inscription;
+  isRecover?: boolean;
+  feeMode?: string;
+  feeRateInput?: string;
+}): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
+  const { recipientAddress, btcAddress, ordinalsAddress, network, ordinal, isRecover, feeMode, feeRateInput } =
+    feeParams;
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const address = isRecover ? btcAddress : ordinalsAddress;
+  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
+  if (!ordUtxo) {
+    // TODO: Throw error and not just the code
+    // eslint-disable-next-line @typescript-eslint/no-throw-literal
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+  }
+  return getBtcFeesForOrdinalSend(recipientAddress, ordUtxo, btcAddress, network, addressUtxos, feeMode, feeRateInput);
+}
+
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
 export async function getBtcFeesForNonOrdinalBtcSend(
@@ -524,6 +557,59 @@ export async function getBtcFeesForNonOrdinalBtcSend(
   } catch (error) {
     return Promise.reject(error.toString());
   }
+}
+
+export type SelectUtxosForSendProps = {
+  changeAddress: string;
+  recipients: Recipient[];
+  availableUtxos: UTXO[];
+  feeRate: number;
+  pinnedUtxos?: UTXO[];
+};
+
+export type TransactionUtxoSelectionMetadata = {
+  selectedUtxos: UTXO[];
+  fee: number;
+  feeRate: number;
+  change: number;
+};
+
+/**
+ * Finds the optimal combination of UTXOs to send the given amount to the given recipients while minimizing fees,
+ * yet staying above the desired fee rate.
+ */
+export function selectUtxosForSend({
+  changeAddress,
+  recipients,
+  availableUtxos,
+  feeRate,
+  pinnedUtxos = [],
+}: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
+  if (recipients.length === 0) {
+    throw new Error('Must have at least one recipient');
+  }
+
+  if (feeRate <= 0) {
+    throw new Error('Fee rate must be a positive number');
+  }
+
+  const pinnedLocations = new Set(pinnedUtxos.map((utxo) => `${utxo.txid}:${utxo.vout}`));
+
+  const sortedUtxos = availableUtxos.filter((utxo) => {
+    const utxoLocation = `${utxo.txid}:${utxo.vout}`;
+    return !pinnedLocations.has(utxoLocation);
+  });
+  sortedUtxos.sort((a, b) => a.value - b.value);
+
+  const selectedUtxoData = selectOptimalUtxos({
+    recipients,
+    selectedUtxos: pinnedUtxos,
+    availableUtxos: sortedUtxos,
+    changeAddress,
+    feeRate,
+  });
+
+  return selectedUtxoData;
 }
 
 export function createOrdinalTransaction(
@@ -789,6 +875,42 @@ export async function signOrdinalSendTransaction(
   return signedBtcTx;
 }
 
+export async function signOrdinalTransaction(ordinalTxParams: {
+  recipientAddress: string;
+  btcAddress: string;
+  ordinalsAddress: string;
+  accountIndex: number;
+  seedPhrase: string;
+  network: NetworkType;
+  ordinal: Inscription;
+  fee?: BigNumber;
+  isRecover?: boolean;
+}): Promise<SignedBtcTx> {
+  const { recipientAddress, btcAddress, ordinalsAddress, accountIndex, seedPhrase, network, ordinal, fee, isRecover } =
+    ordinalTxParams;
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const address = isRecover ? btcAddress : ordinalsAddress;
+  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
+  if (!ordUtxo) {
+    // TODO: Throw error and not just the code
+    // eslint-disable-next-line @typescript-eslint/no-throw-literal
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+  }
+  return signOrdinalSendTransaction(
+    recipientAddress,
+    ordUtxo,
+    btcAddress,
+    accountIndex,
+    seedPhrase,
+    network,
+    addressUtxos,
+    fee,
+  );
+}
+
 export async function signNonOrdinalBtcSendTransaction(
   recipientAddress: string,
   nonOrdinalUtxos: Array<UTXO>,
@@ -842,34 +964,30 @@ export async function signNonOrdinalBtcSendTransaction(
     calculatedFee = fee;
   }
 
-  try {
-    const tx = new btc.Transaction();
-    const btcNetwork = getBtcNetwork(network);
+  const tx = new btc.Transaction();
+  const btcNetwork = getBtcNetwork(network);
 
-    // Create spend
-    const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
-    const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);
+  // Create spend
+  const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(taprootPrivateKey);
+  const p2tr = btc.p2tr(taprootInternalPubKey, undefined, btcNetwork);
 
-    addInputsTaproot(tx, selectedUnspentOutputs, taprootInternalPubKey, p2tr);
+  addInputsTaproot(tx, selectedUnspentOutputs, taprootInternalPubKey, p2tr);
 
-    // Add outputs
-    recipients.forEach((recipient) => {
-      addOutput(tx, recipient.address, recipient.amountSats.minus(calculatedFee), btcNetwork);
-    });
+  // Add outputs
+  recipients.forEach((recipient) => {
+    addOutput(tx, recipient.address, recipient.amountSats.minus(calculatedFee), btcNetwork);
+  });
 
-    // Sign inputs
-    tx.sign(hex.decode(taprootPrivateKey));
-    tx.finalize();
+  // Sign inputs
+  tx.sign(hex.decode(taprootPrivateKey));
+  tx.finalize();
 
-    const signedBtcTx: SignedBtcTx = {
-      tx: tx,
-      signedTx: tx.hex,
-      fee: fee ?? calculatedFee,
-      total: sumSelectedOutputs,
-    };
+  const signedBtcTx: SignedBtcTx = {
+    tx: tx,
+    signedTx: tx.hex,
+    fee: fee ?? calculatedFee,
+    total: sumSelectedOutputs,
+  };
 
-    return await Promise.resolve(signedBtcTx);
-  } catch (error) {
-    return Promise.reject(error.toString());
-  }
+  return signedBtcTx;
 }

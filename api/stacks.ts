@@ -31,8 +31,8 @@ import {
 import { API_TIMEOUT_MILLI } from '../constant';
 import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import {
-  deDuplicatePendingTx,
   getNetworkURL,
+  getUniquePendingTx,
   mapTransferTransactionData,
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
@@ -151,7 +151,7 @@ export async function fetchStxAddressData(
   ]);
 
   const confirmedCount = confirmedTransactions.totalCount;
-  const mempoolCount = deDuplicatePendingTx({
+  const mempoolCount = getUniquePendingTx({
     confirmedTransactions: confirmedTransactions.transactionsList,
     pendingTransactions: mempoolTransactions.transactionsList,
   }).length;
@@ -357,6 +357,7 @@ export async function fetchAddressOfBnsName(
 }
 
 export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {
+
   const [confirmedTransactions, mempoolTransactions] = await Promise.all([
     getConfirmedTransactions({
       stxAddress,
@@ -370,10 +371,10 @@ export async function fetchStxPendingTxData(stxAddress: string, network: StacksN
     }),
   ]);
 
-  const pendingTransactions = deDuplicatePendingTx({
+  const pendingTransactions = getUniquePendingTx({
     confirmedTransactions: confirmedTransactions.transactionsList,
     pendingTransactions: mempoolTransactions.transactionsList,
-  }).filter((tx) => tx.incoming === false);
+  });
 
   return {
     pendingTransactions,

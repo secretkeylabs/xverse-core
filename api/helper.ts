@@ -170,20 +170,24 @@ export function parseBrc20TransactionData(responseTx: OrdinalTokenTransaction): 
   return parsedTx;
 }
 
-export function deDuplicatePendingTx({
+export function getUniquePendingTx({
   confirmedTransactions,
   pendingTransactions,
 }: {
   confirmedTransactions: StxTransactionData[];
   pendingTransactions: StxMempoolTransactionData[];
 }): StxMempoolTransactionData[] {
-  const txArray: StxMempoolTransactionData[] = [];
-  for (const tx of [...confirmedTransactions, ...pendingTransactions]) {
-    if (!txArray.find((t) => t.txid === tx.txid)) {
-      txArray.push(tx as StxMempoolTransactionData);
-    }
+  if (!pendingTransactions.length) {
+    return pendingTransactions;
   }
-  return txArray;
+  return [
+    ...new Map(
+      pendingTransactions
+        .filter((pendingTx) => pendingTx.incoming !== true)
+        .filter((pendingTx) => !confirmedTransactions.find((confirmedTx) => confirmedTx.txid === pendingTx.txid))
+        .map((m) => [m.txid, m]),
+    ).values(),
+  ];
 }
 
 export function mapTransferTransactionData({
