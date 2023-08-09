@@ -66,18 +66,8 @@ export function selectUnspentOutputs(
     sumValue += pinnedOutput.value;
   }
 
-  // Sort UTXOs based on block time in ascending order
-  unspentOutputs.sort((a, b) => {
-    if (a.status.block_time && b.status.block_time) {
-      return a.status.block_time - b.status.block_time;
-    } else if (a.status.block_time) {
-      return 1;
-    } else if (b.status.block_time) {
-      return -1;
-    } else {
-      return a.value - b.value;
-    }
-  });
+  // Sort UTXOs based on value from largest to smallest
+  unspentOutputs.sort((a, b) => b.value - a.value);
 
   unspentOutputs.forEach((unspentOutput) => {
     if (amountSats.toNumber() > sumValue) {
