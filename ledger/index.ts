@@ -326,7 +326,7 @@ export async function* signLedgerMixedBtcTransaction(
  * @param transport - the transport object with connected ledger device
  * @param network - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
- * @param inputToSign - the input with address and indexes to sign
+ * @param inputsToSign - the array of inputs to sign with address and indexes
  * @param psbtBase64 - the incoming transaction in base64 format
  * @param finalize - boolean to finalize the transaction
  * @returns the signed PSBT in string (base64) format
@@ -335,7 +335,7 @@ export async function signIncomingSingleSigPSBT(
   transport: Transport,
   network: NetworkType,
   addressIndex: number,
-  inputToSign: InputToSign,
+  inputsToSign: InputToSign[],
   psbtBase64: string,
   finalize = false,
 ): Promise<string> {
@@ -345,8 +345,14 @@ export async function signIncomingSingleSigPSBT(
 
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
-  const { type } = getAddressInfo(inputToSign.address);
-  const isSegwit = type === 'p2wpkh';
+
+  const types = inputsToSign.map((input: InputToSign) => {
+    const { type } = getAddressInfo(input.address);
+
+    return type;
+  });
+  const hasSegwitInputs = types.some((type) => type === 'p2wpkh');
+  const hasTaprootInputs = types.some((type) => type === 'p2tr');
 
   // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
@@ -382,29 +388,37 @@ export async function signIncomingSingleSigPSBT(
   const psbt = Psbt.fromBase64(psbtBase64);
 
   // Ledger needs to know the derivation path of the inputs to sign
-  for (let i = 0; i < psbt.data.inputs.length; i++) {
-    if (inputToSign.signingIndexes.includes(i)) {
-      if (isSegwit) {
-        psbt.updateInput(i, {
+  inputsToSign.forEach((inputToSign, itemIndex) => {
+    const { type } = getAddressInfo(inputToSign.address);
+    console.log(itemIndex, 'type', type);
+
+    inputToSign.signingIndexes.forEach((signingIndex) => {
+      if (type === 'p2wpkh') {
+        psbt.updateInput(signingIndex, {
           bip32Derivation: [inputDerivation],
         });
-      } else {
-        psbt.updateInput(i, {
+      } else if (type === 'p2tr') {
+        psbt.updateInput(signingIndex, {
           tapBip32Derivation: [taprootInputDerivation],
         });
       }
+    });
+  });
+
+  if (hasTaprootInputs) {
+    const signatures = await app.signPsbt(psbt.toBase64(), taprootAccountPolicy, null);
+    for (const signature of signatures) {
+      psbt.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
     }
   }
 
-  const signatures = await app.signPsbt(psbt.toBase64(), isSegwit ? accountPolicy : taprootAccountPolicy, null);
-  for (const signature of signatures) {
-    if (isSegwit) {
+  if (hasSegwitInputs) {
+    const signatures = await app.signPsbt(psbt.toBase64(), accountPolicy, null);
+    for (const signature of signatures) {
       psbt.updateInput(signature[0], {
         partialSig: [signature[1]],
-      });
-    } else {
-      psbt.updateInput(signature[0], {
-        tapKeySig: signature[1].signature,
       });
     }
   }
