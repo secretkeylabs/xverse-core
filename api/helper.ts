@@ -7,6 +7,8 @@ import {
   StxTransactionData,
   StxTransactionDataResponse,
   TransferTransaction,
+  Brc20HistoryTransactionData,
+  OrdinalTokenTransaction,
 } from '../types';
 
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
@@ -148,6 +150,23 @@ export function parseBtcTransactionData(
     recipientAddress: outputAddresses[0],
   };
 
+  return parsedTx;
+}
+
+export function parseBrc20TransactionData(responseTx: OrdinalTokenTransaction): Brc20HistoryTransactionData {
+  const incoming = responseTx.type === 'receive';
+
+  const date = new Date(0);
+  if (responseTx.blocktime) date.setUTCSeconds(responseTx.blocktime);
+
+  const parsedTx: Brc20HistoryTransactionData = {
+    ...responseTx,
+    amount: new BigNumber(responseTx.amount),
+    seenTime: date,
+    incoming,
+    txType: 'brc20',
+    txStatus: responseTx?.blocktime === 0 ? 'pending' : 'success',
+  };
   return parsedTx;
 }
 
