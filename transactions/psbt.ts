@@ -113,11 +113,12 @@ export async function signPsbt(
         // If input is taproot type and didn't set tapInternalKey,
         // assume it is implied to be the account's publicKey
         const input = psbt.getInput(signingIndex);
-        const witnessOutputScript = input.witnessUtxo?.script &&
-          btc.OutScript.decode(input.witnessUtxo.script);
+        const witnessOutputScript = input.witnessUtxo?.script && btc.OutScript.decode(input.witnessUtxo.script);
 
         if (!input.tapInternalKey && witnessOutputScript?.type === 'tr') {
-          input.tapInternalKey = toXOnly(Buffer.from(publicKey, 'hex'));
+          psbt.updateInput(signingIndex, {
+            tapInternalKey: toXOnly(Buffer.from(publicKey, 'hex')),
+          });
         }
 
         if (inputToSign.sigHash) {
@@ -261,13 +262,11 @@ export function parsePsbt(
         // @ts-expect-error: accessing private property
         pubkey: outputScript.pubkey,
       });
-    } 
-    else if(outputScript.type === 'unknown'){
+    } else if (outputScript.type === 'unknown') {
       //for script outputs
       script = btc.Script.decode(outputScript.script);
-    }
-    else {
-       // @ts-expect-error: accessing private property
+    } else {
+      // @ts-expect-error: accessing private property
       outputAddress = btc.Address(btcNetwork).encode({
         type: outputScript.type,
         // @ts-expect-error: accessing private property
