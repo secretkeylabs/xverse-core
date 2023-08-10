@@ -116,7 +116,9 @@ export async function signPsbt(
         const witnessOutputScript = input.witnessUtxo?.script && btc.OutScript.decode(input.witnessUtxo.script);
 
         if (!input.tapInternalKey && witnessOutputScript?.type === 'tr') {
-          input.tapInternalKey = toXOnly(Buffer.from(publicKey, 'hex'));
+          psbt.updateInput(signingIndex, {
+            tapInternalKey: toXOnly(Buffer.from(publicKey, 'hex')),
+          });
         }
 
         if (inputToSign.sigHash) {
