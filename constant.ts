@@ -38,7 +38,7 @@ export const XVERSE_INSCRIBE_URL = 'https://inscribe.xverse.app';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
-export const GAIA_HUB_URL = 'https://hub.hiro.so';
+export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 
 export const XORD_MAINNET_URL = 'https://inscribe.xverse.app';
 
