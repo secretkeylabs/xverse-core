@@ -68,7 +68,23 @@ export function selectUnspentOutputs(
 
   // Sort UTXOs based on value from largest to smallest
   // This will give close to the optimal spend of UTXOs to minimise fees
-  unspentOutputs.sort((a, b) => b.value - a.value);
+  unspentOutputs.sort((a, b) => {
+    const diff = b.value - a.value;
+    if (diff !== 0) {
+      return diff;
+    }
+
+    // if values are equal, we put the newer UTXO first to have a chance at CPFP
+    if (a.status.block_time && b.status.block_time) {
+      return a.status.block_time - b.status.block_time;
+    } else if (a.status.block_time) {
+      return 1;
+    } else if (b.status.block_time) {
+      return -1;
+    }
+
+    return 0;
+  });
 
   unspentOutputs.forEach((unspentOutput) => {
     if (amountSats.toNumber() > sumValue) {
