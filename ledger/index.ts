@@ -346,13 +346,8 @@ export async function signIncomingSingleSigPSBT(
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
-  const types = inputsToSign.map((input: InputToSign) => {
-    const { type } = getAddressInfo(input.address);
-
-    return type;
-  });
-  const hasSegwitInputs = types.some((type) => type === 'p2wpkh');
-  const hasTaprootInputs = types.some((type) => type === 'p2tr');
+  let hasSegwitInputs = false;
+  let hasTaprootInputs = false;
 
   // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
@@ -388,9 +383,14 @@ export async function signIncomingSingleSigPSBT(
   const psbt = Psbt.fromBase64(psbtBase64);
 
   // Ledger needs to know the derivation path of the inputs to sign
-  inputsToSign.forEach((inputToSign, itemIndex) => {
+  inputsToSign.forEach((inputToSign) => {
     const { type } = getAddressInfo(inputToSign.address);
-    console.log(itemIndex, 'type', type);
+
+    if (type === 'p2wpkh' && !hasSegwitInputs) {
+      hasSegwitInputs = true;
+    } else if (type === 'p2tr' && !hasTaprootInputs) {
+      hasTaprootInputs = true;
+    }
 
     inputToSign.signingIndexes.forEach((signingIndex) => {
       if (type === 'p2wpkh') {
