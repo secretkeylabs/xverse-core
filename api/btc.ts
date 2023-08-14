@@ -54,3 +54,20 @@ export async function fetchBtcTransactionsData(
   );
   return paymentTransactions;
 }
+
+export async function fetchBtcTransaction(
+  id: string,
+  btcAddress: string,
+  ordinalsAddress: string,
+  network: NetworkType,
+  isOrdinal?: boolean,
+) {
+  const btcClient = new BitcoinEsploraApiProvider({
+    network,
+  });
+  const txResponse: esplora.Transaction = await btcClient.getTransaction(id);
+  const transaction: BtcTransactionData = isOrdinal
+    ? parseOrdinalsBtcTransactions(txResponse, ordinalsAddress)
+    : parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);
+  return transaction;
+}

@@ -1,10 +1,10 @@
-import { connectToGaiaHub, GaiaHubConfig, uploadToGaiaHub } from '@stacks/storage';
 import { decryptContent, encryptContent, getPublicKeyFromPrivate } from '@stacks/encryption';
-import { createFetchFn, FetchFn } from '@stacks/network';
-import { BIP32Interface } from 'bip32';
+import { FetchFn, createFetchFn } from '@stacks/network';
+import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storage';
 import { bytesToHex } from '@stacks/transactions';
-import { WALLET_CONFIG_PATH } from '../constant';
+import { BIP32Interface } from 'bip32';
 import { Account } from 'types/account';
+import { WALLET_CONFIG_PATH } from '../constant';
 
 export interface ConfigApp {
   origin: string;
@@ -48,28 +48,6 @@ export const createWalletGaiaConfig = async ({
   return connectToGaiaHub(gaiaHubUrl, configPrivateKey);
 };
 
-export const getOrCreateWalletConfig = async ({
-  configPrivateKey,
-  walletAccounts,
-  gaiaHubConfig,
-  skipUpload,
-  fetchFn = createFetchFn(),
-}: {
-  configPrivateKey: string;
-  walletAccounts: Account[];
-  gaiaHubConfig: GaiaHubConfig;
-  skipUpload?: boolean;
-  fetchFn?: FetchFn;
-}): Promise<WalletConfig> => {
-  const config = await fetchWalletConfig({ configPrivateKey, gaiaHubConfig, fetchFn });
-  if (config) return config;
-  const newConfig = makeWalletConfig(walletAccounts);
-  if (!skipUpload) {
-    await updateWalletConfig({configPrivateKey, walletAccounts, gaiaHubConfig });
-  }
-  return newConfig;
-};
-
 export const fetchWalletConfig = async ({
   configPrivateKey,
   gaiaHubConfig,
@@ -80,9 +58,7 @@ export const fetchWalletConfig = async ({
   fetchFn?: FetchFn;
 }) => {
   try {
-    const response = await fetchFn(
-      `${gaiaHubConfig.url_prefix}${gaiaHubConfig.address}/wallet-config.json`
-    );
+    const response = await fetchFn(`${gaiaHubConfig.url_prefix}${gaiaHubConfig.address}/wallet-config.json`);
     if (!response.ok) return null;
     const encrypted = await response.text();
     const configJSON = (await decryptContent(encrypted, {
@@ -94,31 +70,6 @@ export const fetchWalletConfig = async ({
     console.error(error);
     return null;
   }
-};
-
-export const updateWalletConfig = async ({
-  walletAccounts,
-  configPrivateKey,
-  walletConfig: _walletConfig,
-  gaiaHubConfig,
-}: {
-  walletAccounts: Account[];
-  configPrivateKey: string;
-  walletConfig?: WalletConfig;
-  gaiaHubConfig: GaiaHubConfig;
-}) => {
-  const walletConfig = _walletConfig || makeWalletConfig(walletAccounts);
-  const encrypted = await encryptWalletConfig({ configPrivateKey, walletConfig });
-  await uploadToGaiaHub(
-    'wallet-config.json',
-    encrypted,
-    gaiaHubConfig,
-    undefined,
-    undefined,
-    undefined,
-    true
-  );
-  return walletConfig;
 };
 
 export function makeWalletConfig(walletAccounts: Account[]): WalletConfig {
@@ -140,4 +91,43 @@ export const encryptWalletConfig = async ({
   const publicKey = getPublicKeyFromPrivate(configPrivateKey);
   const encrypted = await encryptContent(JSON.stringify(walletConfig), { publicKey });
   return encrypted;
+};
+
+export const updateWalletConfig = async ({
+  walletAccounts,
+  configPrivateKey,
+  walletConfig: _walletConfig,
+  gaiaHubConfig,
+}: {
+  walletAccounts: Account[];
+  configPrivateKey: string;
+  walletConfig?: WalletConfig;
+  gaiaHubConfig: GaiaHubConfig;
+}) => {
+  const walletConfig = _walletConfig || makeWalletConfig(walletAccounts);
+  const encrypted = await encryptWalletConfig({ configPrivateKey, walletConfig });
+  await uploadToGaiaHub('wallet-config.json', encrypted, gaiaHubConfig, undefined, undefined, undefined, true);
+  return walletConfig;
+};
+
+export const getOrCreateWalletConfig = async ({
+  configPrivateKey,
+  walletAccounts,
+  gaiaHubConfig,
+  skipUpload,
+  fetchFn = createFetchFn(),
+}: {
+  configPrivateKey: string;
+  walletAccounts: Account[];
+  gaiaHubConfig: GaiaHubConfig;
+  skipUpload?: boolean;
+  fetchFn?: FetchFn;
+}): Promise<WalletConfig> => {
+  const config = await fetchWalletConfig({ configPrivateKey, gaiaHubConfig, fetchFn });
+  if (config) return config;
+  const newConfig = makeWalletConfig(walletAccounts);
+  if (!skipUpload) {
+    await updateWalletConfig({ configPrivateKey, walletAccounts, gaiaHubConfig });
+  }
+  return newConfig;
 };

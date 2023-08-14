@@ -1,3 +1,5 @@
+import { TransactionData } from "../xverse/transaction";
+
 export interface Inscription {
   id: string;
   number: number;
@@ -27,4 +29,46 @@ export interface InscriptionsList {
   offset: number;
   total: number;
   results: Inscription[];
+}
+
+export interface OrdinalTokenTransaction {
+  amount: string;
+  availableBalance: string;
+  blockhash: string;
+  blocktime: number;
+  from: string;
+  height: number;
+  idx: number;
+  inscriptionId: string;
+  inscriptionNumber: number;
+  overallBalance: string;
+  satoshi: number;
+  ticker: string;
+  to: string;
+  transferBalance: string;
+  txid: string;
+  txidx: number;
+  type: string;
+  valid: boolean;
+  vout: number;
+}
+
+export interface Brc20HistoryTransactionData extends TransactionData {
+  availableBalance: string;
+  blockhash: string;
+  blocktime: number;
+  from: string;
+  height: number;
+  idx: number;
+  inscriptionId: string;
+  inscriptionNumber: number;
+  overallBalance: string;
+  satoshi: number;
+  ticker: string;
+  to: string;
+  transferBalance: string;
+  txidx: number;
+  type: string;
+  valid: boolean;
+  vout: number;
 }

@@ -1,42 +1,42 @@
+import { StacksNetwork } from '@stacks/network';
+import {
+  BufferCV,
+  ClarityType,
+  PrincipalCV,
+  ResponseCV,
+  SomeCV,
+  TupleCV,
+  UIntCV,
+  bufferCVFromString,
+  callReadOnlyFunction,
+  cvToHex,
+  cvToString,
+  hexToCV,
+  standardPrincipalCV,
+  tupleCV,
+} from '@stacks/transactions';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import {
+  AccountAssetsListData,
+  FungibleToken,
+  NftEventsResponse,
+  NftsListData,
+  NonFungibleToken,
   StxAddressData,
   StxAddressDataResponse,
-  TransactionData,
-  FungibleToken,
   TokensResponse,
-  AccountAssetsListData,
-  NonFungibleToken,
-  NftsListData,
-  NftEventsResponse,
+  TransactionData,
 } from 'types';
 import { API_TIMEOUT_MILLI } from '../constant';
-import { StacksNetwork } from '@stacks/network';
+import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import {
-  deDuplicatePendingTx,
+  getNetworkURL,
+  getUniquePendingTx,
   mapTransferTransactionData,
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
 } from './helper';
-import {
-  BufferCV,
-  bufferCVFromString,
-  callReadOnlyFunction,
-  ClarityType,
-  cvToHex,
-  cvToString,
-  hexToCV,
-  PrincipalCV,
-  ResponseCV,
-  SomeCV,
-  standardPrincipalCV,
-  TupleCV,
-  tupleCV,
-  UIntCV,
-} from '@stacks/transactions';
-import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
-import { getNetworkURL } from './helper';
 
 import {
   StxMempoolResponse,
@@ -49,16 +49,86 @@ import {
   Transaction,
   TransferTransactionsData,
 } from 'types';
-import { getNftDetail } from './gamma';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
+import { getNftDetail } from './gamma';
+
+export async function getConfirmedTransactions({
+  stxAddress,
+  network,
+}: {
+  stxAddress: string;
+  network: StacksNetwork;
+}): Promise<StxTransactionListData> {
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions`;
+
+  const response = await axios.get<StxTransactionResponse>(apiUrl, {
+    timeout: API_TIMEOUT_MILLI,
+  });
+
+  return {
+    transactionsList: response.data.results.map((responseTx) => parseStxTransactionData({ responseTx, stxAddress })),
+    totalCount: response.data.total,
+  };
+}
+
+export async function getMempoolTransactions({
+  stxAddress,
+  network,
+  offset,
+  limit,
+}: {
+  stxAddress: string;
+  network: StacksNetwork;
+  offset: number;
+  limit: number;
+}): Promise<StxMempoolTransactionListData> {
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/tx/mempool?address=${stxAddress}`;
+
+  const response = await axios.get<StxMempoolResponse>(apiUrl, {
+    timeout: API_TIMEOUT_MILLI,
+    params: {
+      limit: limit,
+      offset: offset,
+    },
+  });
+
+  const count: number = response.data.total;
+  const transactions: StxMempoolTransactionData[] = [];
+  response.data.results.forEach((responseTx) => {
+    transactions.push(parseMempoolStxTransactionsData({ responseTx, stxAddress }));
+  });
+
+  return {
+    transactionsList: transactions,
+    totalCount: count,
+  };
+}
+
+export async function getTransferTransactions(
+  stxAddress: string,
+  network: StacksNetwork,
+): Promise<StxTransactionData[]> {
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
+  const response = await axios.get<TransferTransactionsData>(apiUrl, {
+    timeout: API_TIMEOUT_MILLI,
+  });
+
+  const transactions: StxTransactionData[] = [];
+  response.data.results.forEach((t) => {
+    transactions.push(mapTransferTransactionData({ responseTx: t.tx, stxAddress }));
+  });
+
+  return transactions;
+}
 
 export async function fetchStxAddressData(
   stxAddress: string,
   network: StacksNetwork,
   offset: number,
-  paginationLimit: number
+  paginationLimit: number,
 ): Promise<StxAddressData> {
   const apiUrl = `${getNetworkURL(network)}/v2/accounts/${stxAddress}?proof=0`;
+
   const balanceInfo = await axios.get<StxAddressDataResponse>(apiUrl, {
     timeout: API_TIMEOUT_MILLI,
   });
@@ -81,23 +151,18 @@ export async function fetchStxAddressData(
   ]);
 
   const confirmedCount = confirmedTransactions.totalCount;
-  const mempoolCount = deDuplicatePendingTx({
+  const mempoolCount = getUniquePendingTx({
     confirmedTransactions: confirmedTransactions.transactionsList,
     pendingTransactions: mempoolTransactions.transactionsList,
   }).length;
 
-  const transferTransactions: StxTransactionData[] = await getTransferTransactions(
-    stxAddress,
-    network
-  );
+  const transferTransactions: StxTransactionData[] = await getTransferTransactions(stxAddress, network);
   const ftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'fungible');
   const nftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'non_fungible');
 
-  const allConfirmedTransactions: Array<TransactionData> = [
-    ...confirmedTransactions.transactionsList,
-  ];
+  const allConfirmedTransactions: Array<TransactionData> = [...confirmedTransactions.transactionsList];
   ftTransactions.forEach((tx) => {
-    let index = allConfirmedTransactions.findIndex((trans) => {
+    const index = allConfirmedTransactions.findIndex((trans) => {
       return trans.txid === tx.txid;
     });
     if (index === -1) {
@@ -105,7 +170,7 @@ export async function fetchStxAddressData(
     }
   });
   nftTransactions.forEach((tx) => {
-    let index = allConfirmedTransactions.findIndex((trans) => {
+    const index = allConfirmedTransactions.findIndex((trans) => {
       return trans.txid === tx.txid;
     });
     if (index === -1) {
@@ -115,42 +180,35 @@ export async function fetchStxAddressData(
 
   allConfirmedTransactions.sort((t1, t2) => t2.seenTime.getTime() - t1.seenTime.getTime());
 
-  const transactions: Array<TransactionData> = [
-    ...mempoolTransactions.transactionsList,
-    ...allConfirmedTransactions,
-  ];
+  const transactions: Array<TransactionData> = [...mempoolTransactions.transactionsList, ...allConfirmedTransactions];
 
-  return Promise.resolve({
+  return {
     balance: totalBalance,
     availableBalance,
     locked: lockedBalance,
     nonce: balanceInfo.data.nonce,
     transactions,
     totalTransactions: confirmedCount + mempoolCount,
-  });
+  };
 }
 
-export async function getFtData(
-  stxAddress: string,
-  network: StacksNetwork
-): Promise<FungibleToken[]> {
+export async function getFtData(stxAddress: string, network: StacksNetwork): Promise<FungibleToken[]> {
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
-  return axios
-    .get<TokensResponse>(apiUrl, {
-      timeout: 30000,
-    })
-    .then((response) => {
-      const tokens: FungibleToken[] = [];
-      for (const key in response.data.fungible_tokens) {
-        const fungibleToken: FungibleToken = response.data.fungible_tokens[key];
-        const index = key.indexOf('::');
-        fungibleToken.assetName = key.substring(index + 2);
-        fungibleToken.principal = key.substring(0, index);
-        fungibleToken.protocol = "stacks"
-        tokens.push(fungibleToken);
-      }
-      return tokens;
-    });
+
+  const response = await axios.get<TokensResponse>(apiUrl, {
+    timeout: 30000,
+  });
+
+  const tokens: FungibleToken[] = [];
+  for (const key in response.data.fungible_tokens) {
+    const fungibleToken: FungibleToken = response.data.fungible_tokens[key];
+    const index = key.indexOf('::');
+    fungibleToken.assetName = key.substring(index + 2);
+    fungibleToken.principal = key.substring(0, index);
+    fungibleToken.protocol = 'stacks';
+    tokens.push(fungibleToken);
+  }
+  return tokens;
 }
 
 /**
@@ -160,12 +218,8 @@ export async function getFtData(
  * @param offset
  * @returns
  */
-export async function getAccountAssets(
-  stxAddress: string,
-  network: StacksNetwork,
-  offset: number
-): Promise<AccountAssetsListData> {
-  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
+export async function getAccountAssets(stxAddress: string, network: StacksNetwork): Promise<AccountAssetsListData> {
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
 
   return axios
     .get<TokensResponse>(apiUrl, {
@@ -173,8 +227,8 @@ export async function getAccountAssets(
     })
     .then((response) => {
       const assets: NonFungibleToken[] = [];
-      for (let key in response.data.non_fungible_tokens) {
-        var nft: NonFungibleToken = response.data.non_fungible_tokens[key];
+      for (const key in response.data.non_fungible_tokens) {
+        const nft: NonFungibleToken = response.data.non_fungible_tokens[key];
         nft.name = key;
         assets.push(nft);
       }
@@ -189,44 +243,37 @@ export async function getAccountAssets(
 export async function getNftsData(
   stxAddress: string,
   network: StacksNetwork,
-  offset: number
+  offset: number,
 ): Promise<NftEventsResponse> {
-  let apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
+  const apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
 
-  return axios
-    .get<NftEventsResponse>(apiUrl, {
-      timeout: 30000,
-      params: {
-        principal: stxAddress,
-        limit: 20,
-        offset: offset,
-      },
-    })
-    .then((response) => {
-      return response.data;
-    });
+  const response = await axios.get<NftEventsResponse>(apiUrl, {
+    timeout: 30000,
+    params: {
+      principal: stxAddress,
+      limit: 20,
+      offset: offset,
+    },
+  });
+
+  return response.data;
 }
 
-export async function getNfts(
-  stxAddress: string,
-  network: StacksNetwork,
-  offset: number
-): Promise<NftsListData> {
+export async function getNfts(stxAddress: string, network: StacksNetwork, offset: number): Promise<NftsListData> {
   const nfts = await getNftsData(stxAddress, network, offset);
+
   for (const nft of nfts.results) {
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
+
     if (contractInfo[1] !== 'bns') {
-      const detail = await getNftDetail(
-        nft.value.repr.replace('u', ''),
-        contractInfo[0],
-        contractInfo[1]
-      );
+      const detail = await getNftDetail(nft.value.repr.replace('u', ''), contractInfo[0], contractInfo[1]);
       if (detail) {
         nft.data = detail.data;
       }
     }
   }
+
   return {
     nftsList: nfts.results,
     total: nfts.total,
@@ -236,55 +283,50 @@ export async function getNfts(
 export async function getContractInterface(
   contractAddress: string,
   contractName: string,
-  network: StacksNetwork
+  network: StacksNetwork,
 ): Promise<ContractInterfaceResponse | null> {
-  const apiUrl = `${getNetworkURL(
-    network
-  )}/v2/contracts/interface/${contractAddress}/${contractName}`;
+  try {
+    const apiUrl = `${getNetworkURL(network)}/v2/contracts/interface/${contractAddress}/${contractName}`;
 
-  return axios
-    .get<ContractInterfaceResponse>(apiUrl, {
+    const response = await axios.get<ContractInterfaceResponse>(apiUrl, {
       timeout: 30000,
-    })
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      return null;
     });
+
+    return response.data;
+  } catch (err) {
+    return null;
+  }
 }
 
 export async function getBnsName(stxAddress: string, network: StacksNetwork) {
-  const apiUrl = `${getNetworkURL(network)}/v1/addresses/stacks/${stxAddress}`;
-  return axios
-    .get<AddressToBnsResponse>(apiUrl, {
+  try {
+    const apiUrl = `${getNetworkURL(network)}/v1/addresses/stacks/${stxAddress}`;
+    const response = await axios.get<AddressToBnsResponse>(apiUrl, {
       timeout: 30000,
-    })
-    .then((response) => {
-      return response?.data?.names[0];
-    })
-    .catch((error) => {
-      return undefined;
     });
+    return response?.data?.names[0];
+  } catch (err) {
+    return undefined;
+  }
 }
 
 export async function fetchAddressOfBnsName(
   bnsName: string,
   stxAddress: string,
-  network: StacksNetwork
+  network: StacksNetwork,
 ): Promise<string> {
   try {
     if (bnsName.includes('.')) {
       const ns = bnsName.split('.');
-      const name_ = ns[0];
-      const namespace_ = ns[1] ?? '';
+      const nameStr = ns[0];
+      const namespaceStr = ns[1] ?? '';
 
       const contractAddress = 'SP000000000000000000002Q6VF78';
       const contractName = 'bns';
       const functionName = 'name-resolve';
       const senderAddress = stxAddress;
-      const namespace: BufferCV = bufferCVFromString(namespace_);
-      const name: BufferCV = bufferCVFromString(name_);
+      const namespace: BufferCV = bufferCVFromString(namespaceStr);
+      const name: BufferCV = bufferCVFromString(nameStr);
 
       const options = {
         contractAddress,
@@ -301,77 +343,21 @@ export async function fetchAddressOfBnsName(
         return '';
       } else {
         const response = responseCV as ResponseCV;
-        const tupleCV = response.value as TupleCV;
-        const owner: PrincipalCV = tupleCV.data['owner'] as PrincipalCV;
+        const responseTupleCV = response.value as TupleCV;
+        const owner: PrincipalCV = responseTupleCV.data.owner as PrincipalCV;
         const address = cvToString(owner);
         return address;
       }
-    } else return '';
+    } else {
+      return '';
+    }
   } catch (err) {
     return '';
   }
 }
-export async function getConfirmedTransactions({
-  stxAddress,
-  network,
-}: {
-  stxAddress: string;
-  network: StacksNetwork;
-}): Promise<StxTransactionListData> {
-  let apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions`;
 
-  return axios
-    .get<StxTransactionResponse>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-    })
-    .then((response) => {
-      return {
-        transactionsList: response.data.results.map((responseTx) =>
-          parseStxTransactionData({ responseTx, stxAddress })
-        ),
-        totalCount: response.data.total,
-      };
-    });
-}
+export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {
 
-export async function getMempoolTransactions({
-  stxAddress,
-  network,
-  offset,
-  limit,
-}: {
-  stxAddress: string;
-  network: StacksNetwork;
-  offset: number;
-  limit: number;
-}): Promise<StxMempoolTransactionListData> {
-  let apiUrl = `${getNetworkURL(network)}/extended/v1/tx/mempool?address=${stxAddress}`;
-
-  return axios
-    .get<StxMempoolResponse>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-      params: {
-        limit: limit,
-        offset: offset,
-      },
-    })
-    .then((response) => {
-      const count: number = response.data.total;
-      const transactions: StxMempoolTransactionData[] = [];
-      response.data.results.forEach((responseTx) => {
-        transactions.push(parseMempoolStxTransactionsData({ responseTx, stxAddress }));
-      });
-      return {
-        transactionsList: transactions,
-        totalCount: count,
-      };
-    });
-}
-
-export async function fetchStxPendingTxData(
-  stxAddress: string,
-  network: StacksNetwork
-): Promise<StxPendingTxData> {
   const [confirmedTransactions, mempoolTransactions] = await Promise.all([
     getConfirmedTransactions({
       stxAddress,
@@ -385,65 +371,36 @@ export async function fetchStxPendingTxData(
     }),
   ]);
 
-  const pendingTransactions = deDuplicatePendingTx({
+  const pendingTransactions = getUniquePendingTx({
     confirmedTransactions: confirmedTransactions.transactionsList,
     pendingTransactions: mempoolTransactions.transactionsList,
-  }).filter((tx) => tx.incoming === false);
-
-  return Promise.resolve({
-    pendingTransactions,
   });
+
+  return {
+    pendingTransactions,
+  };
 }
 
 export async function getTransaction(txid: string, network: StacksNetwork): Promise<Transaction> {
-  return fetch(`${getNetworkURL(network)}/extended/v1/tx/${txid}`, {
+  const response = await fetch(`${getNetworkURL(network)}/extended/v1/tx/${txid}`, {
     method: 'GET',
-  })
-    .then((response) => response.json())
-    .then((response) => {
-      return response;
-    });
-}
-
-export async function getTransferTransactions(
-  stxAddress: string,
-  network: StacksNetwork
-): Promise<StxTransactionData[]> {
-  let apiUrl = `${getNetworkURL(
-    network
-  )}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
-  return axios
-    .get<TransferTransactionsData>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-    })
-    .then((response: { data: { results: any[] } }) => {
-      const transactions: StxTransactionData[] = [];
-      response.data.results.forEach((t) => {
-        transactions.push(mapTransferTransactionData({ responseTx: t.tx, stxAddress }));
-      });
-
-      return transactions;
-    });
+  });
+  return response.json();
 }
 
 export async function getStacksInfo(network: string) {
-  const url = `${network}/v2/info`;
-  return axios
-    .get<CoreInfo>(url, {
+  try {
+    const url = `${network}/v2/info`;
+    const response = await axios.get<CoreInfo>(url, {
       timeout: 30000,
-    })
-    .then((response) => {
-      return response?.data;
-    })
-    .catch((error) => {
-      return undefined;
     });
+    return response?.data;
+  } catch (err) {
+    return undefined;
+  }
 }
 
-export async function fetchDelegationState(
-  stxAddress: string,
-  network: StacksNetwork
-): Promise<DelegationInfo> {
+export async function fetchDelegationState(stxAddress: string, network: StacksNetwork): Promise<DelegationInfo> {
   const poxContractAddress = 'SP000000000000000000002Q6VF78';
   const poxContractName = 'pox-2';
   const mapName = 'delegation-state';
@@ -453,46 +410,45 @@ export async function fetchDelegationState(
   const headers = {
     'Content-Type': 'application/json',
   };
-  return axios.post(apiUrl, JSON.stringify(key), { headers: headers }).then((response) => {
-    const responseCV = hexToCV(response.data.data);
-    if (responseCV.type === ClarityType.OptionalNone) {
-      return {
-        delegated: false,
-      };
-    } else {
-      const someCV = responseCV as SomeCV;
-      const tupleCV = someCV.value as TupleCV;
-      const amount: UIntCV = tupleCV.data['amount-ustx'] as UIntCV;
-      const delegatedTo: PrincipalCV = tupleCV.data['delegated-to'] as PrincipalCV;
-      const untilBurnHeightSomeCV: SomeCV = tupleCV.data['until-burn-ht'] as SomeCV;
-      var untilBurnHeight = 9999999;
-      if (untilBurnHeightSomeCV.type === ClarityType.OptionalSome) {
-        const untilBurnHeightUIntCV: UIntCV = untilBurnHeightSomeCV.value as UIntCV;
-        untilBurnHeight = Number(untilBurnHeightUIntCV.value);
-      }
-      const delegatedAmount = new BigNumber(amount.value.toString());
 
-      const delegationInfo = {
-        delegated: true,
-        amount: delegatedAmount.toString(),
-        delegatedTo: cvToString(delegatedTo),
-        untilBurnHeight: untilBurnHeight,
-      };
+  const response = await axios.post(apiUrl, JSON.stringify(key), { headers: headers });
 
-      return delegationInfo;
+  const responseCV = hexToCV(response.data.data);
+  if (responseCV.type === ClarityType.OptionalNone) {
+    return {
+      delegated: false,
+    };
+  } else {
+    const someCV = responseCV as SomeCV;
+    const responseTupleCV = someCV.value as TupleCV;
+    const amount: UIntCV = responseTupleCV.data['amount-ustx'] as UIntCV;
+    const delegatedTo: PrincipalCV = responseTupleCV.data['delegated-to'] as PrincipalCV;
+    const untilBurnHeightSomeCV: SomeCV = responseTupleCV.data['until-burn-ht'] as SomeCV;
+    let untilBurnHeight = 9999999;
+    if (untilBurnHeightSomeCV.type === ClarityType.OptionalSome) {
+      const untilBurnHeightUIntCV: UIntCV = untilBurnHeightSomeCV.value as UIntCV;
+      untilBurnHeight = Number(untilBurnHeightUIntCV.value);
     }
-  });
+    const delegatedAmount = new BigNumber(amount.value.toString());
+
+    const delegationInfo = {
+      delegated: true,
+      amount: delegatedAmount.toString(),
+      delegatedTo: cvToString(delegatedTo),
+      untilBurnHeight: untilBurnHeight,
+    };
+
+    return delegationInfo;
+  }
 }
 
 export async function fetchCoinMetaData(contract: string, network: StacksNetwork) {
-  return axios
-  .get<CoinMetaData>(`${getNetworkURL(network)}/metadata/ft/${contract}`, {
-    timeout: 30000,
-  })
-  .then((response) => {
+  try {
+    const response = await axios.get<CoinMetaData>(`${getNetworkURL(network)}/metadata/ft/${contract}`, {
+      timeout: 30000,
+    });
     return response?.data;
-  })
-  .catch((error) => {
+  } catch (err) {
     return undefined;
-  });
+  }
 }
