@@ -6,7 +6,8 @@ export type TransactionType =
   | 'poison_microblock'
   | 'bitcoin'
   | 'unsupported'
-  | 'brc20';
+  | 'brc20'
+  | 'message_sign';
 
 export type TransactionStatus =
   | 'pending'
