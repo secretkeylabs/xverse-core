@@ -298,6 +298,12 @@ export function parseMempoolStxTransactionsData({
   return parsedTx;
 }
 
+/**
+ * parseStxTransactionData
+ * @param responseTx StxTransactionDataResponse
+ * @param stxAddress string
+ * @returns StxTransactionData parsed for display
+ */
 export function parseStxTransactionData({
   responseTx,
   stxAddress,
