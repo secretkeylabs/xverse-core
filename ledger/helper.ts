@@ -1,5 +1,6 @@
 import { NetworkType } from '../types/network';
 import { networks, payments, initEccLib } from 'bitcoinjs-lib';
+import { AppClient } from 'ledger-bitcoin';
 import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, Transport } from './types';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
@@ -11,17 +12,31 @@ import ecdsaFormat from 'ecdsa-sig-formatter';
 import * as ecc from '@bitcoinerlab/secp256k1';
 
 /**
+  This function is used to get the coin type depending on network type
+  @param network - the network type
+  @returns coin type in number format
+**/
+export const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 : 1);
+
+/**
+ * This function is used to get the master fingerprint from the ledger
+ * @param transport - the transport object with connected ledger device
+ * @returns master key fingerprint as a string of 8 hexadecimal digits
+ * */
+export async function getMasterFingerPrint(transport: Transport): Promise<string> {
+  const app = new AppClient(transport);
+  const masterFingerPrint = await app.getMasterFingerprint();
+  return masterFingerPrint;
+}
+
+/**
   This function is used to get the public key from the xpub at a given index
   @param xpub - the extended public key - compressed
   @param index - the address index
   @param network - the network type
   @returns the public key in compressed format
 **/
-export function getPublicKeyFromXpubAtIndex(
-  xpub: string,
-  index: number,
-  network: NetworkType
-): Buffer {
+export function getPublicKeyFromXpubAtIndex(xpub: string, index: number, network: NetworkType): Buffer {
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const { publicKey } = bip32.fromBase58(xpub, btcNetwork).derivePath(`0/${index}`);
   return publicKey;
@@ -37,7 +52,7 @@ export function getPublicKeyFromXpubAtIndex(
 export function getNativeSegwitAccountDataFromXpub(
   xpub: string,
   index: number,
-  network: NetworkType
+  network: NetworkType,
 ): {
   publicKey: Buffer;
   address: string;
@@ -73,7 +88,7 @@ export function getNativeSegwitAccountDataFromXpub(
  * */
 export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
   dataPublicKey: string,
-  profile: LedgerStxJWTAuthProfile
+  profile: LedgerStxJWTAuthProfile,
 ): Promise<string> {
   const address = publicKeyToBtcAddress(dataPublicKey);
 
@@ -127,7 +142,7 @@ export async function signStxJWTAuth(transport: Transport, accountIndex: number,
 export function getTaprootAccountDataFromXpub(
   xpub: string,
   index: number,
-  network: NetworkType
+  network: NetworkType,
 ): {
   publicKey: Buffer;
   address: string;
