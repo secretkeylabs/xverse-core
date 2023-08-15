@@ -85,7 +85,20 @@ const useBrc20TransferExecute = (props: Props) => {
   const executeTransfer = useCallback(() => {
     if (running) return;
 
-    const validationErrorCode = validateProps(props);
+    const innerProps = {
+      seedPhrase,
+      accountIndex,
+      addressUtxos,
+      tick,
+      amount,
+      revealAddress,
+      changeAddress,
+      recipientAddress,
+      feeRate,
+      network,
+    };
+
+    const validationErrorCode = validateProps(innerProps);
     setErrorCode(validationErrorCode);
 
     if (validationErrorCode) {
@@ -98,18 +111,7 @@ const useBrc20TransferExecute = (props: Props) => {
 
     const runTransfer = async () => {
       try {
-        const transferGenerator = await brc20TransferExecute({
-          seedPhrase,
-          accountIndex,
-          addressUtxos,
-          tick,
-          amount,
-          revealAddress,
-          changeAddress,
-          recipientAddress,
-          feeRate,
-          network,
-        });
+        const transferGenerator = await brc20TransferExecute(innerProps);
 
         let done = false;
         do {
@@ -162,6 +164,7 @@ const useBrc20TransferExecute = (props: Props) => {
     recipientAddress,
     feeRate,
     network,
+    running,
   ]);
 
   return {
