@@ -7,7 +7,6 @@ import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { CoreError } from '../utils/coreError';
 import { getBtcPrivateKey } from '../wallet';
-import { tryFinaliseTransferWithBackOff } from './brc20.utils';
 import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
@@ -377,11 +376,10 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
 
   yield ExecuteTransferProgressCodes.Finalizing;
 
-  // we sleep here to give the reveal transaction time to propagate
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
   try {
-    return await tryFinaliseTransferWithBackOff(commitAddress, transferTransaction.signedTx);
+    const response = await xverseInscribeApi.finalizeBrc20TransferOrder(commitAddress, transferTransaction.signedTx);
+
+    return response;
   } catch (error) {
     throw new CoreError('Failed to finalize order', BRC20ErrorCode.FAILED_TO_FINALIZE, error);
   }
