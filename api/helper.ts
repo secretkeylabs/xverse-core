@@ -298,6 +298,12 @@ export function parseMempoolStxTransactionsData({
   return parsedTx;
 }
 
+/**
+ * parseStxTransactionData
+ * @param responseTx StxTransactionDataResponse
+ * @param stxAddress string
+ * @returns StxTransactionData parsed for display
+ */
 export function parseStxTransactionData({
   responseTx,
   stxAddress,
@@ -329,23 +335,27 @@ export function parseStxTransactionData({
 
   // add token transfer data if type is token transfer
   if (parsedTx.txType === 'token_transfer') {
+    const amount = new BigNumber(responseTx.token_transfer?.amount ?? 0);
     parsedTx.tokenTransfer = {
-      recipientAddress: responseTx.token_transfer.recipient_address,
-      amount: new BigNumber(responseTx.token_transfer.amount),
-      memo: responseTx.token_transfer.memo,
+      recipientAddress: responseTx.token_transfer?.recipient_address,
+      amount,
+      memo: responseTx.token_transfer?.memo,
     };
-    const amount = new BigNumber(responseTx.token_transfer.amount);
     parsedTx.amount = amount;
   }
   if (parsedTx.txType === 'contract_call') {
     parsedTx.contractCall = responseTx.contract_call;
-    if (responseTx.contract_call?.function_name === 'transfer') {
-      if (responseTx.post_conditions && responseTx.post_conditions.length > 0) {
-        parsedTx.tokenType = responseTx.post_conditions.find((x) => x !== undefined)?.type;
-        parsedTx.amount = new BigNumber(responseTx.post_conditions.find((x) => x !== undefined)?.amount ?? 0);
-        parsedTx.tokenName = responseTx.post_conditions.find((x) => x !== undefined)?.asset.asset_name;
-        if (responseTx.post_conditions.find((x) => x !== undefined)?.asset_value)
-          parsedTx.assetId = responseTx.post_conditions.find((x) => x !== undefined)?.asset_value?.repr.substring(1);
+    if (
+      responseTx.contract_call?.function_name === 'transfer' &&
+      responseTx.post_conditions &&
+      responseTx.post_conditions.length > 0
+    ) {
+      const firstPostCondition = responseTx.post_conditions.find(Boolean);
+      parsedTx.tokenType = firstPostCondition?.type;
+      parsedTx.amount = new BigNumber(firstPostCondition?.amount ?? 0);
+      parsedTx.tokenName = firstPostCondition?.asset?.asset_name;
+      if (firstPostCondition?.asset_value) {
+        parsedTx.assetId = firstPostCondition.asset_value.repr?.substring(1);
       }
     }
   }
