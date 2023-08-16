@@ -77,7 +77,7 @@ export async function getOrdinalIdFromUtxo(utxo: UTXO) {
 
   const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
   if (ordinalIds.data.length > 0) {
-    return ordinalIds.data.at(-1);
+    return ordinalIds.data[ordinalIds.data.length - 1];
   } else {
     return null;
   }
