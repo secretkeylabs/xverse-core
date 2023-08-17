@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { UTXO } from 'types';
-import { CoreError } from 'utils/coreError';
 import { InscriptionErrorCode, mintFeeEstimate } from '../../transactions/inscriptionMint';
+import { CoreError } from '../../utils/coreError';
 
 type CommitValueBreakdown = {
   commitChainFee: number;
