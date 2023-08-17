@@ -55,14 +55,22 @@ import { getNftDetail } from './gamma';
 export async function getConfirmedTransactions({
   stxAddress,
   network,
+  offset,
+  limit,
 }: {
   stxAddress: string;
   network: StacksNetwork;
+  offset?: number;
+  limit?: number;
 }): Promise<StxTransactionListData> {
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions`;
 
   const response = await axios.get<StxTransactionResponse>(apiUrl, {
     timeout: API_TIMEOUT_MILLI,
+    params: {
+      limit,
+      offset,
+    },
   });
 
   return {
@@ -107,10 +115,16 @@ export async function getMempoolTransactions({
 export async function getTransferTransactions(
   stxAddress: string,
   network: StacksNetwork,
+  offset?: number,
+  limit?: number,
 ): Promise<StxTransactionData[]> {
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
   const response = await axios.get<TransferTransactionsData>(apiUrl, {
     timeout: API_TIMEOUT_MILLI,
+    params: {
+      limit,
+      offset,
+    },
   });
 
   const transactions: StxTransactionData[] = [];
@@ -141,6 +155,8 @@ export async function fetchStxAddressData(
     getConfirmedTransactions({
       stxAddress,
       network,
+      offset: offset,
+      limit: paginationLimit,
     }),
     getMempoolTransactions({
       stxAddress,
@@ -156,7 +172,12 @@ export async function fetchStxAddressData(
     pendingTransactions: mempoolTransactions.transactionsList,
   }).length;
 
-  const transferTransactions: StxTransactionData[] = await getTransferTransactions(stxAddress, network);
+  const transferTransactions: StxTransactionData[] = await getTransferTransactions(
+    stxAddress,
+    network,
+    offset,
+    paginationLimit,
+  );
   const ftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'fungible');
   const nftTransactions = transferTransactions.filter((tx) => tx.tokenType === 'non_fungible');
 
@@ -357,7 +378,6 @@ export async function fetchAddressOfBnsName(
 }
 
 export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {
-
   const [confirmedTransactions, mempoolTransactions] = await Promise.all([
     getConfirmedTransactions({
       stxAddress,
