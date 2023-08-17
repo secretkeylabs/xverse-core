@@ -83,7 +83,7 @@ const useBrc20TransferExecute = (props: Props) => {
   const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
 
   const executeTransfer = useCallback(() => {
-    if (running) return;
+    if (running || !!transferTransactionId) return;
 
     const innerProps = {
       seedPhrase,
@@ -165,6 +165,7 @@ const useBrc20TransferExecute = (props: Props) => {
     feeRate,
     network,
     running,
+    transferTransactionId,
   ]);
 
   return {
