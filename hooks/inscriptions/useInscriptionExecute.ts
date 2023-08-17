@@ -141,6 +141,7 @@ const useInscriptionExecute = (props: Props) => {
   ]);
 
   return {
+    isExecuting: running,
     executeMint,
     revealTransactionId,
     complete: !!revealTransactionId,
