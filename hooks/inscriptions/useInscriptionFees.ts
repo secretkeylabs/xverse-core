@@ -94,6 +94,7 @@ const useInscriptionFees = (props: Props) => {
     setIsInitialised(true);
     setIsLoading(true);
     setErrorCode(undefined);
+    setErrorMessage(undefined);
 
     const runEstimate = async () => {
       try {
