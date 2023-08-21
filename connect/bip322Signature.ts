@@ -77,11 +77,17 @@ const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: Bitc
   }
 };
 
-export const signBip322Message = async (options: SignBip322MessageOptions) => {
-  const { accounts, message, network, seedPhrase, signatureAddress } = options;
-  if (!accounts || accounts.length === 0) {
+export const signBip322Message = async ({
+  accounts,
+  message,
+  network,
+  seedPhrase,
+  signatureAddress,
+}: SignBip322MessageOptions) => {
+  if (!accounts?.length) {
     throw new Error('a List of Accounts are required to derive the correct Private Key');
   }
+
   const { type } = getAddressInfo(signatureAddress);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const master = bip32.fromSeed(seed);
@@ -89,16 +95,12 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
   const child = master.derivePath(signingDerivationPath);
   if (child.privateKey) {
     if (type === AddressType.p2sh) {
-      return (
-        await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)' })
-      ).toString('base64');
+      return (await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)' })).toString('base64');
     }
     const privateKey = child.privateKey?.toString('hex');
     const publicKey = getSigningPk(type, privateKey);
     const txScript = getSignerScript(type, publicKey, getBtcNetwork(network));
-    const inputHash = hex.decode(
-      '0000000000000000000000000000000000000000000000000000000000000000'
-    );
+    const inputHash = hex.decode('0000000000000000000000000000000000000000000000000000000000000000');
     const txVersion = 0;
     const inputIndex = 4294967295;
     const sequence = 0;
@@ -142,10 +144,7 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
     const firstInput = txToSign.getInput(0);
     if (firstInput.finalScriptWitness?.length) {
       const len = encode(firstInput.finalScriptWitness?.length);
-      const result = Buffer.concat([
-        len,
-        ...firstInput.finalScriptWitness.map((w) => encodeVarString(w)),
-      ]);
+      const result = Buffer.concat([len, ...firstInput.finalScriptWitness.map((w) => encodeVarString(w))]);
       return result.toString('base64');
     } else {
       return '';
