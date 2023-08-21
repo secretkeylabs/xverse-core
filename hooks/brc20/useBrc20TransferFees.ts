@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { UTXO } from 'types';
-import { brc20TransferEstimateFees } from '../../transactions/brc20';
+import { CoreError } from 'utils/coreError';
+import { BRC20ErrorCode, brc20TransferEstimateFees } from '../../transactions/brc20';
 
 type CommitValueBreakdown = {
   commitChainFee: number;
@@ -11,47 +12,12 @@ type CommitValueBreakdown = {
   transferUtxoValue: number;
 };
 
-export enum ErrorCode {
-  UTXOS_MISSING = 'UTXOS_MISSING',
-  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-  INVALID_TICK = 'INVALID_TICK',
-  INVALID_AMOUNT = 'INVALID_AMOUNT',
-  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
-  SERVER_ERROR = 'SERVER_ERROR',
-}
-
 type Props = {
   addressUtxos: UTXO[] | undefined;
   tick: string;
   amount: number;
   feeRate: number;
   revealAddress: string;
-};
-
-const validateProps = (props: Props) => {
-  const { addressUtxos, tick, amount, feeRate } = props;
-
-  if (!addressUtxos) {
-    return ErrorCode.UTXOS_MISSING;
-  }
-
-  if (!addressUtxos.length) {
-    return ErrorCode.INSUFFICIENT_FUNDS;
-  }
-
-  if (tick.length !== 4) {
-    return ErrorCode.INVALID_TICK;
-  }
-
-  if (amount <= 0) {
-    return ErrorCode.INVALID_AMOUNT;
-  }
-
-  if (feeRate <= 0) {
-    return ErrorCode.INVALID_FEE_RATE;
-  }
-
-  return null;
 };
 
 /**
@@ -68,22 +34,9 @@ const useBrc20TransferFees = (props: Props) => {
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isInitialised, setIsInitialised] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
+  const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
   useEffect(() => {
-    const validationErrorCode = validateProps(props);
-
-    if (validationErrorCode) {
-      setErrorCode(validationErrorCode);
-
-      if (validationErrorCode !== ErrorCode.UTXOS_MISSING) {
-        setIsInitialised(true);
-      }
-
-      return;
-    }
-
-    setIsInitialised(true);
     setIsLoading(true);
     setErrorCode(undefined);
 
@@ -96,13 +49,18 @@ const useBrc20TransferFees = (props: Props) => {
           revealAddress,
           feeRate,
         });
+        setIsInitialised(true);
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {
-        if (e.message === 'Not enough funds at selected fee rate') {
-          setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
+        if (CoreError.isCoreError(e) && (e.code ?? '') in BRC20ErrorCode) {
+          setErrorCode(e.code as BRC20ErrorCode);
+
+          if (e.code !== BRC20ErrorCode.UTXOS_MISSING) {
+            setIsInitialised(true);
+          }
         } else {
-          setErrorCode(ErrorCode.SERVER_ERROR);
+          setErrorCode(BRC20ErrorCode.SERVER_ERROR);
         }
       }
 
