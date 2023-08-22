@@ -7,7 +7,7 @@ import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend } from './btc';
 
 const MINIMUM_INSCRIPTION_VALUE = 546;
-const MAX_CONTENT_LENGTH = 1000; // TODO: figure this out
+const MAX_CONTENT_LENGTH = 400e3; // 400kb is the max that miners will mine
 
 export enum InscriptionErrorCode {
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
