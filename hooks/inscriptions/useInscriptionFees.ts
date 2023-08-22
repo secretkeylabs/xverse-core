@@ -11,17 +11,6 @@ type CommitValueBreakdown = {
   externalServiceFee?: number;
 };
 
-export enum ErrorCode {
-  UTXOS_MISSING = 'UTXOS_MISSING',
-  CONTENT_TOO_BIG = 'CONTENT_TOO_BIG',
-  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
-  INSCRIPTION_VALUE_TOO_LOW = 'INSCRIPTION_VALUE_TOO_LOW',
-  INVALID_SERVICE_FEE_CONFIG = 'INVALID_SERVICE_FEE_CONFIG',
-  INVALID_CONTENT = 'INVALID_CONTENT',
-  SERVER_ERROR = 'SERVER_ERROR',
-}
-
 type Props = {
   addressUtxos: UTXO[] | undefined;
   content: string;
@@ -31,24 +20,6 @@ type Props = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
-};
-
-const validateProps = (props: Props) => {
-  const { addressUtxos, feeRate } = props;
-
-  if (!addressUtxos) {
-    return ErrorCode.UTXOS_MISSING;
-  }
-
-  if (!addressUtxos.length) {
-    return ErrorCode.INSUFFICIENT_FUNDS;
-  }
-
-  if (feeRate <= 0) {
-    return ErrorCode.INVALID_FEE_RATE;
-  }
-
-  return null;
 };
 
 /**
@@ -75,21 +46,11 @@ const useInscriptionFees = (props: Props) => {
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isInitialised, setIsInitialised] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
+  const [errorCode, setErrorCode] = useState<InscriptionErrorCode | undefined>();
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   useEffect(() => {
-    const validationErrorCode = validateProps(props);
-
-    if (validationErrorCode) {
-      setErrorCode(validationErrorCode);
-
-      if (validationErrorCode !== ErrorCode.UTXOS_MISSING) {
-        setIsInitialised(true);
-      }
-
-      return;
-    }
+    if (!addressUtxos) return;
 
     setIsInitialised(true);
     setIsLoading(true);
@@ -111,30 +72,10 @@ const useInscriptionFees = (props: Props) => {
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {
-        let finalErrorCode: string | undefined;
-        if (CoreError.isCoreError(e)) {
-          finalErrorCode = e.code;
-        }
-
-        switch (finalErrorCode) {
-          case InscriptionErrorCode.CONTENT_TOO_BIG:
-            setErrorCode(ErrorCode.CONTENT_TOO_BIG);
-            break;
-          case InscriptionErrorCode.INSUFFICIENT_FUNDS:
-            setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-            break;
-          case InscriptionErrorCode.INSCRIPTION_VALUE_TOO_LOW:
-            setErrorCode(ErrorCode.INSCRIPTION_VALUE_TOO_LOW);
-            break;
-          case InscriptionErrorCode.INVALID_CONTENT:
-            setErrorCode(ErrorCode.INVALID_CONTENT);
-            break;
-          case InscriptionErrorCode.INVALID_SERVICE_FEE_CONFIG:
-            setErrorCode(ErrorCode.INVALID_SERVICE_FEE_CONFIG);
-            break;
-          default:
-            setErrorCode(ErrorCode.SERVER_ERROR);
-            break;
+        if (CoreError.isCoreError(e) && (e.code ?? '') in InscriptionErrorCode) {
+          setErrorCode(e.code as InscriptionErrorCode);
+        } else {
+          setErrorCode(InscriptionErrorCode.SERVER_ERROR);
         }
 
         setErrorMessage(e.message);

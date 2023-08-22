@@ -11,11 +11,13 @@ const MAX_CONTENT_LENGTH = 400e3; // 400kb is the max that miners will mine
 
 export enum InscriptionErrorCode {
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
+  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
   INVALID_SERVICE_FEE_CONFIG = 'INVALID_SERVICE_FEE_CONFIG',
   INVALID_CONTENT = 'INVALID_CONTENT',
   CONTENT_TOO_BIG = 'CONTENT_TOO_BIG',
   INSCRIPTION_VALUE_TOO_LOW = 'INSCRIPTION_VALUE_TOO_LOW',
   FAILED_TO_FINALIZE = 'FAILED_TO_FINALIZE',
+  SERVER_ERROR = 'SERVER_ERROR',
 }
 
 type EstimateProps = {
@@ -61,7 +63,7 @@ type ExecuteProps = {
   serviceFeeAddress?: string;
 };
 
-export const mintFeeEstimate = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
+export async function mintFeeEstimate(estimateProps: EstimateProps): Promise<EstimateResult> {
   const {
     addressUtxos,
     content,
@@ -143,7 +145,7 @@ export const mintFeeEstimate = async (estimateProps: EstimateProps): Promise<Est
       externalServiceFee: serviceFee,
     },
   };
-};
+}
 
 export async function mintExecute(executeProps: ExecuteProps): Promise<string> {
   const {
@@ -161,6 +163,14 @@ export async function mintExecute(executeProps: ExecuteProps): Promise<string> {
     serviceFeeAddress,
     finalInscriptionValue,
   } = executeProps;
+
+  if (!addressUtxos.length) {
+    throw new CoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
+  }
+
+  if (feeRate <= 0) {
+    throw new CoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
+  }
 
   if ((serviceFee || serviceFeeAddress) && !(serviceFee && serviceFeeAddress)) {
     throw new CoreError(
