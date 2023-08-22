@@ -4,6 +4,14 @@ import { UTXO } from 'types';
 import { CoreError } from 'utils/coreError';
 import { BRC20ErrorCode, brc20TransferEstimateFees } from '../../transactions/brc20';
 
+const DUMMY_UTXO = {
+  address: '',
+  txid: '1234567890123456789012345678901234567890123456789012345678901234',
+  vout: 0,
+  status: { confirmed: true },
+  value: 100e8,
+};
+
 type CommitValueBreakdown = {
   commitChainFee: number;
   revealChainFee: number;
@@ -29,10 +37,9 @@ type Props = {
  * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
  */
 const useBrc20TransferFees = (props: Props) => {
-  const { addressUtxos, tick, amount, feeRate, revealAddress } = props;
+  const { addressUtxos = [], tick, amount, feeRate, revealAddress } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
-  const [isInitialised, setIsInitialised] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
@@ -43,21 +50,29 @@ const useBrc20TransferFees = (props: Props) => {
     const runEstimate = async () => {
       try {
         const result = await brc20TransferEstimateFees({
-          addressUtxos: addressUtxos!,
+          addressUtxos,
           tick,
           amount,
           revealAddress,
           feeRate,
         });
-        setIsInitialised(true);
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {
         if (CoreError.isCoreError(e) && (e.code ?? '') in BRC20ErrorCode) {
           setErrorCode(e.code as BRC20ErrorCode);
 
-          if (e.code !== BRC20ErrorCode.UTXOS_MISSING) {
-            setIsInitialised(true);
+          // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
+          if (e.code === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
+            const result = await brc20TransferEstimateFees({
+              addressUtxos: [DUMMY_UTXO],
+              tick,
+              amount,
+              revealAddress,
+              feeRate,
+            });
+            setCommitValue(result.commitValue);
+            setCommitValueBreakdown(result.valueBreakdown);
           }
         } else {
           setErrorCode(BRC20ErrorCode.SERVER_ERROR);
@@ -74,8 +89,7 @@ const useBrc20TransferFees = (props: Props) => {
     commitValue,
     commitValueBreakdown,
     isLoading,
-    errorCode: isInitialised ? errorCode : undefined,
-    isInitialised,
+    errorCode,
   };
 };
 
