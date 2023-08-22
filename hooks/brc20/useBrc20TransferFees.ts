@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { UTXO } from 'types';
-import { CoreError } from 'utils/coreError';
 import { BRC20ErrorCode, brc20TransferEstimateFees } from '../../transactions/brc20';
+import { CoreError } from '../../utils/coreError';
 
 const DUMMY_UTXO = {
   address: '',
