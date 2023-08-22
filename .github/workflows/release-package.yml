@@ -29,15 +29,9 @@ jobs:
           registry-url: https://npm.pkg.github.com/
       - run: npm ci
       - run: npm run build:esm
-      - id: latest-tag
-        if: github.event.release.prerelease
-        run: echo "tag=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> $GITHUB_OUTPUT
       - id: use-tag-version
         if: github.event.release.prerelease
-        run: npm version --no-git-tag-version $TAG
-        env:
-          TAG: ${{ steps.latest-tag.outputs.tag }}
-          CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+        run: npm version --no-git-tag-version $(git describe --tags --abbrev=0 | sed 's/^v//')
       - id: publish prerelease
         if: github.event.release.prerelease
         run: npm publish --tag prerelease
