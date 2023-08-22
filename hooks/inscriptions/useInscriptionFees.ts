@@ -60,7 +60,7 @@ const useInscriptionFees = (props: Props) => {
     const runEstimate = async () => {
       try {
         const result = await mintFeeEstimate({
-          addressUtxos: addressUtxos!,
+          addressUtxos,
           content,
           contentType,
           revealAddress,
@@ -74,6 +74,30 @@ const useInscriptionFees = (props: Props) => {
       } catch (e) {
         if (CoreError.isCoreError(e) && (e.code ?? '') in InscriptionErrorCode) {
           setErrorCode(e.code as InscriptionErrorCode);
+
+          // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
+          if (e.code === InscriptionErrorCode.INSUFFICIENT_FUNDS) {
+            const result = await mintFeeEstimate({
+              addressUtxos: [
+                {
+                  address: '',
+                  txid: '1234567890123456789012345678901234567890123456789012345678901234',
+                  vout: 0,
+                  status: { confirmed: true },
+                  value: 100e8,
+                },
+              ],
+              content,
+              contentType,
+              revealAddress,
+              feeRate,
+              finalInscriptionValue,
+              serviceFee,
+              serviceFeeAddress,
+            });
+            setCommitValue(result.commitValue);
+            setCommitValueBreakdown(result.valueBreakdown);
+          }
         } else {
           setErrorCode(InscriptionErrorCode.SERVER_ERROR);
         }
