@@ -8,4 +8,5 @@ export * from './hooks';
 export * from './ledger';
 export * from './transactions';
 export * from './types';
+export { CoreError } from './utils/coreError';
 export * from './wallet';
