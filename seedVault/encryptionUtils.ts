@@ -6,7 +6,7 @@ interface EncryptMnemonicArgs {
   mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
 }
 
-export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
+export async function encryptMnemonicWithHandler(cb: EncryptMnemonicArgs) {
   const { mnemonicEncryptionHandler, password, seed } = cb;
   const encryptedSeed = await mnemonicEncryptionHandler(seed, password);
   return encryptedSeed.toString('hex');
@@ -18,7 +18,7 @@ interface DecryptMnemonicArgs {
   mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
 }
 
-export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
+export async function decryptMnemonicWithHandler(cb: DecryptMnemonicArgs) {
   const { mnemonicDecryptionHandler, password, encryptedSeed } = cb;
   const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, password);
   return seedPhrase;
