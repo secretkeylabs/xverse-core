@@ -82,6 +82,10 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
+  if (feeRate <= 0) {
+    throw new CoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
+  }
+
   if (content.length > MAX_CONTENT_LENGTH) {
     throw new CoreError(
       `Content exceeds maximum size of ${MAX_CONTENT_LENGTH} bytes`,
