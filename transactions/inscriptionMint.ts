@@ -63,7 +63,7 @@ type ExecuteProps = {
   serviceFeeAddress?: string;
 };
 
-export async function mintFeeEstimate(estimateProps: EstimateProps): Promise<EstimateResult> {
+export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): Promise<EstimateResult> {
   const {
     addressUtxos,
     content,
@@ -147,7 +147,7 @@ export async function mintFeeEstimate(estimateProps: EstimateProps): Promise<Est
   };
 }
 
-export async function mintExecute(executeProps: ExecuteProps): Promise<string> {
+export async function inscriptionMintExecute(executeProps: ExecuteProps): Promise<string> {
   const {
     seedPhrase,
     accountIndex,
@@ -164,6 +164,7 @@ export async function mintExecute(executeProps: ExecuteProps): Promise<string> {
     finalInscriptionValue,
   } = executeProps;
 
+  // TODO: ensure first UTXO is not inscribed
   if (!addressUtxos.length) {
     throw new CoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   }

@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { NetworkType, UTXO } from 'types';
 import { CoreError } from '../../utils/coreError';
 
-import { InscriptionErrorCode, mintExecute } from '../../transactions/inscriptionMint';
+import { InscriptionErrorCode, inscriptionMintExecute } from '../../transactions/inscriptionMint';
 
 type Props = {
   seedPhrase: string;
@@ -58,7 +58,7 @@ const useInscriptionExecute = (props: Props) => {
 
     const runTransfer = async () => {
       try {
-        const mintResult = await mintExecute(innerProps);
+        const mintResult = await inscriptionMintExecute(innerProps);
 
         setRevealTransactionId(mintResult);
       } catch (e) {

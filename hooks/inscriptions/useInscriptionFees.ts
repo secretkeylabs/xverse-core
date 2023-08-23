@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { UTXO } from 'types';
-import { InscriptionErrorCode, mintFeeEstimate } from '../../transactions/inscriptionMint';
+import { InscriptionErrorCode, inscriptionMintFeeEstimate } from '../../transactions/inscriptionMint';
 import { CoreError } from '../../utils/coreError';
 
 type CommitValueBreakdown = {
@@ -63,7 +63,7 @@ const useInscriptionFees = (props: Props) => {
 
     const runEstimate = async () => {
       try {
-        const result = await mintFeeEstimate({
+        const result = await inscriptionMintFeeEstimate({
           addressUtxos: addressUtxos || [DUMMY_UTXO],
           content,
           contentType,
@@ -81,7 +81,7 @@ const useInscriptionFees = (props: Props) => {
 
           // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
           if (e.code === InscriptionErrorCode.INSUFFICIENT_FUNDS) {
-            const result = await mintFeeEstimate({
+            const result = await inscriptionMintFeeEstimate({
               addressUtxos: [DUMMY_UTXO],
               content,
               contentType,
