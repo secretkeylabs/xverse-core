@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { decryptMnemonicWithCallback, encryptMnemonicWithCallback } from '../../seedVault/encryptionUtils';
+import { decryptMnemonicWithHandler, encryptMnemonicWithHandler } from '../../seedVault/encryptionUtils';
 
 describe('encryptMnemonicWithCallback', () => {
   const password = 'password';
@@ -16,7 +16,7 @@ describe('encryptMnemonicWithCallback', () => {
   });
 
   it('should encrypt the mnemonic', async () => {
-    const result = await encryptMnemonicWithCallback({
+    const result = await encryptMnemonicWithHandler({
       mnemonicEncryptionHandler: mockMnemonicEncryptionHandler,
       password,
       seed,
@@ -32,11 +32,11 @@ describe('encryptMnemonicWithCallback', () => {
     mockMnemonicEncryptionHandler.mockRejectedValue(new Error(errorMessage));
 
     await expect(
-      encryptMnemonicWithCallback({
+      encryptMnemonicWithHandler({
         mnemonicEncryptionHandler: mockMnemonicEncryptionHandler,
         password,
         seed,
-      })
+      }),
     ).rejects.toThrow(errorMessage);
 
   });
@@ -56,7 +56,7 @@ describe('decryptMnemonicWithCallback', () => {
   });
 
   it('should decrypt the mnemonic', async () => {
-    const result = await decryptMnemonicWithCallback({
+    const result = await decryptMnemonicWithHandler({
       mnemonicDecryptionHandler: mockMnemonicDecryptionHandler,
       password,
       encryptedSeed,
@@ -72,11 +72,11 @@ describe('decryptMnemonicWithCallback', () => {
     mockMnemonicDecryptionHandler.mockRejectedValue(new Error(errorMessage));
 
     await expect(
-      decryptMnemonicWithCallback({
+      decryptMnemonicWithHandler({
         mnemonicDecryptionHandler: mockMnemonicDecryptionHandler,
         password,
         encryptedSeed,
-      })
+      }),
     ).rejects.toThrow(errorMessage);
 
   });

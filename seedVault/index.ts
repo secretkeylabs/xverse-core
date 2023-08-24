@@ -57,11 +57,11 @@ class SeedVault {
     if (password && !passwordHash) {
       const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
       if (salt) {
-         passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
-         await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+        passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
+        await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+      } else {
+        throw new Error('passwordHash not set');
       }
-    } else {
-      throw new Error('passwordHash not set');
     }
     const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
     if (!encryptedSeed) throw new Error('Seed not set');
