@@ -508,13 +508,21 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const ordinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
     // TODO: Throw error and not just the code
     // eslint-disable-next-line @typescript-eslint/no-throw-literal
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
   }
-  return getBtcFeesForOrdinalSend(recipientAddress, ordUtxo, btcAddress, network, ordinalsUtxos, feeMode, feeRateInput);
+  return getBtcFeesForOrdinalSend(
+    recipientAddress,
+    ordUtxo,
+    btcAddress,
+    network,
+    addressOrdinalsUtxos,
+    feeMode,
+    feeRateInput,
+  );
 }
 
 // Used to calculate fees for setting low/high fee settings
@@ -909,7 +917,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const ordinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
     // TODO: Throw error and not just the code
     // eslint-disable-next-line @typescript-eslint/no-throw-literal
@@ -922,7 +930,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
     accountIndex,
     seedPhrase,
     network,
-    ordinalsUtxos,
+    addressOrdinalsUtxos,
     fee,
   );
 }
