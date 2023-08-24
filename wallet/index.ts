@@ -70,28 +70,25 @@ export async function newWallet(): Promise<BaseWallet> {
   return walletFromSeedPhrase({ mnemonic, index: 0n, network: 'Mainnet' });
 }
 
-export async function walletFromSeedPhrase({
-  mnemonic,
+export async function getWalletFromRootNode({
   index,
   network,
+  rootNode,
+  master,
 }: {
-  mnemonic: string;
   index: bigint;
   network: NetworkType;
-}): Promise<BaseWallet> {
-  const seed = await bip39.mnemonicToSeed(mnemonic);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-
+  rootNode: BIP32Interface;
+  master: BIP32Interface;
+}): Promise<Omit<BaseWallet, 'masterPubKey' | 'seedPhrase'>> {
   const deriveStxAddressKeychain = deriveStxAddressChain(
     network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
     index,
   );
 
-  const { address, privateKey } = deriveStxAddressKeychain(rootNode);
+  const { address, privateKey } = await deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
-  const master = bip32.fromSeed(seed);
-  const masterPubKey = master.publicKey.toString('hex');
   const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
   // derive segwit btc address
@@ -115,17 +112,51 @@ export async function walletFromSeedPhrase({
   const btcAddress = segwitBtcAddress.address!;
   const btcPublicKey = keyPair.publicKey.toString('hex');
   const taprootInternalPubKey = secp256k1.schnorr.getPublicKey(privKey);
+  const ordinalsPublicKey = hex.encode(taprootInternalPubKey);
 
   return {
     stxAddress,
     btcAddress,
     ordinalsAddress,
-    masterPubKey,
     stxPublicKey,
     btcPublicKey,
-    ordinalsPublicKey: hex.encode(taprootInternalPubKey),
+    ordinalsPublicKey,
+    accountType: 'software',
+  };
+}
+
+export async function walletFromSeedPhrase({
+  mnemonic,
+  index,
+  network,
+}: {
+  mnemonic: string;
+  index: bigint;
+  network: NetworkType;
+}): Promise<BaseWallet> {
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const rootNode = bip32.fromSeed(Buffer.from(seed));
+
+  const master = bip32.fromSeed(seed);
+  const masterPubKey = master.publicKey.toString('hex');
+
+  const wallet = await getWalletFromRootNode({
+    index,
+    network,
+    rootNode,
+    master,
+  });
+
+  return {
+    stxAddress: wallet.stxAddress,
+    btcAddress: wallet.btcAddress,
+    ordinalsAddress: wallet.ordinalsAddress,
+    masterPubKey,
+    stxPublicKey: wallet.stxPublicKey,
+    btcPublicKey: wallet.btcPublicKey,
+    ordinalsPublicKey: wallet.ordinalsPublicKey,
     seedPhrase: mnemonic,
-    accountType: 'software'
+    accountType: wallet.accountType,
   };
 }
 
