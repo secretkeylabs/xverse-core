@@ -75,7 +75,8 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     serviceFeeAddress,
   } = estimateProps;
 
-  if ((serviceFee || serviceFeeAddress) && !(serviceFee && serviceFeeAddress)) {
+  // a service fee of below 546 will result in a dust UTXO
+  if (((serviceFee || serviceFeeAddress) && !(serviceFee && serviceFeeAddress)) || (serviceFee && serviceFee < 546)) {
     throw new CoreError(
       'Invalid service fee config, both serviceFee and serviceFeeAddress must be specified',
       InscriptionErrorCode.INVALID_SERVICE_FEE_CONFIG,
