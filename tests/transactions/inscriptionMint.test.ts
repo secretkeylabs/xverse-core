@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getOrdinalIdsFromUtxo } from '../../api/ordinals';
 import xverseInscribeApi from '../../api/xverseInscribe';
 import { generateSignedBtcTransaction, selectUtxosForSend } from '../../transactions/btc';
 import {
@@ -10,6 +11,7 @@ import {
 import { getBtcPrivateKey } from '../../wallet';
 
 vi.mock('../../api/xverseInscribe');
+vi.mock('../../api/ordinals');
 vi.mock('../../transactions/btc');
 vi.mock('../../wallet');
 
@@ -237,6 +239,7 @@ describe('inscriptionMintExecute', () => {
     vi.mocked(xverseInscribeApi.executeInscriptionOrder).mockResolvedValue({
       revealTransactionId: 'revealTxnId',
     } as any);
+    vi.mocked(getOrdinalIdsFromUtxo).mockResolvedValue([]);
 
     const result = await inscriptionMintExecute({
       addressUtxos: [
@@ -262,6 +265,68 @@ describe('inscriptionMintExecute', () => {
     });
 
     expect(result).toBe('revealTxnId');
+  });
+
+  it('fails on no non-ordinal UTXOS', async () => {
+    vi.mocked(getBtcPrivateKey).mockResolvedValue('dummyPrivateKey');
+    vi.mocked(xverseInscribeApi.createInscriptionOrder).mockResolvedValue({
+      commitAddress: 'dummyCommitAddress',
+      commitValue: 1000,
+      commitValueBreakdown: {
+        chainFee: 1000,
+        inscriptionValue: 546,
+        serviceFee: 2000,
+      },
+    });
+    vi.mocked(selectUtxosForSend).mockReturnValue({
+      fee: 1100,
+      change: 1200,
+      feeRate: 8,
+      selectedUtxos: [
+        {
+          address: 'dummyAddress',
+          status: { confirmed: true },
+          txid: 'dummyTxId',
+          vout: 0,
+          value: 1000,
+        },
+      ],
+    });
+    vi.mocked(generateSignedBtcTransaction).mockResolvedValue({
+      hex: 'dummyHex',
+    } as any);
+    vi.mocked(xverseInscribeApi.executeInscriptionOrder).mockResolvedValue({
+      revealTransactionId: 'revealTxnId',
+    } as any);
+    vi.mocked(getOrdinalIdsFromUtxo).mockResolvedValue(['ordinalId']);
+
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        contentString: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        serviceFee: 5000,
+        serviceFeeAddress: 'dummyServiceFeeAddress',
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+      }),
+    ).rejects.toThrowCoreError(
+      'Must have at least one non-inscribed UTXO for inscription',
+      InscriptionErrorCode.NO_NON_ORDINAL_UTXOS,
+    );
   });
 
   it('should fail on no UTXOs', async () => {

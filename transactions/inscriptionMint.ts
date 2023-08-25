@@ -1,6 +1,7 @@
 import BigNumber from 'bignumber.js';
 
 import { NetworkType, UTXO } from 'types';
+import { getOrdinalIdsFromUtxo } from '../api/ordinals';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { CoreError } from '../utils/coreError';
 import { getBtcPrivateKey } from '../wallet';
@@ -16,6 +17,7 @@ export enum InscriptionErrorCode {
   INVALID_CONTENT = 'INVALID_CONTENT',
   CONTENT_TOO_BIG = 'CONTENT_TOO_BIG',
   INSCRIPTION_VALUE_TOO_LOW = 'INSCRIPTION_VALUE_TOO_LOW',
+  NO_NON_ORDINAL_UTXOS = 'NO_NON_ORDINAL_UTXOS',
   FAILED_TO_FINALIZE = 'FAILED_TO_FINALIZE',
   SERVER_ERROR = 'SERVER_ERROR',
 }
@@ -169,7 +171,6 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     finalInscriptionValue,
   } = executeProps;
 
-  // TODO: ensure first UTXO is not inscribed
   if (!addressUtxos.length) {
     throw new CoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   }
@@ -240,11 +241,30 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     throw new CoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   }
 
+  const selectedOrdinalUtxos = [];
+  const selectedNonOrdinalUtxos = [];
+
+  for (const utxo of bestUtxoData.selectedUtxos) {
+    const ordinalIds = await getOrdinalIdsFromUtxo(utxo);
+    if (ordinalIds.length > 0) {
+      selectedOrdinalUtxos.push(utxo);
+    } else {
+      selectedNonOrdinalUtxos.push(utxo);
+    }
+  }
+
+  if (selectedNonOrdinalUtxos.length === 0) {
+    throw new CoreError(
+      'Must have at least one non-inscribed UTXO for inscription',
+      InscriptionErrorCode.NO_NON_ORDINAL_UTXOS,
+    );
+  }
+
   const commitChainFees = bestUtxoData.fee;
 
   const commitTransaction = await generateSignedBtcTransaction(
     privateKey,
-    bestUtxoData.selectedUtxos,
+    [...selectedNonOrdinalUtxos, ...selectedOrdinalUtxos],
     new BigNumber(commitValue),
     recipients,
     changeAddress,
