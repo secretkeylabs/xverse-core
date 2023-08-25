@@ -40,6 +40,8 @@ describe('inscriptionMintFeeEstimate', () => {
       ],
     });
 
+    const content = 'a'.repeat(400000);
+
     const result = await inscriptionMintFeeEstimate({
       addressUtxos: [
         {
@@ -50,7 +52,7 @@ describe('inscriptionMintFeeEstimate', () => {
           value: 1000,
         },
       ],
-      content: 'dummyContent',
+      content,
       contentType: 'text/plain',
       feeRate: 8,
       revealAddress: 'dummyRevealAddress',
@@ -67,6 +69,31 @@ describe('inscriptionMintFeeEstimate', () => {
       revealChainFee: 1000,
       revealServiceFee: 2000,
     });
+  });
+
+  it('calculates fee estimate correctly', async () => {
+    vi.mocked(xverseInscribeApi.getInscriptionFeeEstimate).mockResolvedValue({
+      chainFee: 1000,
+      inscriptionValue: 546,
+      serviceFee: 2000,
+      vSize: 100,
+    });
+    vi.mocked(selectUtxosForSend).mockReturnValue(undefined);
+
+    const content = 'a'.repeat(400000);
+
+    await expect(() =>
+      inscriptionMintFeeEstimate({
+        addressUtxos: [],
+        content,
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        serviceFee: 5000,
+        serviceFeeAddress: 'dummyServiceFeeAddress',
+      }),
+    ).rejects.toThrowCoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   });
 
   it.each([
@@ -102,6 +129,74 @@ describe('inscriptionMintFeeEstimate', () => {
     ).rejects.toThrowCoreError(
       'Invalid service fee config, both serviceFee and serviceFeeAddress must be specified',
       InscriptionErrorCode.INVALID_SERVICE_FEE_CONFIG,
+    );
+  });
+
+  it('should fail on invalid fee rate', async () => {
+    await expect(() =>
+      inscriptionMintFeeEstimate({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        content: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: -1,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+      }),
+    ).rejects.toThrowCoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
+  });
+
+  it('should fail on big content', async () => {
+    const content = 'a'.repeat(400001);
+
+    await expect(() =>
+      inscriptionMintFeeEstimate({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        content: content,
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+      }),
+    ).rejects.toThrowCoreError('Content exceeds maximum size of 400000 bytes', InscriptionErrorCode.CONTENT_TOO_BIG);
+  });
+
+  it('should fail on low inscription value', async () => {
+    await expect(() =>
+      inscriptionMintFeeEstimate({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        content: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 500,
+      }),
+    ).rejects.toThrowCoreError(
+      'Inscription value cannot be less than 546',
+      InscriptionErrorCode.INSCRIPTION_VALUE_TOO_LOW,
     );
   });
 });
