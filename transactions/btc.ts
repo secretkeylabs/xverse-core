@@ -5,7 +5,7 @@ import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
-import { fetchBtcFeeRate, getOrdinalsByAddress } from '../api/xverse';
+import { fetchBtcFeeRate } from '../api/xverse';
 import { BtcFeeResponse, ErrorCodes, Inscription, NetworkType, ResponseError, UTXO } from '../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
 import { selectOptimalUtxos } from './btc.utils';
@@ -419,13 +419,6 @@ export function getOrdinalUtxo(addressUtxos: UTXO[], ordinal: Inscription): UTXO
   return addressUtxos.find((utxo) => `${utxo.txid}:${utxo.vout}` === ordinal.output);
 }
 
-// get ordinals utxos in btc address
-export async function getOrdinalsUtxos(btcAddress: string) {
-  const ordinals = await getOrdinalsByAddress(btcAddress);
-  const filteredOrdinals = ordinals.filter((item) => item.id !== undefined);
-  return filteredOrdinals.map((item) => item.utxo);
-}
-
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
@@ -508,21 +501,12 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
     // TODO: Throw error and not just the code
     // eslint-disable-next-line @typescript-eslint/no-throw-literal
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
   }
-  return getBtcFeesForOrdinalSend(
-    recipientAddress,
-    ordUtxo,
-    btcAddress,
-    network,
-    addressOrdinalsUtxos,
-    feeMode,
-    feeRateInput,
-  );
+  return getBtcFeesForOrdinalSend(recipientAddress, ordUtxo, btcAddress, network, addressUtxos, feeMode, feeRateInput);
 }
 
 // Used to calculate fees for setting low/high fee settings
@@ -917,7 +901,6 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
     // TODO: Throw error and not just the code
     // eslint-disable-next-line @typescript-eslint/no-throw-literal
@@ -930,7 +913,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
     accountIndex,
     seedPhrase,
     network,
-    addressOrdinalsUtxos,
+    addressUtxos,
     fee,
   );
 }
