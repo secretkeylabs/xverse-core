@@ -190,14 +190,16 @@ describe('brc20MintExecute', () => {
   it('should mint BRC20 successfully', async () => {
     const mockedSeedPhrase = 'seed_phrase';
     const mockedAccountIndex = 0;
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'reveal_address';
     const mockedChangeAddress = 'change_address';
     const mockedFeeRate = 12;
     const mockedNetwork = 'Mainnet';
-    const mockedSelectedUtxos: UTXO[] = [];
+    const mockedSelectedUtxos: UTXO[] = mockedAddressUtxos;
 
     vi.mocked(getBtcPrivateKey).mockResolvedValueOnce('private_key');
 
@@ -450,7 +452,9 @@ describe('brc20TransferExecute', () => {
   it('should execute BRC20 transfer correctly', async () => {
     const mockedSeedPhrase = 'seed_phrase';
     const mockedAccountIndex = 0;
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'reveal_address';
@@ -472,7 +476,7 @@ describe('brc20TransferExecute', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use these 2 fields in this function
     } as any);
 
-    const mockedSelectedUtxos: UTXO[] = [];
+    const mockedSelectedUtxos: UTXO[] = mockedAddressUtxos;
     vi.mocked(selectUtxosForSend).mockReturnValueOnce({
       change: 2070,
       fee: 1070,

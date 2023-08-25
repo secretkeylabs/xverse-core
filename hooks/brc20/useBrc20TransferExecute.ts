@@ -5,15 +5,6 @@ import { CoreError } from '../../utils/coreError';
 
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
 
-export enum ErrorCode {
-  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-  INVALID_TICK = 'INVALID_TICK',
-  INVALID_AMOUNT = 'INVALID_AMOUNT',
-  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
-  BROADCAST_FAILED = 'BROADCAST_FAILED',
-  SERVER_ERROR = 'SERVER_ERROR',
-}
-
 type Props = {
   seedPhrase: string;
   accountIndex: number;
