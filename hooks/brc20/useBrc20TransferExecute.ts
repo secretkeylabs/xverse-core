@@ -27,27 +27,6 @@ type Props = {
   network: NetworkType;
 };
 
-const validateProps = (props: Props) => {
-  const { addressUtxos, tick, amount, feeRate } = props;
-
-  if (!addressUtxos.length) {
-    return ErrorCode.INSUFFICIENT_FUNDS;
-  }
-
-  if (tick.length !== 4) {
-    return ErrorCode.INVALID_TICK;
-  }
-
-  if (amount <= 0) {
-    return ErrorCode.INVALID_AMOUNT;
-  }
-
-  if (feeRate <= 0) {
-    return ErrorCode.INVALID_FEE_RATE;
-  }
-  return undefined;
-};
-
 /**
  *
  * @param seedPhrase - The seed phrase of the wallet
@@ -80,7 +59,7 @@ const useBrc20TransferExecute = (props: Props) => {
   const [revealTransactionId, setRevealTransactionId] = useState<string | undefined>();
   const [transferTransactionId, setTransferTransactionId] = useState<string | undefined>();
   const [progress, setProgress] = useState<ExecuteTransferProgressCodes | undefined>();
-  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
+  const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
   const executeTransfer = useCallback(() => {
     if (running) return;
@@ -98,16 +77,11 @@ const useBrc20TransferExecute = (props: Props) => {
       network,
     };
 
-    const validationErrorCode = validateProps(innerProps);
-    setErrorCode(validationErrorCode);
-
-    if (validationErrorCode) {
-      return;
-    }
-
     // if we get to here, that means that the transfer is valid and we can try to execute it but we don't want to
     // be able to accidentally execute it again if something goes wrong, so we set the running flag
     setRunning(true);
+    setErrorCode(undefined);
+    setProgress(undefined);
 
     const runTransfer = async () => {
       try {
@@ -133,22 +107,13 @@ const useBrc20TransferExecute = (props: Props) => {
           }
         } while (!done);
       } catch (e) {
-        let finalErrorCode: string | undefined;
         if (CoreError.isCoreError(e)) {
-          finalErrorCode = e.code;
+          setErrorCode(e.code as BRC20ErrorCode);
+        } else {
+          setErrorCode(BRC20ErrorCode.SERVER_ERROR);
         }
-
-        switch (finalErrorCode) {
-          case BRC20ErrorCode.FAILED_TO_FINALIZE:
-            setErrorCode(ErrorCode.BROADCAST_FAILED);
-            break;
-          case BRC20ErrorCode.INSUFFICIENT_FUNDS:
-            setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-            break;
-          default:
-            setErrorCode(ErrorCode.SERVER_ERROR);
-            break;
-        }
+      } finally {
+        setRunning(false);
       }
     };
 
