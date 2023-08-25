@@ -178,7 +178,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     throw new CoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
   }
 
-  if ((serviceFee || serviceFeeAddress) && !(serviceFee && serviceFeeAddress)) {
+  if (((serviceFee || serviceFeeAddress) && !(serviceFee && serviceFeeAddress)) || (serviceFee && serviceFee < 546)) {
     throw new CoreError(
       'Invalid service fee config, both serviceFee and serviceFeeAddress must be specified',
       InscriptionErrorCode.INVALID_SERVICE_FEE_CONFIG,
@@ -187,9 +187,9 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
 
   const content = contentString ?? contentBase64;
 
-  if (!content || (contentString && contentBase64) || (!contentString && !contentBase64)) {
+  if (!content || (contentString && contentBase64) || content.length === 0) {
     throw new CoreError(
-      'Only content or contentBase64 can be specified, not both or neither',
+      'Only contentString or contentBase64 can be specified, not both or neither, and should have content',
       InscriptionErrorCode.INVALID_CONTENT,
     );
   }

@@ -253,7 +253,7 @@ describe('inscriptionMintExecute', () => {
       feeRate: 8,
       revealAddress: 'dummyRevealAddress',
       finalInscriptionValue: 1000,
-      serviceFee: 50,
+      serviceFee: 5000,
       serviceFeeAddress: 'dummyServiceFeeAddress',
       accountIndex: 0,
       changeAddress: 'dummyChangeAddress',
@@ -262,5 +262,153 @@ describe('inscriptionMintExecute', () => {
     });
 
     expect(result).toBe('revealTxnId');
+  });
+
+  it('should fail on no UTXOs', async () => {
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [],
+        contentString: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        serviceFee: 5000,
+        serviceFeeAddress: 'dummyServiceFeeAddress',
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+      }),
+    ).rejects.toThrowCoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
+  });
+
+  it('should fail on low fee rate', async () => {
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        contentString: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: 0,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        serviceFee: 5000,
+        serviceFeeAddress: 'dummyServiceFeeAddress',
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+      }),
+    ).rejects.toThrowCoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
+  });
+
+  it.each([
+    {
+      serviceFeeAddress: 'dummyServiceFeeAddress',
+    },
+    {
+      serviceFee: 5000,
+    },
+    {
+      serviceFee: 500,
+      serviceFeeAddress: 'dummyServiceFeeAddress',
+    },
+  ])('should fail on invalid service fee config: %s', async (config) => {
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        contentString: 'dummyContent',
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+        ...config,
+      }),
+    ).rejects.toThrowCoreError(
+      'Invalid service fee config, both serviceFee and serviceFeeAddress must be specified',
+      InscriptionErrorCode.INVALID_SERVICE_FEE_CONFIG,
+    );
+  });
+
+  it.each([
+    {
+      contentString: 'dummyContent',
+      contentBase64: 'dummyContent',
+    },
+    {
+      contentBase64: '',
+    },
+    {},
+  ])('should fail on invalid content: %s', async (config) => {
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+        ...config,
+      }),
+    ).rejects.toThrowCoreError(
+      'Only contentString or contentBase64 can be specified, not both or neither, and should have content',
+      InscriptionErrorCode.INVALID_CONTENT,
+    );
+  });
+
+  it('should fail on large content', async () => {
+    await expect(() =>
+      inscriptionMintExecute({
+        addressUtxos: [
+          {
+            address: 'dummyAddress',
+            status: { confirmed: true },
+            txid: 'dummyTxId',
+            vout: 0,
+            value: 1000,
+          },
+        ],
+        contentString: 'a'.repeat(400001),
+        contentType: 'text/plain',
+        feeRate: 8,
+        revealAddress: 'dummyRevealAddress',
+        finalInscriptionValue: 1000,
+        accountIndex: 0,
+        changeAddress: 'dummyChangeAddress',
+        network: 'Mainnet',
+        seedPhrase: 'dummySeedPhrase',
+      }),
+    ).rejects.toThrowCoreError(`Content exceeds maximum size of 400000 bytes`, InscriptionErrorCode.CONTENT_TOO_BIG);
   });
 });
