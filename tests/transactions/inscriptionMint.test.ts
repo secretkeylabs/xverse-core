@@ -69,7 +69,18 @@ describe('inscriptionMintFeeEstimate', () => {
     });
   });
 
-  it('throws on invalid service fee config', async () => {
+  it.each([
+    {
+      serviceFeeAddress: 'dummyServiceFeeAddress',
+    },
+    {
+      serviceFee: 5000,
+    },
+    {
+      serviceFee: 500,
+      serviceFeeAddress: 'dummyServiceFeeAddress',
+    },
+  ])('should fail on invalid service fee config: %s', async (config) => {
     await expect(() =>
       inscriptionMintFeeEstimate({
         addressUtxos: [
@@ -86,7 +97,7 @@ describe('inscriptionMintFeeEstimate', () => {
         feeRate: 8,
         revealAddress: 'dummyRevealAddress',
         finalInscriptionValue: 1000,
-        serviceFeeAddress: 'dummyServiceFeeAddress',
+        ...config,
       }),
     ).rejects.toThrowCoreError(
       'Invalid service fee config, both serviceFee and serviceFeeAddress must be specified',
