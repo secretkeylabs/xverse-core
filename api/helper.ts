@@ -51,7 +51,7 @@ export function parseOrdinalsBtcTransactions(
 
   const outputAddresses: string[] = [];
   responseTx.vout.forEach((output) => {
-    if (output.scriptpubkey_address && output.scriptpubkey_address !== ordinalsAddress) {
+    if (output.scriptpubkey_address) {
       outputAddresses.push(output.scriptpubkey_address);
     }
   });
