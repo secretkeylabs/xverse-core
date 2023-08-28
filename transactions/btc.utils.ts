@@ -6,7 +6,7 @@ import { createTransaction } from './btc';
 
 // we import the file into itself to enable mocking of recursive functions in the tests
 import * as self from './btc.utils';
-import { getOrdinalsByAddress } from 'api';
+import { getOrdinalsByAddress } from '../api';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
