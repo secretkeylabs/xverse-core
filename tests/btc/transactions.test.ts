@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import * as XverseAPIFunctions from '../../api/xverse';
+import * as BTCFunctions from '../../transactions/btc.utils';
 import {
   Recipient,
   calculateFee,
@@ -11,13 +12,16 @@ import {
   filterUtxos,
   getBtcFees,
   getBtcFeesForOrdinalSend,
+  getBtcFeesForOrdinalTransaction,
   getFee,
+  getOrdinalUtxo,
   selectUnspentOutputs,
   signBtcTransaction,
   signOrdinalSendTransaction,
+  signOrdinalTransaction,
   sumUnspentOutputs,
 } from '../../transactions/btc';
-import { UTXO } from '../../types';
+import { Inscription, UTXO } from '../../types';
 import { getBtcPrivateKey } from '../../wallet';
 import { testSeed } from '../mocks/restore.mock';
 
@@ -803,6 +807,185 @@ describe('bitcoin transactions', () => {
 
     // Needs a better transaction size calculator
     expect(signedTx.fee.toNumber()).eq(fee.toNumber());
+  });
+
+  it('can calculate fee for ordinal send transaction', async () => {
+    const network = 'Mainnet';
+
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinal = {
+      output: '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143:2',
+    };
+
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalsAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        value: ordinalValue,
+        address: ordinalsAddress,
+      },
+    ];
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
+      ordinalOutputs[0],
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        value: unspent1Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        value: unspent2Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+    ];
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30,
+    };
+
+    fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
+
+    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
+    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
+    const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
+    fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
+    const { fee } = await getBtcFeesForOrdinalTransaction({
+      recipientAddress,
+      btcAddress,
+      ordinalsAddress,
+      network,
+      ordinal,
+    });
+
+    const expectedFee = 2610;
+
+    expect(fee.toNumber()).eq(expectedFee);
+  });
+
+  it('can sign ordinal send transaction', async () => {
+    const network = 'Mainnet';
+
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinal = {
+      output: '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143:2',
+    };
+
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalsAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        value: ordinalValue,
+        address: ordinalsAddress,
+      },
+    ];
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
+      ordinalOutputs[0],
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        value: unspent1Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        value: unspent2Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+    ];
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30,
+    };
+
+    fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
+
+    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
+    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
+    const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
+    fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
+
+    const signedTx = await signOrdinalTransaction({
+      recipientAddress,
+      btcAddress,
+      ordinalsAddress,
+      accountIndex: 0,
+      seedPhrase: testSeed,
+      network,
+      ordinal,
+    });
+
+    const expectedTx =
+      '020000000001024301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388acde1c0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac0247304402204684bb4f6e41515e589b2137f98cff5f487acac52ea99ec7306386faadc1fba1022028a9d444c64a21073dda5b8408369200490de8c47ff7e767c2d430d20d5a4d560121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0248304502210085873f21e04b021606aae475dfdbfefd2a13fa3c547a042f488ebf81b8d366a9022008e64cc0a3232cb4ed65fd276ac299e2b8fcea1b7833116c09881e557b4672c80121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
+    expect(signedTx.signedTx).eq(expectedTx);
   });
 
   it('can create and sign ordinal send with ordinal utxo in payment address', async () => {
