@@ -503,9 +503,7 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
   const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
-    // TODO: Throw error and not just the code
-    // eslint-disable-next-line @typescript-eslint/no-throw-literal
-    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
   return getBtcFeesForOrdinalSend(
     recipientAddress,
@@ -913,9 +911,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
   const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
-    // TODO: Throw error and not just the code
-    // eslint-disable-next-line @typescript-eslint/no-throw-literal
-    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
   return signOrdinalSendTransaction(
     recipientAddress,
