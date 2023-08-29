@@ -252,3 +252,4 @@ export async function getStxAddressKeyChain(
 }
 
 export { hashMessage };
+export * from './encryptionUtils';

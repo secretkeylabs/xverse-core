@@ -8,4 +8,5 @@ export * from './account';
 export * from './gaia';
 export * from './ledger';
 export * from './coins';
-export * from './seedVault';
+export { default as SeedVault } from './seedVault';
+export * from './encryption';

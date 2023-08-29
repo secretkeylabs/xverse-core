@@ -54,8 +54,8 @@ class SeedVault {
 
   getSeed = async (password?: string) => {
     let passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
+    const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
     if (password && !passwordHash) {
-      const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
       if (salt) {
         passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
         await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
@@ -91,4 +91,3 @@ class SeedVault {
   };
 }
 export default SeedVault;
-export * from './encryptionUtils';
