@@ -28,17 +28,25 @@ import { getAddressInfo } from 'bitcoin-address-validation';
 /**
  * This function is used to get the native segwit account data from the ledger
  * @param transport - the transport object with connected ledger device
+ * @param accountIndex - the account index of the account to import
+ * @param addressIndex - the index of the account address to import
  * @param network - the network type (Mainnet or Testnet)
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
-export async function importNativeSegwitAccountFromLedger(
-  transport: Transport,
-  network: NetworkType,
+export async function importNativeSegwitAccountFromLedger({
+  transport,
+  network,
   accountIndex = 0,
   addressIndex = 0,
   showAddress = false,
-): Promise<{ address: string; publicKey: string }> {
+}: {
+  transport: Transport;
+  network: NetworkType;
+  accountIndex?: number;
+  addressIndex?: number;
+  showAddress?: boolean;
+}): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
   const btcNetwork = getCoinType(network);
@@ -56,18 +64,26 @@ export async function importNativeSegwitAccountFromLedger(
 
 /**
  * This function is used to get the taproot account data from the ledger
+ * @param transport - the transport object with connected ledger device
  * @param network - the network type (Mainnet or Testnet)
+ * @param accountIndex - the account index of the account to import
  * @param addressIndex - the index of the account address to import
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
-export async function importTaprootAccountFromLedger(
-  transport: Transport,
-  network: NetworkType,
+export async function importTaprootAccountFromLedger({
+  transport,
+  network,
   accountIndex = 0,
   addressIndex = 0,
   showAddress = false,
-): Promise<{ address: string; publicKey: string }> {
+}: {
+  transport: Transport;
+  network: NetworkType;
+  accountIndex?: number;
+  addressIndex?: number;
+  showAddress?: boolean;
+}): Promise<{ address: string; publicKey: string }> {
   const app = new AppClient(transport);
 
   const btcNetwork = getCoinType(network);
@@ -89,16 +105,23 @@ export async function importTaprootAccountFromLedger(
  * @param network - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
  * @param recipients - an array of recipients of the transaction
+ * @param feeRate - a string representing the fee rate in sats/vB
  * @returns the signed raw transaction in hex format
  * */
 
-export async function signLedgerNativeSegwitBtcTransaction(
-  transport: Transport,
-  network: NetworkType,
-  addressIndex: number,
-  recipients: Array<Recipient>,
-  feeRateInput?: string,
-): Promise<string> {
+export async function signLedgerNativeSegwitBtcTransaction({
+  transport,
+  network,
+  addressIndex,
+  recipients,
+  feeRate,
+}: {
+  transport: Transport;
+  network: NetworkType;
+  addressIndex: number;
+  recipients: Recipient[];
+  feeRate?: string;
+}): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
@@ -116,7 +139,7 @@ export async function signLedgerNativeSegwitBtcTransaction(
     witnessScript,
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(network, senderAddress, recipients, feeRateInput);
+  const { selectedUTXOs, changeValue } = await getTransactionData(network, senderAddress, recipients, feeRate);
 
   const inputDerivation: Bip32Derivation = {
     path: `m/84'/${coinType}'/0'/0/${addressIndex}`,
@@ -150,15 +173,22 @@ export async function signLedgerNativeSegwitBtcTransaction(
  * @param network - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
  * @param recipients - an array of recipients of the transaction
+ * @param btcAddress - the address to send the transaction from
  * @returns the signed raw transaction in hex format
  * */
-export async function signLedgerTaprootBtcTransaction(
-  transport: Transport,
-  network: NetworkType,
-  addressIndex: number,
-  recipients: Array<Recipient>,
-  btcAddress: string,
-): Promise<string> {
+export async function signLedgerTaprootBtcTransaction({
+  transport,
+  network,
+  addressIndex,
+  recipients,
+  btcAddress,
+}: {
+  transport: Transport;
+  network: NetworkType;
+  addressIndex: number;
+  recipients: Recipient[];
+  btcAddress: string;
+}): Promise<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
@@ -211,18 +241,26 @@ export async function signLedgerTaprootBtcTransaction(
  * @param network - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
  * @param recipients - an array of recipients of the transaction
+ * @param feeRate - a string representing the fee rate in sats/vB
  * @param ordinalUtxo - the UTXO to send
  * @returns the signed raw transaction in hex format
  * */
 
-export async function* signLedgerMixedBtcTransaction(
-  transport: Transport,
-  network: NetworkType,
-  addressIndex: number,
-  recipients: Array<Recipient>,
-  feeRateInput?: string,
-  ordinalUtxo?: UTXO,
-): AsyncGenerator<string> {
+export async function* signLedgerMixedBtcTransaction({
+  transport,
+  network,
+  addressIndex,
+  recipients,
+  feeRate,
+  ordinalUtxo,
+}: {
+  transport: Transport;
+  network: NetworkType;
+  addressIndex: number;
+  recipients: Recipient[];
+  feeRate?: string;
+  ordinalUtxo?: UTXO;
+}): AsyncGenerator<string> {
   const coinType = getCoinType(network);
   const app = new AppClient(transport);
 
@@ -244,7 +282,7 @@ export async function* signLedgerMixedBtcTransaction(
     network,
     senderAddress,
     recipients,
-    feeRateInput,
+    feeRate,
     ordinalUtxo,
   );
 
@@ -331,14 +369,21 @@ export async function* signLedgerMixedBtcTransaction(
  * @param finalize - boolean to finalize the transaction
  * @returns the signed PSBT in string (base64) format
  * */
-export async function signIncomingSingleSigPSBT(
-  transport: Transport,
-  network: NetworkType,
-  addressIndex: number,
-  inputsToSign: InputToSign[],
-  psbtBase64: string,
+export async function signIncomingSingleSigPSBT({
+  transport,
+  network,
+  addressIndex,
+  inputsToSign,
+  psbtBase64,
   finalize = false,
-): Promise<string> {
+}: {
+  transport: Transport;
+  network: NetworkType;
+  addressIndex: number;
+  inputsToSign: InputToSign[];
+  psbtBase64: string;
+  finalize?: boolean;
+}): Promise<string> {
   if (!psbtBase64?.length) {
     throw new Error('Invalid transaction');
   }
@@ -527,13 +572,19 @@ export async function signSimpleBip322Message({
  * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
-export async function importStacksAccountFromLedger(
-  transport: Transport,
-  network: NetworkType,
+export async function importStacksAccountFromLedger({
+  transport,
+  network,
   accountIndex = 0,
   addressIndex = 0,
   showAddress = false,
-): Promise<{ address: string; publicKey: string }> {
+}: {
+  transport: Transport;
+  network: NetworkType;
+  accountIndex?: number;
+  addressIndex?: number;
+  showAddress?: boolean;
+}): Promise<{ address: string; publicKey: string }> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
   const version = network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig;
@@ -551,11 +602,15 @@ export async function importStacksAccountFromLedger(
  * @param addressIndex - the address index of the account to sign with
  * @returns the signed transaction ready to be broadcasted
  * */
-export async function signLedgerStxTransaction(
-  transport: Transport,
-  transactionBuffer: Buffer,
-  addressIndex: number,
-): Promise<StacksTransaction> {
+export async function signLedgerStxTransaction({
+  transport,
+  transactionBuffer,
+  addressIndex,
+}: {
+  transport: Transport;
+  transactionBuffer: Buffer;
+  addressIndex: number;
+}): Promise<StacksTransaction> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
   const resp = await appStacks.sign(path, transactionBuffer);
@@ -572,12 +627,17 @@ export async function signLedgerStxTransaction(
  * @param addressIndex - the address index of the account to sign with
  * @returns the signed message
  * */
-export async function signStxMessage(
-  transport: Transport,
-  message: string,
+export async function signStxMessage({
+  transport,
+  message,
   accountIndex = 0,
   addressIndex = 0,
-): Promise<ResponseSign> {
+}: {
+  transport: Transport;
+  message: string;
+  accountIndex?: number;
+  addressIndex?: number;
+}): Promise<ResponseSign> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
   // As of now 2023-04-27, the ledger app does not support signing messages longer than 152 bytes
@@ -588,20 +648,24 @@ export async function signStxMessage(
 /**
  * This function is used to sign a Stacks JWT authentication request with the ledger
  * @param transport - the transport object with connected ledger device
- * @param accountIndex - the account index of the account to sign with
- * @param profile
+ * @param addressIndex - the address index of the account to sign with
+ * @param profile - the profile object containing STX address for mainnet and testnet
  * @returns the signed JWT authentication request
  * */
-export async function handleLedgerStxJWTAuth(
-  transport: Transport,
-  accountIndex: number,
-  profile: LedgerStxJWTAuthProfile,
-): Promise<string> {
+export async function handleLedgerStxJWTAuth({
+  transport,
+  addressIndex,
+  profile,
+}: {
+  transport: Transport;
+  addressIndex: number;
+  profile: LedgerStxJWTAuthProfile;
+}): Promise<string> {
   const appStacks = new StacksApp(transport);
-  const { publicKey } = await appStacks.getIdentityPubKey(`m/888'/0'/${accountIndex}'`);
+  const { publicKey } = await appStacks.getIdentityPubKey(`m/888'/0'/${addressIndex}'`);
 
   const inputToSign = await makeLedgerCompatibleUnsignedAuthResponsePayload(publicKey.toString('hex'), profile);
-  return signStxJWTAuth(transport, accountIndex, inputToSign);
+  return signStxJWTAuth(transport, addressIndex, inputToSign);
 }
 
 export { getMasterFingerPrint } from './helper';

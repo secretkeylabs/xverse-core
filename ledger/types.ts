@@ -1,5 +1,3 @@
-import { StacksNetwork } from '@stacks/network';
-import { AnchorMode } from '@stacks/transactions';
 import AppClient from 'ledger-bitcoin';
 
 export type Transport = ConstructorParameters<typeof AppClient>[0];
