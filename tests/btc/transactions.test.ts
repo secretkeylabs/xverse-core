@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import * as XverseAPIFunctions from '../../api/xverse';
+import * as BTCFunctions from '../../transactions/btc.utils';
 import {
   Recipient,
   calculateFee,
@@ -13,6 +14,7 @@ import {
   getBtcFeesForOrdinalSend,
   getBtcFeesForOrdinalTransaction,
   getFee,
+  getOrdinalUtxo,
   selectUnspentOutputs,
   signBtcTransaction,
   signOrdinalSendTransaction,
@@ -810,77 +812,166 @@ describe('bitcoin transactions', () => {
   it('can calculate fee for ordinal send transaction', async () => {
     const network = 'Mainnet';
 
-    const ordinal: Inscription = {
-      address: 'bc1px7mgdeysk3jpm3dzj736cnt3vlc8waqhdnqahhfxd2j4ugyfefcszdrfqg',
-      content_length: 259,
-      content_type: 'text/html',
-      genesis_address: 'bc1pcmnd5zp3c2lggs5g5js3v9dze8kh6kc0e8wuvvzwuhjs3hh3hteshxr0dh',
-      genesis_block_hash: '00000000000000000005168b0a05a252130f626482c09a69d0f027805d65f0c2',
-      genesis_block_height: 800660,
-      genesis_fee: '3000',
-      genesis_timestamp: 1690564657000,
-      genesis_tx_id: '7803025a6946c9d151b8fb866045ebb2ceaaa0bb39cbe826ca212792e4696b11',
-      id: '7803025a6946c9d151b8fb866045ebb2ceaaa0bb39cbe826ca212792e4696b11i0',
-      location: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923:0:0',
-      mime_type: 'text/html',
-      number: 19970390,
-      offset: '0',
-      output: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923:0',
-      sat_coinbase_height: 665491,
-      sat_ordinal: '1859682051650570',
-      sat_rarity: 'common',
-      timestamp: 1692653665000,
-      tx_id: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923',
-      value: '10000',
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinal = {
+      output: '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143:2',
     };
 
-    const recipientAddress = 'bc1p5dmqqdmxkzfu7xnatft3qgkj9jzf47zxjuwa4ggws0m3vaa6ypmqa5p8h0';
-    const ordinalsAddress = 'bc1px7mgdeysk3jpm3dzj736cnt3vlc8waqhdnqahhfxd2j4ugyfefcszdrfqg';
-    const btcAddress = '3Codr66EYyhkhWy1o2RLmrER7TaaHmtrZe';
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalsAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
 
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        value: ordinalValue,
+        address: ordinalsAddress,
+      },
+    ];
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
+      ordinalOutputs[0],
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        value: unspent1Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        value: unspent2Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+    ];
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30,
+    };
+
+    fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
+
+    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
+    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
+    const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
+    fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
     const { fee } = await getBtcFeesForOrdinalTransaction({
       recipientAddress,
       btcAddress,
       ordinalsAddress,
       network,
-      ordinal: ordinal,
+      ordinal,
     });
 
-    const expectedFee = 2680;
+    const expectedFee = 2610;
 
     expect(fee.toNumber()).eq(expectedFee);
-  }, 10000);
+  });
 
   it('can sign ordinal send transaction', async () => {
     const network = 'Mainnet';
 
-    const ordinal: Inscription = {
-      address: 'bc1px7mgdeysk3jpm3dzj736cnt3vlc8waqhdnqahhfxd2j4ugyfefcszdrfqg',
-      content_length: 259,
-      content_type: 'text/html',
-      genesis_address: 'bc1pcmnd5zp3c2lggs5g5js3v9dze8kh6kc0e8wuvvzwuhjs3hh3hteshxr0dh',
-      genesis_block_hash: '00000000000000000005168b0a05a252130f626482c09a69d0f027805d65f0c2',
-      genesis_block_height: 800660,
-      genesis_fee: '3000',
-      genesis_timestamp: 1690564657000,
-      genesis_tx_id: '7803025a6946c9d151b8fb866045ebb2ceaaa0bb39cbe826ca212792e4696b11',
-      id: '7803025a6946c9d151b8fb866045ebb2ceaaa0bb39cbe826ca212792e4696b11i0',
-      location: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923:0:0',
-      mime_type: 'text/html',
-      number: 19970390,
-      offset: '0',
-      output: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923:0',
-      sat_coinbase_height: 665491,
-      sat_ordinal: '1859682051650570',
-      sat_rarity: 'common',
-      timestamp: 1692653665000,
-      tx_id: '5e6bb85299e9bcbd88dbad799965b7387ec7842652979e5e1ebd0c2dc0867923',
-      value: '10000',
+    const ordinalValue = 80000;
+    const unspent1Value = 1000;
+    const unspent2Value = 10000;
+
+    const ordinal = {
+      output: '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143:2',
     };
 
-    const recipientAddress = 'bc1p5dmqqdmxkzfu7xnatft3qgkj9jzf47zxjuwa4ggws0m3vaa6ypmqa5p8h0';
-    const ordinalsAddress = 'bc1px7mgdeysk3jpm3dzj736cnt3vlc8waqhdnqahhfxd2j4ugyfefcszdrfqg';
-    const btcAddress = '3Codr66EYyhkhWy1o2RLmrER7TaaHmtrZe';
+    const recipientAddress = '1QBwMVYH4efRVwxydnwoGwELJoi47FuRvS';
+    const ordinalsAddress = 'bc1prtztqsgks2l6yuuhgsp36lw5n6dzpkj287lesqnfgktzqajendzq3p9urw';
+    const btcAddress = '1H8voHF7NNoyz76h9s6dZSeoypJQamX4xT';
+
+    const ordinalUtxoHash = '5541ccb688190cefb350fd1b3594a8317c933a75ff9932a0063b6e8b61a00143';
+    const ordinalOutputs: Array<UTXO & { address: string; blockHeight?: number }> = [
+      {
+        txid: ordinalUtxoHash,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        value: ordinalValue,
+        address: ordinalsAddress,
+      },
+    ];
+
+    const utxos: Array<UTXO & { address: string; blockHeight?: number }> = [
+      ordinalOutputs[0],
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8c',
+        value: unspent1Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+      {
+        txid: '1f2bbb92a74d379db2502e8ae7a57917041db5dc531ef54e64ca532aa9f59d8d',
+        value: unspent2Value,
+        vout: 2,
+        status: {
+          confirmed: true,
+          block_height: 123123,
+          block_time: 1677048365,
+          block_hash: '000000000000000000072266ee093771d806cc9cb384461841f9edd40b52b67f',
+        },
+        address: btcAddress,
+      },
+    ];
+
+    const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
+    const feeRate = {
+      limits: {
+        min: 1,
+        max: 5,
+      },
+      regular: 10,
+      priority: 30,
+    };
+
+    fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
+
+    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
+    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
+    const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
+    fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
 
     const signedTx = await signOrdinalTransaction({
       recipientAddress,
@@ -893,9 +984,9 @@ describe('bitcoin transactions', () => {
     });
 
     const expectedTx =
-      '02000000000103237986c02d0cbd1e5e9e97522684c77e38b7659979addb88bdbce99952b86b5e0000000017160014883999913cffa58d317d4533c94cb94878788db3ffffffffae8ab66c3f56f56f3334e6b589511f361d14adb3f97b1313472c93189185dbde0100000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff7baaa8615b34b330060ac84b76b98d7c552bdea5c8d725161f530861ce0415800100000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff011027000000000000225120a376003766b093cf1a7d5a571022d22c849af846971ddaa10e83f71677ba20760246304302207ca61aed5e28941258b446ea39a02e35e9d89dc75e0dbfef8addaca26b50289b021f63ce519f1a04dd23b886a493579234af78e5efe6a3553e0987abcb1f4a68cd0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02483045022100a5e4b52c2a3c9166b2c9c606e58fe8bf51bfad551c768c04d8311732587b5081022054b001fb40e09cb3c3d034b1e8acbdc0858b1a343752309422bcde704f355b790121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02483045022100b2721cc0e3d7d46d2df9c92b63d8c676e607be39be6d1fca0c045dbd355732f602203202cc1af05147e3a6d09a5410e6a2dc8a410a25d5c29e9d0dbac9606f7ce5540121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
+      '020000000001024301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3ffffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388acde1c0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac0247304402204684bb4f6e41515e589b2137f98cff5f487acac52ea99ec7306386faadc1fba1022028a9d444c64a21073dda5b8408369200490de8c47ff7e767c2d430d20d5a4d560121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0248304502210085873f21e04b021606aae475dfdbfefd2a13fa3c547a042f488ebf81b8d366a9022008e64cc0a3232cb4ed65fd276ac299e2b8fcea1b7833116c09881e557b4672c80121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
     expect(signedTx.signedTx).eq(expectedTx);
-  }, 10000);
+  });
 
   it('can create and sign ordinal send with ordinal utxo in payment address', async () => {
     const network = 'Mainnet';

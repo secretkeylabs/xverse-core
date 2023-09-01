@@ -5,10 +5,10 @@ import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
-import { fetchBtcFeeRate, getOrdinalsByAddress } from '../api/xverse';
+import { fetchBtcFeeRate } from '../api/xverse';
 import { BtcFeeResponse, ErrorCodes, Inscription, NetworkType, ResponseError, UTXO } from '../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
-import { selectOptimalUtxos } from './btc.utils';
+import { getOrdinalsUtxos, selectOptimalUtxos } from './btc.utils';
 import { BitcoinNetwork, getBtcNetwork } from './btcNetwork';
 
 const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
@@ -419,13 +419,6 @@ export function getOrdinalUtxo(addressUtxos: UTXO[], ordinal: Inscription): UTXO
   return addressUtxos.find((utxo) => `${utxo.txid}:${utxo.vout}` === ordinal.output);
 }
 
-// get ordinals utxos in btc address
-export async function getOrdinalsUtxos(btcAddress: string) {
-  const ordinals = await getOrdinalsByAddress(btcAddress);
-  const filteredOrdinals = ordinals.filter((item) => item.id !== undefined);
-  return filteredOrdinals.map((item) => item.utxo);
-}
-
 // Used to calculate fees for setting low/high fee settings
 // Should replace this function
 export async function getBtcFeesForOrdinalSend(
@@ -510,9 +503,7 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
   const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
-    // TODO: Throw error and not just the code
-    // eslint-disable-next-line @typescript-eslint/no-throw-literal
-    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
   return getBtcFeesForOrdinalSend(
     recipientAddress,
@@ -795,6 +786,7 @@ export async function signOrdinalSendTransaction(
   const ordinalUtxoInPaymentAddress = filteredUnspentOutputs.length < unspentOutputs.length;
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
+
   let feePerVByte: BigNumber = new BigNumber(0);
 
   if (!fee) {
@@ -919,9 +911,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
   const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
   if (!ordUtxo) {
-    // TODO: Throw error and not just the code
-    // eslint-disable-next-line @typescript-eslint/no-throw-literal
-    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound).statusCode;
+    throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
   return signOrdinalSendTransaction(
     recipientAddress,
