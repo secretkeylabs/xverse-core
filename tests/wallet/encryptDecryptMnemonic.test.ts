@@ -44,7 +44,7 @@ describe('encryptMnemonicWithCallback', () => {
         passwordHashGenerator: mockPasswordHashGenerator,
         password,
         seed,
-      })
+      }),
     ).rejects.toThrow(errorMessage);
 
     expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);
@@ -94,7 +94,7 @@ describe('decryptMnemonicWithCallback', () => {
         passwordHashGenerator: mockPasswordHashGenerator,
         password,
         encryptedSeed,
-      })
+      }),
     ).rejects.toThrow(errorMessage);
 
     expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);

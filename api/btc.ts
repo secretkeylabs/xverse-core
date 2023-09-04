@@ -16,11 +16,7 @@ export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, netwo
   return transactions.filter((tx) => tx.incoming);
 }
 
-export async function fetchBtcPaymentTransactions(
-  btcAddress: string,
-  ordinalsAddress: string,
-  network: NetworkType
-) {
+export async function fetchBtcPaymentTransactions(btcAddress: string, ordinalsAddress: string, network: NetworkType) {
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
@@ -36,22 +32,14 @@ export async function fetchBtcTransactionsData(
   btcAddress: string,
   ordinalsAddress: string,
   network: NetworkType,
-  withOrdinals: boolean
+  withOrdinals: boolean,
 ): Promise<BtcTransactionData[]> {
   if (withOrdinals) {
     const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, network);
-    const paymentTransactions = await fetchBtcPaymentTransactions(
-      btcAddress,
-      ordinalsAddress,
-      network
-    );
+    const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, network);
     return [...new Set([...paymentTransactions, ...ordinalsTransactions])];
   }
-  const paymentTransactions = await fetchBtcPaymentTransactions(
-    btcAddress,
-    ordinalsAddress,
-    network
-  );
+  const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, network);
   return paymentTransactions;
 }
 

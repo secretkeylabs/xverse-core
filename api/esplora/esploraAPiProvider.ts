@@ -57,7 +57,7 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
   }
 
   private async getUtxosEsplora(
-    address: string
+    address: string,
   ): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
     const data = await this.httpGet<esplora.UTXO[]>(`/address/${address}/utxo`);
 
@@ -71,7 +71,7 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
   }
 
   private async getUtxosBlockcypher(
-    address: string
+    address: string,
   ): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
     // blockcypher has a limit of 2000 UTXOs per request and allows pagination
     // so we will try get all unspent UTXOs by making multiple requests if there are more than 2000
@@ -115,9 +115,7 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
     return utxoSets;
   }
 
-  async getUnspentUtxos(
-    address: string
-  ): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
+  async getUnspentUtxos(address: string): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
     try {
       // we try using the base esplora api first, however, it has a limit to the number of UTXOs it can return
       const utxoSets = await this.getUtxosEsplora(address);

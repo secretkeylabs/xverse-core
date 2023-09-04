@@ -357,7 +357,6 @@ export async function fetchAddressOfBnsName(
 }
 
 export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {
-
   const [confirmedTransactions, mempoolTransactions] = await Promise.all([
     getConfirmedTransactions({
       stxAddress,
