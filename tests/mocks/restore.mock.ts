@@ -1,4 +1,4 @@
-import { Account } from "../../types";
+import { Account } from '../../types';
 
 export const testSeed = 'force kite borrow once shine pluck couch swift crystal swamp crumble essay';
 
@@ -24,5 +24,3 @@ export const walletAccounts: Account[] = [
     stxPublicKey: '0302ec9c40f8d5daf319bf4b1556c7f51f1eb449dd96d05e7ed42a1056451dd656',
   },
 ];
-
-
