@@ -1,4 +1,5 @@
 # 🔘 PR Type
+
 What kind of change does this PR introduce?
 
 <!-- Please check the one that applies to this PR using "x". -->
@@ -12,14 +13,15 @@ What kind of change does this PR introduce?
 - [ ] Documentation content changes
 - [ ] Other... Please describe:
 
-
 # 📜 Background
+
 Provide a brief explanation of why this pull request is needed. Include the problem you are solving or the functionality you are adding. Reference any related issues.
 
 Issue Link: #[issue_number]
 Context Link (if applicable):
 
 # 🔄 Changes
+
 Does this PR introduce a breaking change?
 
 - [ ] Yes, Incompatible API changes
@@ -27,10 +29,12 @@ Does this PR introduce a breaking change?
 - [ ] No, Bug fixes (backwards compatible)
 
 Changes:
+
 - What has been modified, added, or removed
 - Which are breaking changes
 
 Impact:
+
 - How it improves performance, fixes bugs, adds functionality, etc.
 - Impact on downstream apps, link to issues or PRs for migration
 - What to test
@@ -38,6 +42,7 @@ Impact:
 # 🖼 Screenshot / 📹 Video
 
 # ✅ Review checklist
+
 Please ensure the following are true before merging:
 
 - [ ] Code Style is consistent with the project guidelines.

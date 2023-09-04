@@ -1,4 +1,4 @@
-import { BtcAddressData, BtcTransactionBroadcastResponse } from "../../types";
+import { BtcAddressData, BtcTransactionBroadcastResponse } from '../../types';
 import { BtcAddressMempool, Transaction, UTXO } from '../../types/api/esplora';
 export interface BitcoinApiProvider {
   /**
