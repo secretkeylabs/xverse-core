@@ -1,4 +1,4 @@
-import { TransactionData } from "../xverse/transaction";
+import { TransactionData } from '../xverse/transaction';
 
 export interface Inscription {
   id: string;
