@@ -1,10 +1,10 @@
 import { base64 } from '@scure/base';
 import BigNumber from 'bignumber.js';
 
-import { NetworkType, UTXO } from 'types';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
+import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
 import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
