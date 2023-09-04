@@ -1,6 +1,6 @@
 import { NetworkType } from '../types';
 import { getStxPath, makeLedgerCompatibleUnsignedAuthResponsePayload, signStxJWTAuth } from './helper';
-import { LedgerStxJWTAuthProfile, Transport } from './types';
+import { LedgerErrors, LedgerStxJWTAuthProfile, Transport } from './types';
 import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import { StacksTransaction, AddressVersion } from '@stacks/transactions';
 import { addSignatureToStxTransaction } from './transaction';
@@ -33,6 +33,10 @@ export async function importStacksAccountFromLedger({
   const { address, publicKey } = showAddress
     ? await appStacks.showAddressAndPubKey(path, version)
     : await appStacks.getAddressAndPubKey(path, version);
+
+  if (!publicKey) {
+    throw new Error(LedgerErrors.NO_PUBLIC_KEY);
+  }
 
   return { address, publicKey: publicKey.toString('hex') };
 }

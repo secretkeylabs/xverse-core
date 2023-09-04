@@ -18,3 +18,7 @@ export interface LedgerStxJWTAuthProfile {
     testnet: string;
   };
 }
+
+export enum LedgerErrors {
+  NO_PUBLIC_KEY = 'No public key returned from Ledger device',
+}
