@@ -3,10 +3,7 @@ import { fetchCoinMetaData } from '../api';
 import { supportedCoins } from '../constant';
 import { Coin, CoinMetaData, CoinsResponse } from '../types/index';
 
-export async function getCoinMetaData(
-  contractIds: string[],
-  network: StacksNetwork
-): Promise<CoinsResponse> {
+export async function getCoinMetaData(contractIds: string[], network: StacksNetwork): Promise<CoinsResponse> {
   const coinMetaDataList = contractIds.map(async (contract) => {
     const response: CoinMetaData | undefined = await fetchCoinMetaData(contract, network);
     let coin: Coin;
@@ -28,9 +25,7 @@ export async function getCoinMetaData(
       };
       if (coin.name === '') coin.name = contract.substring(coin.contract.indexOf('.') + 1);
     }
-    const isSupported = supportedCoins.find(
-      (supportedCoin) => supportedCoin.contract === coin.contract
-    );
+    const isSupported = supportedCoins.find((supportedCoin) => supportedCoin.contract === coin.contract);
     if (isSupported) {
       coin.supported = true;
       coin.name = isSupported.name;

@@ -7,4 +7,3 @@ export type StackingState =
   | 'Completed'
   | 'Revoked'
   | 'Error';
-

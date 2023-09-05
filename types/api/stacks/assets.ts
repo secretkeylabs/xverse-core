@@ -1,5 +1,5 @@
-import { cvToJSON, hexToCV } from "@stacks/transactions";
-import { hexToString } from "../../helper";
+import { cvToJSON, hexToCV } from '@stacks/transactions';
+import { hexToString } from '../../helper';
 
 export interface Attribute {
   value: string;
@@ -114,7 +114,5 @@ export function getBnsNftName(nft: NonFungibleToken) {
   const nameValue = cv.value?.name?.value ?? '';
   const nameSpaceValue = cv.value?.namespace?.value ?? '';
 
-  return nameValue && nameSpaceValue
-    ? `${hexToString(nameValue)}.${hexToString(nameSpaceValue)}`
-    : '';
+  return nameValue && nameSpaceValue ? `${hexToString(nameValue)}.${hexToString(nameSpaceValue)}` : '';
 }
