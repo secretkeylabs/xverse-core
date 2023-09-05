@@ -21,27 +21,33 @@ type CommitValueBreakdown = {
 };
 
 type Props = {
+  /** The UTXOs in the bitcoin address which will be used for payment. */
   addressUtxos: UTXO[] | undefined;
+
+  /** The 4 letter BRC-20 token name. */
   tick: string;
+
+  /** The amount of the BRC-20 token to transfer. */
   amount: number;
+
+  /** The desired fee rate for the transactions. */
   feeRate: number;
+
+  /** The address where the balance of the BRC-20 token lives. This is usually the ordinals address. */
   revealAddress: string;
+
+  /** If true, the initial fetch will be skipped. */
+  skipInitialFetch?: boolean;
 };
 
-/**
- * Estimates the fees for a BRC-20 1-step transfer
- * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
- * @param tick - The 4 letter BRC-20 token name
- * @param amount - The amount of the BRC-20 token to transfer
- * @param feeRate - The desired fee rate for the transactions
- * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
- */
 const useBrc20TransferFees = (props: Props) => {
-  const { addressUtxos = [], tick, amount, feeRate, revealAddress } = props;
+  const { addressUtxos = [], tick, amount, feeRate, revealAddress, skipInitialFetch = false } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
+
+  const [isInitialised, setIsInitialised] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -82,7 +88,11 @@ const useBrc20TransferFees = (props: Props) => {
       setIsLoading(false);
     };
 
-    runEstimate();
+    if (!skipInitialFetch || isInitialised) {
+      runEstimate();
+    }
+
+    setIsInitialised(true);
   }, [addressUtxos, tick, amount, revealAddress, feeRate]);
 
   return {
