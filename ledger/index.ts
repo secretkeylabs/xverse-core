@@ -9,7 +9,7 @@ import {
   makeLedgerCompatibleUnsignedAuthResponsePayload,
   signStxJWTAuth,
 } from './helper';
-import { Bip32Derivation, LedgerStxJWTAuthProfile, TapBip32Derivation, Transport } from './types';
+import { Bip32Derivation, LedgerStxJWTAuthProfile, TapBip32Derivation, Transport, LedgerErrors } from './types';
 import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import { StacksTransaction, AddressVersion } from '@stacks/transactions';
 import {
@@ -540,6 +540,10 @@ export async function importStacksAccountFromLedger(
   const { address, publicKey } = showAddress
     ? await appStacks.showAddressAndPubKey(path, version)
     : await appStacks.getAddressAndPubKey(path, version);
+
+  if (!publicKey) {
+    throw new Error(LedgerErrors.NO_PUBLIC_KEY);
+  }
 
   return { address, publicKey: publicKey.toString('hex') };
 }
