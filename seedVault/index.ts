@@ -20,6 +20,7 @@ export enum SeedVaultStorageKeys {
   PASSWORD_HASH = 'passwordHash',
   PASSWORD_SALT = 'passwordSalt',
   ENCRYPTED_KEY = 'encryptedKey',
+  SEED_VAULT_VERSION = 'seedVaultVersion',
 }
 
 class SeedVault {
@@ -38,6 +39,7 @@ class SeedVault {
   }
 
   init = async (password: string) => {
+    this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
     const salt = this._cryptoUtilsAdapter.generateRandomBytes(32);
     if (!salt) throw new Error('Salt not set');
     const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
