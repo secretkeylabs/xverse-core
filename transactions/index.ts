@@ -31,6 +31,7 @@ import {
   brc20TransferExecute,
   createBrc20TransferOrder,
 } from './brc20';
+import { InscriptionErrorCode, inscriptionMintExecute, inscriptionMintFeeEstimate } from './inscriptionMint';
 import type { PSBTInput, PSBTOutput, ParsedPSBT } from './psbt';
 import { parsePsbt } from './psbt';
 import {
@@ -41,6 +42,7 @@ import {
 
 export {
   ExecuteTransferProgressCodes,
+  InscriptionErrorCode,
   addressToString,
   brc20TransferEstimateFees,
   brc20TransferExecute,
@@ -64,6 +66,8 @@ export {
   getNewNonce,
   getNonce,
   hexStringToBuffer,
+  inscriptionMintExecute,
+  inscriptionMintFeeEstimate,
   parsePsbt,
   setFee,
   setNonce,

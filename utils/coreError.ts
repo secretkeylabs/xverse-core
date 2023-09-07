@@ -1,4 +1,4 @@
-export class CoreError extends Error {
+class CoreError extends Error {
   code?: string;
 
   constructor(message: string, code?: string, causedBy?: Error) {
@@ -15,3 +15,5 @@ export class CoreError extends Error {
     return e.name === 'CoreError';
   }
 }
+
+export { CoreError };

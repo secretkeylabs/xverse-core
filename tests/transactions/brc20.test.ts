@@ -195,6 +195,7 @@ describe('brc20MintExecute', () => {
     ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
+    const mockedCommitAddress = 'commit_address';
     const mockedRevealAddress = 'reveal_address';
     const mockedChangeAddress = 'change_address';
     const mockedFeeRate = 12;
@@ -204,7 +205,7 @@ describe('brc20MintExecute', () => {
     vi.mocked(getBtcPrivateKey).mockResolvedValueOnce('private_key');
 
     vi.mocked(xverseInscribeApi.createBrc20MintOrder).mockResolvedValue({
-      commitAddress: 'commit_address',
+      commitAddress: mockedCommitAddress,
       commitValue: 1000,
     } as any);
 
@@ -256,7 +257,7 @@ describe('brc20MintExecute', () => {
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
       changeAddress: 'change_address',
-      recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+      recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
     });
@@ -267,7 +268,7 @@ describe('brc20MintExecute', () => {
       new BigNumber(1000),
       [
         {
-          address: 'commit_address',
+          address: mockedCommitAddress,
           amountSats: new BigNumber(1000),
         },
       ],
@@ -276,7 +277,7 @@ describe('brc20MintExecute', () => {
       'Mainnet',
     );
 
-    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex');
+    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex');
   });
 });
 
@@ -458,6 +459,7 @@ describe('brc20TransferExecute', () => {
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'reveal_address';
+    const mockedCommitAddress = 'commit_address';
     const mockedChangeAddress = 'change_address';
     const mockedRecipientAddress = 'recipient_address';
     const mockedFeeRate = 12;
@@ -471,7 +473,7 @@ describe('brc20TransferExecute', () => {
     } as any);
 
     vi.mocked(xverseInscribeApi.createBrc20TransferOrder).mockResolvedValueOnce({
-      commitAddress: 'commit_address',
+      commitAddress: mockedCommitAddress,
       commitValue: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use these 2 fields in this function
     } as any);
@@ -571,7 +573,7 @@ describe('brc20TransferExecute', () => {
         case ExecuteTransferProgressCodes.ExecutingInscriptionOrder:
           expect(selectUtxosForSend).toHaveBeenCalledWith({
             changeAddress: mockedChangeAddress,
-            recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+            recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
             availableUtxos: mockedAddressUtxos,
             feeRate: mockedFeeRate,
           });
@@ -582,7 +584,7 @@ describe('brc20TransferExecute', () => {
             new BigNumber(1000),
             [
               {
-                address: 'commit_address',
+                address: mockedCommitAddress,
                 amountSats: new BigNumber(1000),
               },
             ],
@@ -593,7 +595,7 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingTransferTransaction:
-          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex', true);
+          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex', true);
           break;
 
         case ExecuteTransferProgressCodes.Finalizing:

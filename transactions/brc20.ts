@@ -185,7 +185,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
 
   const bestUtxoData = selectUtxosForSend({
     changeAddress,
-    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
   });
@@ -357,7 +357,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
 
   const bestUtxoData = selectUtxosForSend({
     changeAddress,
-    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
+    recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
   });
