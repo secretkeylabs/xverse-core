@@ -90,42 +90,42 @@ export async function restoreWalletWithAccounts(
     rootNode,
   });
   if (walletConfig && walletConfig.accounts.length > 0) {
-    const newAccounts: Account[] = [];
-    for (let i = 0; i < walletConfig.accounts.length; i++) {
-      const index = i;
-      let existingAccount: Account = currentAccounts[index];
-      if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
-        const master = bip32.fromSeed(seed);
-        const masterPubKey = master.publicKey.toString('hex');
+    const newAccounts: Account[] = await Promise.all(
+      walletConfig.accounts.map(async (_, index) => {
+        let existingAccount: Account = currentAccounts[index];
+        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
+          const master = bip32.fromSeed(seed);
+          const masterPubKey = master.publicKey.toString('hex');
 
-        const response = await getWalletFromRootNode({
-          index: BigInt(index),
-          network: selectedNetwork.type,
-          rootNode,
-          master,
-        });
-        const username = await getBnsName(response.stxAddress, networkObject);
-        existingAccount = {
-          id: index,
-          stxAddress: response.stxAddress,
-          btcAddress: response.btcAddress,
-          ordinalsAddress: response.ordinalsAddress,
-          masterPubKey,
-          stxPublicKey: response.stxPublicKey,
-          btcPublicKey: response.btcPublicKey,
-          ordinalsPublicKey: response.ordinalsPublicKey,
-          bnsName: username,
-          accountType: response.accountType,
-        };
-        newAccounts.push(existingAccount);
-      } else {
-        const userName = await getBnsName(existingAccount.stxAddress, networkObject);
-        newAccounts.push({
-          ...existingAccount,
-          bnsName: userName,
-        });
-      }
-    }
+          const response = await getWalletFromRootNode({
+            index: BigInt(index),
+            network: selectedNetwork.type,
+            rootNode,
+            master,
+          });
+          const username = await getBnsName(response.stxAddress, networkObject);
+          existingAccount = {
+            id: index,
+            stxAddress: response.stxAddress,
+            btcAddress: response.btcAddress,
+            ordinalsAddress: response.ordinalsAddress,
+            masterPubKey,
+            stxPublicKey: response.stxPublicKey,
+            btcPublicKey: response.btcPublicKey,
+            ordinalsPublicKey: response.ordinalsPublicKey,
+            bnsName: username,
+            accountType: 'software',
+          };
+          return existingAccount;
+        } else {
+          const userName = await getBnsName(existingAccount.stxAddress, networkObject);
+          return {
+            ...existingAccount,
+            bnsName: userName,
+          };
+        }
+      }),
+    );
     return newAccounts;
   }
   return currentAccounts;
