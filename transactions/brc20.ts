@@ -1,10 +1,10 @@
 import { base64 } from '@scure/base';
 import BigNumber from 'bignumber.js';
 
-import { NetworkType, UTXO } from 'types';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
+import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
 import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
@@ -15,10 +15,15 @@ const FINAL_SATS_VALUE = 1000;
 export enum BRC20ErrorCode {
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
   FAILED_TO_FINALIZE = 'FAILED_TO_FINALIZE',
+  UTXOS_MISSING = 'UTXOS_MISSING',
+  INVALID_TICK = 'INVALID_TICK',
+  INVALID_AMOUNT = 'INVALID_AMOUNT',
+  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
+  SERVER_ERROR = 'SERVER_ERROR',
 }
 
 type EstimateProps = {
-  addressUtxos: UTXO[];
+  addressUtxos?: UTXO[];
   tick: string;
   amount: number;
   revealAddress: string;
@@ -91,8 +96,37 @@ export const createBrc20TransferOrder = async (token: string, amount: string, re
   };
 };
 
+const validateProps = (props: EstimateProps): props is EstimateProps & { addressUtxos: UTXO[] } => {
+  const { addressUtxos, tick, amount, feeRate } = props;
+
+  if (!addressUtxos) {
+    throw new CoreError('UTXOs empty', BRC20ErrorCode.UTXOS_MISSING);
+  }
+
+  if (!addressUtxos.length) {
+    throw new CoreError('Insufficient funds, no UTXOs found', BRC20ErrorCode.INSUFFICIENT_FUNDS);
+  }
+
+  if (tick.length !== 4) {
+    throw new CoreError('Invalid tick; should be 4 characters long', BRC20ErrorCode.INVALID_TICK);
+  }
+
+  if (amount <= 0) {
+    throw new CoreError('Amount should be positive', BRC20ErrorCode.INVALID_AMOUNT);
+  }
+
+  if (feeRate <= 0) {
+    throw new CoreError('Fee rate should be positive', BRC20ErrorCode.INVALID_FEE_RATE);
+  }
+
+  return true;
+};
+
 export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
+  validateProps(estimateProps);
+
   const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
+
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
 
   const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
@@ -108,7 +142,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
   const bestUtxoData = selectUtxosForSend({
     changeAddress: dummyAddress,
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos,
+    availableUtxos: addressUtxos!,
     feeRate,
   });
 
@@ -130,6 +164,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
 };
 
 export async function brc20MintExecute(executeProps: ExecuteProps): Promise<string> {
+  validateProps(executeProps);
   const { seedPhrase, accountIndex, addressUtxos, tick, amount, revealAddress, changeAddress, feeRate, network } =
     executeProps;
 
@@ -182,6 +217,8 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
 }
 
 export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
+  validateProps(estimateProps);
+
   const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
@@ -222,7 +259,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
   const bestUtxoData = selectUtxosForSend({
     changeAddress: dummyAddress,
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos,
+    availableUtxos: addressUtxos!,
     feeRate,
   });
 
@@ -261,6 +298,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   },
   never
 > {
+  validateProps(executeProps);
   const {
     seedPhrase,
     accountIndex,
