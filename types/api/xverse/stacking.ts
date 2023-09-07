@@ -1,5 +1,5 @@
-import BigNumber from "bignumber.js";
-import { CoreInfo } from "../stacks/assets";
+import BigNumber from 'bignumber.js';
+import { CoreInfo } from '../stacks/assets';
 
 export interface Pool {
   address: string;
@@ -67,12 +67,12 @@ export interface StackingData {
 }
 
 export interface StackingStateData {
-    delegated: boolean;
-    txid: string;
-    amount: BigNumber;
-    startingCycle: number;
-    duration: number;
-    poolContractAddress: string;
-    poolContractName: string;
-    revoked: boolean;
-  }
+  delegated: boolean;
+  txid: string;
+  amount: BigNumber;
+  startingCycle: number;
+  duration: number;
+  poolContractAddress: string;
+  poolContractName: string;
+  revoked: boolean;
+}

@@ -1,6 +1,5 @@
 import { Inscription, InscriptionsList } from '../../types/api/ordinals';
 
-
 export interface OrdinalsApiProvider {
   /**
    * Get the inscriptions of an account given its addresses.
