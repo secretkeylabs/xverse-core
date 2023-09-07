@@ -5,63 +5,38 @@ import { CoreError } from '../../utils/coreError';
 
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
 
-export enum ErrorCode {
-  INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
-  INVALID_TICK = 'INVALID_TICK',
-  INVALID_AMOUNT = 'INVALID_AMOUNT',
-  INVALID_FEE_RATE = 'INVALID_FEE_RATE',
-  BROADCAST_FAILED = 'BROADCAST_FAILED',
-  SERVER_ERROR = 'SERVER_ERROR',
-}
-
 type Props = {
+  /** The seed phrase of the wallet. */
   seedPhrase: string;
+
+  /** The account index of the seed phrase to use. */
   accountIndex: number;
+
+  /** The UTXOs in the bitcoin address which will be used for payment. */
   addressUtxos: UTXO[];
+
+  /** The 4 letter BRC-20 token name. */
   tick: string;
+
+  /** The amount of the BRC-20 token to transfer. */
   amount: number;
+
+  /** The address where the balance of the BRC-20 token lives. This is usually the ordinals address. */
   revealAddress: string;
+
+  /** The address where change SATS will be sent to. Should be the Bitcoin address of the wallet. */
   changeAddress: string;
+
+  /** The address where the BRC-20 tokens will be sent to. */
   recipientAddress: string;
+
+  /** The desired fee rate for the transactions. */
   feeRate: number;
+
+  /** The network to broadcast the transactions on (Mainnet or Testnet). */
   network: NetworkType;
 };
 
-const validateProps = (props: Props) => {
-  const { addressUtxos, tick, amount, feeRate } = props;
-
-  if (!addressUtxos.length) {
-    return ErrorCode.INSUFFICIENT_FUNDS;
-  }
-
-  if (tick.length !== 4) {
-    return ErrorCode.INVALID_TICK;
-  }
-
-  if (amount <= 0) {
-    return ErrorCode.INVALID_AMOUNT;
-  }
-
-  if (feeRate <= 0) {
-    return ErrorCode.INVALID_FEE_RATE;
-  }
-  return undefined;
-};
-
-/**
- *
- * @param seedPhrase - The seed phrase of the wallet
- * @param accountIndex - The account index of the seed phrase to use
- * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
- * @param tick - The 4 letter BRC-20 token name
- * @param amount - The amount of the BRC-20 token to transfer
- * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
- * @param changeAddress - The address where change SATS will be sent to. Should be the Bitcoin address of the wallet.
- * @param recipientAddress - The address where the BRC-20 tokens will be sent to.
- * @param feeRate - The desired fee rate for the transactions
- * @param network - The network to broadcast the transactions on (Mainnet or Testnet)
- * @returns
- */
 const useBrc20TransferExecute = (props: Props) => {
   const {
     seedPhrase,
@@ -80,10 +55,10 @@ const useBrc20TransferExecute = (props: Props) => {
   const [revealTransactionId, setRevealTransactionId] = useState<string | undefined>();
   const [transferTransactionId, setTransferTransactionId] = useState<string | undefined>();
   const [progress, setProgress] = useState<ExecuteTransferProgressCodes | undefined>();
-  const [errorCode, setErrorCode] = useState<ErrorCode | undefined>();
+  const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
   const executeTransfer = useCallback(() => {
-    if (running || !!transferTransactionId) return;
+    if (running) return;
 
     const innerProps = {
       seedPhrase,
@@ -98,16 +73,11 @@ const useBrc20TransferExecute = (props: Props) => {
       network,
     };
 
-    const validationErrorCode = validateProps(innerProps);
-    setErrorCode(validationErrorCode);
-
-    if (validationErrorCode) {
-      return;
-    }
-
     // if we get to here, that means that the transfer is valid and we can try to execute it but we don't want to
     // be able to accidentally execute it again if something goes wrong, so we set the running flag
     setRunning(true);
+    setErrorCode(undefined);
+    setProgress(undefined);
 
     const runTransfer = async () => {
       try {
@@ -133,22 +103,13 @@ const useBrc20TransferExecute = (props: Props) => {
           }
         } while (!done);
       } catch (e) {
-        let finalErrorCode: string | undefined;
         if (CoreError.isCoreError(e)) {
-          finalErrorCode = e.code;
+          setErrorCode(e.code as BRC20ErrorCode);
+        } else {
+          setErrorCode(BRC20ErrorCode.SERVER_ERROR);
         }
-
-        switch (finalErrorCode) {
-          case BRC20ErrorCode.FAILED_TO_FINALIZE:
-            setErrorCode(ErrorCode.BROADCAST_FAILED);
-            break;
-          case BRC20ErrorCode.INSUFFICIENT_FUNDS:
-            setErrorCode(ErrorCode.INSUFFICIENT_FUNDS);
-            break;
-          default:
-            setErrorCode(ErrorCode.SERVER_ERROR);
-            break;
-        }
+      } finally {
+        setRunning(false);
       }
     };
 
@@ -165,7 +126,6 @@ const useBrc20TransferExecute = (props: Props) => {
     feeRate,
     network,
     running,
-    transferTransactionId,
   ]);
 
   return {
