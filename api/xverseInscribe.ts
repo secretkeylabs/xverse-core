@@ -10,7 +10,7 @@ import {
   Brc20FinalizeTransferOrderRequest,
   Brc20FinalizeTransferOrderResponse,
   NetworkType,
-} from 'types';
+} from '../types';
 
 import { XVERSE_INSCRIBE_URL } from '../constant';
 

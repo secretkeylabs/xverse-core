@@ -1,11 +1,11 @@
 import axios from 'axios';
-import { NftDetailResponse } from 'types';
 import { NFT_BASE_URI } from '../constant';
+import { NftDetailResponse } from '../types';
 
 export async function getNftDetail(
   tokenId: string,
   contractAddress: string,
-  contractName: string
+  contractName: string,
 ): Promise<NftDetailResponse> {
   const apiUrl = `${NFT_BASE_URI}/${contractAddress}.${contractName}/${tokenId}`;
 

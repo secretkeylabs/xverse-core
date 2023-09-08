@@ -131,18 +131,18 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
   }
 
   async getAllInscriptions(address: string): Promise<Inscription[]> {
-    const allOrdinals: Inscription[] = [];
+    const allInscriptions: Inscription[] = [];
 
     let offset = 0;
     const limit = 60;
     let inscriptions: InscriptionsList = await this.getInscriptions(address, offset, limit);
     while (inscriptions.results.length > 0) {
-      allOrdinals.push(...inscriptions.results);
+      allInscriptions.push(...inscriptions.results);
       offset += limit;
       inscriptions = await this.getInscriptions(address, offset, limit);
     }
 
-    return allOrdinals;
+    return allInscriptions;
   }
 
   async getInscription(inscriptionId: string): Promise<Inscription> {

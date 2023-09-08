@@ -9,7 +9,7 @@ import {
   cvToHex,
   uintCV,
 } from '@stacks/transactions';
-import { StxMempoolTransactionData } from 'types/network';
+import { StxMempoolTransactionData } from '../../../types';
 import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared/transaction';
 
 export { cvToHex, uintCV };

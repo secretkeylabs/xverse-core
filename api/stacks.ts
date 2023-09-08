@@ -17,6 +17,7 @@ import {
 } from '@stacks/transactions';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
+import { API_TIMEOUT_MILLI } from '../constant';
 import {
   AccountAssetsListData,
   FungibleToken,
@@ -27,8 +28,7 @@ import {
   StxAddressDataResponse,
   TokensResponse,
   TransactionData,
-} from 'types';
-import { API_TIMEOUT_MILLI } from '../constant';
+} from '../types';
 import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import {
   getNetworkURL,
@@ -48,7 +48,7 @@ import {
   StxTransactionResponse,
   Transaction,
   TransferTransactionsData,
-} from 'types';
+} from '../types';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
 import { getNftDetail } from './gamma';
 
@@ -357,7 +357,6 @@ export async function fetchAddressOfBnsName(
 }
 
 export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {
-
   const [confirmedTransactions, mempoolTransactions] = await Promise.all([
     getConfirmedTransactions({
       stxAddress,

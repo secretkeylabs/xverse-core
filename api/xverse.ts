@@ -1,22 +1,22 @@
+import { StacksTransaction } from '@stacks/transactions';
 import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
-  BtcFeeResponse,
-  TokenFiatRateResponse,
-  SupportedCurrency,
-  CoinsResponse,
-  StackingPoolInfo,
-  StackerInfo,
-  SignedUrlResponse,
-  OrdinalInfo,
   AppInfo,
+  BtcFeeResponse,
+  CoinsResponse,
+  OrdinalInfo,
+  SignedUrlResponse,
   SponsorInfoResponse,
   SponsorTransactionResponse,
-} from 'types';
-import { StacksTransaction } from '@stacks/transactions';
-import { fetchBtcOrdinalsData } from './ordinals';
+  StackerInfo,
+  StackingPoolInfo,
+  SupportedCurrency,
+  TokenFiatRateResponse,
+} from '../types';
 import { handleAxiosError } from './error';
+import { fetchBtcOrdinalsData } from './ordinals';
 
 export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
   return axios

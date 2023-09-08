@@ -3,8 +3,8 @@ import { FetchFn, createFetchFn } from '@stacks/network';
 import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storage';
 import { bytesToHex } from '@stacks/transactions';
 import { BIP32Interface } from 'bip32';
-import { Account } from 'types/account';
 import { WALLET_CONFIG_PATH } from '../constant';
+import { Account } from '../types/account';
 
 export interface ConfigApp {
   origin: string;

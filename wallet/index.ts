@@ -17,9 +17,6 @@ import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validati
 import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
-import { Keychain } from 'types/api/xverse/wallet';
-import { NetworkType } from 'types/network';
-import { BaseWallet } from 'types/wallet';
 import {
   BTC_SEGWIT_PATH_PURPOSE,
   BTC_TAPROOT_PATH_PURPOSE,
@@ -28,6 +25,7 @@ import {
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
 import { getBtcNetwork } from '../transactions/btcNetwork';
+import { BaseWallet, Keychain, NetworkType } from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
