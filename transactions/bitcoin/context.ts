@@ -108,10 +108,10 @@ export abstract class AddressContext {
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
     if (!this._utxos) {
-      const [utxos, ordinals] = await Promise.all([
-        esploraApi[this._network].getUnspentUtxos(this._address),
-        ordinalsApi[this._network].getAllInscriptions(this._address),
-      ]);
+      const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
+      // TODO: Enable testnet once inscriptions available
+      const ordinals: Inscription[] =
+        this._network === 'Testnet' ? [] : await ordinalsApi[this._network].getAllInscriptions(this._address);
 
       const ordinalMap = ordinals.reduce(
         (map, ordinal) => ({
@@ -153,9 +153,9 @@ class P2shAddressContext extends AddressContext {
 
     const publicKeyBuff = hex.decode(publicKey);
 
-    const p2wpkh = btc.p2wpkh(publicKeyBuff, btc.NETWORK);
+    const p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
 
-    this._p2sh = btc.p2sh(p2wpkh, btc.NETWORK);
+    this._p2sh = btc.p2sh(p2wpkh, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
   addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
@@ -192,7 +192,7 @@ class P2trAddressContext extends AddressContext {
 
     const publicKeyBuff = hex.decode(publicKey);
 
-    this._p2tr = btc.p2tr(publicKeyBuff, undefined, btc.NETWORK);
+    this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
   addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
@@ -251,5 +251,9 @@ export class TransactionContext {
       accountIndex,
     );
     this._network = network;
+  }
+
+  addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {
+    transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 }

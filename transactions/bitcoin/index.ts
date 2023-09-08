@@ -12,7 +12,7 @@ const compileTransaction = async (context: TransactionContext, actions: Action[]
  * send bitcoin
  * send bitcoin to multiple recipients
  */
-const sendBtc = async (
+export const sendBtc = async (
   context: TransactionContext,
   recipients: { toAddress: string; amount: bigint }[],
   feeRate: number,
@@ -35,7 +35,7 @@ const sendBtc = async (
  * send multiple sats to 1 recipient
  * send multiple sats to multiple recipients
  */
-const sendOrdinal = async (
+export const sendOrdinal = async (
   context: TransactionContext,
   recipients: {
     toAddress: string;
@@ -60,7 +60,7 @@ const sendOrdinal = async (
   return transaction;
 };
 
-const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (outpoint) {
     const transaction = await compileTransaction(
       context,
@@ -91,7 +91,7 @@ const recoverBitcoin = async (context: TransactionContext, feeRate: number, outp
 };
 
 // TODO: What if multiple ordinals in 1 UTXO?
-const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (outpoint) {
     const transaction = await compileTransaction(
       context,
@@ -121,7 +121,7 @@ const recoverOrdinal = async (context: TransactionContext, feeRate: number, outp
   }
 };
 
-const extractOrdinal = async (
+export const extractOrdinal = async (
   context: TransactionContext,
   sats: { location: string; satsAmount: number }[],
   feeRate: number,

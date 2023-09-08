@@ -107,19 +107,26 @@ const getTransactionVSize = async (
   signActionList: SignActions,
   withChange = false,
 ) => {
-  const transactionCopy = transaction.clone();
+  try {
+    const transactionCopy = transaction.clone();
 
-  if (withChange) {
-    transactionCopy.addOutputAddress(context.paymentAddress.address, 100000n);
+    if (withChange) {
+      context.addOutputAddress(transactionCopy, context.paymentAddress.address, 100000n);
+    }
+
+    for (const executeSign of signActionList) {
+      await executeSign(transactionCopy);
+    }
+
+    transactionCopy.finalize();
+
+    return transactionCopy.vsize;
+  } catch (e) {
+    if (e.message === 'Outputs spends more than inputs amount') {
+      return undefined;
+    }
+    throw e;
   }
-
-  for (const executeSign of signActionList) {
-    await executeSign(transactionCopy);
-  }
-
-  transactionCopy.finalize();
-
-  return transactionCopy.vsize;
 };
 
 export const applySendUtxoActions = async (
@@ -153,7 +160,7 @@ export const applySendUtxoActions = async (
     if (!action.spendable) {
       // if actions are spendable, then we assume all are to the payment address, so
       // any funds would go to the payment address as change at the end, so no need for an output
-      transaction.addOutputAddress(action.toAddress, BigInt(extendedUtxo.utxo.value));
+      context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
     }
 
     if (extendedUtxo.hasInscriptions) {
@@ -199,7 +206,7 @@ export const applySplitUtxoActions = async (
 
     // TODO: below needs to be done for split
     // addressContext.addInput(transaction, extendedUtxo);
-    // transaction.addOutputAddress(transaction, action.toAddress, extendedUtxo.utxo.value);
+    // context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
 
     if (extendedUtxo.hasInscriptions) {
       spentInscriptionUtxos.push(extendedUtxo);
@@ -263,12 +270,12 @@ export const applySendBtcActionsAndFee = async (
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
     if (combinableAmount > 0) {
       totalToSend += combinableAmount;
-      transaction.addOutputAddress(toAddress, combinableAmount);
+      context.addOutputAddress(transaction, toAddress, combinableAmount);
     }
 
     for (const amount of individualAmounts) {
       totalToSend += amount;
-      transaction.addOutputAddress(toAddress, amount);
+      context.addOutputAddress(transaction, toAddress, amount);
     }
 
     while (totalSent < totalToSend) {
@@ -304,29 +311,33 @@ export const applySendBtcActionsAndFee = async (
       [...previousSignActionList, ...signActionList],
       true,
     );
-    const feeWithChange = BigInt(vSizeWithChange * feeRate);
+    if (vSizeWithChange) {
+      const feeWithChange = BigInt(vSizeWithChange * feeRate);
 
-    if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
-      actualFee = feeWithChange;
-      transaction.addOutputAddress(context.paymentAddress.address, currentChange - feeWithChange);
-      complete = true;
-      break;
+      if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
+        actualFee = feeWithChange;
+        context.addOutputAddress(transaction, context.paymentAddress.address, currentChange - feeWithChange);
+        complete = true;
+        break;
+      }
     }
 
     const vSizeNoChange = await getTransactionVSize(context, transaction, [
       ...previousSignActionList,
       ...signActionList,
     ]);
-    const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
-    if (feeWithoutChange < currentChange) {
-      actualFee = feeWithoutChange;
-      complete = true;
-      break;
+    if (vSizeNoChange) {
+      const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
+
+      if (feeWithoutChange < currentChange) {
+        actualFee = feeWithoutChange;
+        complete = true;
+        break;
+      }
     }
 
     const utxoToUse = unusedPaymentUtxos.pop();
-
     if (!utxoToUse) {
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }

@@ -29,6 +29,10 @@ export class EnhancedTransaction {
   }
 
   private async compile() {
+    if (Object.values(this._actions).flat().length === 0) {
+      throw new Error('No actions to compile');
+    }
+
     // order actions by type. Send Utxos first, then Ordinal extraction, then payment
     const transaction = new Transaction();
 
