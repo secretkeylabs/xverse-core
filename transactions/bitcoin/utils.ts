@@ -7,7 +7,7 @@ import { Action, ActionMap, ActionType, SendBtcAction, SendUtxoAction, SplitUtxo
 
 const DUST_VALUE = 1000n;
 
-type SignAction = (transaction: Transaction) => void;
+type SignAction = (transaction: Transaction) => Promise<void>;
 type SignActions = SignAction[];
 
 export const getOutpoint = (transactionId: string, vout: string | number) => {
@@ -101,7 +101,7 @@ const getTransactionTotals = async (context: TransactionContext, transaction: Tr
   return { inputValue, outputValue };
 };
 
-const getTransactionVSize = (
+const getTransactionVSize = async (
   context: TransactionContext,
   transaction: Transaction,
   signActionList: SignActions,
@@ -113,9 +113,10 @@ const getTransactionVSize = (
     transactionCopy.addOutputAddress(context.paymentAddress.address, 100000n);
   }
 
-  signActionList.forEach((executeSign) => {
-    executeSign(transactionCopy);
-  });
+  for (const executeSign of signActionList) {
+    await executeSign(transactionCopy);
+  }
+
   transactionCopy.finalize();
 
   return transactionCopy.vsize;
@@ -160,10 +161,7 @@ export const applySendUtxoActions = async (
     }
 
     const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => {
-      // TODO: seed vault
-      txn.signIdx('Private Key from seed vault' as any, inputIndex);
-    });
+    signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
   return { signActionList, spentInscriptionUtxos };
@@ -208,10 +206,7 @@ export const applySplitUtxoActions = async (
     }
 
     const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => {
-      // TODO: seed vault
-      txn.signIdx('Private Key from seed vault' as any, inputIndex);
-    });
+    signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
   return { signActionList, spentInscriptionUtxos };
@@ -292,10 +287,7 @@ export const applySendBtcActionsAndFee = async (
       }
 
       const inputIndex = transaction.inputsLength - 1;
-      signActionList.push((txn) => {
-        // TODO: seed vault
-        txn.signIdx('Private Key from seed vault' as any, inputIndex);
-      });
+      signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
     }
   }
 
@@ -306,7 +298,7 @@ export const applySendBtcActionsAndFee = async (
   while (!complete) {
     const currentChange = totalSent - totalToSend;
 
-    const vSizeWithChange = getTransactionVSize(
+    const vSizeWithChange = await getTransactionVSize(
       context,
       transaction,
       [...previousSignActionList, ...signActionList],
@@ -321,7 +313,10 @@ export const applySendBtcActionsAndFee = async (
       break;
     }
 
-    const vSizeNoChange = getTransactionVSize(context, transaction, [...previousSignActionList, ...signActionList]);
+    const vSizeNoChange = await getTransactionVSize(context, transaction, [
+      ...previousSignActionList,
+      ...signActionList,
+    ]);
     const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
     if (feeWithoutChange < currentChange) {
@@ -344,10 +339,7 @@ export const applySendBtcActionsAndFee = async (
     }
 
     const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => {
-      // TODO: seed vault
-      txn.signIdx('Private Key from seed vault' as any, inputIndex);
-    });
+    signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
   }
 
   return { actualFee, signActions: signActionList, spentInscriptionUtxos };

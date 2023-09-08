@@ -5,6 +5,7 @@ import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import OrdinalsProvider from '../../api/ordinals/provider';
 import type { Inscription, NetworkType, UTXO } from '../../types';
 import { BaseWallet } from '../../types/wallet';
+import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../../wallet';
 
 import { SupportedAddressType } from './types';
 import { getOutpointFromUtxo } from './utils';
@@ -76,6 +77,11 @@ export abstract class AddressContext {
 
   private _utxos?: ExtendedUtxo[];
 
+  // TODO: Remove when we have seed vault
+  protected _seedPhrase!: string;
+
+  protected _accountIndex!: bigint;
+
   get type(): SupportedAddressType {
     return this._type;
   }
@@ -84,11 +90,20 @@ export abstract class AddressContext {
     return this._address;
   }
 
-  constructor(type: SupportedAddressType, address: string, publicKey: string, network: NetworkType) {
+  constructor(
+    type: SupportedAddressType,
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    seedPhrase: string,
+    accountIndex: bigint,
+  ) {
     this._type = type;
     this._address = address;
     this._publicKey = publicKey;
     this._network = network;
+    this._seedPhrase = seedPhrase;
+    this._accountIndex = accountIndex;
   }
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
@@ -127,13 +142,14 @@ export abstract class AddressContext {
   }
 
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo): void;
+  abstract signInput(transaction: btc.Transaction, index: number): Promise<void>;
 }
 
 class P2shAddressContext extends AddressContext {
   private _p2sh!: ReturnType<typeof btc.p2sh>;
 
-  constructor(address: string, publicKey: string, network: NetworkType) {
-    super('p2sh', address, publicKey, network);
+  constructor(address: string, publicKey: string, network: NetworkType, seedPhrase: string, accountIndex: bigint) {
+    super('p2sh', address, publicKey, network, seedPhrase, accountIndex);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -156,13 +172,23 @@ class P2shAddressContext extends AddressContext {
       witnessScript: this._p2sh.witnessScript,
     });
   }
+
+  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+    // TODO: seed vault
+    const privateKey = await getBtcPrivateKey({
+      seedPhrase: this._seedPhrase,
+      index: this._accountIndex,
+      network: this._network,
+    });
+    transaction.signIdx(hex.decode(privateKey), index);
+  }
 }
 
 class P2trAddressContext extends AddressContext {
   private _p2tr!: ReturnType<typeof btc.p2tr>;
 
-  constructor(address: string, publicKey: string, network: NetworkType) {
-    super('p2tr', address, publicKey, network);
+  constructor(address: string, publicKey: string, network: NetworkType, seedPhrase: string, accountIndex: bigint) {
+    super('p2tr', address, publicKey, network, seedPhrase, accountIndex);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -182,6 +208,16 @@ class P2trAddressContext extends AddressContext {
       tapInternalKey: hex.decode(this._publicKey),
     });
   }
+
+  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+    // TODO: seed vault
+    const privateKey = await getBtcTaprootPrivateKey({
+      seedPhrase: this._seedPhrase,
+      index: this._accountIndex,
+      network: this._network,
+    });
+    transaction.signIdx(hex.decode(privateKey), index);
+  }
 }
 
 export class TransactionContext {
@@ -199,9 +235,21 @@ export class TransactionContext {
     return this._ordinalsAddress;
   }
 
-  constructor(wallet: BaseWallet, network: NetworkType) {
-    this._paymentAddress = new P2shAddressContext(wallet.btcAddress, wallet.btcPublicKey, network);
-    this._ordinalsAddress = new P2trAddressContext(wallet.ordinalsAddress, wallet.ordinalsPublicKey, network);
+  constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint) {
+    this._paymentAddress = new P2shAddressContext(
+      wallet.btcAddress,
+      wallet.btcPublicKey,
+      network,
+      wallet.seedPhrase,
+      accountIndex,
+    );
+    this._ordinalsAddress = new P2trAddressContext(
+      wallet.ordinalsAddress,
+      wallet.ordinalsPublicKey,
+      network,
+      wallet.seedPhrase,
+      accountIndex,
+    );
     this._network = network;
   }
 }

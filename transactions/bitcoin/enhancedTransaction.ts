@@ -17,7 +17,7 @@ export class EnhancedTransaction {
   }
 
   set feeRate(feeRate: number) {
-    // TODO: validate feeRate, any side effects?
+    // TODO: validate feeRate, any side effects? Maybe min/max from context?
     this._feeRate = feeRate;
   }
 
@@ -68,9 +68,9 @@ export class EnhancedTransaction {
     ]);
 
     // now that the transaction is built, we can sign it
-    [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions].forEach((executeSign) => {
-      executeSign(transaction);
-    });
+    for (const executeSign of [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions]) {
+      await executeSign(transaction);
+    }
 
     transaction.finalize();
 
@@ -100,12 +100,19 @@ export class EnhancedTransaction {
     return feeSummary;
   }
 
+  async getTransactionHexAndId() {
+    const { transaction } = await this.compile();
+
+    return { hex: transaction.hex, id: transaction.id };
+  }
+
   async broadcast() {
     const { transaction } = await this.compile();
 
     const transactionHex = transaction.hex;
 
-    // TODO broadcast and return ID
-    return transactionHex;
+    // TODO broadcast
+
+    return transaction.id;
   }
 }
