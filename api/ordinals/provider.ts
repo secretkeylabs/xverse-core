@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, Method } from 'axios';
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, XORD_MAINNET_URL } from '../../constant';
-import * as ordinalsType from '../../types/api/ordinals';
+import { Inscription, InscriptionsList } from '../../types/api/ordinals';
 import { NetworkType } from '../../types/network';
 import { OrdinalsApiProvider } from './types';
 
@@ -117,7 +117,7 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
     }
   }
 
-  async getInscriptions(address: string, offset: number, limit: number): Promise<ordinalsType.InscriptionsList> {
+  async getInscriptions(address: string, offset: number, limit: number): Promise<InscriptionsList> {
     const url = 'inscriptions';
     const params = {
       address,
@@ -125,14 +125,29 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
       limit,
     };
 
-    const data = await this.httpCall<ordinalsType.InscriptionsList>('get', url, { params });
+    const data = await this.httpCall<InscriptionsList>('get', url, { params });
 
     return data;
   }
 
-  async getInscription(inscriptionId: string): Promise<ordinalsType.Inscription> {
+  async getAllInscriptions(address: string): Promise<Inscription[]> {
+    const allOrdinals: Inscription[] = [];
+
+    let offset = 0;
+    const limit = 60;
+    let inscriptions: InscriptionsList = await this.getInscriptions(address, offset, limit);
+    while (inscriptions.results.length > 0) {
+      allOrdinals.push(...inscriptions.results);
+      offset += limit;
+      inscriptions = await this.getInscriptions(address, offset, limit);
+    }
+
+    return allOrdinals;
+  }
+
+  async getInscription(inscriptionId: string): Promise<Inscription> {
     const url = `inscriptions/${inscriptionId}`;
-    const inscription = await this.httpCall<ordinalsType.Inscription>('get', url);
+    const inscription = await this.httpCall<Inscription>('get', url);
     return inscription;
   }
 }
