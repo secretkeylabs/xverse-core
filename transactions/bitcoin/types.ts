@@ -43,3 +43,7 @@ export type ActionMap = {
 } & {
   [K in Action['type']]: Action[];
 };
+
+export type CompilationOptions = {
+  rbfEnabled?: boolean;
+};

@@ -2,8 +2,16 @@ import { Transaction } from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 
 import { TransactionContext } from './context';
-import { Action, ActionMap, ActionType } from './types';
+import { Action, ActionMap, ActionType, CompilationOptions } from './types';
 import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions, extractActionMap } from './utils';
+
+const defaultOptions: CompilationOptions = {
+  rbfEnabled: false,
+};
+
+const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions => {
+  return { ...defaultOptions, ...options };
+};
 
 export class EnhancedTransaction {
   private _context!: TransactionContext;
@@ -30,7 +38,8 @@ export class EnhancedTransaction {
     this._actions = extractActionMap(actions);
   }
 
-  private async compile() {
+  // TODO: process options
+  private async compile(options: CompilationOptions) {
     if (Object.values(this._actions).flat().length === 0) {
       throw new Error('No actions to compile');
     }
@@ -50,28 +59,29 @@ export class EnhancedTransaction {
         throw new Error('Send Utxo actions must either all be spendable or only none-spendable');
       } else if (this._actions[ActionType.SPLIT_UTXO].length > 0 || this._actions[ActionType.SEND_BTC].length > 0) {
         throw new Error('Send Utxo actions must be the only actions if they are spendable');
-      } else if (
-        !allSpendableSendUtxosToSameAddress ||
-        spendableSendUtxos[0].toAddress !== this._context.paymentAddress.address
-      ) {
+      } else if (!allSpendableSendUtxosToSameAddress) {
         throw new Error('Send Utxo actions must all be to the payment address if spendable');
       }
     }
 
     const { signActionList: sendUtxoSignActions, spentInscriptionUtxos: sendUtxoSpentInscriptionUtxos } =
-      await applySendUtxoActions(this._context, transaction, this._actions[ActionType.SEND_UTXO]);
+      await applySendUtxoActions(this._context, options, transaction, this._actions[ActionType.SEND_UTXO]);
 
-    const { signActionList: splitSignActions, spentInscriptionUtxos: splitSignSspentInscriptionUtxos } =
-      await applySplitUtxoActions(this._context, transaction, this._actions[ActionType.SPLIT_UTXO]);
+    const { signActionList: splitSignActions, spentInscriptionUtxos: splitSignSpentInscriptionUtxos } =
+      await applySplitUtxoActions(this._context, options, transaction, this._actions[ActionType.SPLIT_UTXO]);
 
     const {
       actualFee,
       signActions: sendBtcSignActions,
       spentInscriptionUtxos: sendBtcSpentInscriptionUtxos,
-    } = await applySendBtcActionsAndFee(this._context, transaction, this._actions[ActionType.SEND_BTC], this._feeRate, [
-      ...sendUtxoSignActions,
-      ...splitSignActions,
-    ]);
+    } = await applySendBtcActionsAndFee(
+      this._context,
+      options,
+      transaction,
+      this._actions[ActionType.SEND_BTC],
+      this._feeRate,
+      [...sendUtxoSignActions, ...splitSignActions],
+    );
 
     // now that the transaction is built, we can sign it
     for (const executeSign of [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions]) {
@@ -85,14 +95,14 @@ export class EnhancedTransaction {
       transaction,
       spentInscriptionUtxos: [
         ...sendUtxoSpentInscriptionUtxos,
-        ...splitSignSspentInscriptionUtxos,
+        ...splitSignSpentInscriptionUtxos,
         ...sendBtcSpentInscriptionUtxos,
       ],
     };
   }
 
-  async getFeeSummary() {
-    const { actualFee, transaction, spentInscriptionUtxos } = await this.compile();
+  async getFeeSummary(options: CompilationOptions = {}) {
+    const { actualFee, transaction, spentInscriptionUtxos } = await this.compile(getOptionsWithDefaults(options));
 
     const vsize = transaction.vsize;
 
@@ -106,14 +116,14 @@ export class EnhancedTransaction {
     return feeSummary;
   }
 
-  async getTransactionHexAndId() {
-    const { transaction } = await this.compile();
+  async getTransactionHexAndId(options: CompilationOptions = {}) {
+    const { transaction } = await this.compile(getOptionsWithDefaults(options));
 
     return { hex: transaction.hex, id: transaction.id };
   }
 
-  async broadcast() {
-    const { transaction } = await this.compile();
+  async broadcast(options: CompilationOptions = {}) {
+    const { transaction } = await this.compile(getOptionsWithDefaults(options));
 
     const transactionHex = transaction.hex;
 

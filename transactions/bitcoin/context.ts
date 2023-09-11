@@ -8,7 +8,7 @@ import type { Inscription, NetworkType, UTXO } from '../../types';
 import { BaseWallet } from '../../types/wallet';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../../wallet';
 
-import { SupportedAddressType } from './types';
+import { CompilationOptions, SupportedAddressType } from './types';
 import { getOutpointFromUtxo } from './utils';
 
 const esploraMainnetProvider = new EsploraProvider({
@@ -142,7 +142,7 @@ export abstract class AddressContext {
     return utxos.find((utxo) => utxo.outpoint === outpoint);
   }
 
-  abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo): void;
+  abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): void;
   abstract signInput(transaction: btc.Transaction, index: number): Promise<void>;
 }
 
@@ -159,7 +159,7 @@ class P2shAddressContext extends AddressContext {
     this._p2sh = btc.p2sh(p2wpkh, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
+  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -171,6 +171,7 @@ class P2shAddressContext extends AddressContext {
       },
       redeemScript: this._p2sh.redeemScript,
       witnessScript: this._p2sh.witnessScript,
+      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
 
@@ -196,7 +197,7 @@ class P2wpkhAddressContext extends AddressContext {
     this._p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
+  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -206,6 +207,7 @@ class P2wpkhAddressContext extends AddressContext {
         script: this._p2wpkh.script,
         amount: BigInt(utxo.value),
       },
+      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
 
@@ -231,7 +233,7 @@ class P2trAddressContext extends AddressContext {
     this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
+  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -242,6 +244,7 @@ class P2trAddressContext extends AddressContext {
         amount: BigInt(utxo.value),
       },
       tapInternalKey: hex.decode(this._publicKey),
+      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
 
@@ -257,53 +260,93 @@ class P2trAddressContext extends AddressContext {
 }
 
 export class TransactionContext {
-  private _paymentAddress!: AddressContext;
+  private _addresses!: AddressContext[];
 
-  private _ordinalsAddress!: AddressContext;
+  private _changeAddress!: string;
 
   private _network!: NetworkType;
 
-  get paymentAddress(): AddressContext {
-    return this._paymentAddress;
+  get changeAddress(): string {
+    return this._changeAddress;
   }
 
-  get ordinalsAddress(): AddressContext {
-    return this._ordinalsAddress;
+  constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint, changeAddress: string) {
+    this._addresses = [];
+    this._network = network;
+    this._changeAddress = changeAddress;
+
+    // TODO: update the arg type for this instead of calculating it here
+    const addressData = [
+      {
+        address: wallet.btcAddress,
+        publicKey: wallet.btcPublicKey,
+      },
+      {
+        address: wallet.ordinalsAddress,
+        publicKey: wallet.ordinalsPublicKey,
+      },
+    ];
+
+    for (const addressItem of addressData) {
+      const { type } = getAddressInfo(addressItem.address);
+
+      if (type === AddressType.p2sh) {
+        this._addresses.push(
+          new P2shAddressContext(addressItem.address, addressItem.publicKey, network, wallet.seedPhrase, accountIndex),
+        );
+      } else if (type === AddressType.p2wpkh) {
+        this._addresses.push(
+          new P2wpkhAddressContext(
+            addressItem.address,
+            addressItem.publicKey,
+            network,
+            wallet.seedPhrase,
+            accountIndex,
+          ),
+        );
+      } else if (type === AddressType.p2tr) {
+        this._addresses.push(
+          new P2trAddressContext(addressItem.address, addressItem.publicKey, network, wallet.seedPhrase, accountIndex),
+        );
+      } else {
+        throw new Error('Unsupported payment address type');
+      }
+    }
   }
 
-  constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint) {
-    const { type } = getAddressInfo(wallet.btcAddress);
+  getAddressContext(address: string): AddressContext | undefined {
+    return this._addresses.find((context) => context.address === address);
+  }
 
-    if (type === AddressType.p2sh) {
-      // Nested Segwit address
-      this._paymentAddress = new P2shAddressContext(
-        wallet.btcAddress,
-        wallet.btcPublicKey,
-        network,
-        wallet.seedPhrase,
-        accountIndex,
-      );
-    } else if (type === AddressType.p2wpkh) {
-      // Native Segwit address
-      this._paymentAddress = new P2wpkhAddressContext(
-        wallet.btcAddress,
-        wallet.btcPublicKey,
-        network,
-        wallet.seedPhrase,
-        accountIndex,
-      );
-    } else {
-      throw new Error('Unsupported payment address type');
+  async getUtxo(outpoint: string): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
+    for (const addressContext of this._addresses) {
+      const extendedUtxo = await addressContext.getUtxo(outpoint);
+
+      if (extendedUtxo) {
+        return { extendedUtxo, addressContext };
+      }
     }
 
-    this._ordinalsAddress = new P2trAddressContext(
-      wallet.ordinalsAddress,
-      wallet.ordinalsPublicKey,
-      network,
-      wallet.seedPhrase,
-      accountIndex,
-    );
-    this._network = network;
+    return {};
+  }
+
+  async getSpendableUtxos(): Promise<{ extendedUtxo: ExtendedUtxo; addressContext: AddressContext }[]> {
+    const spendableUtxos: { extendedUtxo: ExtendedUtxo; addressContext: AddressContext }[] = [];
+
+    for (const address of this._addresses) {
+      const utxos = await address.getNonOrdinalUtxos();
+
+      // TODO: this might be bad since it won't allow you to spend your change until it is confirmed
+      // !Note: Having a payments address would make this easier since we can try to spend anything in there and warn
+      // !Note: if there inscriptions
+      const addressSpendableUtxos = utxos
+        .filter((extendedUtxo) => extendedUtxo.utxo.status.confirmed)
+        .map((extendedUtxo) => ({ extendedUtxo, addressContext: address }));
+
+      spendableUtxos.push(...addressSpendableUtxos);
+    }
+
+    return spendableUtxos;
   }
 
   addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {

@@ -60,14 +60,20 @@ export const sendOrdinal = async (
   return transaction;
 };
 
-export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverBitcoin = async (
+  context: TransactionContext,
+  toAddress: string,
+  feeRate: number,
+  fromAddress?: string,
+  outpoint?: string,
+) => {
   if (outpoint) {
     const transaction = await compileTransaction(
       context,
       [
         {
           type: ActionType.SEND_UTXO,
-          toAddress: context.paymentAddress.address,
+          toAddress,
           outpoint,
           combinable: true,
           spendable: true,
@@ -76,28 +82,41 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
       feeRate,
     );
     return transaction;
-  } else {
-    const nonOrdinalUtxos = ['id:1', 'id:2']; // await context.ordinalsAddress.getNonOrdinalUtxos();
+  } else if (fromAddress) {
+    const nonOrdinalUtxos = await context.getAddressContext(fromAddress)?.getNonOrdinalUtxos();
+
+    if (!nonOrdinalUtxos || nonOrdinalUtxos.length === 0) {
+      throw new Error('No non-ordinal utxos found to recover');
+    }
+
     const actions = nonOrdinalUtxos.map<SendUtxoAction>((utxo) => ({
       type: ActionType.SEND_UTXO,
-      toAddress: context.paymentAddress.address,
-      outpoint: utxo,
+      toAddress,
+      outpoint: utxo.outpoint,
       combinable: true,
       spendable: true,
     }));
     const transaction = await compileTransaction(context, actions, feeRate);
     return transaction;
+  } else {
+    throw new Error('Must provide either fromAddress or outpoint');
   }
 };
 
-export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverOrdinal = async (
+  context: TransactionContext,
+  toAddress: string,
+  feeRate: number,
+  fromAddress?: string,
+  outpoint?: string,
+) => {
   if (outpoint) {
     const transaction = await compileTransaction(
       context,
       [
         {
           type: ActionType.SEND_UTXO,
-          toAddress: context.ordinalsAddress.address,
+          toAddress,
           outpoint,
           combinable: false,
           spendable: false,
@@ -106,30 +125,38 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
       feeRate,
     );
     return transaction;
-  } else {
-    const ordinalUtxos = await context.paymentAddress.getNonOrdinalUtxos();
+  } else if (fromAddress) {
+    const ordinalUtxos = await context.getAddressContext(fromAddress)?.getNonOrdinalUtxos();
+
+    if (!ordinalUtxos || ordinalUtxos.length === 0) {
+      throw new Error('No ordinal utxos found to recover');
+    }
+
     const actions = ordinalUtxos.map<SendUtxoAction>((utxo) => ({
       type: ActionType.SEND_UTXO,
-      toAddress: context.ordinalsAddress.address,
+      toAddress,
       outpoint: utxo.outpoint,
       combinable: false,
       spendable: false,
     }));
     const transaction = await compileTransaction(context, actions, feeRate);
     return transaction;
+  } else {
+    throw new Error('Must provide either fromAddress or outpoint');
   }
 };
 
 export const extractOrdinal = async (
   context: TransactionContext,
   sats: { location: string; satsAmount: number }[],
+  toAddress: string,
   feeRate: number,
 ) => {
   const recipients = sats.map(({ location, satsAmount }) => ({
     location,
     minOutputSatsAmount: satsAmount,
     maxOutputSatsAmount: satsAmount,
-    toAddress: context.ordinalsAddress.address,
+    toAddress,
     moveToZeroOffset: true,
   }));
   return sendOrdinal(context, recipients, feeRate);

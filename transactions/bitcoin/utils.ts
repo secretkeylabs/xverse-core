@@ -3,7 +3,15 @@ import { Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
 
 import { ExtendedUtxo, TransactionContext } from './context';
-import { Action, ActionMap, ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './types';
+import {
+  Action,
+  ActionMap,
+  ActionType,
+  CompilationOptions,
+  SendBtcAction,
+  SendUtxoAction,
+  SplitUtxoAction,
+} from './types';
 
 const DUST_VALUE = 1000n;
 
@@ -81,8 +89,7 @@ const getTransactionTotals = async (context: TransactionContext, transaction: Tr
     }
 
     const outpoint = getOutpoint(Buffer.from(input.txid).toString('hex'), input.index);
-    const extendedUtxo =
-      (await context.ordinalsAddress.getUtxo(outpoint)) ?? (await context.paymentAddress.getUtxo(outpoint));
+    const { extendedUtxo } = await context.getUtxo(outpoint);
 
     if (!extendedUtxo) {
       throw new Error(`Transaction input UTXO not found: ${outpoint}`);
@@ -111,7 +118,7 @@ const getTransactionVSize = async (
     const transactionCopy = transaction.clone();
 
     if (withChange) {
-      context.addOutputAddress(transactionCopy, context.paymentAddress.address, 100000n);
+      context.addOutputAddress(transactionCopy, context.changeAddress, 100000n);
     }
 
     for (const executeSign of signActionList) {
@@ -131,6 +138,7 @@ const getTransactionVSize = async (
 
 export const applySendUtxoActions = async (
   context: TransactionContext,
+  options: CompilationOptions,
   transaction: Transaction,
   actions: SendUtxoAction[],
 ) => {
@@ -139,15 +147,9 @@ export const applySendUtxoActions = async (
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
 
   for (const action of actions) {
-    let extendedUtxo = await context.ordinalsAddress.getUtxo(action.outpoint);
-    let addressContext = context.ordinalsAddress;
+    const { extendedUtxo, addressContext } = await context.getUtxo(action.outpoint);
 
-    if (!extendedUtxo) {
-      extendedUtxo = await context.paymentAddress.getUtxo(action.outpoint);
-      addressContext = context.paymentAddress;
-    }
-
-    if (!extendedUtxo) {
+    if (!extendedUtxo || !addressContext) {
       throw new Error(`UTXO not found: ${action.outpoint}`);
     }
 
@@ -155,7 +157,7 @@ export const applySendUtxoActions = async (
       throw new Error(`UTXO already used: ${action.outpoint}`);
     }
 
-    addressContext.addInput(transaction, extendedUtxo);
+    addressContext.addInput(transaction, extendedUtxo, options);
 
     if (!action.spendable) {
       // if actions are spendable, then we assume all are to the payment address, so
@@ -177,6 +179,7 @@ export const applySendUtxoActions = async (
 // TODO: finish
 export const applySplitUtxoActions = async (
   context: TransactionContext,
+  options: CompilationOptions,
   transaction: Transaction,
   actions: SplitUtxoAction[],
 ) => {
@@ -201,15 +204,9 @@ export const applySplitUtxoActions = async (
   }, {} as Record<string, SplitUtxoAction[]>);
 
   for (const [outpoint, outpointActions] of Object.entries(outpointActionMap)) {
-    let extendedUtxo = await context.ordinalsAddress.getUtxo(outpoint);
-    let addressContext = context.ordinalsAddress;
+    const { extendedUtxo, addressContext } = await context.getUtxo(outpoint);
 
-    if (!extendedUtxo) {
-      extendedUtxo = await context.paymentAddress.getUtxo(outpoint);
-      addressContext = context.paymentAddress;
-    }
-
-    if (!extendedUtxo) {
+    if (!extendedUtxo || !addressContext) {
       throw new Error(`UTXO for outpoint not found: ${outpoint}`);
     }
 
@@ -232,6 +229,7 @@ export const applySplitUtxoActions = async (
 
 export const applySendBtcActionsAndFee = async (
   context: TransactionContext,
+  options: CompilationOptions,
   transaction: Transaction,
   actions: SendBtcAction[],
   feeRate: number,
@@ -261,24 +259,25 @@ export const applySendBtcActionsAndFee = async (
   }
 
   // get available UTXOs to spend
-  const unusedPaymentUtxos = (await context.paymentAddress.getUtxos()).filter(
-    (utxo) => !usedOutpoints.has(utxo.outpoint),
+  const unusedPaymentUtxos = (await context.getSpendableUtxos()).filter(
+    (utxoData) => !usedOutpoints.has(utxoData.extendedUtxo.outpoint),
   );
 
   // sort smallest to biggest as we'll be popping off the end
   // also, inscribed UTXOs are de-prioritized
   unusedPaymentUtxos.sort((a, b) => {
-    if (a.hasInscriptions && !b.hasInscriptions) {
+    if (a.extendedUtxo.hasInscriptions && !b.extendedUtxo.hasInscriptions) {
       return -1;
     }
-    if (b.hasInscriptions && !a.hasInscriptions) {
+    if (b.extendedUtxo.hasInscriptions && !a.extendedUtxo.hasInscriptions) {
       return 1;
     }
-    const diff = a.utxo.value - b.utxo.value;
+    const diff = a.extendedUtxo.utxo.value - b.extendedUtxo.utxo.value;
     if (diff !== 0) {
       return diff;
     }
-    return a.outpoint.localeCompare(b.outpoint);
+    // this is just for consistent sorting
+    return a.extendedUtxo.outpoint.localeCompare(b.extendedUtxo.outpoint);
   });
 
   // add inputs and outputs for the required actions
@@ -302,16 +301,16 @@ export const applySendBtcActionsAndFee = async (
         throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
       }
 
-      totalSent += BigInt(utxoToUse.utxo.value);
+      totalSent += BigInt(utxoToUse.extendedUtxo.utxo.value);
 
-      context.paymentAddress.addInput(transaction, utxoToUse);
+      utxoToUse.addressContext.addInput(transaction, utxoToUse.extendedUtxo, options);
 
-      if (utxoToUse.hasInscriptions) {
-        spentInscriptionUtxos.push(utxoToUse);
+      if (utxoToUse.extendedUtxo.hasInscriptions) {
+        spentInscriptionUtxos.push(utxoToUse.extendedUtxo);
       }
 
       const inputIndex = transaction.inputsLength - 1;
-      signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
+      signActionList.push((txn) => utxoToUse.addressContext.signInput(txn, inputIndex));
     }
   }
 
@@ -333,7 +332,7 @@ export const applySendBtcActionsAndFee = async (
 
       if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
         actualFee = feeWithChange;
-        context.addOutputAddress(transaction, context.paymentAddress.address, currentChange - feeWithChange);
+        context.addOutputAddress(transaction, context.changeAddress, currentChange - feeWithChange);
         complete = true;
         break;
       }
@@ -359,15 +358,15 @@ export const applySendBtcActionsAndFee = async (
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }
 
-    totalSent += BigInt(utxoToUse.utxo.value);
-    context.paymentAddress.addInput(transaction, utxoToUse);
+    totalSent += BigInt(utxoToUse.extendedUtxo.utxo.value);
+    utxoToUse.addressContext.addInput(transaction, utxoToUse.extendedUtxo, options);
 
-    if (utxoToUse.hasInscriptions) {
-      spentInscriptionUtxos.push(utxoToUse);
+    if (utxoToUse.extendedUtxo.hasInscriptions) {
+      spentInscriptionUtxos.push(utxoToUse.extendedUtxo);
     }
 
     const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
+    signActionList.push((txn) => utxoToUse.addressContext.signInput(txn, inputIndex));
   }
 
   return { actualFee, signActions: signActionList, spentInscriptionUtxos };
