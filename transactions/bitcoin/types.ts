@@ -25,8 +25,8 @@ export type SplitUtxoAction = {
   type: ActionType.SPLIT_UTXO;
   toAddress: string;
   location: string;
-  minOutputSatsAmount: number;
-  maxOutputSatsAmount: number;
+  minOutputSatsAmount?: number;
+  maxOutputSatsAmount?: number;
   moveToZeroOffset: boolean;
 };
 

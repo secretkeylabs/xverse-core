@@ -27,6 +27,12 @@ export const getOutpointFromLocation = (location: string) => {
   return getOutpoint(txid, vout);
 };
 
+export const getOffsetFromLocation = (location: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [txid, vout, offset] = location.split(':');
+  return +offset;
+};
+
 export const getOutpointFromUtxo = (utxo: UTXO) => {
   return getOutpoint(utxo.txid, utxo.vout);
 };
@@ -118,7 +124,7 @@ const getTransactionVSize = async (
     const transactionCopy = transaction.clone();
 
     if (withChange) {
-      context.addOutputAddress(transactionCopy, context.changeAddress, 100000n);
+      context.addOutputAddress(transactionCopy, context.changeAddress, 546n);
     }
 
     for (const executeSign of signActionList) {
@@ -214,10 +220,23 @@ export const applySplitUtxoActions = async (
       spentInscriptionUtxos.push(extendedUtxo);
     }
 
-    for (const action of outpointActions) {
+    addressContext.addInput(transaction, extendedUtxo, options);
+
+    outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
+
+    // we make a collection of graphs of an action to the next action so we can calculate the distance between them
+    const outpointActionGraph = outpointActions.map((action, index) => {
+      return [action, outpointActions[index + 1]] as [SplitUtxoAction, SplitUtxoAction | undefined];
+    });
+
+    const currentOffset = 0;
+    for (const [action, nextAction] of outpointActionGraph) {
       const { location, maxOutputSatsAmount, minOutputSatsAmount, moveToZeroOffset, toAddress } = action;
 
-      // TODO: implement
+      const offset = getOffsetFromLocation(location);
+      const offsetFromCurrent = offset - currentOffset;
+
+      context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
     }
 
     const inputIndex = transaction.inputsLength - 1;
@@ -327,6 +346,7 @@ export const applySendBtcActionsAndFee = async (
       [...previousSignActionList, ...signActionList],
       true,
     );
+
     if (vSizeWithChange) {
       const feeWithChange = BigInt(vSizeWithChange * feeRate);
 
@@ -347,7 +367,7 @@ export const applySendBtcActionsAndFee = async (
       const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
       if (feeWithoutChange < currentChange) {
-        actualFee = feeWithoutChange;
+        actualFee = currentChange;
         complete = true;
         break;
       }

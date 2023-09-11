@@ -38,7 +38,6 @@ export class EnhancedTransaction {
     this._actions = extractActionMap(actions);
   }
 
-  // TODO: process options
   private async compile(options: CompilationOptions) {
     if (Object.values(this._actions).flat().length === 0) {
       throw new Error('No actions to compile');
