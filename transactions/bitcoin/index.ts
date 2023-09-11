@@ -34,6 +34,12 @@ export const sendBtc = async (
  * send sat
  * send multiple sats to 1 recipient
  * send multiple sats to multiple recipients
+ *
+ * !Note: this uses split UTXO action. In some cases, we'll probably want to use send UTXO action instead
+ * !Note: We use the split UTXO action to cater for the following scenarios:
+ * - multiple inscriptions exist in 1 UTXO at different offsets
+ * - An inscription exists in a large UTXO (e.g. 10k sats) and we want to use those extra sats as fees or as change
+ * - We want to move an inscription to offset of 0
  */
 export const sendOrdinal = async (
   context: TransactionContext,

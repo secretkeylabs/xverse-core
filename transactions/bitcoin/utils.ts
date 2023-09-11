@@ -193,6 +193,7 @@ export const applySplitUtxoActions = async (
   const usedOutpoints = extractUsedOutpoints(transaction);
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
 
+  // group actions by UTXO
   const outpointActionMap = actions.reduce((map, action) => {
     const { location } = action;
     const outpoint = getOutpointFromLocation(location);
@@ -209,6 +210,7 @@ export const applySplitUtxoActions = async (
     return map;
   }, {} as Record<string, SplitUtxoAction[]>);
 
+  // Process actions for each outpoint
   for (const [outpoint, outpointActions] of Object.entries(outpointActionMap)) {
     const { extendedUtxo, addressContext } = await context.getUtxo(outpoint);
 
