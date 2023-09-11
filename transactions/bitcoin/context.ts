@@ -1,5 +1,6 @@
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import OrdinalsProvider from '../../api/ordinals/provider';
@@ -184,6 +185,41 @@ class P2shAddressContext extends AddressContext {
   }
 }
 
+class P2wpkhAddressContext extends AddressContext {
+  private _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
+
+  constructor(address: string, publicKey: string, network: NetworkType, seedPhrase: string, accountIndex: bigint) {
+    super('p2wpkh', address, publicKey, network, seedPhrase, accountIndex);
+
+    const publicKeyBuff = hex.decode(publicKey);
+
+    this._p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+  }
+
+  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo): void {
+    const utxo = extendedUtxo.utxo;
+
+    transaction.addInput({
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: this._p2wpkh.script,
+        amount: BigInt(utxo.value),
+      },
+    });
+  }
+
+  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+    // TODO: seed vault
+    const privateKey = await getBtcPrivateKey({
+      seedPhrase: this._seedPhrase,
+      index: this._accountIndex,
+      network: this._network,
+    });
+    transaction.signIdx(hex.decode(privateKey), index);
+  }
+}
+
 class P2trAddressContext extends AddressContext {
   private _p2tr!: ReturnType<typeof btc.p2tr>;
 
@@ -236,13 +272,30 @@ export class TransactionContext {
   }
 
   constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint) {
-    this._paymentAddress = new P2shAddressContext(
-      wallet.btcAddress,
-      wallet.btcPublicKey,
-      network,
-      wallet.seedPhrase,
-      accountIndex,
-    );
+    const { type } = getAddressInfo(wallet.btcAddress);
+
+    if (type === AddressType.p2sh) {
+      // Nested Segwit address
+      this._paymentAddress = new P2shAddressContext(
+        wallet.btcAddress,
+        wallet.btcPublicKey,
+        network,
+        wallet.seedPhrase,
+        accountIndex,
+      );
+    } else if (type === AddressType.p2wpkh) {
+      // Native Segwit address
+      this._paymentAddress = new P2wpkhAddressContext(
+        wallet.btcAddress,
+        wallet.btcPublicKey,
+        network,
+        wallet.seedPhrase,
+        accountIndex,
+      );
+    } else {
+      throw new Error('Unsupported payment address type');
+    }
+
     this._ordinalsAddress = new P2trAddressContext(
       wallet.ordinalsAddress,
       wallet.ordinalsPublicKey,

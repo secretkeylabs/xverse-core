@@ -184,14 +184,23 @@ export const applySplitUtxoActions = async (
   const usedOutpoints = extractUsedOutpoints(transaction);
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
 
-  for (const action of actions) {
-    const { location, maxOutputSatsAmount, minOutputSatsAmount, moveToZeroOffset, toAddress } = action;
+  const outpointActionMap = actions.reduce((map, action) => {
+    const { location } = action;
     const outpoint = getOutpointFromLocation(location);
 
     if (usedOutpoints.has(outpoint)) {
       throw new Error(`UTXO already used: ${outpoint}`);
     }
 
+    if (!(outpoint in map)) {
+      map[outpoint] = [];
+    }
+
+    map[outpoint].push(action);
+    return map;
+  }, {} as Record<string, SplitUtxoAction[]>);
+
+  for (const [outpoint, outpointActions] of Object.entries(outpointActionMap)) {
     let extendedUtxo = await context.ordinalsAddress.getUtxo(outpoint);
     let addressContext = context.ordinalsAddress;
 
@@ -201,15 +210,17 @@ export const applySplitUtxoActions = async (
     }
 
     if (!extendedUtxo) {
-      throw new Error(`UTXO for location not found: ${action.location}`);
+      throw new Error(`UTXO for outpoint not found: ${outpoint}`);
     }
-
-    // TODO: below needs to be done for split
-    // addressContext.addInput(transaction, extendedUtxo);
-    // context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
 
     if (extendedUtxo.hasInscriptions) {
       spentInscriptionUtxos.push(extendedUtxo);
+    }
+
+    for (const action of outpointActions) {
+      const { location, maxOutputSatsAmount, minOutputSatsAmount, moveToZeroOffset, toAddress } = action;
+
+      // TODO: implement
     }
 
     const inputIndex = transaction.inputsLength - 1;
@@ -255,8 +266,14 @@ export const applySendBtcActionsAndFee = async (
   );
 
   // sort smallest to biggest as we'll be popping off the end
+  // also, inscribed UTXOs are de-prioritized
   unusedPaymentUtxos.sort((a, b) => {
-    // TODO: make sure UTXOs with inscriptions are deprioritised
+    if (a.hasInscriptions && !b.hasInscriptions) {
+      return -1;
+    }
+    if (b.hasInscriptions && !a.hasInscriptions) {
+      return 1;
+    }
     const diff = a.utxo.value - b.utxo.value;
     if (diff !== 0) {
       return diff;

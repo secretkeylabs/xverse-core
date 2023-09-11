@@ -90,7 +90,6 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
   }
 };
 
-// TODO: What if multiple ordinals in 1 UTXO?
 export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (outpoint) {
     const transaction = await compileTransaction(
@@ -101,18 +100,18 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
           toAddress: context.ordinalsAddress.address,
           outpoint,
           combinable: false,
-          spendable: true,
+          spendable: false,
         },
       ],
       feeRate,
     );
     return transaction;
   } else {
-    const ordinalUtxos = ['id:1', 'id:2']; // await context.paymentAddress.getNonOrdinalUtxos();
+    const ordinalUtxos = await context.paymentAddress.getNonOrdinalUtxos();
     const actions = ordinalUtxos.map<SendUtxoAction>((utxo) => ({
       type: ActionType.SEND_UTXO,
       toAddress: context.ordinalsAddress.address,
-      outpoint: utxo,
+      outpoint: utxo.outpoint,
       combinable: false,
       spendable: false,
     }));

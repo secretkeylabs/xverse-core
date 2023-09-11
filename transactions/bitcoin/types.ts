@@ -1,4 +1,4 @@
-export type SupportedAddressType = 'p2tr' | 'p2sh';
+export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
 export enum ActionType {
   SEND_BTC = 'sendBtc',

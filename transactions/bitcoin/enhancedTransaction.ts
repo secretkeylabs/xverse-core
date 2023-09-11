@@ -17,7 +17,9 @@ export class EnhancedTransaction {
   }
 
   set feeRate(feeRate: number) {
-    // TODO: validate feeRate, any side effects? Maybe min/max from context?
+    if (feeRate < 1) {
+      throw new Error('Fee rate must be a natural number');
+    }
     this._feeRate = feeRate;
   }
 
