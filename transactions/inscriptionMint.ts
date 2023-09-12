@@ -261,11 +261,12 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   }
 
   const commitChainFees = bestUtxoData.fee;
+  const satsToSend = new BigNumber(commitValue).plus(serviceFee ?? 0);
 
   const commitTransaction = await generateSignedBtcTransaction(
     privateKey,
     [...selectedNonOrdinalUtxos, ...selectedOrdinalUtxos],
-    new BigNumber(commitValue),
+    satsToSend,
     recipients,
     changeAddress,
     new BigNumber(commitChainFees),

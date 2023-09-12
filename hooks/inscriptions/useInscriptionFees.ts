@@ -30,14 +30,6 @@ const DUMMY_UTXO = {
   value: 100e8,
 };
 
-/**
- * Estimates the fees for a BRC-20 1-step transfer
- * @param addressUtxos - The UTXOs in the bitcoin address which will be used for payment
- * @param content - The content of the inscription
- * @param contentType - The contentType of the inscription
- * @param feeRate - The desired fee rate for the transactions
- * @param revealAddress - The address where the balance of the BRC-20 token lives. This is usually the ordinals address.
- */
 const useInscriptionFees = (props: Props) => {
   const {
     addressUtxos,
