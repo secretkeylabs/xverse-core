@@ -238,6 +238,8 @@ export const applySplitUtxoActions = async (
       const offset = getOffsetFromLocation(location);
       const offsetFromCurrent = offset - currentOffset;
 
+      // TODO: add locations in a list and move output UTXOs around until all fit. Throw error if unachievable.
+
       context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
     }
 
