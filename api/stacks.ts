@@ -52,6 +52,8 @@ import {
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
 import { getNftDetail } from './gamma';
 
+// TODO: these methods needs to be refactored
+// reference https://github.com/secretkeylabs/xverse-core/pull/217/files#r1298242728
 export async function getConfirmedTransactions({
   stxAddress,
   network,
