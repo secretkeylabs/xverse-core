@@ -75,11 +75,59 @@ export async function checkAccountActivity(
   return btcTxHistory.length !== 0;
 }
 
+const getAccountFromWalletConfig = async ({
+  existingAccount,
+  master,
+  masterPubKey,
+  rootNode,
+  selectedNetwork,
+  networkObject,
+  index,
+}: {
+  existingAccount?: Account;
+  master: BIP32Interface;
+  masterPubKey: string;
+  rootNode: BIP32Interface;
+  selectedNetwork: SettingsNetwork;
+  networkObject: StacksNetwork;
+  index: number;
+}) => {
+  if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
+    const response = await getWalletFromRootNode({
+      index: BigInt(index),
+      network: selectedNetwork.type,
+      rootNode,
+      master,
+    });
+    const username = await getBnsName(response.stxAddress, networkObject);
+    existingAccount = {
+      id: index,
+      stxAddress: response.stxAddress,
+      btcAddress: response.btcAddress,
+      ordinalsAddress: response.ordinalsAddress,
+      masterPubKey,
+      stxPublicKey: response.stxPublicKey,
+      btcPublicKey: response.btcPublicKey,
+      ordinalsPublicKey: response.ordinalsPublicKey,
+      bnsName: username,
+      accountType: 'software',
+    };
+    return existingAccount;
+  } else {
+    const userName = await getBnsName(existingAccount.stxAddress, networkObject);
+    return {
+      ...existingAccount,
+      bnsName: userName,
+    };
+  }
+};
+
 export async function restoreWalletWithAccounts(
   mnemonic: string,
   selectedNetwork: SettingsNetwork,
   networkObject: StacksNetwork,
   currentAccounts: Account[],
+  isMobile?: boolean,
 ): Promise<Account[]> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
@@ -89,46 +137,48 @@ export async function restoreWalletWithAccounts(
     currentAccounts,
     rootNode,
   });
-  if (walletConfig && walletConfig.accounts.length > 0) {
-    const newAccounts: Account[] = await Promise.all(
-      walletConfig.accounts.map(async (_, index) => {
-        let existingAccount: Account = currentAccounts[index];
-        if (!existingAccount || !existingAccount.ordinalsAddress || !existingAccount.ordinalsPublicKey) {
-          const master = bip32.fromSeed(seed);
-          const masterPubKey = master.publicKey.toString('hex');
 
-          const response = await getWalletFromRootNode({
-            index: BigInt(index),
-            network: selectedNetwork.type,
-            rootNode,
-            master,
-          });
-          const username = await getBnsName(response.stxAddress, networkObject);
-          existingAccount = {
-            id: index,
-            stxAddress: response.stxAddress,
-            btcAddress: response.btcAddress,
-            ordinalsAddress: response.ordinalsAddress,
-            masterPubKey,
-            stxPublicKey: response.stxPublicKey,
-            btcPublicKey: response.btcPublicKey,
-            ordinalsPublicKey: response.ordinalsPublicKey,
-            bnsName: username,
-            accountType: 'software',
-          };
-          return existingAccount;
-        } else {
-          const userName = await getBnsName(existingAccount.stxAddress, networkObject);
-          return {
-            ...existingAccount,
-            bnsName: userName,
-          };
-        }
-      }),
-    );
+  // If no accounts are found in the wallet config, return the current accounts
+  if (!walletConfig?.accounts.length) {
+    return currentAccounts;
+  }
+
+  const master = bip32.fromSeed(seed);
+  const masterPubKey = master.publicKey.toString('hex');
+
+  // for mobile, we need a for loop to get the accounts
+  // because it allows the js thread to breathe between each account
+  if (isMobile) {
+    const newAccounts: Account[] = [];
+    for (let index = 0; index < walletConfig.accounts.length; index++) {
+      const account = await getAccountFromWalletConfig({
+        existingAccount: currentAccounts[index],
+        master,
+        masterPubKey,
+        rootNode,
+        selectedNetwork,
+        networkObject,
+        index,
+      });
+      newAccounts.push(account);
+    }
     return newAccounts;
   }
-  return currentAccounts;
+
+  const newAccounts: Account[] = await Promise.all(
+    walletConfig.accounts.map((_, index) =>
+      getAccountFromWalletConfig({
+        existingAccount: currentAccounts[index],
+        master,
+        masterPubKey,
+        rootNode,
+        selectedNetwork,
+        networkObject,
+        index,
+      }),
+    ),
+  );
+  return newAccounts;
 }
 
 export async function createWalletAccount(
