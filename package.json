@@ -3,6 +3,9 @@
   "version": "1.7.0",
   "description": "",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.0.2",
     "@noble/secp256k1": "^1.7.1",
