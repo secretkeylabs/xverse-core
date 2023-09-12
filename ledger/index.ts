@@ -9,12 +9,12 @@ import {
   makeLedgerCompatibleUnsignedAuthResponsePayload,
   signStxJWTAuth,
 } from './helper';
-import { Bip32Derivation, LedgerStxJWTAuthProfile, TapBip32Derivation, Transport } from './types';
+import { Bip32Derivation, LedgerStxJWTAuthProfile, TapBip32Derivation, Transport, LedgerErrors } from './types';
 import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import { StacksTransaction, AddressVersion } from '@stacks/transactions';
 import {
   getTransactionData,
-  addSignitureToStxTransaction,
+  addSignatureToStxTransaction,
   createNativeSegwitPsbt,
   createTaprootPsbt,
   createMixedPsbt,
@@ -521,6 +521,10 @@ export async function signSimpleBip322Message({
 /**
  * This function is used to get the stx account data from the ledger
  * @param transport - the transport object with connected ledger device
+ * @param network - the network type (Mainnet or Testnet)
+ * @param accountIndex - the account index of the account to sign with
+ * @param addressIndex - the index of the account address to sign with
+ * @param showAddress - show address on the wallet's screen
  * @returns the address and the public key in compressed format
  * */
 export async function importStacksAccountFromLedger(
@@ -528,13 +532,18 @@ export async function importStacksAccountFromLedger(
   network: NetworkType,
   accountIndex = 0,
   addressIndex = 0,
+  showAddress = false,
 ): Promise<{ address: string; publicKey: string }> {
   const appStacks = new StacksApp(transport);
+  const path = `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
+  const version = network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig;
+  const { address, publicKey } = showAddress
+    ? await appStacks.showAddressAndPubKey(path, version)
+    : await appStacks.getAddressAndPubKey(path, version);
 
-  const { address, publicKey } = await appStacks.getAddressAndPubKey(
-    `m/44'/5757'/${accountIndex}'/0/${addressIndex}`,
-    network === 'Mainnet' ? AddressVersion.MainnetSingleSig : AddressVersion.TestnetSingleSig,
-  );
+  if (!publicKey) {
+    throw new Error(LedgerErrors.NO_PUBLIC_KEY);
+  }
 
   return { address, publicKey: publicKey.toString('hex') };
 }
@@ -542,20 +551,19 @@ export async function importStacksAccountFromLedger(
 /**
  * This function is used to sign a Stacks transaction with the ledger
  * @param transport - the transport object with connected ledger device
- * @param transaction - the transaction to sign
+ * @param transactionBuffer - the transaction to sign
  * @param addressIndex - the address index of the account to sign with
  * @returns the signed transaction ready to be broadcasted
  * */
 export async function signLedgerStxTransaction(
   transport: Transport,
-  transaction: StacksTransaction,
+  transactionBuffer: Buffer,
   addressIndex: number,
 ): Promise<StacksTransaction> {
   const appStacks = new StacksApp(transport);
   const path = `m/44'/5757'/${0}'/0/${addressIndex}`;
-  const transactionBuffer = transaction.serialize();
   const resp = await appStacks.sign(path, transactionBuffer);
-  const signedTx = addSignitureToStxTransaction(transactionBuffer, resp.signatureVRS);
+  const signedTx = addSignatureToStxTransaction(transactionBuffer, resp.signatureVRS);
 
   return signedTx; // TX ready to be broadcast
 }

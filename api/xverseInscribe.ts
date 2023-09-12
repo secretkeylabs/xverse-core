@@ -9,6 +9,12 @@ import {
   Brc20ExecuteOrderResponse,
   Brc20FinalizeTransferOrderRequest,
   Brc20FinalizeTransferOrderResponse,
+  InscriptionCostEstimateRequest,
+  InscriptionCostEstimateResponse,
+  InscriptionCreateOrderRequest,
+  InscriptionCreateOrderResponse,
+  InscriptionExecuteOrderRequest,
+  InscriptionExecuteOrderResponse,
   NetworkType,
 } from 'types';
 
@@ -17,6 +23,26 @@ import { XVERSE_INSCRIBE_URL } from '../constant';
 const apiClient = axios.create({
   baseURL: XVERSE_INSCRIBE_URL,
 });
+
+const getInscriptionFeeEstimate = async (
+  requestBody: InscriptionCostEstimateRequest,
+): Promise<InscriptionCostEstimateResponse> => {
+  const response = await apiClient.post<InscriptionCostEstimateResponse>('/v1/inscriptions/cost-estimate', requestBody);
+  return response.data;
+};
+
+const createInscriptionOrder = async (
+  requestBody: InscriptionCreateOrderRequest,
+): Promise<InscriptionCreateOrderResponse> => {
+  const response = await apiClient.post<InscriptionCreateOrderResponse>('/v1/inscriptions/place-order', requestBody);
+  return response.data;
+};
+const executeInscriptionOrder = async (
+  requestBody: InscriptionExecuteOrderRequest,
+): Promise<InscriptionExecuteOrderResponse> => {
+  const response = await apiClient.post<InscriptionExecuteOrderResponse>('/v1/inscriptions/execute-order', requestBody);
+  return response.data;
+};
 
 const getBrc20TransferFees = async (
   tick: string,
@@ -169,6 +195,9 @@ const finalizeBrc20TransferOrder = async (
 };
 
 export default {
+  getInscriptionFeeEstimate,
+  createInscriptionOrder,
+  executeInscriptionOrder,
   getBrc20TransferFees,
   createBrc20TransferOrder,
   getBrc20MintFees,
