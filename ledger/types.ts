@@ -1,5 +1,3 @@
-import { StacksNetwork } from '@stacks/network';
-import { AnchorMode } from '@stacks/transactions';
 import AppClient from 'ledger-bitcoin';
 
 export type Transport = ConstructorParameters<typeof AppClient>[0];
@@ -19,4 +17,8 @@ export interface LedgerStxJWTAuthProfile {
     mainnet: string;
     testnet: string;
   };
+}
+
+export enum LedgerErrors {
+  NO_PUBLIC_KEY = 'No public key returned from Ledger device',
 }

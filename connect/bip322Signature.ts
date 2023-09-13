@@ -1,10 +1,10 @@
 import * as secp256k1 from '@noble/secp256k1';
-import { base64, hex } from '@scure/base';
+import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
-import { signAsync, verify } from 'bitcoinjs-message';
+import { signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
@@ -147,18 +147,4 @@ export const signBip322Message = async ({
   } else {
     throw new Error("Couldn't sign Message");
   }
-};
-
-export const verifySignature = (address: string, message: string, signature: string) => {
-  if (!address) throw new Error('Invalid Address');
-  const { type } = getAddressInfo(address);
-  if (type === AddressType.p2sh) {
-    return verify(message, address, signature);
-  }
-  const decodedSignature = base64.decode(signature).slice(2);
-  if (!decodedSignature) throw new Error('Malformed Signature');
-  const msgHash = bip0322Hash(message);
-  const pk = secp256k1.recoverPublicKey(msgHash, decodedSignature, 1);
-  const isValid = secp256k1.verify(decodedSignature, msgHash, pk, { strict: false });
-  return isValid;
 };

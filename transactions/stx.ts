@@ -51,6 +51,12 @@ import {
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import BigNumber from 'bignumber.js';
+
+export interface StacksRecipient {
+  address: string;
+  amountMicrostacks: BigNumber;
+}
 
 export async function signTransaction(
   unsignedTx: StacksTransaction,
