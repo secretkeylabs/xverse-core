@@ -25,9 +25,6 @@ export type SplitUtxoAction = {
   type: ActionType.SPLIT_UTXO;
   toAddress: string;
   location: string;
-  minOutputSatsAmount?: number;
-  maxOutputSatsAmount?: number;
-  moveToZeroOffset: boolean;
 };
 
 export type Action = SendBtcAction | SendUtxoAction | SplitUtxoAction;

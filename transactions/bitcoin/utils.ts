@@ -13,7 +13,7 @@ import {
   SplitUtxoAction,
 } from './types';
 
-const DUST_VALUE = 1000n;
+const DUST_VALUE = 546;
 
 type SignAction = (transaction: Transaction) => Promise<void>;
 type SignActions = SignAction[];
@@ -166,8 +166,10 @@ export const applySendUtxoActions = async (
     addressContext.addInput(transaction, extendedUtxo, options);
 
     if (!action.spendable) {
-      // if actions are spendable, then we assume all are to the payment address, so
-      // any funds would go to the payment address as change at the end, so no need for an output
+      // we have a validator to ensure that if an action is spendable, then all must be spendable
+      // and are to the payment address (for UTXO consolidation)
+      // so, any funds would go to the payment address as change at the end, so no need for an output
+      // so, we only add an output for non-spendable actions
       context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
     }
 
@@ -182,7 +184,6 @@ export const applySendUtxoActions = async (
   return { signActionList, spentInscriptionUtxos };
 };
 
-// TODO: finish
 export const applySplitUtxoActions = async (
   context: TransactionContext,
   options: CompilationOptions,
@@ -224,25 +225,36 @@ export const applySplitUtxoActions = async (
 
     addressContext.addInput(transaction, extendedUtxo, options);
 
+    // sort from smallest to biggest
     outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
 
-    // we make a collection of graphs of an action to the next action so we can calculate the distance between them
-    const outpointActionGraph = outpointActions.map((action, index) => {
-      return [action, outpointActions[index + 1]] as [SplitUtxoAction, SplitUtxoAction | undefined];
-    });
-
-    const currentOffset = 0;
-    for (const [action, nextAction] of outpointActionGraph) {
-      const { location, maxOutputSatsAmount, minOutputSatsAmount, moveToZeroOffset, toAddress } = action;
-
+    for (let i = 0; i < outpointActions.length; i++) {
+      const action = outpointActions[i];
+      const { location, toAddress } = action;
       const offset = getOffsetFromLocation(location);
-      const offsetFromCurrent = offset - currentOffset;
 
-      // TODO: add locations in a list and move output UTXOs around until all fit. Throw error if unachievable.
+      if (i === 0 && offset > 0) {
+        // if first offset is not 0, then we need to add an output for the remainder from the beginning of the UTXO
+        // This will return to the address where the UTXO is from
+        if (offset < DUST_VALUE) {
+          throw new Error(
+            `Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as it the first output would be below dust`,
+          );
+        }
+        context.addOutputAddress(transaction, extendedUtxo.utxo.address, BigInt(offset));
+      }
 
-      context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
+      const nextAction = outpointActions[i + 1];
+      const outputEndOffset = nextAction ? getOffsetFromLocation(nextAction.location) : extendedUtxo.utxo.value;
+
+      // validate there are enough sats
+      if (outputEndOffset - offset < DUST_VALUE) {
+        throw new Error(`Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as there are not enough sats`);
+      }
+      context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
     }
 
+    // add input signing
     const inputIndex = transaction.inputsLength - 1;
     signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
@@ -341,6 +353,7 @@ export const applySendBtcActionsAndFee = async (
   let complete = false;
   let actualFee = 0n;
 
+  // TODO: try pre-empt the fee so that we don't generate a lot of txns
   while (!complete) {
     const currentChange = totalSent - totalToSend;
 
