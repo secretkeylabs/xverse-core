@@ -1,14 +1,14 @@
 export type StorageAdapter = {
   get(key: string): Promise<string> | string | null;
   set(key: string, value: string): Promise<void> | void;
-}
+};
 
-export type CryptoUtilsAdapter =  {
+export type CryptoUtilsAdapter = {
   encrypt(data: string, password: string): Promise<string>;
   decrypt(data: string, password: string): Promise<string>;
   hash(data: string, salt: string): Promise<string>;
-  generateRandomBytes(length: number): string;
-}
+  generateRandomBytes(length: number): string | Promise<string>;
+};
 
 export type SeedVaultConfig = {
   secureStorageAdapter: StorageAdapter;
@@ -40,7 +40,7 @@ class SeedVault {
 
   init = async (password: string) => {
     this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
-    const salt = this._cryptoUtilsAdapter.generateRandomBytes(32);
+    const salt = await this._cryptoUtilsAdapter.generateRandomBytes(32);
     if (!salt) throw new Error('Salt not set');
     const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
     if (!passwordHash) throw new Error('Password hash not set');
@@ -59,7 +59,7 @@ class SeedVault {
   getSeed = async () => {
     const passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
     if (!passwordHash) {
-        throw new Error('passwordHash not set');
+      throw new Error('passwordHash not set');
     }
     const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
     if (!encryptedSeed) throw new Error('Seed not set');
@@ -81,23 +81,23 @@ class SeedVault {
 
   unlockVault = async (password: string): Promise<string> => {
     try {
-    const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
-    const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
-    if (salt && encryptedSeed) {
-      const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
-      const seedPhrase = await this._cryptoUtilsAdapter.decrypt(encryptedSeed, passwordHash as string);
-      await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
-      return seedPhrase;
-    } else {
-      throw new Error('empty vault');
-    }
+      const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
+      const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
+      if (salt && encryptedSeed) {
+        const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
+        const seedPhrase = await this._cryptoUtilsAdapter.decrypt(encryptedSeed, passwordHash as string);
+        await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+        return seedPhrase;
+      } else {
+        throw new Error('empty vault');
+      }
     } catch (err) {
       if (err.message === 'empty vault') {
         throw err;
       }
       throw new Error('Wrong password');
     }
-  }
+  };
 
   lockVault = async () => {
     const seed = await this.getSeed();
