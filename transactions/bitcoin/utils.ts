@@ -154,6 +154,7 @@ export const applySendUtxoActions = async (
   const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
+  const spentUnconfirmedUtxos: ExtendedUtxo[] = [];
 
   for (const action of actions) {
     const { extendedUtxo, addressContext } = await context.getUtxo(action.outpoint);
@@ -179,12 +180,15 @@ export const applySendUtxoActions = async (
     if (extendedUtxo.hasInscriptions) {
       spentInscriptionUtxos.push(extendedUtxo);
     }
+    if (extendedUtxo.utxo.status.confirmed === false) {
+      spentUnconfirmedUtxos.push(extendedUtxo);
+    }
 
     const inputIndex = transaction.inputsLength - 1;
     signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
-  return { signActionList, spentInscriptionUtxos };
+  return { signActionList, spentInscriptionUtxos, spentUnconfirmedUtxos };
 };
 
 export const applySplitUtxoActions = async (
@@ -196,6 +200,7 @@ export const applySplitUtxoActions = async (
   const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
+  const spentUnconfirmedUtxos: ExtendedUtxo[] = [];
 
   // group actions by UTXO
   const outpointActionMap = actions.reduce((map, action) => {
@@ -224,6 +229,9 @@ export const applySplitUtxoActions = async (
 
     if (extendedUtxo.hasInscriptions) {
       spentInscriptionUtxos.push(extendedUtxo);
+    }
+    if (extendedUtxo.utxo.status.confirmed === false) {
+      spentUnconfirmedUtxos.push(extendedUtxo);
     }
 
     addressContext.addInput(transaction, extendedUtxo, options);
@@ -266,7 +274,7 @@ export const applySplitUtxoActions = async (
     signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
-  return { signActionList, spentInscriptionUtxos };
+  return { signActionList, spentInscriptionUtxos, spentUnconfirmedUtxos };
 };
 
 export const applySendBtcActionsAndFee = async (
@@ -279,6 +287,7 @@ export const applySendBtcActionsAndFee = async (
 ) => {
   const signActionList: SignActions = [];
   const spentInscriptionUtxos: ExtendedUtxo[] = [];
+  const spentUnconfirmedUtxos: ExtendedUtxo[] = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
 
   // compile amounts to send to each address
@@ -301,25 +310,31 @@ export const applySendBtcActionsAndFee = async (
   }
 
   // get available UTXOs to spend
-  const unusedPaymentUtxos = (await context.getSpendableUtxos()).filter(
-    (utxoData) => !usedOutpoints.has(utxoData.extendedUtxo.outpoint),
+  const unusedPaymentUtxos = (await context.paymentAddress.getNonOrdinalUtxos()).filter(
+    (utxoData) => !usedOutpoints.has(utxoData.outpoint),
   );
 
   // sort smallest to biggest as we'll be popping off the end
-  // also, inscribed UTXOs are de-prioritized
+  // also, unconfirmed and inscribed UTXOs are de-prioritized
   unusedPaymentUtxos.sort((a, b) => {
-    if (a.extendedUtxo.hasInscriptions && !b.extendedUtxo.hasInscriptions) {
+    if (a.hasInscriptions && !b.hasInscriptions) {
       return -1;
     }
-    if (b.extendedUtxo.hasInscriptions && !a.extendedUtxo.hasInscriptions) {
+    if (b.hasInscriptions && !a.hasInscriptions) {
       return 1;
     }
-    const diff = a.extendedUtxo.utxo.value - b.extendedUtxo.utxo.value;
+    const diff = a.utxo.value - b.utxo.value;
     if (diff !== 0) {
       return diff;
     }
+    if (a.utxo.status.confirmed && !b.utxo.status.confirmed) {
+      return 1;
+    }
+    if (b.utxo.status.confirmed && !a.utxo.status.confirmed) {
+      return -1;
+    }
     // this is just for consistent sorting
-    return a.extendedUtxo.outpoint.localeCompare(b.extendedUtxo.outpoint);
+    return a.outpoint.localeCompare(b.outpoint);
   });
 
   // add inputs and outputs for the required actions
@@ -343,16 +358,19 @@ export const applySendBtcActionsAndFee = async (
         throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
       }
 
-      totalSent += BigInt(utxoToUse.extendedUtxo.utxo.value);
+      totalSent += BigInt(utxoToUse.utxo.value);
 
-      utxoToUse.addressContext.addInput(transaction, utxoToUse.extendedUtxo, options);
+      context.paymentAddress.addInput(transaction, utxoToUse, options);
 
-      if (utxoToUse.extendedUtxo.hasInscriptions) {
-        spentInscriptionUtxos.push(utxoToUse.extendedUtxo);
+      if (utxoToUse.hasInscriptions) {
+        spentInscriptionUtxos.push(utxoToUse);
+      }
+      if (utxoToUse.utxo.status.confirmed === false) {
+        spentUnconfirmedUtxos.push(utxoToUse);
       }
 
       const inputIndex = transaction.inputsLength - 1;
-      signActionList.push((txn) => utxoToUse.addressContext.signInput(txn, inputIndex));
+      signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
     }
   }
 
@@ -409,16 +427,19 @@ export const applySendBtcActionsAndFee = async (
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }
 
-    totalSent += BigInt(utxoToUse.extendedUtxo.utxo.value);
-    utxoToUse.addressContext.addInput(transaction, utxoToUse.extendedUtxo, options);
+    totalSent += BigInt(utxoToUse.utxo.value);
+    context.paymentAddress.addInput(transaction, utxoToUse, options);
 
-    if (utxoToUse.extendedUtxo.hasInscriptions) {
-      spentInscriptionUtxos.push(utxoToUse.extendedUtxo);
+    if (utxoToUse.hasInscriptions) {
+      spentInscriptionUtxos.push(utxoToUse);
+    }
+    if (utxoToUse.utxo.status.confirmed === false) {
+      spentUnconfirmedUtxos.push(utxoToUse);
     }
 
     const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => utxoToUse.addressContext.signInput(txn, inputIndex));
+    signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
   }
 
-  return { actualFee, signActions: signActionList, spentInscriptionUtxos };
+  return { actualFee, signActions: signActionList, spentInscriptionUtxos, spentUnconfirmedUtxos };
 };

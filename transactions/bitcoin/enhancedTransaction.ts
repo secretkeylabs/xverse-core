@@ -65,16 +65,23 @@ export class EnhancedTransaction {
       }
     }
 
-    const { signActionList: sendUtxoSignActions, spentInscriptionUtxos: sendUtxoSpentInscriptionUtxos } =
-      await applySendUtxoActions(this._context, options, transaction, this._actions[ActionType.SEND_UTXO]);
+    const {
+      signActionList: sendUtxoSignActions,
+      spentInscriptionUtxos: sendUtxoSpentInscriptionUtxos,
+      spentUnconfirmedUtxos: sendUtxoSpentUnconfirmedUtxos,
+    } = await applySendUtxoActions(this._context, options, transaction, this._actions[ActionType.SEND_UTXO]);
 
-    const { signActionList: splitSignActions, spentInscriptionUtxos: splitSignSpentInscriptionUtxos } =
-      await applySplitUtxoActions(this._context, options, transaction, this._actions[ActionType.SPLIT_UTXO]);
+    const {
+      signActionList: splitSignActions,
+      spentInscriptionUtxos: splitSpentInscriptionUtxos,
+      spentUnconfirmedUtxos: splitSpentUnconfirmedUtxos,
+    } = await applySplitUtxoActions(this._context, options, transaction, this._actions[ActionType.SPLIT_UTXO]);
 
     const {
       actualFee,
       signActions: sendBtcSignActions,
       spentInscriptionUtxos: sendBtcSpentInscriptionUtxos,
+      spentUnconfirmedUtxos: sendBtcSpentUnconfirmedUtxos,
     } = await applySendBtcActionsAndFee(
       this._context,
       options,
@@ -96,14 +103,21 @@ export class EnhancedTransaction {
       transaction,
       spentInscriptionUtxos: [
         ...sendUtxoSpentInscriptionUtxos,
-        ...splitSignSpentInscriptionUtxos,
+        ...splitSpentInscriptionUtxos,
         ...sendBtcSpentInscriptionUtxos,
+      ],
+      spentUnconfirmedUtxos: [
+        ...sendUtxoSpentUnconfirmedUtxos,
+        ...splitSpentUnconfirmedUtxos,
+        ...sendBtcSpentUnconfirmedUtxos,
       ],
     };
   }
 
   async getFeeSummary(options: CompilationOptions = {}) {
-    const { actualFee, transaction, spentInscriptionUtxos } = await this.compile(getOptionsWithDefaults(options));
+    const { actualFee, transaction, spentInscriptionUtxos, spentUnconfirmedUtxos } = await this.compile(
+      getOptionsWithDefaults(options),
+    );
 
     const vsize = transaction.vsize;
 
@@ -112,6 +126,7 @@ export class EnhancedTransaction {
       feeRate: new BigNumber(actualFee.toString()).dividedBy(vsize).toNumber(),
       vsize,
       spentInscriptionUtxos,
+      spentUnconfirmedUtxos,
     };
 
     return feeSummary;
