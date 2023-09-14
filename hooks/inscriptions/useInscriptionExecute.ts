@@ -16,6 +16,8 @@ type Props = {
   contentType: string;
   feeRate: number;
   network: NetworkType;
+  serviceFee?: number;
+  serviceFeeAddress?: string;
 };
 
 const useInscriptionExecute = (props: Props) => {
@@ -30,6 +32,8 @@ const useInscriptionExecute = (props: Props) => {
     changeAddress,
     feeRate,
     network,
+    serviceFee,
+    serviceFeeAddress,
   } = props;
   const [running, setRunning] = useState(false);
   const [revealTransactionId, setRevealTransactionId] = useState<string | undefined>();
@@ -50,6 +54,8 @@ const useInscriptionExecute = (props: Props) => {
       contentString,
       feeRate,
       network,
+      serviceFee,
+      serviceFeeAddress,
     };
 
     // if we get to here, that means that the transfer is valid and we can try to execute it but we don't want to
@@ -88,6 +94,8 @@ const useInscriptionExecute = (props: Props) => {
     network,
     running,
     revealTransactionId,
+    serviceFee,
+    serviceFeeAddress,
   ]);
 
   return {
