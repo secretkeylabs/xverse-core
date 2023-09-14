@@ -270,12 +270,16 @@ export class TransactionContext {
     return this._changeAddress;
   }
 
+  get network(): NetworkType {
+    return this._network;
+  }
+
   constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint, changeAddress: string) {
     this._addresses = [];
     this._network = network;
     this._changeAddress = changeAddress;
 
-    // TODO: update the arg type for this instead of calculating it here
+    // TODO: update the arg type for this instead of calculating it here. Maybe once we have seed vault.
     const addressData = [
       {
         address: wallet.btcAddress,

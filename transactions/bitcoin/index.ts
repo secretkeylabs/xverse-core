@@ -41,27 +41,20 @@ export const sendBtc = async (
  * - An inscription exists in a large UTXO (e.g. 10k sats) and we want to use those extra sats as fees or as change
  * - We want to move an inscription to offset of 0
  */
+// TODO: revisit
 export const sendOrdinal = async (
   context: TransactionContext,
   recipients: {
     toAddress: string;
     location: string;
-    minOutputSatsAmount: number;
-    maxOutputSatsAmount: number;
-    moveToZeroOffset?: boolean;
   }[],
   feeRate: number,
 ) => {
-  const actions = recipients.map<SplitUtxoAction>(
-    ({ toAddress, location, minOutputSatsAmount, maxOutputSatsAmount, moveToZeroOffset }) => ({
-      type: ActionType.SPLIT_UTXO,
-      toAddress,
-      location,
-      minOutputSatsAmount,
-      maxOutputSatsAmount,
-      moveToZeroOffset: moveToZeroOffset ?? true,
-    }),
-  );
+  const actions = recipients.map<SplitUtxoAction>(({ toAddress, location }) => ({
+    type: ActionType.SPLIT_UTXO,
+    toAddress,
+    location,
+  }));
   const transaction = await compileTransaction(context, actions, feeRate);
   return transaction;
 };
@@ -152,6 +145,7 @@ export const recoverOrdinal = async (
   }
 };
 
+// TODO: revisit
 export const extractOrdinal = async (
   context: TransactionContext,
   sats: { location: string; satsAmount: number }[],

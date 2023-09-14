@@ -12,6 +12,9 @@ import {
   SendUtxoAction,
   SplitUtxoAction,
 } from './types';
+// these are conservative estimates
+const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
+const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
 
 const DUST_VALUE = 546;
 
@@ -233,6 +236,10 @@ export const applySplitUtxoActions = async (
       const { location, toAddress } = action;
       const offset = getOffsetFromLocation(location);
 
+      if (offset < 0) {
+        throw new Error(`Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as it is negative`);
+      }
+
       if (i === 0 && offset > 0) {
         // if first offset is not 0, then we need to add an output for the remainder from the beginning of the UTXO
         // This will return to the address where the UTXO is from
@@ -353,40 +360,47 @@ export const applySendBtcActionsAndFee = async (
   let complete = false;
   let actualFee = 0n;
 
-  // TODO: try pre-empt the fee so that we don't generate a lot of txns
   while (!complete) {
     const currentChange = totalSent - totalToSend;
 
-    const vSizeWithChange = await getTransactionVSize(
-      context,
-      transaction,
-      [...previousSignActionList, ...signActionList],
-      true,
-    );
+    // use this to get a conservative estimate of the fees so we don't compile too many transactions below
+    const totalEstimatedFee =
+      (transaction.inputsLength * ESTIMATED_VBYTES_PER_INPUT +
+        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT) *
+      feeRate;
 
-    if (vSizeWithChange) {
-      const feeWithChange = BigInt(vSizeWithChange * feeRate);
+    if (totalEstimatedFee < currentChange) {
+      const vSizeWithChange = await getTransactionVSize(
+        context,
+        transaction,
+        [...previousSignActionList, ...signActionList],
+        true,
+      );
 
-      if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
-        actualFee = feeWithChange;
-        context.addOutputAddress(transaction, context.changeAddress, currentChange - feeWithChange);
-        complete = true;
-        break;
+      if (vSizeWithChange) {
+        const feeWithChange = BigInt(vSizeWithChange * feeRate);
+
+        if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
+          actualFee = feeWithChange;
+          context.addOutputAddress(transaction, context.changeAddress, currentChange - feeWithChange);
+          complete = true;
+          break;
+        }
       }
-    }
 
-    const vSizeNoChange = await getTransactionVSize(context, transaction, [
-      ...previousSignActionList,
-      ...signActionList,
-    ]);
+      const vSizeNoChange = await getTransactionVSize(context, transaction, [
+        ...previousSignActionList,
+        ...signActionList,
+      ]);
 
-    if (vSizeNoChange) {
-      const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
+      if (vSizeNoChange) {
+        const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
-      if (feeWithoutChange < currentChange) {
-        actualFee = currentChange;
-        complete = true;
-        break;
+        if (feeWithoutChange < currentChange) {
+          actualFee = currentChange;
+          complete = true;
+          break;
+        }
       }
     }
 
