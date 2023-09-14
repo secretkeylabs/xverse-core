@@ -5,6 +5,7 @@ describe('SeedVault', () => {
   const secureStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
+    remove: vi.fn(),
   };
   const cryptoUtilsAdapter = {
     encrypt: vi.fn(),
@@ -15,6 +16,7 @@ describe('SeedVault', () => {
   const commonStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
+    remove: vi.fn(),
   };
   const config: SeedVaultConfig = {
     secureStorageAdapter,
@@ -112,7 +114,8 @@ describe('SeedVault', () => {
     const newPassword = 'newPassword';
     const seedPhrase = 'seedPhrase';
     it('should change the password if the old password is correct', async () => {
-      vi.spyOn(seedVault, 'unlockVault').mockResolvedValueOnce(seedPhrase);
+      vi.spyOn(seedVault, 'unlockVault').mockResolvedValueOnce(undefined);
+      vi.spyOn(seedVault, 'getSeed').mockResolvedValueOnce(seedPhrase);
       vi.spyOn(seedVault, 'init').mockResolvedValue(undefined);
       vi.spyOn(seedVault, 'storeSeed').mockResolvedValue(undefined);
 
@@ -173,7 +176,7 @@ describe('SeedVault', () => {
   });
 
   describe('unlockVault', () => {
-    it('should return the seed phrase if the password is correct', async () => {
+    it('should unlock the vault if the password is correct', async () => {
       vi.spyOn(commonStorageAdapter, 'get').mockImplementation(async (key: string) => {
         if (key === SeedVaultStorageKeys.ENCRYPTED_KEY) {
           return encryptedSeed;
@@ -187,9 +190,8 @@ describe('SeedVault', () => {
       vi.spyOn(cryptoUtilsAdapter, 'decrypt').mockResolvedValueOnce(seed);
       vi.spyOn(secureStorageAdapter, 'set').mockResolvedValueOnce(undefined);
 
-      const result = await seedVault.unlockVault(password);
+      await seedVault.unlockVault(password);
 
-      expect(result).toBe(seed);
       expect(commonStorageAdapter.get).toHaveBeenCalledTimes(2);
       expect(commonStorageAdapter.get).toHaveBeenCalledWith(SeedVaultStorageKeys.ENCRYPTED_KEY);
       expect(commonStorageAdapter.get).toHaveBeenCalledWith(SeedVaultStorageKeys.PASSWORD_SALT);
@@ -235,6 +237,28 @@ describe('SeedVault', () => {
       expect(cryptoUtilsAdapter.hash).toHaveBeenCalledWith(wrongPassword, salt);
       expect(cryptoUtilsAdapter.decrypt).toHaveBeenCalled();
       expect(secureStorageAdapter.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('isVaultUnlocked', () => {
+    it('should return true if the vault is unlocked', async () => {
+      secureStorageAdapter.get.mockResolvedValueOnce('passwordHash');
+      const isUnlocked = await seedVault.isVaultUnlocked();
+      expect(isUnlocked).toBe(true);
+    });
+
+    it('should return false if the vault is locked', async () => {
+      secureStorageAdapter.get.mockResolvedValueOnce(undefined);
+      const isUnlocked = await seedVault.isVaultUnlocked();
+      expect(isUnlocked).toBe(false);
+    });
+  });
+
+  describe('clearVaultStorage', () => {
+    it('should remove all items from storage', async () => {
+      await seedVault.clearVaultStorage();
+      expect(commonStorageAdapter.remove).toHaveBeenCalledTimes(Object.values(SeedVaultStorageKeys).length - 1);
+      expect(secureStorageAdapter.remove).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,6 +1,7 @@
 export type StorageAdapter = {
   get(key: string): Promise<string> | string | null;
   set(key: string, value: string): Promise<void> | void;
+  remove(key: string): Promise<void> | void;
 };
 
 export type CryptoUtilsAdapter = {
@@ -69,7 +70,8 @@ class SeedVault {
   };
 
   changePassword = async (oldPassword: string, newPassword: string) => {
-    const seedPhrase = await this.unlockVault(oldPassword);
+    await this.unlockVault(oldPassword);
+    const seedPhrase = await this.getSeed();
     await this.init(newPassword);
     await this.storeSeed(seedPhrase);
   };
@@ -79,23 +81,24 @@ class SeedVault {
     return !!encryptedSeed;
   };
 
-  unlockVault = async (password: string): Promise<string> => {
-    try {
-      const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
-      const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
-      if (salt && encryptedSeed) {
+  isVaultUnlocked = async () => {
+    const passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
+    return !!passwordHash;
+  };
+
+  unlockVault = async (password: string): Promise<void> => {
+    const encryptedSeed = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
+    const salt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
+    if (salt && encryptedSeed) {
+      try {
         const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
-        const seedPhrase = await this._cryptoUtilsAdapter.decrypt(encryptedSeed, passwordHash as string);
+        await this._cryptoUtilsAdapter.decrypt(encryptedSeed, passwordHash as string);
         await this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
-        return seedPhrase;
-      } else {
-        throw new Error('empty vault');
+      } catch (err) {
+        throw new Error('Wrong password');
       }
-    } catch (err) {
-      if (err.message === 'empty vault') {
-        throw err;
-      }
-      throw new Error('Wrong password');
+    } else {
+      throw new Error('empty vault');
     }
   };
 
@@ -106,6 +109,19 @@ class SeedVault {
     } else {
       throw new Error('Password Hash not set');
     }
+  };
+
+  private removeVaultStorageItem = async (key: SeedVaultStorageKeys) => {
+    if (key === SeedVaultStorageKeys.PASSWORD_HASH) {
+      return this._secureStorageAdapter.remove(key);
+    }
+    return this._commonStorageAdapter.remove(key);
+  };
+
+  clearVaultStorage = async () => {
+    Object.values(SeedVaultStorageKeys).forEach(async (key) => {
+      await this.removeVaultStorageItem(key);
+    });
   };
 }
 export default SeedVault;
