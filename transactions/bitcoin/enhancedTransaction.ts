@@ -1,6 +1,8 @@
 import { Transaction } from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
 
+import EsploraClient from '../../api/esplora/esploraAPiProvider';
+
 import { TransactionContext } from './context';
 import { Action, ActionMap, ActionType, CompilationOptions } from './types';
 import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions, extractActionMap } from './utils';
@@ -126,7 +128,9 @@ export class EnhancedTransaction {
 
     const transactionHex = transaction.hex;
 
-    // TODO broadcast
+    const esploraClient = new EsploraClient({ network: this._context.network });
+
+    await esploraClient.sendRawTransaction(transactionHex);
 
     return transaction.id;
   }
