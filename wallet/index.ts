@@ -13,7 +13,7 @@ import {
   publicKeyToString,
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
-import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
+import { AddressType, getAddressInfo, Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
 import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
@@ -321,3 +321,6 @@ export async function getStxAddressKeyChain(
 }
 
 export { hashMessage };
+
+export const validateBtcAddressIsTaproot = (btcAddress: string): boolean =>
+  getAddressInfo(btcAddress).type === AddressType.p2tr;
