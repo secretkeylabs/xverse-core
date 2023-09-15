@@ -322,5 +322,10 @@ export async function getStxAddressKeyChain(
 
 export { hashMessage };
 
-export const validateBtcAddressIsTaproot = (btcAddress: string): boolean =>
-  getAddressInfo(btcAddress).type === AddressType.p2tr;
+export const validateBtcAddressIsTaproot = (btcAddress: string): boolean => {
+  try {
+    return getAddressInfo(btcAddress)?.type === AddressType.p2tr;
+  } catch {
+    return false;
+  }
+};
