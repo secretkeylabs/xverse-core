@@ -247,10 +247,9 @@ export const applySplitUtxoActions = async (
     // sort from smallest to biggest
     outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
 
-    const utxoInscriptionOffsets = extendedUtxo.inscriptions.map<[string, number]>((inscription) => [
-      inscription.id,
-      +inscription.offset,
-    ]);
+    const utxoInscriptionOffsets = (
+      await Promise.all(extendedUtxo.inscriptions.map((inscriptionItem) => inscriptionItem.inscription))
+    ).map<[string, number]>((inscription) => [inscription.id, +inscription.offset]);
 
     for (let i = 0; i < outpointActions.length; i++) {
       const action = outpointActions[i];
@@ -398,11 +397,16 @@ export const applySendBtcActionsAndFee = async (
 
       totalSent += BigInt(utxoToUse.utxo.value);
 
+      // figure out which inscriptions are being sent and where
       const amountLeftFromUtxo = totalSent > totalToSend ? totalSent - totalToSend : 0n;
       const amountUsedFromUtxo = BigInt(utxoToUse.utxo.value) - amountLeftFromUtxo;
 
-      const usedInscriptionIds = utxoToUse.inscriptions.filter((i) => +i.offset < amountUsedFromUtxo).map((i) => i.id);
-      hangingInscriptionIds = utxoToUse.inscriptions.filter((i) => +i.offset >= amountUsedFromUtxo).map((i) => i.id);
+      const utxoInscriptions = await Promise.all(
+        utxoToUse.inscriptions.map((inscriptionItem) => inscriptionItem.inscription),
+      );
+      const usedInscriptionIds = utxoInscriptions.filter((i) => +i.offset < amountUsedFromUtxo).map((i) => i.id);
+      hangingInscriptionIds = utxoInscriptions.filter((i) => +i.offset >= amountUsedFromUtxo).map((i) => i.id);
+
       if (context.paymentAddress.address === toAddress || context.ordinalsAddress.address === toAddress) {
         returnedInscriptionIds.push(...usedInscriptionIds);
       } else {
@@ -413,6 +417,7 @@ export const applySendBtcActionsAndFee = async (
         spentUnconfirmedUtxos.push(utxoToUse);
       }
 
+      // add input signing actions
       const inputIndex = transaction.inputsLength - 1;
       signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
     }

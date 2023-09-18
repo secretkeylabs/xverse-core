@@ -3,6 +3,7 @@ import * as btc from '@scure/btc-signer';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
+import { getOrdinalIdsFromUtxo } from '../../api/ordinals';
 import OrdinalsProvider from '../../api/ordinals/provider';
 import type { Inscription, NetworkType, UTXO } from '../../types';
 import { BaseWallet } from '../../types/wallet';
@@ -37,12 +38,54 @@ const ordinalsApi = {
   Testnet: ordinalsTestnetProvider,
 };
 
+type InscriptionId = string;
+
+export class InscriptionContext {
+  private _inscription!: Inscription;
+
+  private _id!: InscriptionId;
+
+  private _network!: NetworkType;
+
+  constructor(id: InscriptionId, network: NetworkType) {
+    this._id = id;
+    this._network = network;
+  }
+
+  get id(): InscriptionId {
+    return this._id;
+  }
+
+  get inscription(): Promise<Inscription> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (this._network === 'Testnet') {
+          throw new Error('Inscriptions not available on testnet yet');
+        }
+
+        if (!this._inscription) {
+          this._inscription = await ordinalsApi[this._network].getInscription(this._id);
+        }
+        resolve(this._inscription);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+}
+
 export class ExtendedUtxo {
   private _utxo!: UTXO;
 
   private _outpoint!: string;
 
-  private _inscriptions!: Inscription[];
+  private _inscriptions!: InscriptionContext[];
+
+  constructor(utxo: UTXO, inscriptions: InscriptionId[], network: NetworkType) {
+    this._utxo = utxo;
+    this._outpoint = getOutpointFromUtxo(utxo);
+    this._inscriptions = inscriptions.map((inscriptionId) => new InscriptionContext(inscriptionId, network));
+  }
 
   get outpoint(): string {
     return this._outpoint;
@@ -52,18 +95,12 @@ export class ExtendedUtxo {
     return this._utxo;
   }
 
-  get inscriptions(): Inscription[] {
+  get inscriptions(): InscriptionContext[] {
     return [...this._inscriptions];
   }
 
   get hasInscriptions(): boolean {
     return this._inscriptions.length > 0;
-  }
-
-  constructor(utxo: UTXO, inscriptions: Inscription[]) {
-    this._utxo = utxo;
-    this._outpoint = getOutpointFromUtxo(utxo);
-    this._inscriptions = inscriptions;
   }
 }
 
@@ -83,14 +120,6 @@ export abstract class AddressContext {
 
   protected _accountIndex!: bigint;
 
-  get type(): SupportedAddressType {
-    return this._type;
-  }
-
-  get address(): string {
-    return this._address;
-  }
-
   constructor(
     type: SupportedAddressType,
     address: string,
@@ -107,24 +136,29 @@ export abstract class AddressContext {
     this._accountIndex = accountIndex;
   }
 
+  get type(): SupportedAddressType {
+    return this._type;
+  }
+
+  get address(): string {
+    return this._address;
+  }
+
   async getUtxos(): Promise<ExtendedUtxo[]> {
     if (!this._utxos) {
       const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
-      // TODO: Enable testnet once inscriptions available
-      const ordinals: Inscription[] =
-        this._network === 'Testnet' ? [] : await ordinalsApi[this._network].getAllInscriptions(this._address);
 
-      const ordinalMap = ordinals.reduce(
-        (map, ordinal) => ({
-          ...map,
-          [ordinal.output]: [...(map[ordinal.output] || []), ordinal],
-        }),
-        {} as Record<string, Inscription[]>,
-      );
+      const utxoContexts: ExtendedUtxo[] = [];
 
-      this._utxos = utxos.map((utxo) => {
-        return new ExtendedUtxo(utxo, ordinalMap[utxo.txid] || []);
-      });
+      for (const utxo of utxos) {
+        // TODO: Enable testnet once inscriptions available
+        // TODO: Use UTXO cache
+        const ordinalIds: InscriptionId[] = this._network === 'Testnet' ? [] : await getOrdinalIdsFromUtxo(utxo);
+
+        utxoContexts.push(new ExtendedUtxo(utxo, ordinalIds, this._network));
+      }
+
+      this._utxos = utxoContexts;
     }
 
     return [...this._utxos];
@@ -292,22 +326,6 @@ export class TransactionContext {
 
   private _network!: NetworkType;
 
-  get paymentAddress(): AddressContext {
-    return this._paymentAddress;
-  }
-
-  get ordinalsAddress(): AddressContext {
-    return this._ordinalsAddress;
-  }
-
-  get changeAddress(): string {
-    return this._paymentAddress.address;
-  }
-
-  get network(): NetworkType {
-    return this._network;
-  }
-
   constructor(wallet: BaseWallet, network: NetworkType, accountIndex: bigint) {
     this._paymentAddress = createAddressContext(
       wallet.btcAddress,
@@ -328,6 +346,22 @@ export class TransactionContext {
           );
 
     this._network = network;
+  }
+
+  get paymentAddress(): AddressContext {
+    return this._paymentAddress;
+  }
+
+  get ordinalsAddress(): AddressContext {
+    return this._ordinalsAddress;
+  }
+
+  get changeAddress(): string {
+    return this._paymentAddress.address;
+  }
+
+  get network(): NetworkType {
+    return this._network;
   }
 
   async getUtxo(outpoint: string): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
