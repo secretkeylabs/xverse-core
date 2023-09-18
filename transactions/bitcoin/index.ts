@@ -35,14 +35,14 @@ export const sendBtc = async (
  * send multiple sats to 1 recipient
  * send multiple sats to multiple recipients
  *
- * !Note: this uses split UTXO action. In some cases, we'll probably want to use send UTXO action instead
  * !Note: We use the split UTXO action to cater for the following scenarios:
  * - multiple inscriptions exist in 1 UTXO at different offsets
  * - An inscription exists in a large UTXO (e.g. 10k sats) and we want to use those extra sats as fees or as change
  * - We want to move an inscription to offset of 0
  */
-// TODO: revisit
-export const sendOrdinal = async (
+const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
+const DUST_VALUE = 546; // the value of an inscription we prefer to use
+export const sendOrdinals = async (
   context: TransactionContext,
   recipients: {
     toAddress: string;
@@ -50,13 +50,132 @@ export const sendOrdinal = async (
   }[],
   feeRate: number,
 ) => {
-  const actions = recipients.map<SplitUtxoAction>(({ toAddress, location }) => ({
-    type: ActionType.SPLIT_UTXO,
-    toAddress,
-    location,
-  }));
+  if (recipients.length === 0) {
+    throw new Error('Must provide at least 1 recipient');
+  }
+
+  const utxoToRecipientsMap = recipients.reduce((acc, { location, toAddress }) => {
+    const [transactionId, vout, offsetStr] = location.split(':');
+    const outPoint = `${transactionId}:${vout}`;
+    const offset = +offsetStr;
+
+    if (!acc[outPoint]) {
+      acc[outPoint] = [];
+    }
+
+    acc[outPoint].push({ toAddress, offset, location });
+    acc[outPoint].sort((a, b) => a.offset - b.offset);
+
+    return acc;
+  }, {} as Record<string, { toAddress: string; offset: number; location: string }[]>);
+
+  const actions: (SplitUtxoAction | SendUtxoAction)[] = [];
+
+  for (const [outpoint, recipientCollection] of Object.entries(utxoToRecipientsMap)) {
+    const { extendedUtxo } = await context.getUtxo(outpoint);
+
+    if (!extendedUtxo) {
+      throw new Error(`No utxo found for outpoint ${outpoint}`);
+    }
+
+    // If there is only 1 inscription in the utxo and it's value is less than the minimum value for a split utxo
+    // then we can just send the utxo
+    if (
+      extendedUtxo.inscriptions.length <= 1 &&
+      recipientCollection.length === 1 &&
+      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_VALUE + DUST_VALUE
+    ) {
+      actions.push({
+        type: ActionType.SEND_UTXO,
+        toAddress: recipientCollection[0].toAddress,
+        outpoint,
+        combinable: false,
+        spendable: false,
+      });
+      continue;
+    }
+
+    recipientCollection.sort((a, b) => a.offset - b.offset);
+
+    // calculate and preprocess action limits
+    const recipientCollectionWithLimits = recipientCollection.map((recipient) => ({
+      ...recipient,
+      min: recipient.offset,
+      max: Math.min(extendedUtxo.utxo.value, recipient.offset + DUST_VALUE),
+    }));
+
+    for (let i = recipientCollectionWithLimits.length - 1; i >= 0; i--) {
+      const currentOffset = recipientCollectionWithLimits[i];
+      const previousOffset = i === 0 ? undefined : recipientCollectionWithLimits[i - 1];
+
+      if (currentOffset.max < currentOffset.offset) {
+        throw new Error('Cannot split utxo, desired offsets interfere with each other');
+      }
+
+      if (!previousOffset) {
+        currentOffset.min = currentOffset.max - DUST_VALUE;
+        if (currentOffset.min < 0) {
+          throw new Error('Cannot split utxo, desired offsets interfere with each other');
+        }
+        if (currentOffset.min < SPLIT_UTXO_MIN_VALUE) {
+          currentOffset.min = 0;
+        }
+      } else {
+        currentOffset.min = currentOffset.max - DUST_VALUE;
+
+        if (currentOffset.min > previousOffset.max) {
+          previousOffset.max = currentOffset.min;
+        }
+      }
+    }
+
+    // create actions
+    for (let i = 0; i < recipientCollectionWithLimits.length; i++) {
+      const { toAddress, min, max } = recipientCollectionWithLimits[i];
+      const nextOffset =
+        i === recipientCollectionWithLimits.length - 1 ? undefined : recipientCollectionWithLimits[i + 1];
+
+      actions.push({
+        type: ActionType.SPLIT_UTXO,
+        location: `${outpoint}:${min}`,
+        toAddress,
+      });
+
+      if (nextOffset) {
+        if (nextOffset.min - max > SPLIT_UTXO_MIN_VALUE) {
+          actions.push({
+            type: ActionType.SPLIT_UTXO,
+            location: `${outpoint}:${max}`,
+            toAddress: extendedUtxo.utxo.address,
+          });
+        }
+      } else {
+        if (extendedUtxo.utxo.value - max > SPLIT_UTXO_MIN_VALUE) {
+          actions.push({
+            type: ActionType.SPLIT_UTXO,
+            location: `${outpoint}:${max}`,
+            toAddress: extendedUtxo.utxo.address,
+          });
+        }
+      }
+    }
+  }
+
   const transaction = await compileTransaction(context, actions, feeRate);
   return transaction;
+};
+
+export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpoint: string, feeRate: number) => {
+  const utxo = await context.getUtxo(outpoint);
+
+  if (!utxo?.extendedUtxo) {
+    throw new Error('No utxo found for outpoint');
+  }
+
+  const inscriptions = await Promise.all(utxo.extendedUtxo.inscriptions.map((i) => i.inscription));
+  const recipients = inscriptions.map(({ location }) => ({ toAddress: context.ordinalsAddress.address, location }));
+
+  return sendOrdinals(context, recipients, feeRate);
 };
 
 export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
@@ -154,21 +273,4 @@ export const recoverOrdinal = async (
   } else {
     throw new Error('Must provide either fromAddress or outpoint');
   }
-};
-
-// TODO: revisit
-export const extractOrdinal = async (
-  context: TransactionContext,
-  sats: { location: string; satsAmount: number }[],
-  toAddress: string,
-  feeRate: number,
-) => {
-  const recipients = sats.map(({ location, satsAmount }) => ({
-    location,
-    minOutputSatsAmount: satsAmount,
-    maxOutputSatsAmount: satsAmount,
-    toAddress,
-    moveToZeroOffset: true,
-  }));
-  return sendOrdinal(context, recipients, feeRate);
 };
