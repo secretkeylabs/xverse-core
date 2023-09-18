@@ -145,6 +145,8 @@ const getTransactionVSize = async (
   }
 };
 
+// TODO: instead of spent inscription UTXOs, we should return the inscriptions themselves separated into transferred
+// TODO: and sent back to self and sent as fees
 export const applySendUtxoActions = async (
   context: TransactionContext,
   options: CompilationOptions,
@@ -422,7 +424,13 @@ export const applySendBtcActionsAndFee = async (
       }
     }
 
-    const utxoToUse = unusedPaymentUtxos.pop();
+    let utxoToUse = unusedPaymentUtxos.pop();
+
+    // ensure UTXO is not dust as selected fee rate
+    while (utxoToUse && ESTIMATED_VBYTES_PER_INPUT * feeRate < utxoToUse.utxo.value) {
+      utxoToUse = unusedPaymentUtxos.pop();
+    }
+
     if (!utxoToUse) {
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }
