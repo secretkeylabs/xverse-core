@@ -1,4 +1,4 @@
-export  { StacksNetwork, StacksMainnet, StacksTestnet } from '@stacks/network';
+export { StacksNetwork, StacksMainnet, StacksTestnet } from '@stacks/network';
 
 export type NetworkType = 'Mainnet' | 'Testnet';
 

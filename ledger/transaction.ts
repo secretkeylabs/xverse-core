@@ -150,11 +150,11 @@ export async function createNativeSegwitPsbt(
   return psbt;
 }
 
-export function addSignitureToStxTransaction(transaction: string | Buffer, signatureVRS: Buffer) {
-  const deserialzedTx = deserializeTransaction(transaction);
+export function addSignatureToStxTransaction(transaction: string | Buffer, signatureVRS: Buffer) {
+  const deserializedTx = deserializeTransaction(transaction);
   const spendingCondition = createMessageSignature(signatureVRS.toString('hex'));
-  (deserialzedTx.auth.spendingCondition as SingleSigSpendingCondition).signature = spendingCondition;
-  return deserialzedTx;
+  (deserializedTx.auth.spendingCondition as SingleSigSpendingCondition).signature = spendingCondition;
+  return deserializedTx;
 }
 
 /**

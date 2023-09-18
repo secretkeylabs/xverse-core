@@ -49,3 +49,4 @@ export type { SupportedCurrency } from './currency';
 export * from './error';
 export * from './network';
 export * from './wallet';
+export * from './mixpanel';

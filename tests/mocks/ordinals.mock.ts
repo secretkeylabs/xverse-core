@@ -1,4 +1,4 @@
-import { UTXO } from "../../types/api/esplora";
+import { UTXO } from '../../types/api/esplora';
 
 export const utxos: Array<UTXO> = [
   {

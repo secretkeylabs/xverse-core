@@ -20,7 +20,7 @@ export class ResponseError extends Error {
 export type ApiResponseErrorParams = {
   status: number;
   data: unknown;
-  headers: Record<string,string>;
+  headers: Record<string, string>;
 };
 export class ApiResponseError extends Error implements ApiResponseErrorParams {
   public status;
@@ -29,7 +29,7 @@ export class ApiResponseError extends Error implements ApiResponseErrorParams {
 
   public headers;
 
-  constructor({status, data, headers}: ApiResponseErrorParams) {
+  constructor({ status, data, headers }: ApiResponseErrorParams) {
     super(status.toString());
     this.name = 'ApiResponseError';
     this.status = status;
