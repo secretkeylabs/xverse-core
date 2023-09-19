@@ -147,12 +147,9 @@ export abstract class AddressContext {
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
     if (!this._utxos) {
-      console.log('Fetching UTXOs');
       const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
 
       const utxoContexts: ExtendedUtxo[] = [];
-
-      console.log(`Fetching inscription IDs for ${utxos.length} UTXOs`);
 
       // TODO: Enable testnet once inscriptions available
       // TODO: Use UTXO cache
@@ -163,7 +160,6 @@ export abstract class AddressContext {
       };
 
       await processPromisesBatch(utxos, 20, populateUtxoOrdinalIds);
-      console.log('Fetched inscription IDs');
 
       this._utxos = utxoContexts;
     }
