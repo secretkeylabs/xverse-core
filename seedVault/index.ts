@@ -31,13 +31,28 @@ class SeedVault {
 
   private readonly _commonStorageAdapter: StorageAdapter;
 
+  private readonly _eventEmitter: BroadcastChannel;
+
+  private readonly _eventListener: BroadcastChannel;
+
   VERSION = 1;
 
   constructor(config: SeedVaultConfig) {
     this._secureStorageAdapter = config.secureStorageAdapter;
     this._cryptoUtilsAdapter = config.cryptoUtilsAdapter;
     this._commonStorageAdapter = config.commonStorageAdapter;
+
+    this._eventEmitter = new BroadcastChannel('seedVault');
+    this._eventListener = new BroadcastChannel('seedVault');
   }
+
+  addChangeListener = (callback: () => void) => {
+    this._eventListener.addEventListener('message', callback);
+  };
+
+  removeChangeListener = (callback: () => void) => {
+    this._eventListener.removeEventListener('message', callback);
+  };
 
   init = async (password: string) => {
     this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
@@ -47,6 +62,8 @@ class SeedVault {
     if (!passwordHash) throw new Error('Password hash not set');
     this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, salt);
     this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+
+    this._eventEmitter.postMessage('init');
   };
 
   storeSeed = async (seed: string, overwriteExistingSeed?: boolean) => {
@@ -59,6 +76,8 @@ class SeedVault {
     const encryptedSeed = await this._cryptoUtilsAdapter.encrypt(seed, password);
     if (!encryptedSeed) throw new Error('Seed not set');
     this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
+
+    this._eventEmitter.postMessage('storeSeed');
   };
 
   getSeed = async () => {
@@ -78,6 +97,8 @@ class SeedVault {
     const seedPhrase = await this.getSeed();
     await this.init(newPassword);
     await this.storeSeed(seedPhrase, true);
+
+    this._eventEmitter.postMessage('changePassword');
   };
 
   hasSeed = async () => {
@@ -104,6 +125,8 @@ class SeedVault {
     } else {
       throw new Error('empty vault');
     }
+
+    this._eventEmitter.postMessage('unlockVault');
   };
 
   lockVault = async () => {
@@ -113,6 +136,8 @@ class SeedVault {
     } else {
       throw new Error('Password Hash not set');
     }
+
+    this._eventEmitter.postMessage('lockVault');
   };
 
   private removeVaultStorageItem = async (key: SeedVaultStorageKeys) => {
@@ -126,6 +151,8 @@ class SeedVault {
     Object.values(SeedVaultStorageKeys).forEach(async (key) => {
       await this.removeVaultStorageItem(key);
     });
+
+    this._eventEmitter.postMessage('clearVaultStorage');
   };
 }
 export default SeedVault;
