@@ -7,6 +7,7 @@ import { getOrdinalIdsFromUtxo } from '../../api/ordinals';
 import OrdinalsProvider from '../../api/ordinals/provider';
 import type { Inscription, NetworkType, UTXO } from '../../types';
 import { BaseWallet } from '../../types/wallet';
+import { processPromisesBatch } from '../../utils/promises';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../../wallet';
 
 import { CompilationOptions, SupportedAddressType } from './types';
@@ -146,17 +147,23 @@ export abstract class AddressContext {
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
     if (!this._utxos) {
+      console.log('Fetching UTXOs');
       const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
 
       const utxoContexts: ExtendedUtxo[] = [];
 
-      for (const utxo of utxos) {
-        // TODO: Enable testnet once inscriptions available
-        // TODO: Use UTXO cache
+      console.log(`Fetching inscription IDs for ${utxos.length} UTXOs`);
+
+      // TODO: Enable testnet once inscriptions available
+      // TODO: Use UTXO cache
+      const populateUtxoOrdinalIds = async (utxo: UTXO): Promise<void> => {
         const ordinalIds: InscriptionId[] = this._network === 'Testnet' ? [] : await getOrdinalIdsFromUtxo(utxo);
 
         utxoContexts.push(new ExtendedUtxo(utxo, ordinalIds, this._network));
-      }
+      };
+
+      await processPromisesBatch(utxos, 20, populateUtxoOrdinalIds);
+      console.log('Fetched inscription IDs');
 
       this._utxos = utxoContexts;
     }
