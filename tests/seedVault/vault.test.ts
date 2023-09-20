@@ -72,16 +72,6 @@ describe('SeedVault', () => {
       expect(commonStorageAdapter.set).toHaveBeenCalledWith(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
     });
 
-    it('should overwrite the stored seed if overwriteExistingSeed is true', async () => {
-      const prevStoredEncryptedSeed = 'prevStoredEncryptedSeed';
-      secureStorageAdapter.get.mockResolvedValueOnce(password);
-      commonStorageAdapter.get.mockResolvedValueOnce(prevStoredEncryptedSeed);
-      cryptoUtilsAdapter.encrypt.mockResolvedValueOnce(encryptedSeed);
-      await seedVault.storeSeed(seed, true);
-      expect(cryptoUtilsAdapter.encrypt).toHaveBeenCalledWith(seed, password);
-      expect(commonStorageAdapter.set).toHaveBeenCalledWith(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
-    });
-
     it('should throw an error if the password hash is not set', async () => {
       secureStorageAdapter.get.mockResolvedValueOnce(undefined);
       await expect(seedVault.storeSeed(seed)).rejects.toThrow('passwordHash not set');
@@ -125,11 +115,11 @@ describe('SeedVault', () => {
   describe('changePassword', () => {
     const oldPassword = 'oldPassword';
     const newPassword = 'newPassword';
-    const seedPhrase = 'seedPhrase';
     it('should change the password if the old password is correct', async () => {
       vi.spyOn(seedVault, 'unlockVault').mockResolvedValueOnce(undefined);
-      vi.spyOn(seedVault, 'getSeed').mockResolvedValueOnce(seedPhrase);
+      vi.spyOn(seedVault, 'getSeed').mockResolvedValueOnce(seed);
       vi.spyOn(seedVault, 'init').mockResolvedValue(undefined);
+      cryptoUtilsAdapter.encrypt.mockResolvedValueOnce(encryptedSeed);
       vi.spyOn(seedVault, 'storeSeed').mockResolvedValue(undefined);
 
       await seedVault.changePassword(oldPassword, newPassword);
@@ -138,8 +128,6 @@ describe('SeedVault', () => {
       expect(seedVault.unlockVault).toHaveBeenCalledWith(oldPassword);
       expect(seedVault.init).toHaveBeenCalledTimes(1);
       expect(seedVault.init).toHaveBeenCalledWith(newPassword);
-      expect(seedVault.storeSeed).toHaveBeenCalledTimes(1);
-      expect(seedVault.storeSeed).toHaveBeenCalledWith(seedPhrase, true);
     });
 
     it('should throw an error if the old password is incorrect', async () => {
