@@ -76,7 +76,7 @@ const useBrc20TransferFees = (props: Props) => {
             // This could be due to the user changing the inputs before the request has finished or
             // navigating off the page. Either way, we don't want to show an error in this case and we don't want to
             // fire the state change methods.
-            return;
+            return 'cancelled';
           }
 
           if (CoreError.isCoreError(e) && (e.code ?? '') in BRC20ErrorCode) {
@@ -89,11 +89,15 @@ const useBrc20TransferFees = (props: Props) => {
       };
 
       // we first try to estimate using the actual UTXOs
-      const ephemeralErrorCode = await callEstimate(addressUtxos, feeCancelToken.token);
+      let ephemeralErrorCode = await callEstimate(addressUtxos, feeCancelToken.token);
 
       // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
       if (ephemeralErrorCode === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
-        await callEstimate([DUMMY_UTXO], feeEstimateCancelToken.token);
+        ephemeralErrorCode = await callEstimate([DUMMY_UTXO], feeEstimateCancelToken.token);
+      }
+
+      if (ephemeralErrorCode === 'cancelled') {
+        return;
       }
 
       setIsLoading(false);
