@@ -205,7 +205,7 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
     );
     return transaction;
   } else {
-    const nonOrdinalUtxos = await context.ordinalsAddress.getNonOrdinalUtxos();
+    const nonOrdinalUtxos = (await context.ordinalsAddress.getNonOrdinalUtxos()).filter((u) => u.utxo.status.confirmed);
 
     if (nonOrdinalUtxos.length === 0) {
       throw new Error('No non-ordinal utxos found to recover');

@@ -46,22 +46,23 @@ export const extractActionMap = (actions: Action[]): ActionMap => {
     [ActionType.SPLIT_UTXO]: [],
     [ActionType.SEND_BTC]: [],
   } as ActionMap;
-  const reservedUtxos = new Set<string>();
-
   for (const action of actions) {
     const actionType = action.type;
-
-    if (actionType === ActionType.SEND_UTXO || actionType === ActionType.SPLIT_UTXO) {
-      const outpoint = actionType === ActionType.SEND_UTXO ? action.outpoint : getOutpointFromLocation(action.location);
-
-      if (reservedUtxos.has(outpoint)) {
-        throw new Error(`duplicate UTXO being spent: ${outpoint}`);
-      }
-
-      reservedUtxos.add(outpoint);
-    }
-
     actionMap[actionType].push(action);
+  }
+
+  const reservedUtxos = new Set<string>();
+
+  for (const action of actionMap[ActionType.SPLIT_UTXO]) {
+    reservedUtxos.add(getOutpointFromLocation(action.location));
+  }
+
+  for (const action of actionMap[ActionType.SEND_UTXO]) {
+    const outpoint = action.outpoint;
+    if (reservedUtxos.has(outpoint)) {
+      throw new Error(`duplicate UTXO being spent: ${outpoint}`);
+    }
+    reservedUtxos.add(outpoint);
   }
 
   return actionMap;
@@ -74,7 +75,7 @@ const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
   for (let i = 0; i < inputCount; i++) {
     const input = transaction.getInput(i);
 
-    if (!input.txid || !input.index) {
+    if (!input.txid || (!input.index && input.index !== 0)) {
       throw new Error(`Invalid input found on transaction at index ${i}`);
     }
 
@@ -93,7 +94,7 @@ const getTransactionTotals = async (context: TransactionContext, transaction: Tr
   for (let i = 0; i < inputCount; i++) {
     const input = transaction.getInput(i);
 
-    if (!input.txid || !input.index) {
+    if (!input.txid || (!input.index && input.index !== 0)) {
       throw new Error(`Invalid input found on transaction at index ${i}`);
     }
 
@@ -286,7 +287,7 @@ export const applySplitUtxoActions = async (
 
       // check which inscriptions are being sent and where
       const affectedInscriptionIds = utxoInscriptionOffsets
-        .filter(([, inscriptionOffset]) => offset >= inscriptionOffset && inscriptionOffset < outputEndOffset)
+        .filter(([, inscriptionOffset]) => offset <= inscriptionOffset && inscriptionOffset < outputEndOffset)
         .map(([id]) => id);
       if (context.paymentAddress.address === toAddress || context.ordinalsAddress.address === toAddress) {
         returnedInscriptionIds.push(...affectedInscriptionIds);
@@ -351,15 +352,15 @@ export const applySendBtcActionsAndFee = async (
     if (b.hasInscriptions && !a.hasInscriptions) {
       return 1;
     }
-    const diff = a.utxo.value - b.utxo.value;
-    if (diff !== 0) {
-      return diff;
-    }
     if (a.utxo.status.confirmed && !b.utxo.status.confirmed) {
       return 1;
     }
     if (b.utxo.status.confirmed && !a.utxo.status.confirmed) {
       return -1;
+    }
+    const diff = a.utxo.value - b.utxo.value;
+    if (diff !== 0) {
+      return diff;
     }
     // this is just for consistent sorting
     return a.outpoint.localeCompare(b.outpoint);
@@ -475,8 +476,8 @@ export const applySendBtcActionsAndFee = async (
 
     let utxoToUse = unusedPaymentUtxos.pop();
 
-    // ensure UTXO is not dust as selected fee rate
-    while (utxoToUse && ESTIMATED_VBYTES_PER_INPUT * feeRate < utxoToUse.utxo.value) {
+    // ensure UTXO is not dust at selected fee rate
+    while (utxoToUse && ESTIMATED_VBYTES_PER_INPUT * feeRate > utxoToUse.utxo.value) {
       utxoToUse = unusedPaymentUtxos.pop();
     }
 
