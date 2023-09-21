@@ -93,7 +93,7 @@ const useBrc20TransferFees = (props: Props) => {
 
       // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
       if (ephemeralErrorCode === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
-        await callEstimate(addressUtxos, feeEstimateCancelToken.token);
+        await callEstimate([DUMMY_UTXO], feeEstimateCancelToken.token);
       }
 
       setIsLoading(false);
