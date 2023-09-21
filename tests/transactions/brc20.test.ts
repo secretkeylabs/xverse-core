@@ -76,6 +76,7 @@ describe('brc20MintEstimateFees', () => {
       mockedRevealAddress,
       mockedFeeRate,
       1000,
+      undefined,
     );
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
@@ -339,6 +340,7 @@ describe('brc20TransferEstimateFees', () => {
       mockedRevealAddress,
       mockedFeeRate,
       2800,
+      undefined,
     );
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
