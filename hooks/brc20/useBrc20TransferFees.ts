@@ -1,3 +1,4 @@
+import axios, { CancelToken } from 'axios';
 import { useEffect, useState } from 'react';
 
 import { UTXO } from 'types';
@@ -53,36 +54,50 @@ const useBrc20TransferFees = (props: Props) => {
     setIsLoading(true);
     setErrorCode(undefined);
 
-    const runEstimate = async () => {
-      try {
-        const result = await brc20TransferEstimateFees({
-          addressUtxos,
-          tick,
-          amount,
-          revealAddress,
-          feeRate,
-        });
-        setCommitValue(result.commitValue);
-        setCommitValueBreakdown(result.valueBreakdown);
-      } catch (e) {
-        if (CoreError.isCoreError(e) && (e.code ?? '') in BRC20ErrorCode) {
-          setErrorCode(e.code as BRC20ErrorCode);
+    const feeCancelToken = axios.CancelToken.source();
+    const feeEstimateCancelToken = axios.CancelToken.source();
 
-          // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
-          if (e.code === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
-            const result = await brc20TransferEstimateFees({
-              addressUtxos: [DUMMY_UTXO],
-              tick,
-              amount,
-              revealAddress,
-              feeRate,
-            });
-            setCommitValue(result.commitValue);
-            setCommitValueBreakdown(result.valueBreakdown);
+    const runEstimate = async () => {
+      const callEstimate = async (addressUtxosToUse: UTXO[], cancelToken: CancelToken) => {
+        try {
+          const result = await brc20TransferEstimateFees({
+            addressUtxos: addressUtxosToUse,
+            tick,
+            amount,
+            revealAddress,
+            feeRate,
+            cancelToken,
+          });
+          setCommitValue(result.commitValue);
+          setCommitValueBreakdown(result.valueBreakdown);
+        } catch (e) {
+          if (axios.isCancel(e)) {
+            // The request was cancelled due to the use effect being cleaned up
+            // This could be due to the user changing the inputs before the request has finished or
+            // navigating off the page. Either way, we don't want to show an error in this case and we don't want to
+            // fire the state change methods.
+            return 'cancelled';
           }
-        } else {
-          setErrorCode(BRC20ErrorCode.SERVER_ERROR);
+
+          if (CoreError.isCoreError(e) && (e.code ?? '') in BRC20ErrorCode) {
+            setErrorCode(e.code as BRC20ErrorCode);
+            return e.code as BRC20ErrorCode;
+          } else {
+            setErrorCode(BRC20ErrorCode.SERVER_ERROR);
+          }
         }
+      };
+
+      // we first try to estimate using the actual UTXOs
+      let ephemeralErrorCode = await callEstimate(addressUtxos, feeCancelToken.token);
+
+      // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
+      if (ephemeralErrorCode === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
+        ephemeralErrorCode = await callEstimate([DUMMY_UTXO], feeEstimateCancelToken.token);
+      }
+
+      if (ephemeralErrorCode === 'cancelled') {
+        return;
       }
 
       setIsLoading(false);
@@ -93,6 +108,11 @@ const useBrc20TransferFees = (props: Props) => {
     }
 
     setIsInitialised(true);
+
+    return () => {
+      feeCancelToken.cancel('Fee estimate out of scope, cleaning up');
+      feeEstimateCancelToken.cancel('Fee estimate out of scope, cleaning up');
+    };
   }, [addressUtxos, tick, amount, revealAddress, feeRate]);
 
   return {
