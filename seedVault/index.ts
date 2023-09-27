@@ -49,7 +49,7 @@ class SeedVault {
     this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
   };
 
-  private _storeSeed = async (seed: string, overwriteExistingSeed?: boolean) => {
+  storeSeed = async (seed: string, overwriteExistingSeed = false) => {
     const password = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
     if (!password) throw new Error('passwordHash not set');
     const prevStoredEncryptedSeed = await this.hasSeed();
@@ -60,8 +60,6 @@ class SeedVault {
     if (!encryptedSeed) throw new Error('Seed not set');
     this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
   };
-
-  storeSeed = async (seed: string) => this._storeSeed(seed, false);
 
   getSeed = async () => {
     const passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
@@ -79,7 +77,7 @@ class SeedVault {
     await this.unlockVault(oldPassword);
     const seedPhrase = await this.getSeed();
     await this.init(newPassword);
-    await this._storeSeed(seedPhrase, true);
+    await this.storeSeed(seedPhrase, true);
   };
 
   hasSeed = async () => {
