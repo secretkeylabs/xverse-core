@@ -39,7 +39,7 @@ export type {
 } from './api/stacks/assets';
 export * from './api/stacks/transaction';
 export * from './api/xverse/coins';
-export type { OrdinalInfo } from './api/xverse/ordinals';
+export type { OrdinalInfo, UtxoOrdinalBundle } from './api/xverse/ordinals';
 export * from './api/xverse/sponsor';
 export type { Pool, StackerInfo, StackingData, StackingPoolInfo, StackingStateData } from './api/xverse/stacking';
 export * from './api/xverse/transaction';
@@ -47,6 +47,6 @@ export * from './api/xverse/wallet';
 export * from './api/xverseInscribe';
 export type { SupportedCurrency } from './currency';
 export * from './error';
+export * from './mixpanel';
 export * from './network';
 export * from './wallet';
-export * from './mixpanel';
