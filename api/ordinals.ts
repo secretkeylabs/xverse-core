@@ -4,12 +4,12 @@ import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XV
 import {
   Account,
   Brc20HistoryTransactionData,
+  Brc20TxHistoryItem,
   BtcOrdinal,
   FungibleToken,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
-  OrdinalTokenTransaction,
   UTXO,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
@@ -164,15 +164,12 @@ export async function getBrc20History(address: string, token: string): Promise<B
       timeout: 30000,
     })
     .then((response) => {
-      const data: OrdinalTokenTransaction[] = response.data;
+      const data: Brc20TxHistoryItem[] = response.data;
       const transactions: Brc20HistoryTransactionData[] = [];
       data.forEach((tx) => {
-        transactions.push(parseBrc20TransactionData(tx));
+        transactions.push(parseBrc20TransactionData(tx, address));
       });
       return transactions;
-    })
-    .catch((error) => {
-      return [];
     });
 }
 
