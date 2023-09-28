@@ -204,11 +204,7 @@ export async function getErc721Metadata(tokenContract: string, tokenId: string):
   return erc721Metadata.data;
 }
 
-export async function getInscriptionsByCollection(
-  address: string,
-  offset?: number,
-  limit?: number,
-): Promise<CollectionsList> {
+export async function getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
   const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/collections`;
   const response = await axios.get(requestUrl, {
     params: {
@@ -225,7 +221,7 @@ export async function getCollectionMarketData(collectionId: string): Promise<Col
   return response.data;
 }
 
-export async function getInscriptionsInCollection(
+export async function getCollectionSpecificInscriptions(
   address: string,
   collectionId: string,
   offset?: number,
