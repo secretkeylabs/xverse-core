@@ -12,11 +12,21 @@ import ecdsaFormat from 'ecdsa-sig-formatter';
 import * as ecc from '@bitcoinerlab/secp256k1';
 
 /**
-  This function is used to get the coin type depending on network type
-  @param network - the network type
-  @returns coin type in number format
-**/
+ * This function is used to get the coin type depending on network type
+ * @param network - the network type
+ * @returns coin type in number format
+ **/
 export const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 : 1);
+
+/**
+ * This function is used to get the STX path depending on account index and address index
+ * @param accountIndex - the account index of the account to sign with
+ * @param addressIndex - the index of the account address to sign with
+ * @returns path in string format
+ **/
+export const getStxPath = ({ accountIndex, addressIndex }: { addressIndex: number; accountIndex: number }) => {
+  return `m/44'/5757'/${accountIndex}'/0/${addressIndex}`;
+};
 
 /**
  * This function is used to get the master fingerprint from the ledger
