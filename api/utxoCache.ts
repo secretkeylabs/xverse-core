@@ -1,4 +1,4 @@
-import { getAddressUtxoOrdinalBundles } from './ordinals';
+import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
 export type UtxoStates = 'inscribed' | 'notInscribed' | 'unknown';
 
@@ -21,6 +21,8 @@ export class UtxoCache {
 
   CACHE_STORAGE_KEY = 'utxoCache';
 
+  CACHE_VERSION_STORAGE_KEY = 'utxoCacheVersion';
+
   VERSION = 1;
 
   constructor(config: UtxoCacheConfig) {
@@ -38,7 +40,16 @@ export class UtxoCache {
 
   getUtxoState = async (utxoId: string): Promise<UtxoStates | null> => {
     const cache = await this._getCache();
-    return cache[utxoId] || null;
+    if (cache[utxoId]) {
+      return cache[utxoId];
+    }
+    const [txid, vout] = utxoId.split(':');
+    const utxo = await getUtxoOrdinalBundle(txid, parseInt(vout, 10));
+    const isInscribed = utxo.inscriptions.length > 0 ? 'inscribed' : 'notInscribed';
+    const isUnconfirmed = utxo.block_height === 0;
+    const utxoState = isUnconfirmed ? 'unknown' : isInscribed;
+    await this.setUtxoState(utxoId, utxoState);
+    return utxoState;
   };
 
   async setUtxoState(utxoId: string, state: UtxoStates): Promise<void> {
@@ -58,7 +69,7 @@ export class UtxoCache {
   }
 
   async getVersion(): Promise<number> {
-    const version = await this._cacheStorageController.get('utxoCacheVersion');
+    const version = await this._cacheStorageController.get(this.CACHE_VERSION_STORAGE_KEY);
     if (version) {
       return parseInt(version, 10);
     } else {
@@ -78,7 +89,7 @@ export class UtxoCache {
   };
 
   initCache = async (address: string): Promise<void> => {
-    await this._cacheStorageController.set('utxoCacheVersion', this.VERSION.toString());
+    await this._cacheStorageController.set(this.CACHE_VERSION_STORAGE_KEY, this.VERSION.toString());
     const utxos = await this.getAllUtxos(address);
     await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(utxos));
   };
