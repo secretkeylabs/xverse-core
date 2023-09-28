@@ -72,12 +72,18 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }
 
-export async function getOrdinalIdFromUtxo(utxo: UTXO) {
+export async function getOrdinalIdsFromUtxo(utxo: UTXO): Promise<string[]> {
   const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
 
-  const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
-  if (ordinalIds.data.length > 0) {
-    return ordinalIds.data.at(-1);
+  const { data: ordinalIds } = await axios.get<string[]>(ordinalContentUrl);
+
+  return ordinalIds;
+}
+
+export async function getOrdinalIdFromUtxo(utxo: UTXO) {
+  const ordinalIds = await getOrdinalIdsFromUtxo(utxo);
+  if (ordinalIds.length > 0) {
+    return ordinalIds[ordinalIds.length - 1];
   } else {
     return null;
   }

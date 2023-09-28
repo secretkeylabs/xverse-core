@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { getUniquePendingTx } from 'api/helper';
-import { StxMempoolTransactionData, StxTransactionData } from 'types/*';
+import { getUniquePendingTx, parseStxTransactionData } from 'api/helper';
+import {
+  StxMempoolTransactionData,
+  StxMempoolTransactionDataResponse,
+  StxTransactionData,
+  StxTransactionDataResponse,
+} from 'types/*';
+import { TransactionType } from 'types/api/shared/transaction';
 
 describe('getUniquePendingTx', () => {
   [
@@ -64,5 +70,26 @@ describe('getUniquePendingTx', () => {
     it(name, () => {
       expect(getUniquePendingTx(inputs)).toEqual(expected);
     });
+  });
+});
+
+describe('parseStxTransactionData', () => {
+  it('does not throw if post condition has no asset', () => {
+    const inputs = {
+      responseTx: {
+        tx_type: 'contract_call' as TransactionType,
+        contract_call: {
+          function_name: 'transfer',
+        },
+        post_conditions: [
+          {
+            type: '',
+            amount: 0,
+          },
+        ],
+      } as unknown as StxTransactionDataResponse,
+      stxAddress: 'address1',
+    };
+    expect(() => parseStxTransactionData(inputs)).not.toThrow();
   });
 });

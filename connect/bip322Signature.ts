@@ -1,10 +1,10 @@
 import * as secp256k1 from '@noble/secp256k1';
-import { base64, hex } from '@scure/base';
+import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
-import { signAsync, verify } from 'bitcoinjs-message';
+import { signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
@@ -24,11 +24,6 @@ export function bip0322Hash(message: string) {
   const result = sha256(Buffer.concat([tagHash, tagHash, Buffer.from(message)]));
   return result.toString('hex');
 }
-
-const toUint8 = (buf: Buffer): Uint8Array => {
-  const uin = new Uint8Array(buf.length);
-  return uin.map((a, index, arr) => (arr[index] = buf[index]));
-};
 
 function encodeVarString(b: Uint8Array) {
   return Buffer.concat([encode(b.byteLength), b]);
@@ -77,11 +72,17 @@ const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: Bitc
   }
 };
 
-export const signBip322Message = async (options: SignBip322MessageOptions) => {
-  const { accounts, message, network, seedPhrase, signatureAddress } = options;
-  if (!accounts || accounts.length === 0) {
+export const signBip322Message = async ({
+  accounts,
+  message,
+  network,
+  seedPhrase,
+  signatureAddress,
+}: SignBip322MessageOptions) => {
+  if (!accounts?.length) {
     throw new Error('a List of Accounts are required to derive the correct Private Key');
   }
+
   const { type } = getAddressInfo(signatureAddress);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const master = bip32.fromSeed(seed);
@@ -89,16 +90,12 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
   const child = master.derivePath(signingDerivationPath);
   if (child.privateKey) {
     if (type === AddressType.p2sh) {
-      return (
-        await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)' })
-      ).toString('base64');
+      return (await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)' })).toString('base64');
     }
     const privateKey = child.privateKey?.toString('hex');
     const publicKey = getSigningPk(type, privateKey);
     const txScript = getSignerScript(type, publicKey, getBtcNetwork(network));
-    const inputHash = hex.decode(
-      '0000000000000000000000000000000000000000000000000000000000000000'
-    );
+    const inputHash = hex.decode('0000000000000000000000000000000000000000000000000000000000000000');
     const txVersion = 0;
     const inputIndex = 4294967295;
     const sequence = 0;
@@ -142,10 +139,7 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
     const firstInput = txToSign.getInput(0);
     if (firstInput.finalScriptWitness?.length) {
       const len = encode(firstInput.finalScriptWitness?.length);
-      const result = Buffer.concat([
-        len,
-        ...firstInput.finalScriptWitness.map((w) => encodeVarString(w)),
-      ]);
+      const result = Buffer.concat([len, ...firstInput.finalScriptWitness.map((w) => encodeVarString(w))]);
       return result.toString('base64');
     } else {
       return '';
@@ -153,18 +147,4 @@ export const signBip322Message = async (options: SignBip322MessageOptions) => {
   } else {
     throw new Error("Couldn't sign Message");
   }
-};
-
-export const verifySignature = (address: string, message: string, signature: string) => {
-  if (!address) throw new Error('Invalid Address');
-  const { type } = getAddressInfo(address);
-  if (type === AddressType.p2sh) {
-    return verify(message, address, signature);
-  }
-  const decodedSignature = base64.decode(signature).slice(2);
-  if (!decodedSignature) throw new Error('Malformed Signature');
-  const msgHash = bip0322Hash(message);
-  const pk = secp256k1.recoverPublicKey(msgHash, decodedSignature, 1);
-  const isValid = secp256k1.verify(decodedSignature, msgHash, pk, { strict: false });
-  return isValid;
 };

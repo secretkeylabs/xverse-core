@@ -6,6 +6,7 @@ import { createTransaction } from './btc';
 
 // we import the file into itself to enable mocking of recursive functions in the tests
 import * as self from './btc.utils';
+import { getOrdinalsByAddress } from '../api';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
@@ -199,4 +200,10 @@ export function selectOptimalUtxos({
   }
 
   return bestSelectionData;
+}
+
+// get ordinals utxos in btc address
+export async function getOrdinalsUtxos(btcAddress: string) {
+  const ordinals = await getOrdinalsByAddress(btcAddress);
+  return ordinals.map((item) => item.utxo);
 }

@@ -6,14 +6,10 @@ export type TransactionType =
   | 'poison_microblock'
   | 'bitcoin'
   | 'unsupported'
-  | 'brc20';
+  | 'brc20'
+  | 'message_sign';
 
-export type TransactionStatus =
-  | 'pending'
-  | 'success'
-  | 'invalid'
-  | 'abort_by_response'
-  | 'abort_by_post_condition';
+export type TransactionStatus = 'pending' | 'success' | 'invalid' | 'abort_by_response' | 'abort_by_post_condition';
 
 export type TokenType = 'fungible' | 'non_fungible';
 

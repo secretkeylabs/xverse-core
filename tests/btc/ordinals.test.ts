@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { getOrdinalsFtBalance } from '../../api/ordinals'
+import { getOrdinalsFtBalance } from '../../api/ordinals';
 // import { signNonOrdinalBtcSendTransaction } from '../../transactions/btc';
 // import { UTXO } from '../../types';
 // import * as OrdinalsAPIFunctions from '../../api/ordinals';
@@ -22,7 +22,6 @@ it('can create non-ordinal BTC transfer from ordinals address', async () => {
   //   })
   // );
   // axiosSpy.mockImplementationOnce(() => Promise.resolve());
-
   // const fetchOrdinalIdSpy = vi.spyOn(OrdinalsAPIFunctions, 'getOrdinalIdFromUtxo');
   // const ordinal = {
   //   id: '123456',
@@ -31,15 +30,12 @@ it('can create non-ordinal BTC transfer from ordinals address', async () => {
   // fetchOrdinalIdSpy.mockImplementationOnce(() => Promise.resolve(notOrdinal));
   // fetchOrdinalIdSpy.mockImplementationOnce(() => Promise.resolve(ordinal));
   // fetchOrdinalIdSpy.mockImplementationOnce(() => Promise.resolve(notOrdinal));
-
   // const fetchUtxoSpy = vi.spyOn(btcClient, 'getUnspentUtxos');
   // fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
-
   // const network = 'Mainnet';
   // const address = 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq';
   // const recipientAddress = '37qg72pj86wvAEYh8TK42g7ZyHu5eytdRH';
   // const nonOrdinalUtxos = await OrdinalsAPIFunctions.getNonOrdinalUtxo(address, network);
-
   // expect(axiosSpy).toHaveBeenCalledTimes(3);
   // expect(nonOrdinalUtxos.length).eq(2);
   // expect(nonOrdinalUtxos[0].txid).eq(
@@ -48,7 +44,6 @@ it('can create non-ordinal BTC transfer from ordinals address', async () => {
   // expect(nonOrdinalUtxos[1].txid).eq(
   //   'b048fc332d852d8258a45f5a8b16a346f03a8f5d45b9e94498a5a7db624e01a1'
   // );
-
   // const fetchFeeRateSpy = vi.spyOn(XverseAPIFunctions, 'fetchBtcFeeRate');
   // const feeRate = {
   //   limits: {
@@ -58,9 +53,7 @@ it('can create non-ordinal BTC transfer from ordinals address', async () => {
   //   regular: 10,
   //   priority: 30,
   // };
-
   // fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
-
   // const tx = await signNonOrdinalBtcSendTransaction(
   //   recipientAddress,
   //   nonOrdinalUtxos,
@@ -68,7 +61,6 @@ it('can create non-ordinal BTC transfer from ordinals address', async () => {
   //   testSeed,
   //   network
   // );
-
   // expect(tx.tx.outputs[0].amount).eq(13195n);
   // expect(tx.fee.toNumber()).eq(2250);
   // expect(tx.total.toNumber()).equal(15445);

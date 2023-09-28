@@ -17,38 +17,17 @@ import {
 } from '@stacks/transactions';
 import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import BigNumber from 'bignumber.js';
-import {
-  btcToSats,
-  getBtcFiatEquivalent,
-  getStxFiatEquivalent,
-  stxToMicrostacks,
-} from '../currency';
-import {
-  StxMempoolTransactionData,
-  PostConditionsOptions,
-  FungibleToken,
-  Coin,
-  FeesMultipliers,
-} from '../types';
-import {
-  generateContractDeployTransaction,
-  generateUnsignedContractCall,
-  getNonce,
-  setNonce,
-} from './stx';
+import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
+import { StxMempoolTransactionData, PostConditionsOptions, FungibleToken, Coin, FeesMultipliers } from '../types';
+import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce, setNonce } from './stx';
 import { StacksNetwork } from '@stacks/network';
 
-export function getNewNonce(
-  pendingTransactions: StxMempoolTransactionData[],
-  currentNonce: bigint
-): bigint {
+export function getNewNonce(pendingTransactions: StxMempoolTransactionData[], currentNonce: bigint): bigint {
   if ((pendingTransactions ?? []).length === 0) {
     // handle case where account nonce is 0 and no pending transactions
     return currentNonce;
   }
-  const maxPendingNonce = Math.max(
-    ...(pendingTransactions ?? []).map((transaction) => transaction?.nonce)
-  );
+  const maxPendingNonce = Math.max(...(pendingTransactions ?? []).map((transaction) => transaction?.nonce));
   if (maxPendingNonce >= currentNonce) {
     return BigInt(maxPendingNonce + 1);
   } else {
@@ -64,7 +43,7 @@ export function makeNonFungiblePostCondition(options: PostConditionsOptions): Po
     stxAddress,
     NonFungibleConditionCode.DoesNotOwn,
     assetInfo,
-    hexToCV(amount.toString())
+    hexToCV(amount.toString()),
   );
 }
 
@@ -72,12 +51,7 @@ export function makeFungiblePostCondition(options: PostConditionsOptions): PostC
   const { contractAddress, contractName, assetName, stxAddress, amount } = options;
 
   const assetInfo = createAssetInfo(contractAddress, contractName, assetName);
-  return makeStandardFungiblePostCondition(
-    stxAddress,
-    FungibleConditionCode.Equal,
-    BigInt(amount),
-    assetInfo
-  );
+  return makeStandardFungiblePostCondition(stxAddress, FungibleConditionCode.Equal, BigInt(amount), assetInfo);
 }
 
 export function getFiatEquivalent(
@@ -85,7 +59,7 @@ export function getFiatEquivalent(
   currencyType: string,
   stxBtcRate: BigNumber,
   btcFiatRate: BigNumber,
-  fungibleToken?: FungibleToken
+  fungibleToken?: FungibleToken,
 ) {
   if ((currencyType === 'FT' && !fungibleToken?.tokenFiatRate) || currencyType === 'NFT') {
     return '';
@@ -96,7 +70,7 @@ export function getFiatEquivalent(
       return getStxFiatEquivalent(
         stxToMicrostacks(new BigNumber(value)),
         new BigNumber(stxBtcRate),
-        new BigNumber(btcFiatRate)
+        new BigNumber(btcFiatRate),
       )
         .toFixed(2)
         .toString();
@@ -137,8 +111,8 @@ export const extractFromPayload = (payload: any) => {
         (arg: string) =>
           deserializeStacksMessage(
             new BufferReader(hexStringToBuffer(arg)),
-            StacksMessageType.PostCondition
-          ) as PostCondition
+            StacksMessageType.PostCondition,
+          ) as PostCondition,
       ) as PostCondition[])
     : [];
 
@@ -147,12 +121,10 @@ export const extractFromPayload = (payload: any) => {
 
 export const getFTInfoFromPostConditions = (postConds: PostCondition[]) =>
   (
-    postConds?.filter(
-      (postCond) => postCond.conditionType === PostConditionType.Fungible
-    ) as FungiblePostCondition[]
+    postConds?.filter((postCond) => postCond.conditionType === PostConditionType.Fungible) as FungiblePostCondition[]
   )?.map(
     (postCond: FungiblePostCondition) =>
-      `${addressToString(postCond.assetInfo.address)}.${postCond.assetInfo.contractName.content}`
+      `${addressToString(postCond.assetInfo.address)}.${postCond.assetInfo.contractName.content}`,
   );
 
 /**
@@ -167,7 +139,7 @@ export const createContractCallPromises = async (
   payload: any,
   stxAddress: string,
   network: StacksNetwork,
-  stxPublicKey: string
+  stxPublicKey: string,
 ) => {
   const sponsored = payload?.sponsored;
   const { pendingTransactions } = await fetchStxPendingTxData(stxAddress, network);
@@ -193,25 +165,15 @@ export const createContractCallPromises = async (
   const unSignedContractCall = await generateUnsignedContractCall(tx);
   const { fee } = unSignedContractCall.auth.spendingCondition;
 
-  const checkForPostConditionMessage =
-    payload?.postConditionMode === 2 && payload?.postConditions?.values.length <= 0;
+  const checkForPostConditionMessage = payload?.postConditionMode === 2 && payload?.postConditions?.values.length <= 0;
   const showPostConditionMessage = !!checkForPostConditionMessage;
 
   const newNonce = getNewNonce(pendingTransactions, getNonce(unSignedContractCall));
   setNonce(unSignedContractCall, newNonce);
 
-  const contractInterfacePromise = getContractInterface(
-    payload.contractAddress,
-    payload.contractName,
-    network
-  );
+  const contractInterfacePromise = getContractInterface(payload.contractAddress, payload.contractName, network);
 
-  return Promise.all([
-    unSignedContractCall,
-    contractInterfacePromise,
-    coinsMetaDataPromise,
-    showPostConditionMessage,
-  ]);
+  return Promise.all([unSignedContractCall, contractInterfacePromise, coinsMetaDataPromise, showPostConditionMessage]);
 };
 
 /**
@@ -228,7 +190,7 @@ export const createDeployContractRequest = async (
   network: StacksNetwork,
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
-  walletAddress: string
+  walletAddress: string,
 ) => {
   const { codeBody, contractName, postConditionMode } = payload;
   const { postConds } = extractFromPayload(payload);

@@ -30,7 +30,9 @@ describe('brc20MintEstimateFees', () => {
   });
 
   it('should estimate BRC20 mint fees correctly', async () => {
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
@@ -74,6 +76,7 @@ describe('brc20MintEstimateFees', () => {
       mockedRevealAddress,
       mockedFeeRate,
       1000,
+      undefined,
     );
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
@@ -82,6 +85,101 @@ describe('brc20MintEstimateFees', () => {
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
     });
+  });
+
+  it('should throw on undefined UTXOs', async () => {
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20MintEstimateFees({
+        addressUtxos: undefined,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('UTXOs empty');
+  });
+
+  it('should throw on empty UTXOs', async () => {
+    const mockedAddressUtxos: UTXO[] = [];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20MintEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Insufficient funds, no UTXOs found');
+  });
+
+  it('should throw on invalid tick', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICKs';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20MintEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Invalid tick; should be 4 characters long');
+  });
+
+  it('should throw on invalid amount', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICK';
+    const mockedAmount = 0;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20MintEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Amount should be positive');
+  });
+
+  it('should throw on invalid fee rate', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 0;
+
+    await expect(() =>
+      brc20MintEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Fee rate should be positive');
   });
 });
 
@@ -93,19 +191,22 @@ describe('brc20MintExecute', () => {
   it('should mint BRC20 successfully', async () => {
     const mockedSeedPhrase = 'seed_phrase';
     const mockedAccountIndex = 0;
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
+    const mockedCommitAddress = 'commit_address';
     const mockedRevealAddress = 'reveal_address';
     const mockedChangeAddress = 'change_address';
     const mockedFeeRate = 12;
     const mockedNetwork = 'Mainnet';
-    const mockedSelectedUtxos: UTXO[] = [];
+    const mockedSelectedUtxos: UTXO[] = mockedAddressUtxos;
 
     vi.mocked(getBtcPrivateKey).mockResolvedValueOnce('private_key');
 
     vi.mocked(xverseInscribeApi.createBrc20MintOrder).mockResolvedValue({
-      commitAddress: 'commit_address',
+      commitAddress: mockedCommitAddress,
       commitValue: 1000,
     } as any);
 
@@ -157,7 +258,7 @@ describe('brc20MintExecute', () => {
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
       changeAddress: 'change_address',
-      recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+      recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
     });
@@ -168,7 +269,7 @@ describe('brc20MintExecute', () => {
       new BigNumber(1000),
       [
         {
-          address: 'commit_address',
+          address: mockedCommitAddress,
           amountSats: new BigNumber(1000),
         },
       ],
@@ -177,7 +278,7 @@ describe('brc20MintExecute', () => {
       'Mainnet',
     );
 
-    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex');
+    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex');
   });
 });
 
@@ -187,7 +288,9 @@ describe('brc20TransferEstimateFees', () => {
   });
 
   it('should estimate BRC20 transfer fees correctly', async () => {
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
@@ -237,6 +340,7 @@ describe('brc20TransferEstimateFees', () => {
       mockedRevealAddress,
       mockedFeeRate,
       2800,
+      undefined,
     );
 
     expect(selectUtxosForSend).toHaveBeenCalledWith({
@@ -245,6 +349,101 @@ describe('brc20TransferEstimateFees', () => {
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
     });
+  });
+
+  it('should throw on undefined UTXOs', async () => {
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20TransferEstimateFees({
+        addressUtxos: undefined,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('UTXOs empty');
+  });
+
+  it('should throw on empty UTXOs', async () => {
+    const mockedAddressUtxos: UTXO[] = [];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20TransferEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Insufficient funds, no UTXOs found');
+  });
+
+  it('should throw on invalid tick', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICKs';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20TransferEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Invalid tick; should be 4 characters long');
+  });
+
+  it('should throw on invalid amount', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICK';
+    const mockedAmount = 0;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    await expect(() =>
+      brc20TransferEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Amount should be positive');
+  });
+
+  it('should throw on invalid fee rate', async () => {
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
+    const mockedTick = 'TICK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 0;
+
+    await expect(() =>
+      brc20TransferEstimateFees({
+        addressUtxos: mockedAddressUtxos,
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      }),
+    ).rejects.toThrow('Fee rate should be positive');
   });
 });
 
@@ -256,10 +455,13 @@ describe('brc20TransferExecute', () => {
   it('should execute BRC20 transfer correctly', async () => {
     const mockedSeedPhrase = 'seed_phrase';
     const mockedAccountIndex = 0;
-    const mockedAddressUtxos: UTXO[] = [];
+    const mockedAddressUtxos: UTXO[] = [
+      { txid: 'txid', vout: 0, value: 1000, status: { confirmed: true }, address: 'address' },
+    ];
     const mockedTick = 'TICK';
     const mockedAmount = 10;
     const mockedRevealAddress = 'reveal_address';
+    const mockedCommitAddress = 'commit_address';
     const mockedChangeAddress = 'change_address';
     const mockedRecipientAddress = 'recipient_address';
     const mockedFeeRate = 12;
@@ -273,12 +475,12 @@ describe('brc20TransferExecute', () => {
     } as any);
 
     vi.mocked(xverseInscribeApi.createBrc20TransferOrder).mockResolvedValueOnce({
-      commitAddress: 'commit_address',
+      commitAddress: mockedCommitAddress,
       commitValue: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use these 2 fields in this function
     } as any);
 
-    const mockedSelectedUtxos: UTXO[] = [];
+    const mockedSelectedUtxos: UTXO[] = mockedAddressUtxos;
     vi.mocked(selectUtxosForSend).mockReturnValueOnce({
       change: 2070,
       fee: 1070,
@@ -373,7 +575,7 @@ describe('brc20TransferExecute', () => {
         case ExecuteTransferProgressCodes.ExecutingInscriptionOrder:
           expect(selectUtxosForSend).toHaveBeenCalledWith({
             changeAddress: mockedChangeAddress,
-            recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(1000) }],
+            recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
             availableUtxos: mockedAddressUtxos,
             feeRate: mockedFeeRate,
           });
@@ -384,7 +586,7 @@ describe('brc20TransferExecute', () => {
             new BigNumber(1000),
             [
               {
-                address: 'commit_address',
+                address: mockedCommitAddress,
                 amountSats: new BigNumber(1000),
               },
             ],
@@ -395,7 +597,7 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingTransferTransaction:
-          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('commit_address', 'commit_hex', true);
+          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex', true);
           break;
 
         case ExecuteTransferProgressCodes.Finalizing:

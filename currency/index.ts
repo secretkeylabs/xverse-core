@@ -9,20 +9,14 @@ const microstacksToStx = (microstacks: BigNumber): BigNumber => microstacks.mult
 
 const stxToMicrostacks = (stacks: BigNumber): BigNumber => stacks.multipliedBy(1000000);
 
-const getStxFiatEquivalent = (
-  stxAmount: BigNumber,
-  stxBtcRate: BigNumber,
-  btcFiatRate: BigNumber
-): BigNumber => microstacksToStx(stxAmount).multipliedBy(stxBtcRate).multipliedBy(btcFiatRate);
+const getStxFiatEquivalent = (stxAmount: BigNumber, stxBtcRate: BigNumber, btcFiatRate: BigNumber): BigNumber =>
+  microstacksToStx(stxAmount).multipliedBy(stxBtcRate).multipliedBy(btcFiatRate);
 
 const getBtcFiatEquivalent = (btcAmount: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   satsToBtc(btcAmount).multipliedBy(btcFiatRate);
 
-const getStxTokenEquivalent = (
-  fiatAmount: BigNumber,
-  stxBtcRate: BigNumber,
-  btcFiatRate: BigNumber
-): BigNumber => fiatAmount.dividedBy(stxBtcRate).dividedBy(btcFiatRate);
+const getStxTokenEquivalent = (fiatAmount: BigNumber, stxBtcRate: BigNumber, btcFiatRate: BigNumber): BigNumber =>
+  fiatAmount.dividedBy(stxBtcRate).dividedBy(btcFiatRate);
 
 const getBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   fiatAmount.dividedBy(btcFiatRate);
