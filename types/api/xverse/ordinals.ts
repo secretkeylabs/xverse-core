@@ -3,7 +3,7 @@ export interface OrdinalInfo {
   metadata: Record<string, string>;
 }
 
-export type SatRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'mythic';
+export type SatRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export type BundleRareSat = {
   number: string;
