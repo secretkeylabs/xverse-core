@@ -38,13 +38,17 @@ export class UtxoCache {
     }
   };
 
+  _getAddressUtxos = async (address: string) => getAddressUtxoOrdinalBundles(address, 0, 200);
+
+  _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(txid, vout);
+
   getUtxoState = async (utxoId: string): Promise<UtxoStates | null> => {
     const cache = await this._getCache();
     if (cache[utxoId]) {
       return cache[utxoId];
     }
     const [txid, vout] = utxoId.split(':');
-    const utxo = await getUtxoOrdinalBundle(txid, parseInt(vout, 10));
+    const utxo = await this._getUtxo(txid, parseInt(vout, 10));
     const isInscribed = utxo.inscriptions.length > 0 ? 'inscribed' : 'notInscribed';
     const isUnconfirmed = utxo.block_height === 0;
     const utxoState = isUnconfirmed ? 'unknown' : isInscribed;
@@ -53,14 +57,21 @@ export class UtxoCache {
   };
 
   async setUtxoState(utxoId: string, state: UtxoStates): Promise<void> {
-    const cache = await this._getCache();
+    let cache = await this._getCache();
+    if (!cache) {
+      cache = {};
+    }
     cache[utxoId] = state;
     await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(cache));
   }
 
   async removeUtxoState(utxoId: string): Promise<void> {
     const cache = await this._getCache();
-    delete cache[utxoId];
+    if (cache && utxoId in cache) {
+      delete cache[utxoId];
+    } else {
+      throw new Error('Utxo not found in cache');
+    }
     await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(cache));
   }
 
@@ -77,9 +88,11 @@ export class UtxoCache {
     }
   }
 
-  getAllUtxos = async (address: string): Promise<UtxoCacheStruct> => {
-    const utxos = await getAddressUtxoOrdinalBundles(address, 0, 200);
-    const utxosObject: { [key: string]: UtxoStates } = utxos.results.reduce((acc, utxo) => {
+  getAllUtxos = async (btcAddress: string, ordinalsAddress?: string): Promise<UtxoCacheStruct> => {
+    const utxos = await this._getAddressUtxos(btcAddress);
+    const ordinalsAddressUtxos = ordinalsAddress ? await this._getAddressUtxos(ordinalsAddress) : { results: [] };
+    const allUtxos = [...utxos.results, ...ordinalsAddressUtxos.results];
+    const utxosObject: { [key: string]: UtxoStates } = allUtxos.reduce((acc, utxo) => {
       const isInscribed = utxo.inscriptions.length > 0 ? 'inscribed' : 'notInscribed';
       const isUnconfirmed = utxo.block_height === 0;
       acc[`${utxo.txid}:${utxo.vout}`] = isUnconfirmed ? 'unknown' : isInscribed;
