@@ -87,3 +87,10 @@ export interface Brc20HistoryTransactionData extends TransactionData {
     amount: string;
   };
 }
+
+export interface HiroApiBrc20TxHistoryResponse {
+  limit: number;
+  offset: number;
+  total: number;
+  results: Array<Brc20TxHistoryItem>;
+}
