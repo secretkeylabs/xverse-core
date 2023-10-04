@@ -7,7 +7,7 @@
     "@bitcoinerlab/secp256k1": "^1.0.2",
     "@noble/secp256k1": "^1.7.1",
     "@scure/base": "^1.1.1",
-    "@scure/btc-signer": "^1.0.0",
+    "@scure/btc-signer": "1.1.0",
     "@stacks/auth": "^6.5.1",
     "@stacks/encryption": "6.1.1",
     "@stacks/network": "4.3.5",
