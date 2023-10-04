@@ -102,7 +102,7 @@ export const signBip322Message = async ({
     const scriptSig = btc.Script.encode(['OP_0', hex.decode(bip0322Hash(message))]);
     // tx-to-spend
     const txToSpend = new btc.Transaction({
-      allowUnknowOutput: true,
+      allowUnknownOutputs: true,
       version: txVersion,
     });
     txToSpend.addOutput({
