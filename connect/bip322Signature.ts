@@ -117,7 +117,7 @@ export const signBip322Message = async ({
     });
     // tx-to-sign
     const txToSign = new btc.Transaction({
-      allowUnknowOutput: true,
+      allowUnknownOutputs: true,
       version: txVersion,
     });
     txToSign.addInput({
