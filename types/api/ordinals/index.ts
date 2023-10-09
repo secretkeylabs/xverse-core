@@ -22,6 +22,10 @@ export interface Inscription {
   content_length: number;
   timestamp: number;
   tx_id: string;
+  category?: 'brc-20' | 'sns' | null;
+  collection_id?: string | null;
+  collection_name?: string | null;
+  inscription_floor_price?: number;
 }
 
 export interface InscriptionsList {
