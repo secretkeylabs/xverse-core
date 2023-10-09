@@ -1,5 +1,12 @@
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
+export type WalletContext = {
+  btcAddress: string;
+  ordinalsAddress: string;
+  btcPublicKey: string;
+  ordinalsPublicKey: string;
+};
+
 export enum ActionType {
   SEND_BTC = 'sendBtc',
   SEND_UTXO = 'sendUtxo',
