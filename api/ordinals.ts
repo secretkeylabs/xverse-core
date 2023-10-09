@@ -6,10 +6,10 @@ import {
   Brc20HistoryTransactionData,
   BtcOrdinal,
   FungibleToken,
+  HiroApiBrc20TxHistoryResponse,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
-  OrdinalTokenTransaction,
   UTXO,
   UtxoOrdinalBundle,
 } from '../types';
@@ -165,15 +165,12 @@ export async function getBrc20History(address: string, token: string): Promise<B
       timeout: 30000,
     })
     .then((response) => {
-      const data: OrdinalTokenTransaction[] = response.data;
+      const data: HiroApiBrc20TxHistoryResponse = response.data;
       const transactions: Brc20HistoryTransactionData[] = [];
-      data.forEach((tx) => {
-        transactions.push(parseBrc20TransactionData(tx));
+      data.results.forEach((tx) => {
+        transactions.push(parseBrc20TransactionData(tx, address));
       });
       return transactions;
-    })
-    .catch((error) => {
-      return [];
     });
 }
 
