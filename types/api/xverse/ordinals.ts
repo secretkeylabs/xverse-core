@@ -7,12 +7,12 @@ export interface OrdinalInfo {
 
 export interface CollectionMarketDataResponse {
   collection_id: string;
-  collection_name: string;
-  floor_price: number;
-  floor_change_24h: number;
+  collection_name?: string;
+  floor_price?: number;
+  floor_change_24h?: number;
 }
 
-export type CondensedInscription = Pick<Inscription, 'id' | 'content_type'>;
+export type CondensedInscription = Pick<Inscription, 'id' | 'content_type' | 'number'>;
 
 export interface InscriptionCollectionsData {
   collection_id: string | null;
