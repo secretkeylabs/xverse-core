@@ -1,11 +1,14 @@
 import { StacksTransaction } from '@stacks/transactions';
 import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
+import { CollectionMarketDataResponse, CollectionsList } from 'types/api/xverse/ordinals';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   AppInfo,
   BtcFeeResponse,
   CoinsResponse,
+  Inscription,
+  InscriptionInCollectionsList,
   OrdinalInfo,
   SignedUrlResponse,
   SponsorInfoResponse,
@@ -199,6 +202,45 @@ export async function getErc721Metadata(tokenContract: string, tokenId: string):
   const requestUrl = `${XVERSE_API_BASE_URL}/v1/eth/${tokenContract}/${tokenId}`;
   const erc721Metadata = await axios.get(requestUrl);
   return erc721Metadata.data;
+}
+
+export async function getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/collections`;
+  const response = await axios.get(requestUrl, {
+    params: {
+      limit,
+      offset,
+    },
+  });
+  return response.data;
+}
+
+export async function getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/collections/${collectionId}`;
+  const response = await axios.get(requestUrl);
+  return response.data;
+}
+
+export async function getCollectionSpecificInscriptions(
+  address: string,
+  collectionId: string,
+  offset?: number,
+  limit?: number,
+): Promise<InscriptionInCollectionsList> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/collections/${collectionId}`;
+  const response = await axios.get(requestUrl, {
+    params: {
+      limit,
+      offset,
+    },
+  });
+  return response.data;
+}
+
+export async function getInscription(address: string, inscriptionId: string): Promise<Inscription> {
+  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`;
+  const response = await axios.get(requestUrl);
+  return response.data;
 }
 
 export async function getAppConfig() {
