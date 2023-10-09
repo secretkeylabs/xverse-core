@@ -1,4 +1,5 @@
 import { base64 } from '@scure/base';
+import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
 import { createInscriptionRequest } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
@@ -27,6 +28,7 @@ type EstimateProps = {
   amount: number;
   revealAddress: string;
   feeRate: number;
+  cancelToken?: CancelToken;
 };
 
 type BaseEstimateResult = {
@@ -124,7 +126,7 @@ const validateProps = (props: EstimateProps): props is EstimateProps & { address
 export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
 
@@ -134,6 +136,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
     revealAddress,
     feeRate,
     FINAL_SATS_VALUE,
+    cancelToken,
   );
 
   const commitValue = new BigNumber(FINAL_SATS_VALUE).plus(revealChainFee).plus(revealServiceFee);
@@ -218,7 +221,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
 export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
@@ -251,6 +254,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     revealAddress,
     feeRate,
     inscriptionValue.toNumber(),
+    cancelToken,
   );
 
   const commitValue = inscriptionValue.plus(revealChainFee).plus(revealServiceFee);

@@ -11,6 +11,7 @@ import {
   NetworkType,
   OrdinalTokenTransaction,
   UTXO,
+  UtxoOrdinalBundle,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -209,3 +210,44 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
+
+type AddressBundleResponse = {
+  total: number;
+  offset: number;
+  limit: number;
+  results: UtxoOrdinalBundle[];
+};
+export const getAddressUtxoOrdinalBundles = async (
+  address: string,
+  offset: number,
+  limit: number,
+  options?: {
+    /** Filter out unconfirmed UTXOs */
+    hideUnconfirmed?: boolean;
+    /** Filter out UTXOs that only have one or more inscriptions (and no rare sats) */
+    hideInscriptionOnly?: boolean;
+  },
+) => {
+  const params: Record<string, unknown> = {
+    offset,
+    limit,
+  };
+
+  if (options?.hideUnconfirmed) {
+    params.hideUnconfirmed = 'true';
+  }
+  if (options?.hideInscriptionOnly) {
+    params.hideInscriptionOnly = 'true';
+  }
+
+  const response = await axios.get<AddressBundleResponse>(`${XVERSE_API_BASE_URL}/v1/address/${address}/ordinal-utxo`, {
+    params,
+  });
+
+  return response.data;
+};
+
+export const getUtxoOrdinalBundle = async (txid: string, vout: number): Promise<UtxoOrdinalBundle> => {
+  const response = await axios.get<UtxoOrdinalBundle>(`${XVERSE_API_BASE_URL}/v1/ordinal-utxo/${txid}:${vout}`);
+  return response.data;
+};

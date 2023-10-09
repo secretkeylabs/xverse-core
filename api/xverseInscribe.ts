@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { CancelToken } from 'axios';
 
 import {
   Brc20CostEstimateRequest,
@@ -50,6 +50,7 @@ const getBrc20TransferFees = async (
   revealAddress: string,
   feeRate: number,
   inscriptionValue?: number,
+  cancelToken?: CancelToken,
 ): Promise<Brc20CostEstimateResponse> => {
   const requestBody: Brc20CostEstimateRequest = {
     operation: 'transfer',
@@ -59,7 +60,9 @@ const getBrc20TransferFees = async (
     feeRate,
     inscriptionValue,
   };
-  const response = await apiClient.post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody);
+  const response = await apiClient.post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody, {
+    cancelToken,
+  });
   return response.data;
 };
 
@@ -90,6 +93,7 @@ const getBrc20MintFees = async (
   revealAddress: string,
   feeRate: number,
   inscriptionValue?: number,
+  cancelToken?: CancelToken,
 ): Promise<Brc20CostEstimateResponse> => {
   const requestBody: Brc20CostEstimateRequest = {
     operation: 'mint',
@@ -99,7 +103,9 @@ const getBrc20MintFees = async (
     feeRate,
     inscriptionValue,
   };
-  const response = await apiClient.post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody);
+  const response = await apiClient.post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody, {
+    cancelToken: cancelToken,
+  });
   return response.data;
 };
 

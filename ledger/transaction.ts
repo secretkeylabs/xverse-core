@@ -21,6 +21,7 @@ import { Bip32Derivation, TapBip32Derivation } from './types';
  * @param network - the network type (Mainnet or Testnet)
  * @param senderAddress - the address to send the transaction from
  * @param recipients - an array of recipients of the transaction
+ * @param feeRateInput - a string representing the fee rate in sats/vB
  * @param ordinalUtxo - the UTXO to send
  * @returns the selected utxos, the change value and the fee
  * */
@@ -95,6 +96,7 @@ export async function getTransactionData(
  * @param changeValue - the value of the remaining balance after the transaction has been completed
  * @param inputUTXOs - the selected input utxos
  * @param inputDerivation - the derivation data for the sender address
+ * @param witnessScript - the witness script for the sender address
  * @returns the psbt without any signatures
  * */
 export async function createNativeSegwitPsbt(
@@ -165,6 +167,8 @@ export function addSignatureToStxTransaction(transaction: string | Buffer, signa
  * @param changeValue - the value of the remaining balance after the transaction has been completed
  * @param inputUTXOs - the selected input utxos
  * @param inputDerivation - the derivation data for the sender address
+ * @param taprootScript - the taproot script for the sender address
+ * @param tapInternalKey - the internal public key for the sender address
  * @returns the psbt without any signatures
  * */
 export async function createTaprootPsbt(
@@ -218,6 +222,10 @@ export async function createTaprootPsbt(
  * @param changeValue - the value of the remaining balance after the transaction has been completed
  * @param inputUTXOs - the selected input utxos
  * @param inputDerivation - the derivation data for the sender address
+ * @param witnessScript - the witness script for the segwit sender address
+ * @param taprootInputDerivation - the derivation data for the taproot sender address
+ * @param taprootScript - the taproot script for the taproot sender address
+ * @param tapInternalKey - the internal public key for the taproot sender address
  * @returns the psbt without any signatures
  * */
 export async function createMixedPsbt(
@@ -260,6 +268,7 @@ export async function createMixedPsbt(
         bip32Derivation: inputDerivation,
       });
     } else {
+      // Adding Taproot input
       psbt.addInput({
         hash: utxo.txid,
         index: utxo.vout,
