@@ -13,7 +13,7 @@ import {
   publicKeyToString,
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
-import { Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
+import { AddressType, getAddressInfo, Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
 import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
@@ -269,44 +269,6 @@ export function validateBtcAddress({ btcAddress, network }: { btcAddress: string
   }
 }
 
-interface EncryptMnemonicArgs {
-  password: string;
-  seed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
-}
-
-interface DecryptMnemonicArgs {
-  password: string;
-  encryptedSeed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
-}
-
-export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
-  const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
-
-  const { hash } = await passwordHashGenerator(password);
-  const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
-
-  return encryptedSeedBuffer.toString('hex');
-}
-
-export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
-  const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
-
-  const { hash } = await passwordHashGenerator(password);
-  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
-
-  return seedPhrase;
-}
-
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
@@ -319,3 +281,12 @@ export async function getStxAddressKeyChain(
 }
 
 export { hashMessage };
+export * from './encryptionUtils';
+
+export const validateBtcAddressIsTaproot = (btcAddress: string): boolean => {
+  try {
+    return getAddressInfo(btcAddress)?.type === AddressType.p2tr;
+  } catch {
+    return false;
+  }
+};
