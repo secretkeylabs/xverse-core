@@ -6,11 +6,12 @@ import {
   Brc20HistoryTransactionData,
   BtcOrdinal,
   FungibleToken,
+  HiroApiBrc20TxHistoryResponse,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
-  OrdinalTokenTransaction,
   UTXO,
+  UtxoOrdinalBundle,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -164,15 +165,12 @@ export async function getBrc20History(address: string, token: string): Promise<B
       timeout: 30000,
     })
     .then((response) => {
-      const data: OrdinalTokenTransaction[] = response.data;
+      const data: HiroApiBrc20TxHistoryResponse = response.data;
       const transactions: Brc20HistoryTransactionData[] = [];
-      data.forEach((tx) => {
-        transactions.push(parseBrc20TransactionData(tx));
+      data.results.forEach((tx) => {
+        transactions.push(parseBrc20TransactionData(tx, address));
       });
       return transactions;
-    })
-    .catch((error) => {
-      return [];
     });
 }
 
@@ -209,3 +207,44 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
+
+type AddressBundleResponse = {
+  total: number;
+  offset: number;
+  limit: number;
+  results: UtxoOrdinalBundle[];
+};
+export const getAddressUtxoOrdinalBundles = async (
+  address: string,
+  offset: number,
+  limit: number,
+  options?: {
+    /** Filter out unconfirmed UTXOs */
+    hideUnconfirmed?: boolean;
+    /** Filter out UTXOs that only have one or more inscriptions (and no rare sats) */
+    hideInscriptionOnly?: boolean;
+  },
+) => {
+  const params: Record<string, unknown> = {
+    offset,
+    limit,
+  };
+
+  if (options?.hideUnconfirmed) {
+    params.hideUnconfirmed = 'true';
+  }
+  if (options?.hideInscriptionOnly) {
+    params.hideInscriptionOnly = 'true';
+  }
+
+  const response = await axios.get<AddressBundleResponse>(`${XVERSE_API_BASE_URL}/v1/address/${address}/ordinal-utxo`, {
+    params,
+  });
+
+  return response.data;
+};
+
+export const getUtxoOrdinalBundle = async (txid: string, vout: number): Promise<UtxoOrdinalBundle> => {
+  const response = await axios.get<UtxoOrdinalBundle>(`${XVERSE_API_BASE_URL}/v1/ordinal-utxo/${txid}:${vout}`);
+  return response.data;
+};

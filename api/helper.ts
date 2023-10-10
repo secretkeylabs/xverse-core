@@ -1,14 +1,14 @@
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
 import {
+  Brc20HistoryTransactionData,
+  Brc20TxHistoryItem,
   BtcTransactionData,
   StxMempoolTransactionData,
   StxMempoolTransactionDataResponse,
   StxTransactionData,
   StxTransactionDataResponse,
   TransferTransaction,
-  Brc20HistoryTransactionData,
-  OrdinalTokenTransaction,
 } from '../types';
 
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
@@ -153,19 +153,27 @@ export function parseBtcTransactionData(
   return parsedTx;
 }
 
-export function parseBrc20TransactionData(responseTx: OrdinalTokenTransaction): Brc20HistoryTransactionData {
-  const incoming = responseTx.type === 'receive';
+export function parseBrc20TransactionData(
+  responseTx: Brc20TxHistoryItem,
+  address: string,
+): Brc20HistoryTransactionData {
+  const incoming = responseTx.transfer_send?.to_address === address;
 
   const date = new Date(0);
-  if (responseTx.blocktime) date.setUTCSeconds(responseTx.blocktime);
+  if (responseTx.timestamp) date.setUTCMilliseconds(responseTx.timestamp);
+  let amount = '0';
+  if (responseTx.mint) amount = responseTx.mint.amount;
+  else if (responseTx.transfer) amount = responseTx.transfer.amount;
+  else if (responseTx.transfer_send) amount = responseTx.transfer_send.amount;
 
   const parsedTx: Brc20HistoryTransactionData = {
     ...responseTx,
-    amount: new BigNumber(responseTx.amount),
+    txid: responseTx.tx_id,
+    amount: new BigNumber(amount),
     seenTime: date,
     incoming,
     txType: 'brc20',
-    txStatus: responseTx?.blocktime === 0 ? 'pending' : 'success',
+    txStatus: 'success',
   };
   return parsedTx;
 }
