@@ -1,9 +1,13 @@
+import { UtxoOrdinalBundle } from '../types/api/xverse/ordinals';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
-export type UtxoStates = 'inscribed' | 'notInscribed' | 'unknown';
-
 export type UtxoCacheStruct = {
-  [utxoId: string]: UtxoStates;
+  [utxoId: string]: UtxoOrdinalBundle;
+};
+
+type UtxoCacheStorage = {
+  version: number;
+  utxos: UtxoCacheStruct;
 };
 
 export type StorageAdapter = {
@@ -19,9 +23,7 @@ type UtxoCacheConfig = {
 export class UtxoCache {
   private readonly _cacheStorageController: StorageAdapter;
 
-  CACHE_STORAGE_KEY = 'utxoCache';
-
-  CACHE_VERSION_STORAGE_KEY = 'utxoCacheVersion';
+  utxos: UtxoCacheStruct = {};
 
   VERSION = 1;
 
@@ -29,81 +31,104 @@ export class UtxoCache {
     this._cacheStorageController = config.cacheStorageController;
   }
 
-  _getCache = async (): Promise<UtxoCacheStruct> => {
-    const cache = await this._cacheStorageController.get(this.CACHE_STORAGE_KEY);
+  private getAddressCacheStorageKey = (address: string) => `utxoCache-${address}`;
+
+  _getCache = async (address: string): Promise<UtxoCacheStorage> => {
+    const cache = await this._cacheStorageController.get(this.getAddressCacheStorageKey(address));
     if (cache) {
       return JSON.parse(cache);
     } else {
-      return {};
+      return {
+        version: -1,
+        utxos: {},
+      };
     }
   };
 
-  _getAddressUtxos = async (address: string) => getAddressUtxoOrdinalBundles(address, 0, 200);
+  private _setCache = async (utxos: UtxoCacheStruct, address: string): Promise<void> => {
+    await this._cacheStorageController.set(
+      this.getAddressCacheStorageKey(address),
+      JSON.stringify({
+        version: this.VERSION,
+        utxos: utxos,
+      }),
+    );
+  };
+
+  _getAddressUtxos = async (address: string) => getAddressUtxoOrdinalBundles(address, 0, 60);
 
   _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(txid, vout);
 
-  getUtxoState = async (utxoId: string): Promise<UtxoStates | null> => {
-    const cache = await this._getCache();
-    if (cache[utxoId]) {
-      return cache[utxoId];
+  clear = async (address: string): Promise<void> => {
+    await this._cacheStorageController.remove(this.getAddressCacheStorageKey(address));
+  };
+
+  getVersion = async (address: string): Promise<number> => {
+    const { version } = await this._getCache(address);
+    if (version) {
+      return version;
+    } else {
+      return -1;
+    }
+  };
+
+  isCacheUpdated = async (address: string): Promise<boolean> => {
+    const version = await this.getVersion(address);
+    return version === this.VERSION;
+  };
+
+  getUtxoState = async (utxoId: string, address: string): Promise<UtxoOrdinalBundle | null> => {
+    const { utxos } = await this._getCache(address);
+    console.log('🚀 ~ file: utxoCache.ts:82 ~ UtxoCache ~ getUtxoState= ~ utxos:', utxos);
+    if (utxos && utxos[utxoId]) {
+      return utxos[utxoId];
     }
     const [txid, vout] = utxoId.split(':');
     const utxo = await this._getUtxo(txid, parseInt(vout, 10));
-    const isInscribed = utxo.inscriptions.length > 0 ? 'inscribed' : 'notInscribed';
-    const isUnconfirmed = utxo.block_height === 0;
-    const utxoState = isUnconfirmed ? 'unknown' : isInscribed;
-    await this.setUtxoState(utxoId, utxoState);
-    return utxoState;
+    await this.setUtxoState(utxoId, utxo, address, utxos);
+    return utxo;
   };
 
-  async setUtxoState(utxoId: string, state: UtxoStates): Promise<void> {
-    let cache = await this._getCache();
-    if (!cache) {
-      cache = {};
+  setUtxoState = async (
+    utxoId: string,
+    utxo: UtxoOrdinalBundle,
+    address: string,
+    cachedUtxos: UtxoCacheStruct,
+  ): Promise<void> => {
+    console.log('🚀 ~ file: utxoCache.ts:97 ~ UtxoCache ~ cachedUtxos:', cachedUtxos);
+    console.log('🚀 ~ file: utxoCache.ts:97 ~ UtxoCache ~ address:', address);
+    console.log('🚀 ~ file: utxoCache.ts:97 ~ UtxoCache ~ utxo:', utxo);
+    console.log('🚀 ~ file: utxoCache.ts:97 ~ UtxoCache ~ utxoId:', utxoId);
+    if (!cachedUtxos) {
+      cachedUtxos = {};
     }
-    cache[utxoId] = state;
-    await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(cache));
-  }
+    cachedUtxos[utxoId] = utxo;
+    await this._setCache(this.utxos, address);
+  };
 
-  async removeUtxoState(utxoId: string): Promise<void> {
-    const cache = await this._getCache();
-    if (cache && utxoId in cache) {
-      delete cache[utxoId];
-    } else {
-      throw new Error('Utxo not found in cache');
+  removeUtxoState = async (utxoId: string, address: string): Promise<void | boolean> => {
+    const { utxos: cachedUtxos } = await this._getCache(address);
+    if (cachedUtxos && utxoId in cachedUtxos) {
+      delete cachedUtxos[utxoId];
+      await this._setCache(cachedUtxos, address);
     }
-    await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(cache));
-  }
+    return false;
+  };
 
-  async clear(): Promise<void> {
-    await this._cacheStorageController.remove(this.CACHE_STORAGE_KEY);
-  }
-
-  async getVersion(): Promise<number> {
-    const version = await this._cacheStorageController.get(this.CACHE_VERSION_STORAGE_KEY);
-    if (version) {
-      return parseInt(version, 10);
-    } else {
-      return 0;
-    }
-  }
-
-  getAllUtxos = async (btcAddress: string, ordinalsAddress?: string): Promise<UtxoCacheStruct> => {
+  getAllUtxos = async (btcAddress: string): Promise<UtxoCacheStruct> => {
     const utxos = await this._getAddressUtxos(btcAddress);
-    const ordinalsAddressUtxos = ordinalsAddress ? await this._getAddressUtxos(ordinalsAddress) : { results: [] };
-    const allUtxos = [...utxos.results, ...ordinalsAddressUtxos.results];
-    const utxosObject: { [key: string]: UtxoStates } = allUtxos.reduce((acc, utxo) => {
-      const isInscribed = utxo.inscriptions.length > 0 ? 'inscribed' : 'notInscribed';
-      const isUnconfirmed = utxo.block_height === 0;
-      acc[`${utxo.txid}:${utxo.vout}`] = isUnconfirmed ? 'unknown' : isInscribed;
+    const utxosObject: UtxoCacheStruct = utxos.results.reduce((acc, utxo) => {
+      acc[`${utxo.txid}:${utxo.vout}`] = utxo;
       return acc;
-    }, {} as { [key: string]: UtxoStates });
+    }, {} as UtxoCacheStruct);
     return utxosObject;
   };
 
   initCache = async (address: string): Promise<void> => {
-    await this._cacheStorageController.set(this.CACHE_VERSION_STORAGE_KEY, this.VERSION.toString());
-    const utxos = await this.getAllUtxos(address);
-    await this._cacheStorageController.set(this.CACHE_STORAGE_KEY, JSON.stringify(utxos));
+    const cacheUpdated = await this.isCacheUpdated(address);
+    if (!cacheUpdated) {
+      const utxos = await this.getAllUtxos(address);
+      await this._setCache(utxos, address);
+    }
   };
 }

@@ -1,232 +1,148 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { UtxoCache } from '../../api/utxoCache';
+import { StorageAdapter, UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
+import { UtxoOrdinalBundle } from '../../types/api/xverse/ordinals';
 
 describe('UtxoCache', () => {
-  const cacheStorageController = {
-    get: vi.fn(),
-    set: vi.fn(),
-    remove: vi.fn(),
-  };
-  const utxoCache = new UtxoCache({ cacheStorageController });
+  let utxoCache: UtxoCache;
+  let mockStorageAdapter: StorageAdapter;
+  let mockCache: UtxoCacheStruct;
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    mockCache = {
+      'txid1:0': {
+        txid: 'txid1',
+        vout: 0,
+        inscriptions: [],
+        block_height: 123,
+        value: 456,
+        sats: [],
+      },
+      'txid2:1': {
+        txid: 'txid2',
+        vout: 1,
+        inscriptions: [],
+        block_height: 123,
+        value: 456,
+        sats: [],
+      },
+    };
+    mockStorageAdapter = {
+      get: vi.fn(),
+      set: vi.fn(),
+      remove: vi.fn(),
+    };
+    utxoCache = new UtxoCache({
+      cacheStorageController: mockStorageAdapter,
+    });
   });
 
   describe('getUtxoState', () => {
-    it('should return the cached state if it exists', async () => {
-      const cachedState = 'inscribed';
-      utxoCache._getCache = vi.fn().mockResolvedValue({ utxoId: cachedState });
-
-      const utxoId = 'utxoId';
-      const state = await utxoCache.getUtxoState(utxoId);
-
-      expect(state).toEqual(cachedState);
-      expect(utxoCache._getCache).toHaveBeenCalledTimes(1);
-      expect(utxoCache._getCache).toHaveBeenCalledWith();
+    it('should return cached utxo if it exists', async () => {
+      utxoCache._getCache = vi.fn().mockResolvedValueOnce({ utxos: mockCache, version: 1 });
+      const utxo = await utxoCache.getUtxoState('txid1:0', 'address1');
+      expect(utxo).toEqual(mockCache['txid1:0']);
     });
 
-    it('should return the state from the blockchain if it is not cached', async () => {
-      utxoCache._getCache = vi.fn().mockResolvedValue({});
-
-      const utxoId = 'txid:1';
-      const utxo = {
-        inscriptions: [{ payload: 'payload' }],
-        block_height: 1,
-      };
-      const getUtxoOrdinalBundle = vi.fn().mockResolvedValue(utxo);
-      utxoCache._getUtxo = getUtxoOrdinalBundle;
-
-      const state = await utxoCache.getUtxoState(utxoId);
-
-      expect(state).toEqual('inscribed');
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledTimes(1);
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('txid', 1);
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
-        JSON.stringify({ [utxoId]: 'inscribed' }),
-      );
-    });
-
-    it('should return "unknown" if the utxo is unconfirmed', async () => {
-      utxoCache._getCache = vi.fn().mockResolvedValue({});
-
-      const utxoId = 'txid:2';
-      const utxo = {
+    it('should fetch utxo from API and cache it if it does not exist in cache', async () => {
+      utxoCache._getCache = vi.fn().mockResolvedValueOnce(JSON.stringify({ version: 1, utxos: {} }));
+      const mockUtxo = {
+        txid: 'txid1',
+        vout: 0,
         inscriptions: [],
-        block_height: 0,
+        block_height: 123,
+        value: 456,
+        sats: [],
       };
-      const getUtxoOrdinalBundle = vi.fn().mockResolvedValue(utxo);
-      utxoCache._getUtxo = getUtxoOrdinalBundle;
-
-      const state = await utxoCache.getUtxoState(utxoId);
-
-      expect(state).toEqual('unknown');
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledTimes(1);
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('txid', 2);
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
-        JSON.stringify({ [utxoId]: 'unknown' }),
-      );
-    });
-
-    it('should return "notInscribed" if the utxo is confirmed but not inscribed', async () => {
-      utxoCache._getCache = vi.fn().mockResolvedValue({});
-
-      const utxoId = 'txid:3';
-      const utxo = {
-        inscriptions: [],
-        block_height: 1,
-      };
-      const getUtxoOrdinalBundle = vi.fn().mockResolvedValue(utxo);
-      utxoCache._getUtxo = getUtxoOrdinalBundle;
-
-      const state = await utxoCache.getUtxoState(utxoId);
-
-      expect(state).toEqual('notInscribed');
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledTimes(1);
-      expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('txid', 3);
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
-        JSON.stringify({ [utxoId]: 'notInscribed' }),
+      const mockGetUtxoOrdinalBundle = vi.fn().mockResolvedValueOnce(mockUtxo);
+      utxoCache._getUtxo = mockGetUtxoOrdinalBundle;
+      await utxoCache.getUtxoState('txid1:0', 'address1');
+      expect(mockGetUtxoOrdinalBundle).toHaveBeenCalledWith('txid1', 0);
+      expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+        'utxoCache-address1',
+        JSON.stringify({
+          version: 1,
+          utxos: {
+            'txid1:0': mockUtxo,
+          },
+        }),
       );
     });
   });
 
   describe('setUtxoState', () => {
-    it('should set the state in the cache', async () => {
-      const utxoId = 'utxoId';
-      const state = 'inscribed';
-
-      await utxoCache.setUtxoState(utxoId, state);
-
-      expect(utxoCache._getCache).toHaveBeenCalledTimes(1);
-      expect(utxoCache._getCache).toHaveBeenCalledWith();
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
-        JSON.stringify({ [utxoId]: state }),
+    it('should set utxo state in cache', async () => {
+      utxoCache._getCache = vi.fn().mockResolvedValueOnce({ version: 1, utxos: mockCache });
+      await utxoCache.setUtxoState('txid3:2', mockCache['txid3:2'], 'address1', mockCache);
+      expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+        'utxoCache-address1',
+        JSON.stringify({
+          version: 1,
+          utxos: {
+            ...mockCache,
+            'txid3:2': { txid: 'txid3', vout: 2, inscriptions: [], block_height: 123, value: 456, sats: [] },
+          },
+        }),
       );
     });
   });
 
   describe('removeUtxoState', () => {
-    it('should remove the state from the cache', async () => {
-      const utxoId = 'utxoId';
-      utxoCache._getCache = vi.fn().mockResolvedValue({ utxoId: 'notInscribed', utxoId2: 'inscribed' });
-      await utxoCache.removeUtxoState(utxoId);
-
-      expect(utxoCache._getCache).toHaveBeenCalledTimes(1);
-      expect(utxoCache._getCache).toHaveBeenCalledWith();
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
-        JSON.stringify({ utxoId2: 'inscribed' }),
+    it('should remove utxo state from cache', async () => {
+      utxoCache._getCache = vi.fn().mockResolvedValueOnce({ version: 1, utxos: mockCache });
+      await utxoCache.removeUtxoState('txid1:0', 'address1');
+      expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+        'utxoCache-address1',
+        JSON.stringify({
+          version: 1,
+          utxos: {
+            'txid2:1': mockCache['txid2:1'],
+          },
+        }),
       );
-    });
-  });
-
-  describe('clear', () => {
-    it('should remove the cache from storage', async () => {
-      await utxoCache.clear();
-
-      expect(cacheStorageController.remove).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.remove).toHaveBeenCalledWith(utxoCache.CACHE_STORAGE_KEY);
-    });
-  });
-
-  describe('getVersion', () => {
-    it('should return the version from storage', async () => {
-      const version = 1;
-      cacheStorageController.get = vi.fn().mockResolvedValue(version.toString());
-
-      const result = await utxoCache.getVersion();
-
-      expect(result).toEqual(version);
-      expect(cacheStorageController.get).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.get).toHaveBeenCalledWith(utxoCache.CACHE_VERSION_STORAGE_KEY);
-    });
-
-    it('should return 0 if the version is not in storage', async () => {
-      cacheStorageController.get = vi.fn().mockResolvedValue(null);
-
-      const result = await utxoCache.getVersion();
-
-      expect(result).toEqual(0);
-      expect(cacheStorageController.get).toHaveBeenCalledTimes(1);
-      expect(cacheStorageController.get).toHaveBeenCalledWith(utxoCache.CACHE_VERSION_STORAGE_KEY);
-    });
-  });
-
-  describe('getAllUtxos', () => {
-    it('should return the states of all UTXOs for the given address', async () => {
-      // Mock the getAddressUtxoOrdinalBundles function to return some UTXOs
-      const getAddressUtxoOrdinalBundles = vi.fn().mockResolvedValue({
-        results: [
-          { txid: 'txid1', vout: 0, inscriptions: [], block_height: 1 },
-          { txid: 'txid2', vout: 1, inscriptions: [{ data: 'inscription' }], block_height: 2 },
-        ],
-      });
-      utxoCache._getAddressUtxos = getAddressUtxoOrdinalBundles;
-
-      const utxos = await utxoCache.getAllUtxos('address');
-
-      expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('address');
-      expect(utxos).toEqual({
-        'txid1:0': 'notInscribed',
-        'txid2:1': 'inscribed',
-      });
-    });
-
-    it('should include UTXOs from the ordinals address if provided', async () => {
-      // Mock the getAddressUtxoOrdinalBundles function to return some UTXOs
-      const getAddressUtxoOrdinalBundles = vi.fn().mockResolvedValue({
-        results: [{ txid: 'txid3', vout: 2, inscriptions: [], block_height: 3 }],
-      });
-      utxoCache._getAddressUtxos = getAddressUtxoOrdinalBundles;
-
-      const utxos = await utxoCache.getAllUtxos('address', 'ordinalsAddress');
-
-      expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('ordinalsAddress');
-      expect(utxos).toEqual({
-        'txid3:2': 'notInscribed',
-      });
     });
   });
 
   describe('initCache', () => {
-    it('should initialize the cache with the states of all utxos for the given address', async () => {
-      const address = 'address';
-      const utxos = {
+    it('should fetch all utxos for address and cache them', async () => {
+      const mockGetAddressUtxoOrdinalBundles = vi.fn().mockResolvedValueOnce({
         results: [
-          { txid: 'txid1', vout: 0, inscriptions: [{ payload: 'payload' }], block_height: 1 },
-          { txid: 'txid2', vout: 1, inscriptions: [], block_height: 1 },
-          { txid: 'txid3', vout: 2, inscriptions: [{ payload: 'payload' }], block_height: 0 },
+          {
+            txid: 'txid1',
+            vout: 0,
+            inscriptions: [],
+            block_height: 123,
+            value: 456,
+            sats: [],
+          },
+          {
+            txid: 'txid2',
+            vout: 1,
+            inscriptions: [],
+            block_height: 123,
+            value: 456,
+            sats: [],
+          },
         ],
-      };
-      const getAddressUtxoOrdinalBundles = vi.fn().mockResolvedValue(utxos);
-      utxoCache._getAddressUtxos = getAddressUtxoOrdinalBundles;
-
-      await utxoCache.initCache(address);
-
-      expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledTimes(1);
-      expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith(address);
-      expect(cacheStorageController.set).toHaveBeenCalledTimes(2);
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_VERSION_STORAGE_KEY,
-        utxoCache.VERSION.toString(),
-      );
-      expect(cacheStorageController.set).toHaveBeenCalledWith(
-        utxoCache.CACHE_STORAGE_KEY,
+      });
+      utxoCache._getAddressUtxos = mockGetAddressUtxoOrdinalBundles;
+      await utxoCache.initCache('address1');
+      expect(utxoCache._getAddressUtxos).toHaveBeenCalledWith('address1');
+      expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+        'utxoCache-address1',
         JSON.stringify({
-          'txid1:0': 'inscribed',
-          'txid2:1': 'notInscribed',
-          'txid3:2': 'unknown',
+          version: 1,
+          utxos: mockCache,
         }),
       );
+    });
+
+    it('should not fetch utxos if cache is already up to date', async () => {
+      utxoCache._getCache = vi.fn().mockResolvedValueOnce({ version: 1, utxos: mockCache });
+      const mockGetAddressUtxoOrdinalBundles = vi.fn();
+      utxoCache._getAddressUtxos = mockGetAddressUtxoOrdinalBundles;
+      await utxoCache.initCache('address1');
+      expect(mockGetAddressUtxoOrdinalBundles).not.toHaveBeenCalled();
+      expect(mockStorageAdapter.set).not.toHaveBeenCalled();
     });
   });
 });
