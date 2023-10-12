@@ -49,8 +49,16 @@ export async function getBtcFeeRate(network: NetworkType) {
 }
 
 export async function isCustomFeesAllowed(network: NetworkType, customFees: string) {
+  if (Number.isNaN(Number(customFees))) {
+    return false;
+  }
+
+  if (network === 'Testnet') {
+    return Number(customFees) >= 1;
+  }
+
   const feeRate = await getBtcFeeRate(network);
-  return Number(customFees) >= feeRate?.limits?.min ? true : false;
+  return Number(customFees) >= feeRate?.limits?.min;
 }
 
 export function selectUnspentOutputs(
