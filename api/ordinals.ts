@@ -54,7 +54,7 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
     addressUTXOs
       .filter((utxo) => utxo.status.confirmed) // we can only detect ordinals from confirmed utxos
       .map(async (utxo: UTXO) => {
-        const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+        const ordinalContentUrl = `${XVERSE_INSCRIBE_URL(network)}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
 
         const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
 
@@ -73,16 +73,16 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }
 
-export async function getOrdinalIdsFromUtxo(utxo: UTXO): Promise<string[]> {
-  const ordinalContentUrl = `${XVERSE_INSCRIBE_URL}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+export async function getOrdinalIdsFromUtxo(network: NetworkType, utxo: UTXO): Promise<string[]> {
+  const ordinalContentUrl = `${XVERSE_INSCRIBE_URL(network)}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
 
   const { data: ordinalIds } = await axios.get<string[]>(ordinalContentUrl);
 
   return ordinalIds;
 }
 
-export async function getOrdinalIdFromUtxo(utxo: UTXO) {
-  const ordinalIds = await getOrdinalIdsFromUtxo(utxo);
+export async function getOrdinalIdFromUtxo(network: NetworkType, utxo: UTXO) {
+  const ordinalIds = await getOrdinalIdsFromUtxo(network, utxo);
   if (ordinalIds.length > 0) {
     return ordinalIds[ordinalIds.length - 1];
   } else {
@@ -111,7 +111,7 @@ export async function getNonOrdinalUtxo(address: string, network: NetworkType): 
   const nonOrdinalOutputs: Array<UTXO> = [];
 
   for (let i = 0; i < unspentOutputs.length; i++) {
-    const ordinalId = await getOrdinalIdFromUtxo(unspentOutputs[i]);
+    const ordinalId = await getOrdinalIdFromUtxo(network, unspentOutputs[i]);
     if (!ordinalId) {
       nonOrdinalOutputs.push(unspentOutputs[i]);
     }

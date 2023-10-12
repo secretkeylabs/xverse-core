@@ -31,6 +31,7 @@ type EstimateProps = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
+  network: NetworkType;
 };
 
 type BaseEstimateResult = {
@@ -75,6 +76,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     finalInscriptionValue,
     serviceFee,
     serviceFeeAddress,
+    network,
   } = estimateProps;
 
   // a service fee of below 546 will result in a dust UTXO
@@ -107,13 +109,16 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
-  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getInscriptionFeeEstimate({
-    contentLength: content.length,
-    contentType,
-    revealAddress,
-    feeRate,
-    inscriptionValue,
-  });
+  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getInscriptionFeeEstimate(
+    network,
+    {
+      contentLength: content.length,
+      contentType,
+      revealAddress,
+      feeRate,
+      inscriptionValue,
+    },
+  );
 
   const commitValue = new BigNumber(inscriptionValue).plus(revealChainFee).plus(revealServiceFee);
 
@@ -212,11 +217,10 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
 
   const contentField = contentBase64 ? { contentBase64 } : { contentString: contentString as string };
 
-  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder({
+  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder(network, {
     ...contentField,
     contentType,
     feeRate,
-    network,
     revealAddress,
     inscriptionValue,
   });
@@ -245,7 +249,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   const selectedNonOrdinalUtxos = [];
 
   for (const utxo of bestUtxoData.selectedUtxos) {
-    const ordinalIds = await getOrdinalIdsFromUtxo(utxo);
+    const ordinalIds = await getOrdinalIdsFromUtxo(network, utxo);
     if (ordinalIds.length > 0) {
       selectedOrdinalUtxos.push(utxo);
     } else {
@@ -273,7 +277,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     network,
   );
 
-  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder({
+  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder(network, {
     commitAddress,
     commitTransactionHex: commitTransaction.hex,
   });

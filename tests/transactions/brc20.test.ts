@@ -58,6 +58,7 @@ describe('brc20MintEstimateFees', () => {
       amount: mockedAmount,
       revealAddress: mockedRevealAddress,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(result).toEqual({
@@ -75,6 +76,7 @@ describe('brc20MintEstimateFees', () => {
       mockedAmount,
       mockedRevealAddress,
       mockedFeeRate,
+      'Mainnet',
       1000,
       undefined,
     );
@@ -278,7 +280,7 @@ describe('brc20MintExecute', () => {
       'Mainnet',
     );
 
-    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex');
+    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('Mainnet', mockedCommitAddress, 'commit_hex');
   });
 });
 
@@ -321,6 +323,7 @@ describe('brc20TransferEstimateFees', () => {
       amount: mockedAmount,
       revealAddress: mockedRevealAddress,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(result).toEqual({
@@ -339,6 +342,7 @@ describe('brc20TransferEstimateFees', () => {
       mockedAmount,
       mockedRevealAddress,
       mockedFeeRate,
+      'Mainnet',
       2800,
       undefined,
     );
@@ -364,6 +368,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('UTXOs empty');
   });
@@ -382,6 +387,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Insufficient funds, no UTXOs found');
   });
@@ -402,6 +408,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Invalid tick; should be 4 characters long');
   });
@@ -422,6 +429,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Amount should be positive');
   });
@@ -442,6 +450,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Fee rate should be positive');
   });
@@ -597,7 +606,12 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingTransferTransaction:
-          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex', true);
+          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(
+            'Mainnet',
+            mockedCommitAddress,
+            'commit_hex',
+            true,
+          );
           break;
 
         case ExecuteTransferProgressCodes.Finalizing:

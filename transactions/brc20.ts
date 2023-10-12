@@ -30,6 +30,7 @@ type EstimateProps = {
   revealAddress: string;
   feeRate: number;
   cancelToken?: CancelToken;
+  network: NetworkType;
 };
 
 type BaseEstimateResult = {
@@ -127,7 +128,7 @@ const validateProps = (props: EstimateProps): props is EstimateProps & { address
 export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
 
@@ -136,6 +137,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
     amount,
     revealAddress,
     feeRate,
+    network,
     FINAL_SATS_VALUE,
     cancelToken,
   );
@@ -214,7 +216,11 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
     network,
   );
 
-  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(commitAddress, commitTransaction.hex);
+  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(
+    network,
+    commitAddress,
+    commitTransaction.hex,
+  );
 
   return revealTransactionId;
 }
@@ -222,7 +228,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
 export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
   const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
@@ -254,6 +260,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     amount,
     revealAddress,
     feeRate,
+    network,
     inscriptionValue.toNumber(),
     cancelToken,
   );
@@ -390,6 +397,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;
 
   const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20Order(
+    network,
     commitAddress,
     commitTransaction.hex,
     true,
@@ -419,7 +427,11 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   yield ExecuteTransferProgressCodes.Finalizing;
 
   try {
-    const response = await xverseInscribeApi.finalizeBrc20TransferOrder(commitAddress, transferTransaction.signedTx);
+    const response = await xverseInscribeApi.finalizeBrc20TransferOrder(
+      network,
+      commitAddress,
+      transferTransaction.signedTx,
+    );
 
     return response;
   } catch (error) {
