@@ -40,12 +40,12 @@ export const XVERSE_API_BASE_URL = (network: NetworkType) =>
 export const XVERSE_INSCRIBE_URL = (network: NetworkType) =>
   `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
 
+export const XORD_MAINNET_URL = (network: NetworkType) =>
+  `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
+
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.blockstack.org';
-
-// TODO:
-export const XORD_MAINNET_URL = 'https://inscribe.xverse.app';
 
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 

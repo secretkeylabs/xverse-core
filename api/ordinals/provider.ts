@@ -41,7 +41,7 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
       });
 
       this.xordClient = axios.create({
-        baseURL: `${XORD_MAINNET_URL}/v1`,
+        baseURL: `${XORD_MAINNET_URL(network)}/v1`,
       });
     } else {
       this.hiroClient = axios.create({
