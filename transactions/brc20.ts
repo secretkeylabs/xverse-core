@@ -130,7 +130,10 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
 
   const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
   const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
     tick,
@@ -232,7 +235,11 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
 
   const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
+
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
   const { tx } = await signNonOrdinalBtcSendTransaction(
     dummyAddress,

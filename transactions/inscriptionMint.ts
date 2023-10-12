@@ -98,7 +98,10 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
   const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
 
