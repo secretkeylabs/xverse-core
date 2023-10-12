@@ -120,8 +120,8 @@ export async function getNonOrdinalUtxo(address: string, network: NetworkType): 
   return nonOrdinalOutputs;
 }
 
-export async function getOrdinalsFtBalance(address: string): Promise<FungibleToken[]> {
-  const url = `${XVERSE_API_BASE_URL}/v1/ordinals/token/balances/${address}`;
+export async function getOrdinalsFtBalance(network: NetworkType, address: string): Promise<FungibleToken[]> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/token/balances/${address}`;
   return axios
     .get(url, {
       timeout: 30000,
@@ -158,8 +158,12 @@ export async function getOrdinalsFtBalance(address: string): Promise<FungibleTok
     });
 }
 
-export async function getBrc20History(address: string, token: string): Promise<Brc20HistoryTransactionData[]> {
-  const url = `${XVERSE_API_BASE_URL}/v1/ordinals/token/${token}/history/${address}`;
+export async function getBrc20History(
+  network: NetworkType,
+  address: string,
+  token: string,
+): Promise<Brc20HistoryTransactionData[]> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/token/${token}/history/${address}`;
   return axios
     .get(url, {
       timeout: 30000,
@@ -215,6 +219,7 @@ type AddressBundleResponse = {
   results: UtxoOrdinalBundle[];
 };
 export const getAddressUtxoOrdinalBundles = async (
+  network: NetworkType,
   address: string,
   offset: number,
   limit: number,
@@ -237,14 +242,23 @@ export const getAddressUtxoOrdinalBundles = async (
     params.hideInscriptionOnly = 'true';
   }
 
-  const response = await axios.get<AddressBundleResponse>(`${XVERSE_API_BASE_URL}/v1/address/${address}/ordinal-utxo`, {
-    params,
-  });
+  const response = await axios.get<AddressBundleResponse>(
+    `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinal-utxo`,
+    {
+      params,
+    },
+  );
 
   return response.data;
 };
 
-export const getUtxoOrdinalBundle = async (txid: string, vout: number): Promise<UtxoOrdinalBundle> => {
-  const response = await axios.get<UtxoOrdinalBundle>(`${XVERSE_API_BASE_URL}/v1/ordinal-utxo/${txid}:${vout}`);
+export const getUtxoOrdinalBundle = async (
+  network: NetworkType,
+  txid: string,
+  vout: number,
+): Promise<UtxoOrdinalBundle> => {
+  const response = await axios.get<UtxoOrdinalBundle>(
+    `${XVERSE_API_BASE_URL(network)}/v1/ordinal-utxo/${txid}:${vout}`,
+  );
   return response.data;
 };

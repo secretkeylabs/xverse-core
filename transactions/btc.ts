@@ -39,17 +39,17 @@ export interface SignedBtcTx {
  * fetch btc fee rate from the api
  * if api fails, returns default fee rate
  */
-export async function getBtcFeeRate() {
+export async function getBtcFeeRate(network: NetworkType) {
   try {
-    const feeRate = await fetchBtcFeeRate();
+    const feeRate = await fetchBtcFeeRate(network);
     return feeRate;
   } catch (e) {
     return defaultFeeRate;
   }
 }
 
-export async function isCustomFeesAllowed(customFees: string) {
-  const feeRate = await getBtcFeeRate();
+export async function isCustomFeesAllowed(network: NetworkType, customFees: string) {
+  const feeRate = await getBtcFeeRate(network);
   return Number(customFees) >= feeRate?.limits?.min ? true : false;
 }
 
@@ -368,7 +368,7 @@ export async function getBtcFees(
     const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     // Get total sats to send (including custom fee)
     let satsToSend = new BigNumber(0);
@@ -438,7 +438,7 @@ export async function getBtcFeesForOrdinalSend(
     const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     // Get total sats to send (including custom fee)
     const satsToSend = new BigNumber(ordinalUtxo.value);
@@ -531,7 +531,7 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     const sumSelectedOutputs = sumUnspentOutputs(unspentOutputs);
     const satsToSend = sumSelectedOutputs;
@@ -696,7 +696,7 @@ export async function signBtcTransaction(
     let feePerVByte: BigNumber = new BigNumber(0);
 
     if (!fee) {
-      feeRate = await getBtcFeeRate();
+      feeRate = await getBtcFeeRate(network);
     }
 
     // Get sender address payment private key
@@ -790,7 +790,7 @@ export async function signOrdinalSendTransaction(
   let feePerVByte: BigNumber = new BigNumber(0);
 
   if (!fee) {
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
   }
 
   // Get sender address payment and ordinals private key
@@ -939,7 +939,7 @@ export async function signNonOrdinalBtcSendTransaction(
   let feeRate: BtcFeeResponse = defaultFeeRate;
 
   if (!fee) {
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
   }
 
   // Get sender address payment and ordinals private key

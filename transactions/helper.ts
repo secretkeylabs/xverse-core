@@ -1,3 +1,4 @@
+import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   AssetInfo,
@@ -15,12 +16,11 @@ import {
   PostConditionType,
   StacksMessageType,
 } from '@stacks/transactions';
-import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import BigNumber from 'bignumber.js';
+import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
-import { StxMempoolTransactionData, PostConditionsOptions, FungibleToken, Coin, FeesMultipliers } from '../types';
+import { Coin, FeesMultipliers, FungibleToken, PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce, setNonce } from './stx';
-import { StacksNetwork } from '@stacks/network';
 
 export function getNewNonce(pendingTransactions: StxMempoolTransactionData[], currentNonce: bigint): bigint {
   if ((pendingTransactions ?? []).length === 0) {
@@ -147,7 +147,8 @@ export const createContractCallPromises = async (
 
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
-  const coinsMetaDataPromise: Coin[] | null = await getCoinsInfo(ftContactAddresses, 'USD');
+  // Stacks isn't setup for testnet, so we default to mainnet
+  const coinsMetaDataPromise: Coin[] | null = await getCoinsInfo('Mainnet', ftContactAddresses, 'USD');
 
   const tx = {
     publicKey: stxPublicKey,

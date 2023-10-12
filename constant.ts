@@ -1,3 +1,5 @@
+import { NetworkType } from './types';
+
 export const API_TIMEOUT_MILLI = 30000;
 
 export const ENTROPY_BYTES = 16;
@@ -32,14 +34,17 @@ export const BLOCKCYPHER_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/
 
 export const NFT_BASE_URI = 'https://stacks.gamma.io/api/v1/collections';
 
-export const XVERSE_API_BASE_URL = 'https://api-3.xverse.app';
+export const XVERSE_API_BASE_URL = (network: NetworkType) =>
+  `https://api-${network === 'Mainnet' ? '3' : 'testnet'}.xverse.app`;
 
+// TODO:
 export const XVERSE_INSCRIBE_URL = 'https://inscribe.xverse.app';
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.blockstack.org';
 
+// TODO:
 export const XORD_MAINNET_URL = 'https://inscribe.xverse.app';
 
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
@@ -92,6 +97,8 @@ export const supportedCoins = [
     name: 'SLIME',
   },
 ];
+
+// TODO:
 export const ORDINALS_URL = (inscriptionId: string) => `https://ord.xverse.app/content/${inscriptionId}`;
 
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
