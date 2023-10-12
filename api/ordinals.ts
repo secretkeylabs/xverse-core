@@ -90,8 +90,8 @@ export async function getOrdinalIdFromUtxo(network: NetworkType, utxo: UTXO) {
   }
 }
 
-export async function getTextOrdinalContent(inscriptionId: string): Promise<string> {
-  const url = ORDINALS_URL(inscriptionId);
+export async function getTextOrdinalContent(network: NetworkType, inscriptionId: string): Promise<string> {
+  const url = ORDINALS_URL(network, inscriptionId);
   return axios
     .get<string>(url, {
       timeout: 30000,

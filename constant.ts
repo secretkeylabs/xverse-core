@@ -98,8 +98,8 @@ export const supportedCoins = [
   },
 ];
 
-// TODO:
-export const ORDINALS_URL = (inscriptionId: string) => `https://ord.xverse.app/content/${inscriptionId}`;
+export const ORDINALS_URL = (network: NetworkType, inscriptionId: string) =>
+  `https://ord${network === 'Mainnet' ? '' : '-testnet'}.xverse.app/content/${inscriptionId}`;
 
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
 
