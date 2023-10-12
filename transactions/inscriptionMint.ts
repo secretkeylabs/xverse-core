@@ -136,6 +136,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     recipients,
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -239,6 +240,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     recipients,
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {

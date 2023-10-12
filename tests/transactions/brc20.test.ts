@@ -86,6 +86,7 @@ describe('brc20MintEstimateFees', () => {
       recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(4080) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
   });
 
@@ -102,6 +103,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('UTXOs empty');
   });
@@ -120,6 +122,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Insufficient funds, no UTXOs found');
   });
@@ -140,6 +143,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Invalid tick; should be 4 characters long');
   });
@@ -160,6 +164,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Amount should be positive');
   });
@@ -180,6 +185,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Fee rate should be positive');
   });
@@ -263,6 +269,7 @@ describe('brc20MintExecute', () => {
       recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
@@ -352,6 +359,7 @@ describe('brc20TransferEstimateFees', () => {
       recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(5880) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
   });
 
@@ -587,6 +595,7 @@ describe('brc20TransferExecute', () => {
             recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
             availableUtxos: mockedAddressUtxos,
             feeRate: mockedFeeRate,
+            network: 'Mainnet',
           });
 
           expect(generateSignedBtcTransaction).toHaveBeenCalledWith(

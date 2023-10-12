@@ -579,6 +579,7 @@ export type SelectUtxosForSendProps = {
   availableUtxos: UTXO[];
   feeRate: number;
   pinnedUtxos?: UTXO[];
+  network: NetworkType;
 };
 
 export type TransactionUtxoSelectionMetadata = {
@@ -598,6 +599,7 @@ export function selectUtxosForSend({
   availableUtxos,
   feeRate,
   pinnedUtxos = [],
+  network,
 }: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
   if (recipients.length === 0) {
     throw new Error('Must have at least one recipient');
@@ -621,6 +623,7 @@ export function selectUtxosForSend({
     availableUtxos: sortedUtxos,
     changeAddress,
     feeRate,
+    network,
   });
 
   return selectedUtxoData;

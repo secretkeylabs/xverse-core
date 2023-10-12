@@ -149,6 +149,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos!,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -193,6 +194,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
     recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -272,6 +274,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos!,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -371,6 +374,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
