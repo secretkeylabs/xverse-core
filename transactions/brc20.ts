@@ -176,7 +176,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   const { commitAddress, commitValue } = await xverseInscribeApi.createBrc20MintOrder(
@@ -247,7 +247,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     ],
     0,
     'action action action action action action action action action action action action',
-    'Mainnet',
+    network,
     new BigNumber(1),
   );
 
@@ -326,7 +326,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
@@ -347,7 +347,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     ],
     accountIndex,
     seedPhrase,
-    'Mainnet',
+    network,
     new BigNumber(1),
   );
 
@@ -420,7 +420,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     ],
     accountIndex,
     seedPhrase,
-    'Mainnet',
+    network,
     new BigNumber(transferFeeEstimate),
   );
 

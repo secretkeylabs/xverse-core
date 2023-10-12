@@ -212,7 +212,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   const contentField = contentBase64 ? { contentBase64 } : { contentString: contentString as string };

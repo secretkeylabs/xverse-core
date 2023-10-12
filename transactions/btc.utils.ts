@@ -1,12 +1,12 @@
 import { hex } from '@scure/base';
 import BigNumber from 'bignumber.js';
-import { UTXO } from '../types';
+import { NetworkType, UTXO } from '../types';
 import type { Recipient, TransactionUtxoSelectionMetadata } from './btc';
 import { createTransaction } from './btc';
 
 // we import the file into itself to enable mocking of recursive functions in the tests
-import * as self from './btc.utils';
 import { getOrdinalsByAddress } from '../api';
+import * as self from './btc.utils';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
@@ -21,15 +21,16 @@ export function buildTransactionAndGetMetadata(props: {
   privateKey: string;
   recipientTotal: BigNumber;
   withChange: boolean;
+  network: NetworkType;
 }): TransactionUtxoSelectionMetadata | undefined {
-  const { privateKey, selectedUtxos, recipientTotal, recipients, changeAddress, feeRate, withChange } = props;
+  const { privateKey, selectedUtxos, recipientTotal, recipients, changeAddress, feeRate, withChange, network } = props;
   const tx = createTransaction(
     privateKey,
     selectedUtxos,
     recipientTotal,
     recipients,
     changeAddress,
-    'Mainnet',
+    network,
     !withChange,
   );
 
@@ -82,6 +83,7 @@ export function buildTransactionAndGetMetadata(props: {
 }
 
 export function getTransactionMetadataForUtxos(
+  network: NetworkType,
   recipients: Recipient[],
   selectedUtxos: UTXO[],
   changeAddress: string,
@@ -111,6 +113,7 @@ export function getTransactionMetadataForUtxos(
     privateKey: dummyPrivateKey,
     recipientTotal,
     withChange: true,
+    network,
   });
 
   if (metaDataWithChange) return metaDataWithChange;
@@ -125,6 +128,7 @@ export function getTransactionMetadataForUtxos(
     privateKey: dummyPrivateKey,
     recipientTotal,
     withChange: false,
+    network,
   });
 
   return metaDataWithoutChange;
@@ -137,6 +141,7 @@ type SelectOptimalUtxosProps = {
   changeAddress: string;
   feeRate: number;
   currentBestUtxoCount?: number;
+  network: NetworkType;
 };
 export function selectOptimalUtxos({
   recipients,
@@ -145,8 +150,15 @@ export function selectOptimalUtxos({
   changeAddress,
   feeRate,
   currentBestUtxoCount,
+  network,
 }: SelectOptimalUtxosProps): TransactionUtxoSelectionMetadata | undefined {
-  const currentSelectionData = self.getTransactionMetadataForUtxos(recipients, selectedUtxos, changeAddress, feeRate);
+  const currentSelectionData = self.getTransactionMetadataForUtxos(
+    network,
+    recipients,
+    selectedUtxos,
+    changeAddress,
+    feeRate,
+  );
 
   // if there is a valid selection, adding more UTXOs would only make the fees higher, so just return
   if (currentSelectionData) return currentSelectionData;
@@ -176,6 +188,7 @@ export function selectOptimalUtxos({
       changeAddress,
       feeRate,
       currentBestUtxoCount: currentBestUtxoCount ?? bestSelectionData?.selectedUtxos.length,
+      network,
     });
 
     if (!nextSelectionData) return bestSelectionData;
