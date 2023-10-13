@@ -40,7 +40,7 @@ export const XVERSE_API_BASE_URL = (network: NetworkType) =>
 export const XVERSE_INSCRIBE_URL = (network: NetworkType) =>
   `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
 
-export const XORD_MAINNET_URL = (network: NetworkType) =>
+export const XORD_URL = (network: NetworkType) =>
   `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
