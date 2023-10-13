@@ -216,7 +216,7 @@ export function selectOptimalUtxos({
 }
 
 // get ordinals utxos in btc address
-export async function getOrdinalsUtxos(btcAddress: string) {
-  const ordinals = await getOrdinalsByAddress(btcAddress);
+export async function getOrdinalsUtxos(network: NetworkType, btcAddress: string) {
+  const ordinals = await getOrdinalsByAddress(network, btcAddress);
   return ordinals.map((item) => item.utxo);
 }

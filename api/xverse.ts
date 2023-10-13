@@ -201,8 +201,8 @@ export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
     .catch(handleAxiosError);
 }
 
-export async function getOrdinalsByAddress(ordinalsAddress: string) {
-  return fetchBtcOrdinalsData(ordinalsAddress, 'Mainnet');
+export async function getOrdinalsByAddress(network: NetworkType, ordinalsAddress: string) {
+  return fetchBtcOrdinalsData(ordinalsAddress, network);
 }
 
 export async function getOrdinalInfo(network: NetworkType, ordinalId: string): Promise<OrdinalInfo> {

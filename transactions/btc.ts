@@ -501,7 +501,7 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
@@ -912,7 +912,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
