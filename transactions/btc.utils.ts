@@ -1,11 +1,12 @@
 import { hex } from '@scure/base';
 import BigNumber from 'bignumber.js';
+
+import { getOrdinalsByAddress } from '../api';
 import { NetworkType, UTXO } from '../types';
 import type { Recipient, TransactionUtxoSelectionMetadata } from './btc';
 import { createTransaction } from './btc';
 
 // we import the file into itself to enable mocking of recursive functions in the tests
-import { getOrdinalsByAddress } from '../api';
 import * as self from './btc.utils';
 
 // these are conservative estimates
