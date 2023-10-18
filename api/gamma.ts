@@ -21,12 +21,16 @@ export async function getNftDetail(
     });
 }
 
-export async function getNftsCollectionData(collectionId: string): Promise<NftCollectionData> {
-  const apiUrl = `${GAMMA_COLLECTION_API}/${collectionId}?include=floorItem`;
+export async function getNftsCollectionData(collectionId: string): Promise<NftCollectionData | undefined> {
+  try {
+    const apiUrl = `${GAMMA_COLLECTION_API}/${collectionId}?include=floorItem`;
 
-  const response = await axios.get<NftCollectionData>(apiUrl, {
-    timeout: 30000,
-  });
+    const response = await axios.get<NftCollectionData>(apiUrl, {
+      timeout: 30000,
+    });
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    return undefined;
+  }
 }

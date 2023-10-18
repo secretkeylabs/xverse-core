@@ -274,7 +274,6 @@ export async function getNftsData(
     timeout: 30000,
     params: {
       principal: stxAddress,
-      limit: 20,
       offset: offset,
     },
   });
