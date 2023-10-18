@@ -6,6 +6,7 @@ export * from './currency';
 export * from './gaia';
 export * from './hooks';
 export * from './ledger';
+export * from './stacksCollectible';
 export * from './transactions';
 export * from './types';
 export { CoreError } from './utils/coreError';
