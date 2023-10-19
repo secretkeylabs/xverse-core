@@ -57,7 +57,7 @@ export class EnhancedTransaction {
       // Spendable send utxo actions are designed for recovery purposes, and must be the only actions in the transaction
       // Otherwise things get complicated, and we don't want to support that
       if (this._actions[ActionType.SEND_UTXO].length !== spendableSendUtxos.length) {
-        throw new Error('Send Utxo actions must either all be spendable or only none-spendable');
+        throw new Error('Send Utxo actions must either all be spendable or only non-spendable');
       } else if (this._actions[ActionType.SPLIT_UTXO].length > 0 || this._actions[ActionType.SEND_BTC].length > 0) {
         throw new Error('Send Utxo actions must be the only actions if they are spendable');
       } else if (!allSpendableSendUtxosToSameAddress) {
