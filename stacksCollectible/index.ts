@@ -7,12 +7,12 @@ import { getNftsData } from '../api/stacks';
 import { microstacksToStx } from '../currency';
 
 export interface StacksCollectionData {
-  collection_contract_id: string | null;
+  collection_id: string | null;
   collection_name: string | null;
   total_nft: number;
-  thumbnail_nft: Array<NonFungibleToken>; //stores a max of four nfts
-  nft_list: Array<NonFungibleToken>; //stores entire list of nft in collection
-  floorprice?: number;
+  thumbnail_nfts: Array<NonFungibleToken>; //stores a max of four nfts
+  all_nfts: Array<NonFungibleToken>; //stores entire list of nft in collection
+  floor_price?: number;
 }
 export interface StacksCollectionList {
   offset: number;
@@ -72,11 +72,11 @@ export async function getNftCollections(
       if (contractInfo[1] === 'bns') {
         //no further data required for BNS, arrange into collection
         const bnsCollection: StacksCollectionData = {
-          collection_contract_id: 'bns',
+          collection_id: 'bns',
           collection_name: 'BNS Names',
           total_nft: 1,
-          thumbnail_nft: [nft],
-          nft_list: [nft],
+          thumbnail_nfts: [nft],
+          all_nfts: [nft],
         };
         collectionRecord[contractInfo[1]] = bnsCollection;
       } else {
@@ -105,19 +105,19 @@ export async function getNftCollections(
       if (collectionRecord[contractId]) {
         const data = collectionRecord[contractId];
 
-        data.nft_list.push(nft);
+        data.all_nfts.push(nft);
         if (data.total_nft < 4) {
-          data?.thumbnail_nft.push(nft);
+          data?.thumbnail_nfts.push(nft);
         }
         data.total_nft += 1;
       } else {
         collectionRecord[contractId] = {
-          collection_contract_id: contractId,
+          collection_id: contractId,
           collection_name: collectionData?.collection?.name ?? contractId,
           total_nft: 1,
-          nft_list: [nft],
-          thumbnail_nft: [nft],
-          floorprice: collectionData?.collection?.floorItem?.price
+          all_nfts: [nft],
+          thumbnail_nfts: [nft],
+          floor_price: collectionData?.collection?.floorItem?.price
             ? microstacksToStx(new BigNumber(collectionData?.collection?.floorItem?.price)).toNumber()
             : 0,
         };
@@ -130,7 +130,7 @@ export async function getNftCollections(
   //sort according to total nft in a collection
   nftCollectionList.sort((a, b) => {
     //place bns collection at the bottom of nft list
-    if (a.collection_contract_id === 'bns' || b.collection_contract_id === 'bns') return -1;
+    if (a.collection_id === 'bns' || b.collection_id === 'bns') return -1;
     return b.total_nft - a.total_nft;
   });
 
