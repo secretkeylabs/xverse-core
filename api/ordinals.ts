@@ -211,7 +211,7 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
 
-type AddressBundleResponse = {
+export type AddressBundleResponse = {
   total: number;
   offset: number;
   limit: number;
