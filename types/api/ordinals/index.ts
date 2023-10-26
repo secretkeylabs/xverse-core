@@ -22,6 +22,10 @@ export interface Inscription {
   content_length: number;
   timestamp: number;
   tx_id: string;
+  category?: 'brc-20' | 'sns' | null;
+  collection_id?: string | null;
+  collection_name?: string | null;
+  inscription_floor_price?: number;
 }
 
 export interface InscriptionsList {
@@ -31,44 +35,66 @@ export interface InscriptionsList {
   results: Inscription[];
 }
 
-export interface OrdinalTokenTransaction {
-  amount: string;
-  availableBalance: string;
-  blockhash: string;
-  blocktime: number;
-  from: string;
-  height: number;
-  idx: number;
-  inscriptionId: string;
-  inscriptionNumber: number;
-  overallBalance: string;
-  satoshi: number;
+export interface Brc20TxHistoryItem {
+  operation: string;
   ticker: string;
-  to: string;
-  transferBalance: string;
-  txid: string;
-  txidx: number;
-  type: string;
-  valid: boolean;
-  vout: number;
+  inscription_id: string;
+  block_height: number;
+  block_hash: string;
+  tx_id: string;
+  location: string;
+  address: string;
+  timestamp: number;
+  transfer_send?: {
+    amount: string;
+    from_address: string;
+    to_address: string;
+  };
+  transfer?: {
+    amount: string;
+    from_address: string;
+  };
+  deploy?: {
+    max_supply: string;
+    mint_limit: string;
+    decimals: number;
+  };
+  mint?: {
+    amount: string;
+  };
 }
 
 export interface Brc20HistoryTransactionData extends TransactionData {
-  availableBalance: string;
-  blockhash: string;
-  blocktime: number;
-  from: string;
-  height: number;
-  idx: number;
-  inscriptionId: string;
-  inscriptionNumber: number;
-  overallBalance: string;
-  satoshi: number;
+  operation: string;
   ticker: string;
-  to: string;
-  transferBalance: string;
-  txidx: number;
-  type: string;
-  valid: boolean;
-  vout: number;
+  inscription_id: string;
+  block_height: number;
+  block_hash: string;
+  location: string;
+  address: string;
+  timestamp: number;
+  transfer_send?: {
+    amount: string;
+    from_address: string;
+    to_address: string;
+  };
+  transfer?: {
+    amount: string;
+    from_address: string;
+  };
+  deploy?: {
+    max_supply: string;
+    mint_limit: string;
+    decimals: number;
+  };
+  mint?: {
+    amount: string;
+  };
+}
+
+export interface HiroApiBrc20TxHistoryResponse {
+  limit: number;
+  offset: number;
+  total: number;
+  results: Array<Brc20TxHistoryItem>;
 }
