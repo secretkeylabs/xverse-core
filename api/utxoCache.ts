@@ -136,13 +136,12 @@ export class UtxoCache {
     return utxo;
   };
 
-  removeUtxo = async (utxoId: string, address: string): Promise<void | boolean> => {
+  removeUtxo = async (utxoId: string, address: string): Promise<void> => {
     const { utxos: cachedUtxos } = await this._getCache(address);
     if (cachedUtxos && utxoId in cachedUtxos) {
       delete cachedUtxos[utxoId];
       await this._setCache(cachedUtxos, address);
     }
-    return false;
   };
 
   clear = async (address: string): Promise<void> => {
