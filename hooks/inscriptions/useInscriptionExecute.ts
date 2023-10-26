@@ -6,7 +6,7 @@ import { CoreError } from '../../utils/coreError';
 import { InscriptionErrorCode, inscriptionMintExecute } from '../../transactions/inscriptionMint';
 
 type Props = {
-  seedPhrase: string;
+  getSeedPhrase: () => Promise<string>;
   accountIndex: number;
   addressUtxos: UTXO[];
   revealAddress: string;
@@ -22,7 +22,7 @@ type Props = {
 
 const useInscriptionExecute = (props: Props) => {
   const {
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     contentType,
@@ -44,7 +44,7 @@ const useInscriptionExecute = (props: Props) => {
     if (running || !!revealTransactionId) return;
 
     const innerProps = {
-      seedPhrase,
+      getSeedPhrase,
       accountIndex,
       addressUtxos,
       revealAddress,
@@ -82,7 +82,7 @@ const useInscriptionExecute = (props: Props) => {
 
     runTransfer();
   }, [
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     contentType,
