@@ -11,7 +11,7 @@ import {
   TransferTransaction,
 } from '../types';
 
-import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, ORDINALS_URL } from '../constant';
+import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
 import * as esplora from '../types/api/esplora';
 
 export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
@@ -390,8 +390,4 @@ export function getFetchableUrl(uri: string, protocol: string): string | null {
     return `${publicIpfs}/${url[1]}`;
   }
   return null;
-}
-
-export function getOrdinalImageUrl(content: string): string | null {
-  return getFetchableUrl(`${ORDINALS_URL}${content}`, 'http');
 }

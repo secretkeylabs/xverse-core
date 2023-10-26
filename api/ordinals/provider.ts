@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, Method } from 'axios';
-import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, XORD_MAINNET_URL } from '../../constant';
+import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, XORD_URL } from '../../constant';
 import * as ordinalsType from '../../types/api/ordinals';
 import { NetworkType } from '../../types/network';
 import { OrdinalsApiProvider } from './types';
@@ -35,19 +35,13 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
       });
     }
 
-    if (network == 'Mainnet') {
-      this.hiroClient = axios.create({
-        baseURL: `${HIRO_MAINNET_DEFAULT}${API_PREFIX}`,
-      });
+    this.xordClient = axios.create({
+      baseURL: `${XORD_URL(network)}/v1`,
+    });
 
-      this.xordClient = axios.create({
-        baseURL: `${XORD_MAINNET_URL}/v1`,
-      });
-    } else {
-      this.hiroClient = axios.create({
-        baseURL: `${HIRO_TESTNET_DEFAULT}${API_PREFIX}`,
-      });
-    }
+    this.hiroClient = axios.create({
+      baseURL: `${network == 'Mainnet' ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT}${API_PREFIX}`,
+    });
   }
 
   private canFallback(): boolean {

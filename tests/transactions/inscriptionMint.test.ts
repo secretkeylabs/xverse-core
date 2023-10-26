@@ -61,6 +61,7 @@ describe('inscriptionMintFeeEstimate', () => {
       finalInscriptionValue: 1000,
       serviceFee: 5000,
       serviceFeeAddress: 'dummyServiceFeeAddress',
+      network: 'Mainnet',
     });
 
     expect(result.commitValue).toEqual(10100);
@@ -94,6 +95,7 @@ describe('inscriptionMintFeeEstimate', () => {
         finalInscriptionValue: 1000,
         serviceFee: 5000,
         serviceFeeAddress: 'dummyServiceFeeAddress',
+        network: 'Mainnet',
       }),
     ).rejects.toThrowCoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   });
@@ -126,6 +128,7 @@ describe('inscriptionMintFeeEstimate', () => {
         feeRate: 8,
         revealAddress: 'dummyRevealAddress',
         finalInscriptionValue: 1000,
+        network: 'Mainnet',
         ...config,
       }),
     ).rejects.toThrowCoreError(
@@ -151,6 +154,7 @@ describe('inscriptionMintFeeEstimate', () => {
         feeRate: -1,
         revealAddress: 'dummyRevealAddress',
         finalInscriptionValue: 1000,
+        network: 'Mainnet',
       }),
     ).rejects.toThrowCoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
   });
@@ -174,6 +178,7 @@ describe('inscriptionMintFeeEstimate', () => {
         feeRate: 8,
         revealAddress: 'dummyRevealAddress',
         finalInscriptionValue: 1000,
+        network: 'Mainnet',
       }),
     ).rejects.toThrowCoreError('Content exceeds maximum size of 400000 bytes', InscriptionErrorCode.CONTENT_TOO_BIG);
   });
@@ -195,6 +200,7 @@ describe('inscriptionMintFeeEstimate', () => {
         feeRate: 8,
         revealAddress: 'dummyRevealAddress',
         finalInscriptionValue: 500,
+        network: 'Mainnet',
       }),
     ).rejects.toThrowCoreError(
       'Inscription value cannot be less than 546',

@@ -24,6 +24,7 @@ describe('selectOptimalUtxos', () => {
     const getMetadataMock = vi.spyOn(self, 'getTransactionMetadataForUtxos').mockReturnValueOnce(mockedResponse);
 
     const result = self.selectOptimalUtxos({
+      network: 'Mainnet',
       recipients: [{ address: '', amountSats: new BigNumber(10) }],
       selectedUtxos: [utxo10k],
       availableUtxos: [],
@@ -39,6 +40,7 @@ describe('selectOptimalUtxos', () => {
     const getMetadataMock = vi.spyOn(self, 'getTransactionMetadataForUtxos').mockReturnValueOnce(undefined);
 
     const result = self.selectOptimalUtxos({
+      network: 'Mainnet',
       recipients: [{ address: '', amountSats: new BigNumber(10) }],
       selectedUtxos: [],
       availableUtxos: [],
@@ -54,6 +56,7 @@ describe('selectOptimalUtxos', () => {
     const getMetadataMock = vi.spyOn(self, 'getTransactionMetadataForUtxos').mockReturnValueOnce(undefined);
 
     const result = self.selectOptimalUtxos({
+      network: 'Mainnet',
       recipients: [{ address: '', amountSats: new BigNumber(10) }],
       selectedUtxos: [utxo10k, utxo384k],
       availableUtxos: [utxo792k, utxo3k],
@@ -77,6 +80,7 @@ describe('selectOptimalUtxos', () => {
       availableUtxos: [utxo10k, utxo384k, utxo792k, utxo3k],
       changeAddress: dummyChangeAddress,
       feeRate: 1,
+      network: 'Mainnet' as const,
     };
 
     const result = selectOptimalUtxos(props);
@@ -90,6 +94,7 @@ describe('selectOptimalUtxos', () => {
       changeAddress: props.changeAddress,
       feeRate: props.feeRate,
       currentBestUtxoCount: undefined,
+      network: 'Mainnet',
     });
   });
 
@@ -109,6 +114,7 @@ describe('selectOptimalUtxos', () => {
       availableUtxos: [utxo10k, utxo384k, utxo792k, utxo3k],
       changeAddress: dummyChangeAddress,
       feeRate: 1,
+      network: 'Mainnet' as const,
     };
 
     const result = selectOptimalUtxos(props);
@@ -156,6 +162,7 @@ describe('selectOptimalUtxos', () => {
       availableUtxos: [utxo10k, utxo384k, utxo792k, utxo3k],
       changeAddress: dummyChangeAddress,
       feeRate: 1,
+      network: 'Mainnet' as const,
     };
 
     const result = selectOptimalUtxos(props);
@@ -199,6 +206,7 @@ describe('selectOptimalUtxos', () => {
       availableUtxos: [utxo10k, utxo384k, utxo792k, utxo3k],
       changeAddress: dummyChangeAddress,
       feeRate: 1,
+      network: 'Mainnet' as const,
     };
 
     const result = selectOptimalUtxos(props);
@@ -242,6 +250,7 @@ describe('selectOptimalUtxos', () => {
       availableUtxos: [utxo10k, utxo384k, utxo792k, utxo3k],
       changeAddress: dummyChangeAddress,
       feeRate: 1,
+      network: 'Mainnet' as const,
     };
 
     const result = selectOptimalUtxos(props);
@@ -266,6 +275,7 @@ describe('getTransactionMetadataForUtxos', () => {
     const buildMetaDataMock = vi.spyOn(self, 'buildTransactionAndGetMetadata');
 
     const result = self.getTransactionMetadataForUtxos(
+      'Mainnet',
       [{ address: '', amountSats: new BigNumber(10000) }],
       [utxo10k],
       dummyChangeAddress,
@@ -287,6 +297,7 @@ describe('getTransactionMetadataForUtxos', () => {
     buildMetaDataMock.mockReturnValueOnce(mockResponse);
 
     const result = self.getTransactionMetadataForUtxos(
+      'Mainnet',
       [{ address: '', amountSats: new BigNumber(100) }],
       [utxo10k],
       dummyChangeAddress,
@@ -309,6 +320,7 @@ describe('getTransactionMetadataForUtxos', () => {
     buildMetaDataMock.mockReturnValueOnce(mockResponse);
 
     const result = self.getTransactionMetadataForUtxos(
+      'Mainnet',
       [{ address: '', amountSats: new BigNumber(100) }],
       [utxo10k],
       dummyChangeAddress,
@@ -327,6 +339,7 @@ describe('buildTransactionAndGetMetadata with change', () => {
 
   it('builds a valid transaction', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(1000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
@@ -346,6 +359,7 @@ describe('buildTransactionAndGetMetadata with change', () => {
 
   it('returns undefined if not enough sats in UTXOs for output', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(11000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
@@ -360,6 +374,7 @@ describe('buildTransactionAndGetMetadata with change', () => {
 
   it('returns undefined if change is below dust', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(8000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
@@ -380,6 +395,7 @@ describe('buildTransactionAndGetMetadata without change', () => {
 
   it('builds a valid transaction', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(1000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
@@ -399,6 +415,7 @@ describe('buildTransactionAndGetMetadata without change', () => {
 
   it('returns undefined if not enough sats in UTXOs for output', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(11000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
@@ -413,6 +430,7 @@ describe('buildTransactionAndGetMetadata without change', () => {
 
   it('returns undefined if fee rate is below desired', async () => {
     const result = self.buildTransactionAndGetMetadata({
+      network: 'Mainnet',
       recipients: [{ address: dummyRecipientAddress, amountSats: new BigNumber(8000) }],
       selectedUtxos: [utxo10k],
       changeAddress: dummyChangeAddress,
