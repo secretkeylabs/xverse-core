@@ -5,7 +5,8 @@ import { NftCollectionData, NftDetailResponse, NftEventsResponse, NonFungibleTok
 import { getNftDetail, getNftsCollectionData } from '../api/gamma';
 import { getNftsData } from '../api/stacks';
 import { microstacksToStx } from '../currency';
-const nftCollection: Record<string, StacksCollectionData[]> = {};
+import { getCacheValue, setCacheValue } from './stacksCollectionCache';
+
 export interface StacksCollectionData {
   collection_id: string | null;
   collection_name: string | null;
@@ -150,10 +151,11 @@ async function checkCacheOrFetchNFTCollection(
   network: StacksNetwork,
 ): Promise<StacksCollectionData[]> {
   const cacheKey = `nft-collection-${stxAddress}`;
+  const cachedValue = getCacheValue(cacheKey);
 
-  if (nftCollection[cacheKey]) {
+  if (cachedValue) {
     // return data from in-memory cache
-    return nftCollection[cacheKey];
+    return cachedValue;
   }
 
   const nfts = await getAllNftContracts(stxAddress, network);
@@ -170,7 +172,7 @@ async function checkCacheOrFetchNFTCollection(
   });
 
   //store in in-memory cache
-  nftCollection[cacheKey] = nftCollectionList;
+  setCacheValue(cacheKey, nftCollectionList);
 
   return nftCollectionList;
 }
