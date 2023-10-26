@@ -1,3 +1,4 @@
+import { NetworkType } from 'types/network';
 import { UtxoOrdinalBundle } from '../types/api/xverse/ordinals';
 import { AddressBundleResponse, getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
@@ -18,15 +19,19 @@ export type StorageAdapter = {
 
 type UtxoCacheConfig = {
   cacheStorageController: StorageAdapter;
+  network: NetworkType;
 };
 
 export class UtxoCache {
   private readonly _cacheStorageController: StorageAdapter;
 
+  private readonly _network: NetworkType;
+
   private readonly VERSION = 1;
 
   constructor(config: UtxoCacheConfig) {
     this._cacheStorageController = config.cacheStorageController;
+    this._network = config.network;
   }
 
   private getAddressCacheStorageKey = (address: string) => `utxoCache-${address}`;
@@ -61,7 +66,7 @@ export class UtxoCache {
     let page = 1;
     let totalPages = 1;
     while (page <= totalPages) {
-      const response: AddressBundleResponse = await getAddressUtxoOrdinalBundles(address, page, 60);
+      const response: AddressBundleResponse = await getAddressUtxoOrdinalBundles(this._network, address, page, 60);
       const { results, total } = response;
       allData = allData.concat(results);
       totalPages = total;
@@ -70,7 +75,7 @@ export class UtxoCache {
     return allData;
   };
 
-  private _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(txid, vout);
+  private _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(this._network, txid, vout);
 
   private getAllUtxos = async (btcAddress: string): Promise<UtxoCacheStruct> => {
     const utxos = await this._getAddressUtxos(btcAddress);
