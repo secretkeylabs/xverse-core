@@ -56,7 +56,7 @@ type TransferEstimateResult = BaseEstimateResult & {
 };
 
 type ExecuteProps = {
-  seedPhrase: string;
+  getSeedPhrase: () => Promise<string>;
   accountIndex: number;
   addressUtxos: UTXO[];
   tick: string;
@@ -174,11 +174,11 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
 
 export async function brc20MintExecute(executeProps: ExecuteProps): Promise<string> {
   validateProps(executeProps);
-  const { seedPhrase, accountIndex, addressUtxos, tick, amount, revealAddress, changeAddress, feeRate, network } =
+  const { getSeedPhrase, accountIndex, addressUtxos, tick, amount, revealAddress, changeAddress, feeRate, network } =
     executeProps;
 
   const privateKey = await getBtcPrivateKey({
-    seedPhrase,
+    seedPhrase: await getSeedPhrase(),
     index: BigInt(accountIndex),
     network,
   });
@@ -321,7 +321,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
 > {
   validateProps(executeProps);
   const {
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     tick,
@@ -334,7 +334,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   } = executeProps;
 
   const privateKey = await getBtcPrivateKey({
-    seedPhrase,
+    seedPhrase: await getSeedPhrase(),
     index: BigInt(accountIndex),
     network,
   });
@@ -356,7 +356,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
       },
     ],
     accountIndex,
-    seedPhrase,
+    await getSeedPhrase(),
     network,
     new BigNumber(1),
   );
@@ -430,7 +430,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
       },
     ],
     accountIndex,
-    seedPhrase,
+    await getSeedPhrase(),
     network,
     new BigNumber(transferFeeEstimate),
   );

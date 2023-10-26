@@ -32,6 +32,7 @@ describe('UtxoCache', () => {
     };
     utxoCache = new UtxoCache({
       cacheStorageController: mockStorageAdapter,
+      network: 'Mainnet',
     });
   });
 

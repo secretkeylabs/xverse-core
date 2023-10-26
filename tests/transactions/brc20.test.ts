@@ -234,7 +234,7 @@ describe('brc20MintExecute', () => {
     });
 
     const result = await brc20MintExecute({
-      seedPhrase: mockedSeedPhrase,
+      getSeedPhrase: async () => mockedSeedPhrase,
       accountIndex: mockedAccountIndex,
       addressUtxos: mockedAddressUtxos,
       tick: mockedTick,
@@ -529,7 +529,7 @@ describe('brc20TransferExecute', () => {
 
     // Execute the generator function
     const generator = brc20TransferExecute({
-      seedPhrase: mockedSeedPhrase,
+      getSeedPhrase: async () => mockedSeedPhrase,
       accountIndex: mockedAccountIndex,
       addressUtxos: mockedAddressUtxos,
       tick: mockedTick,
