@@ -30,6 +30,7 @@ type EstimateProps = {
   revealAddress: string;
   feeRate: number;
   cancelToken?: CancelToken;
+  network: NetworkType;
 };
 
 type BaseEstimateResult = {
@@ -127,15 +128,19 @@ const validateProps = (props: EstimateProps): props is EstimateProps & { address
 export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
   const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
     tick,
     amount,
     revealAddress,
     feeRate,
+    network,
     FINAL_SATS_VALUE,
     cancelToken,
   );
@@ -147,6 +152,7 @@ export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promi
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos!,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -174,7 +180,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   const { commitAddress, commitValue } = await xverseInscribeApi.createBrc20MintOrder(
@@ -191,6 +197,7 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
     recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -214,7 +221,11 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
     network,
   );
 
-  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(commitAddress, commitTransaction.hex);
+  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(
+    network,
+    commitAddress,
+    commitTransaction.hex,
+  );
 
   return revealTransactionId;
 }
@@ -222,9 +233,13 @@ export async function brc20MintExecute(executeProps: ExecuteProps): Promise<stri
 export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
+  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
+
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
   const { tx } = await signNonOrdinalBtcSendTransaction(
     dummyAddress,
@@ -241,7 +256,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     ],
     0,
     'action action action action action action action action action action action action',
-    'Mainnet',
+    network,
     new BigNumber(1),
   );
 
@@ -254,6 +269,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     amount,
     revealAddress,
     feeRate,
+    network,
     inscriptionValue.toNumber(),
     cancelToken,
   );
@@ -265,6 +281,7 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos!,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -319,7 +336,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   const privateKey = await getBtcPrivateKey({
     seedPhrase,
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
@@ -340,7 +357,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     ],
     accountIndex,
     seedPhrase,
-    'Mainnet',
+    network,
     new BigNumber(1),
   );
 
@@ -364,6 +381,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -390,6 +408,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;
 
   const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20Order(
+    network,
     commitAddress,
     commitTransaction.hex,
     true,
@@ -412,14 +431,18 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     ],
     accountIndex,
     seedPhrase,
-    'Mainnet',
+    network,
     new BigNumber(transferFeeEstimate),
   );
 
   yield ExecuteTransferProgressCodes.Finalizing;
 
   try {
-    const response = await xverseInscribeApi.finalizeBrc20TransferOrder(commitAddress, transferTransaction.signedTx);
+    const response = await xverseInscribeApi.finalizeBrc20TransferOrder(
+      network,
+      commitAddress,
+      transferTransaction.signedTx,
+    );
 
     return response;
   } catch (error) {
