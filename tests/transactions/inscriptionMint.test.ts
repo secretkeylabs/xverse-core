@@ -261,7 +261,7 @@ describe('inscriptionMintExecute', () => {
       accountIndex: 0,
       changeAddress: 'dummyChangeAddress',
       network: 'Mainnet',
-      seedPhrase: 'dummySeedPhrase',
+      getSeedPhrase: async () => 'dummySeedPhrase',
     });
 
     expect(result).toBe('revealTxnId');
@@ -321,7 +321,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
       }),
     ).rejects.toThrowCoreError(
       'Must have at least one non-inscribed UTXO for inscription',
@@ -343,7 +343,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
       }),
     ).rejects.toThrowCoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
   });
@@ -370,7 +370,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
       }),
     ).rejects.toThrowCoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
   });
@@ -406,7 +406,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
         ...config,
       }),
     ).rejects.toThrowCoreError(
@@ -443,7 +443,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
         ...config,
       }),
     ).rejects.toThrowCoreError(
@@ -472,7 +472,7 @@ describe('inscriptionMintExecute', () => {
         accountIndex: 0,
         changeAddress: 'dummyChangeAddress',
         network: 'Mainnet',
-        seedPhrase: 'dummySeedPhrase',
+        getSeedPhrase: async () => 'dummySeedPhrase',
       }),
     ).rejects.toThrowCoreError(`Content exceeds maximum size of 400000 bytes`, InscriptionErrorCode.CONTENT_TOO_BIG);
   });

@@ -50,7 +50,7 @@ type EstimateResult = BaseEstimateResult & {
 };
 
 type ExecuteProps = {
-  seedPhrase: string;
+  getSeedPhrase: () => Promise<string>;
   accountIndex: number;
   changeAddress: string;
   network: NetworkType;
@@ -156,7 +156,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
 
 export async function inscriptionMintExecute(executeProps: ExecuteProps): Promise<string> {
   const {
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     changeAddress,
@@ -205,7 +205,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
 
   const privateKey = await getBtcPrivateKey({
-    seedPhrase,
+    seedPhrase: await getSeedPhrase(),
     index: BigInt(accountIndex),
     network: 'Mainnet',
   });
