@@ -1,6 +1,8 @@
 export * from './account';
 export * from './api';
 export * from './coins';
+export { default as SeedVault } from './seedVault';
+export * from './encryption';
 export * from './connect';
 export * from './currency';
 export * from './gaia';

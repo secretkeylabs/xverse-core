@@ -58,6 +58,7 @@ describe('brc20MintEstimateFees', () => {
       amount: mockedAmount,
       revealAddress: mockedRevealAddress,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(result).toEqual({
@@ -75,6 +76,7 @@ describe('brc20MintEstimateFees', () => {
       mockedAmount,
       mockedRevealAddress,
       mockedFeeRate,
+      'Mainnet',
       1000,
       undefined,
     );
@@ -84,6 +86,7 @@ describe('brc20MintEstimateFees', () => {
       recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(4080) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
   });
 
@@ -100,6 +103,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('UTXOs empty');
   });
@@ -118,6 +122,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Insufficient funds, no UTXOs found');
   });
@@ -138,6 +143,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Invalid tick; should be 4 characters long');
   });
@@ -158,6 +164,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Amount should be positive');
   });
@@ -178,6 +185,7 @@ describe('brc20MintEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Fee rate should be positive');
   });
@@ -226,7 +234,7 @@ describe('brc20MintExecute', () => {
     });
 
     const result = await brc20MintExecute({
-      seedPhrase: mockedSeedPhrase,
+      getSeedPhrase: async () => mockedSeedPhrase,
       accountIndex: mockedAccountIndex,
       addressUtxos: mockedAddressUtxos,
       tick: mockedTick,
@@ -261,6 +269,7 @@ describe('brc20MintExecute', () => {
       recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
@@ -278,7 +287,7 @@ describe('brc20MintExecute', () => {
       'Mainnet',
     );
 
-    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex');
+    expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith('Mainnet', mockedCommitAddress, 'commit_hex');
   });
 });
 
@@ -321,6 +330,7 @@ describe('brc20TransferEstimateFees', () => {
       amount: mockedAmount,
       revealAddress: mockedRevealAddress,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
 
     expect(result).toEqual({
@@ -339,6 +349,7 @@ describe('brc20TransferEstimateFees', () => {
       mockedAmount,
       mockedRevealAddress,
       mockedFeeRate,
+      'Mainnet',
       2800,
       undefined,
     );
@@ -348,6 +359,7 @@ describe('brc20TransferEstimateFees', () => {
       recipients: [{ address: mockedRevealAddress, amountSats: new BigNumber(5880) }],
       availableUtxos: mockedAddressUtxos,
       feeRate: mockedFeeRate,
+      network: 'Mainnet',
     });
   });
 
@@ -364,6 +376,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('UTXOs empty');
   });
@@ -382,6 +395,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Insufficient funds, no UTXOs found');
   });
@@ -402,6 +416,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Invalid tick; should be 4 characters long');
   });
@@ -422,6 +437,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Amount should be positive');
   });
@@ -442,6 +458,7 @@ describe('brc20TransferEstimateFees', () => {
         amount: mockedAmount,
         revealAddress: mockedRevealAddress,
         feeRate: mockedFeeRate,
+        network: 'Mainnet',
       }),
     ).rejects.toThrow('Fee rate should be positive');
   });
@@ -512,7 +529,7 @@ describe('brc20TransferExecute', () => {
 
     // Execute the generator function
     const generator = brc20TransferExecute({
-      seedPhrase: mockedSeedPhrase,
+      getSeedPhrase: async () => mockedSeedPhrase,
       accountIndex: mockedAccountIndex,
       addressUtxos: mockedAddressUtxos,
       tick: mockedTick,
@@ -578,6 +595,7 @@ describe('brc20TransferExecute', () => {
             recipients: [{ address: mockedCommitAddress, amountSats: new BigNumber(1000) }],
             availableUtxos: mockedAddressUtxos,
             feeRate: mockedFeeRate,
+            network: 'Mainnet',
           });
 
           expect(generateSignedBtcTransaction).toHaveBeenCalledWith(
@@ -597,7 +615,12 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingTransferTransaction:
-          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(mockedCommitAddress, 'commit_hex', true);
+          expect(xverseInscribeApi.executeBrc20Order).toHaveBeenCalledWith(
+            'Mainnet',
+            mockedCommitAddress,
+            'commit_hex',
+            true,
+          );
           break;
 
         case ExecuteTransferProgressCodes.Finalizing:

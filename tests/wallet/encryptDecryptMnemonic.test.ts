@@ -1,103 +1,40 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { encryptMnemonicWithHandler, decryptMnemonicWithHandler } from '../../wallet';
 
-import { decryptMnemonicWithCallback, encryptMnemonicWithCallback } from '../../wallet';
+describe('encryptionUtils', () => {
+  describe('encryptMnemonicWithHandler', () => {
+    it('should encrypt the seed using the provided handler and password', async () => {
+      const seed = 'test seed';
+      const password = 'test password';
+      const encryptedSeed = 'encrypted seed';
+      const mnemonicEncryptionHandler = vi.fn().mockResolvedValue(encryptedSeed);
 
-describe('encryptMnemonicWithCallback', () => {
-  const password = 'password';
-  const seed = 'seed';
-
-  const mockMnemonicEncryptionHandler = vi.fn(() => {
-    const encryptedSeedBuffer = Buffer.from('encrypted_seed');
-    return Promise.resolve(encryptedSeedBuffer);
-  });
-
-  const mockPasswordHashGenerator = vi.fn(() => {
-    const hash = 'password_hash';
-    return Promise.resolve({ hash, salt: 'salt' });
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should encrypt the mnemonic', async () => {
-    const result = await encryptMnemonicWithCallback({
-      mnemonicEncryptionHandler: mockMnemonicEncryptionHandler,
-      passwordHashGenerator: mockPasswordHashGenerator,
-      password,
-      seed,
-    });
-
-    expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);
-    expect(mockMnemonicEncryptionHandler).toHaveBeenCalledWith(seed, 'password_hash');
-    expect(result).toBe('656e637279707465645f73656564');
-  });
-
-  it('should reject with an error if encryption fails', async () => {
-    const errorMessage = 'Encryption error';
-
-    mockPasswordHashGenerator.mockRejectedValue(new Error(errorMessage));
-
-    await expect(
-      encryptMnemonicWithCallback({
-        mnemonicEncryptionHandler: mockMnemonicEncryptionHandler,
-        passwordHashGenerator: mockPasswordHashGenerator,
-        password,
+      const result = await encryptMnemonicWithHandler({
         seed,
-      }),
-    ).rejects.toThrow(errorMessage);
-
-    expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);
-    expect(mockMnemonicEncryptionHandler).not.toHaveBeenCalled();
-  });
-});
-
-describe('decryptMnemonicWithCallback', () => {
-  const password = 'password';
-  const encryptedSeed = 'encrypted_seed';
-
-  const mockMnemonicDecryptionHandler = vi.fn(() => {
-    const seedPhrase = 'decrypted_seed_phrase';
-    return Promise.resolve(seedPhrase);
-  });
-
-  const mockPasswordHashGenerator = vi.fn(() => {
-    const hash = 'password_hash';
-    return Promise.resolve({ hash, salt: 'salt' });
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should decrypt the mnemonic', async () => {
-    const result = await decryptMnemonicWithCallback({
-      mnemonicDecryptionHandler: mockMnemonicDecryptionHandler,
-      passwordHashGenerator: mockPasswordHashGenerator,
-      password,
-      encryptedSeed,
-    });
-
-    expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);
-    expect(mockMnemonicDecryptionHandler).toHaveBeenCalledWith(encryptedSeed, 'password_hash');
-    expect(result).toBe('decrypted_seed_phrase');
-  });
-
-  it('should reject with an error if decryption fails', async () => {
-    const errorMessage = 'Decryption error';
-
-    mockPasswordHashGenerator.mockRejectedValue(new Error(errorMessage));
-
-    await expect(
-      decryptMnemonicWithCallback({
-        mnemonicDecryptionHandler: mockMnemonicDecryptionHandler,
-        passwordHashGenerator: mockPasswordHashGenerator,
         password,
-        encryptedSeed,
-      }),
-    ).rejects.toThrow(errorMessage);
+        mnemonicEncryptionHandler,
+      });
 
-    expect(mockPasswordHashGenerator).toHaveBeenCalledWith(password);
-    expect(mockMnemonicDecryptionHandler).not.toHaveBeenCalled();
+      expect(mnemonicEncryptionHandler).toHaveBeenCalledWith(seed, password);
+      expect(result).toBe(encryptedSeed);
+    });
+  });
+
+  describe('decryptMnemonicWithHandler', () => {
+    it('should decrypt the encrypted seed using the provided handler and password', async () => {
+      const encryptedSeed = 'encrypted seed';
+      const password = 'test password';
+      const seedPhrase = 'test seed phrase';
+      const mnemonicDecryptionHandler = vi.fn().mockResolvedValue(seedPhrase);
+
+      const result = await decryptMnemonicWithHandler({
+        encryptedSeed,
+        password,
+        mnemonicDecryptionHandler,
+      });
+
+      expect(mnemonicDecryptionHandler).toHaveBeenCalledWith(encryptedSeed, password);
+      expect(result).toBe(seedPhrase);
+    });
   });
 });

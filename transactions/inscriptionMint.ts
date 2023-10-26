@@ -31,6 +31,7 @@ type EstimateProps = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
+  network: NetworkType;
 };
 
 type BaseEstimateResult = {
@@ -50,7 +51,7 @@ type EstimateResult = BaseEstimateResult & {
 };
 
 type ExecuteProps = {
-  seedPhrase: string;
+  getSeedPhrase: () => Promise<string>;
   accountIndex: number;
   changeAddress: string;
   network: NetworkType;
@@ -75,6 +76,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     finalInscriptionValue,
     serviceFee,
     serviceFeeAddress,
+    network,
   } = estimateProps;
 
   // a service fee of below 546 will result in a dust UTXO
@@ -96,7 +98,10 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
-  const dummyAddress = 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh';
+  const dummyAddress =
+    network === 'Mainnet'
+      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
+      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
   const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
 
@@ -107,13 +112,16 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
-  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getInscriptionFeeEstimate({
-    contentLength: content.length,
-    contentType,
-    revealAddress,
-    feeRate,
-    inscriptionValue,
-  });
+  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getInscriptionFeeEstimate(
+    network,
+    {
+      contentLength: content.length,
+      contentType,
+      revealAddress,
+      feeRate,
+      inscriptionValue,
+    },
+  );
 
   const commitValue = new BigNumber(inscriptionValue).plus(revealChainFee).plus(revealServiceFee);
 
@@ -131,6 +139,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     recipients,
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -156,7 +165,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
 
 export async function inscriptionMintExecute(executeProps: ExecuteProps): Promise<string> {
   const {
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     changeAddress,
@@ -205,18 +214,17 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
 
   const privateKey = await getBtcPrivateKey({
-    seedPhrase,
+    seedPhrase: await getSeedPhrase(),
     index: BigInt(accountIndex),
-    network: 'Mainnet',
+    network,
   });
 
   const contentField = contentBase64 ? { contentBase64 } : { contentString: contentString as string };
 
-  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder({
+  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder(network, {
     ...contentField,
     contentType,
     feeRate,
-    network,
     revealAddress,
     inscriptionValue,
   });
@@ -235,6 +243,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     recipients,
     availableUtxos: addressUtxos,
     feeRate,
+    network,
   });
 
   if (!bestUtxoData) {
@@ -245,7 +254,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
   const selectedNonOrdinalUtxos = [];
 
   for (const utxo of bestUtxoData.selectedUtxos) {
-    const ordinalIds = await getOrdinalIdsFromUtxo(utxo);
+    const ordinalIds = await getOrdinalIdsFromUtxo(network, utxo);
     if (ordinalIds.length > 0) {
       selectedOrdinalUtxos.push(utxo);
     } else {
@@ -273,7 +282,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     network,
   );
 
-  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder({
+  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder(network, {
     commitAddress,
     commitTransactionHex: commitTransaction.hex,
   });
