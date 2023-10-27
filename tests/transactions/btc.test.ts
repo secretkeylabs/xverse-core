@@ -16,6 +16,7 @@ describe('selectUtxosForSend', () => {
         recipients,
         availableUtxos: utxos,
         feeRate,
+        network: 'Mainnet',
       });
 
       expect(selectedUtxoData).toBeDefined();
@@ -33,6 +34,7 @@ describe('selectUtxosForSend', () => {
       availableUtxos: utxos,
       feeRate: 10,
       pinnedUtxos: [utxo3k],
+      network: 'Mainnet',
     });
 
     expect(selectedUtxoData).toEqual({
@@ -49,6 +51,7 @@ describe('selectUtxosForSend', () => {
       recipients: [{ address: recipientAddress1, amountSats: new BigNumber(1000) }],
       availableUtxos: [],
       feeRate: 10,
+      network: 'Mainnet',
     });
 
     expect(selectedUtxoData).toBeUndefined();
@@ -60,6 +63,7 @@ describe('selectUtxosForSend', () => {
       recipients: [{ address: recipientAddress1, amountSats: new BigNumber(10000000) }],
       availableUtxos: utxos,
       feeRate: 10,
+      network: 'Mainnet',
     });
 
     expect(selectedUtxoData).toBeUndefined();
@@ -67,7 +71,13 @@ describe('selectUtxosForSend', () => {
 
   it('should throw if no recipients', () => {
     expect(() =>
-      selectUtxosForSend({ changeAddress: dummyChangeAddress, recipients: [], availableUtxos: utxos, feeRate: 10 }),
+      selectUtxosForSend({
+        changeAddress: dummyChangeAddress,
+        recipients: [],
+        availableUtxos: utxos,
+        feeRate: 10,
+        network: 'Mainnet',
+      }),
     ).toThrow('Must have at least one recipient');
   });
 
@@ -79,6 +89,7 @@ describe('selectUtxosForSend', () => {
         recipients: recipients,
         availableUtxos: utxos,
         feeRate: 0,
+        network: 'Mainnet',
       }),
     ).toThrow('Fee rate must be a positive number');
     expect(() =>
@@ -87,6 +98,7 @@ describe('selectUtxosForSend', () => {
         recipients: recipients,
         availableUtxos: utxos,
         feeRate: -1,
+        network: 'Mainnet',
       }),
     ).toThrow('Fee rate must be a positive number');
   });

@@ -39,18 +39,18 @@ export interface SignedBtcTx {
  * fetch btc fee rate from the api
  * if api fails, returns default fee rate
  */
-export async function getBtcFeeRate() {
+export async function getBtcFeeRate(network: NetworkType) {
   try {
-    const feeRate = await fetchBtcFeeRate();
+    const feeRate = await fetchBtcFeeRate(network);
     return feeRate;
   } catch (e) {
     return defaultFeeRate;
   }
 }
 
-export async function isCustomFeesAllowed(customFees: string) {
-  const feeRate = await getBtcFeeRate();
-  return Number(customFees) >= feeRate?.limits?.min ? true : false;
+export async function isCustomFeesAllowed(network: NetworkType, customFees: string) {
+  const feeRate = await getBtcFeeRate(network);
+  return Number(customFees) >= feeRate.limits.min;
 }
 
 export function selectUnspentOutputs(
@@ -368,7 +368,7 @@ export async function getBtcFees(
     const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     // Get total sats to send (including custom fee)
     let satsToSend = new BigNumber(0);
@@ -438,7 +438,7 @@ export async function getBtcFeesForOrdinalSend(
     const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     // Get total sats to send (including custom fee)
     const satsToSend = new BigNumber(ordinalUtxo.value);
@@ -501,7 +501,7 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
@@ -531,7 +531,7 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
 
     const sumSelectedOutputs = sumUnspentOutputs(unspentOutputs);
     const satsToSend = sumSelectedOutputs;
@@ -579,6 +579,7 @@ export type SelectUtxosForSendProps = {
   availableUtxos: UTXO[];
   feeRate: number;
   pinnedUtxos?: UTXO[];
+  network: NetworkType;
 };
 
 export type TransactionUtxoSelectionMetadata = {
@@ -598,6 +599,7 @@ export function selectUtxosForSend({
   availableUtxos,
   feeRate,
   pinnedUtxos = [],
+  network,
 }: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
   if (recipients.length === 0) {
     throw new Error('Must have at least one recipient');
@@ -621,6 +623,7 @@ export function selectUtxosForSend({
     availableUtxos: sortedUtxos,
     changeAddress,
     feeRate,
+    network,
   });
 
   return selectedUtxoData;
@@ -696,7 +699,7 @@ export async function signBtcTransaction(
     let feePerVByte: BigNumber = new BigNumber(0);
 
     if (!fee) {
-      feeRate = await getBtcFeeRate();
+      feeRate = await getBtcFeeRate(network);
     }
 
     // Get sender address payment private key
@@ -790,7 +793,7 @@ export async function signOrdinalSendTransaction(
   let feePerVByte: BigNumber = new BigNumber(0);
 
   if (!fee) {
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
   }
 
   // Get sender address payment and ordinals private key
@@ -909,7 +912,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   const address = isRecover ? btcAddress : ordinalsAddress;
   const addressUtxos = await btcClient.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
@@ -939,7 +942,7 @@ export async function signNonOrdinalBtcSendTransaction(
   let feeRate: BtcFeeResponse = defaultFeeRate;
 
   if (!fee) {
-    feeRate = await getBtcFeeRate();
+    feeRate = await getBtcFeeRate(network);
   }
 
   // Get sender address payment and ordinals private key

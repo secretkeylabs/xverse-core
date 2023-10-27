@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
-import { UTXO } from 'types';
 import { Recipient } from '../../transactions/btc';
+import { UTXO } from '../../types';
 
 import { utxo10k, utxo384k, utxo3k, utxo792k } from './btc.data';
 

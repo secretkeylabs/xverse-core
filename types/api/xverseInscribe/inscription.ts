@@ -1,5 +1,3 @@
-import { NetworkType } from 'types/network';
-
 export type InscriptionCostEstimateRequest = {
   revealAddress: string;
   feeRate: number;
@@ -18,7 +16,6 @@ export type InscriptionCostEstimateResponse = {
 type InscriptionCreateOrderBaseRequest = {
   feeRate: number;
   revealAddress: string;
-  network: NetworkType;
   inscriptionValue?: number;
   contentType: string;
 };

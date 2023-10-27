@@ -1,23 +1,20 @@
-import { NetworkType } from '../types/network';
-import { BtcFeeResponse } from '../types/api/xverse/transaction';
-import { UTXO } from 'types/api/esplora';
-import { ErrorCodes, ResponseError } from '../types/error';
-import { networks, Psbt } from 'bitcoinjs-lib';
+import { SingleSigSpendingCondition, createMessageSignature, deserializeTransaction } from '@stacks/transactions';
+import axios from 'axios';
+import BigNumber from 'bignumber.js';
+import { Psbt, networks } from 'bitcoinjs-lib';
 import { fetchBtcFeeRate } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import {
+  Recipient,
   defaultFeeRate,
+  filterUtxos,
+  getFee,
   selectUnspentOutputs,
   sumUnspentOutputs,
-  Recipient,
-  getFee,
-  filterUtxos,
 } from '../transactions/btc';
-import axios from 'axios';
-import BigNumber from 'bignumber.js';
-import { Bip32Derivation, TapBip32Derivation } from './types';
+import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
 import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './constants';
-import { createMessageSignature, deserializeTransaction, SingleSigSpendingCondition } from '@stacks/transactions';
+import { Bip32Derivation, TapBip32Derivation } from './types';
 
 /**
  * This function is used to get the transaction data for the ledger psbt
@@ -62,7 +59,7 @@ export async function getTransactionData(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  feeRate = await fetchBtcFeeRate();
+  feeRate = await fetchBtcFeeRate(network);
   const { newSelectedUnspentOutputs, fee } = await getFee(
     filteredUnspentOutputs,
     selectedUTXOs,

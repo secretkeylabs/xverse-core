@@ -13,13 +13,10 @@ import {
   publicKeyToString,
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
-import { AddressType, getAddressInfo, Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
+import { AddressType, Network as btcAddressNetwork, getAddressInfo, validate } from 'bitcoin-address-validation';
 import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
-import { Keychain } from 'types/api/xverse/wallet';
-import { NetworkType } from 'types/network';
-import { BaseWallet } from 'types/wallet';
 import {
   BTC_SEGWIT_PATH_PURPOSE,
   BTC_TAPROOT_PATH_PURPOSE,
@@ -28,6 +25,7 @@ import {
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
 import { getBtcNetwork } from '../transactions/btcNetwork';
+import { BaseWallet, Keychain, NetworkType } from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
@@ -271,44 +269,6 @@ export function validateBtcAddress({ btcAddress, network }: { btcAddress: string
   }
 }
 
-interface EncryptMnemonicArgs {
-  password: string;
-  seed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicEncryptionHandler: (seed: string, key: string) => Promise<Buffer>;
-}
-
-interface DecryptMnemonicArgs {
-  password: string;
-  encryptedSeed: string;
-  passwordHashGenerator: (password: string) => Promise<{
-    salt: string;
-    hash: string;
-  }>;
-  mnemonicDecryptionHandler: (seed: Buffer | string, key: string) => Promise<string>;
-}
-
-export async function encryptMnemonicWithCallback(cb: EncryptMnemonicArgs) {
-  const { mnemonicEncryptionHandler, passwordHashGenerator, password, seed } = cb;
-
-  const { hash } = await passwordHashGenerator(password);
-  const encryptedSeedBuffer = await mnemonicEncryptionHandler(seed, hash);
-
-  return encryptedSeedBuffer.toString('hex');
-}
-
-export async function decryptMnemonicWithCallback(cb: DecryptMnemonicArgs) {
-  const { mnemonicDecryptionHandler, passwordHashGenerator, password, encryptedSeed } = cb;
-
-  const { hash } = await passwordHashGenerator(password);
-  const seedPhrase = await mnemonicDecryptionHandler(encryptedSeed, hash);
-
-  return seedPhrase;
-}
-
 export async function getStxAddressKeyChain(
   mnemonic: string,
   chainID: ChainID,
@@ -320,6 +280,7 @@ export async function getStxAddressKeyChain(
   return deriveStxAddressKeychain(rootNode);
 }
 
+export * from './encryptionUtils';
 export { hashMessage };
 
 export const validateBtcAddressIsTaproot = (btcAddress: string): boolean => {
