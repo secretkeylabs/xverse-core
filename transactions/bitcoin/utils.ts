@@ -245,6 +245,9 @@ export const applySplitUtxoActions = async (
 
     addressContext.addInput(transaction, extendedUtxo, options);
 
+    // TODO: use data from UTXO cache here
+    // TODO: add rare sats to the outputs
+    // TODO: add sattributes to the outputs
     // sort from smallest to biggest
     outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
 
