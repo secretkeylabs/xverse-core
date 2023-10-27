@@ -146,6 +146,16 @@ async function fetchNFTCollectionDetailsRecord(
   return collectionRecord;
 }
 
+function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
+  //sort according to total nft in a collection
+  return nftCollectionList.sort((a, b) => {
+    //place bns collection at the bottom of nft list
+    if (a.collection_id === 'bns') return 1;
+    else if (b.collection_id === 'bns') return -1;
+    return b.total_nft - a.total_nft;
+  });
+}
+
 async function checkCacheOrFetchNFTCollection(
   stxAddress: string,
   network: StacksNetwork,
@@ -164,17 +174,11 @@ async function checkCacheOrFetchNFTCollection(
 
   const nftCollectionList = Object.values(collectionRecord);
 
-  //sort according to total nft in a collection
-  nftCollectionList.sort((a, b) => {
-    //place bns collection at the bottom of nft list
-    if (a.collection_id === 'bns' || b.collection_id === 'bns') return -1;
-    return b.total_nft - a.total_nft;
-  });
-
+  const sortedNftCollectionList = sortNftCollectionList(nftCollectionList);
   //store in in-memory cache
-  setCacheValue(cacheKey, nftCollectionList);
+  setCacheValue(cacheKey, sortedNftCollectionList);
 
-  return nftCollectionList;
+  return sortedNftCollectionList;
 }
 
 export async function getNftCollections(
