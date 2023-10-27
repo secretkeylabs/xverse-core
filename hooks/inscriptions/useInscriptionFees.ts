@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { UTXO } from 'types';
 import { InscriptionErrorCode, inscriptionMintFeeEstimate } from '../../transactions/inscriptionMint';
+import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
 
 type CommitValueBreakdown = {
@@ -20,6 +20,7 @@ type Props = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
+  network: NetworkType;
 };
 
 const DUMMY_UTXO = {
@@ -40,6 +41,7 @@ const useInscriptionFees = (props: Props) => {
     finalInscriptionValue,
     serviceFee,
     serviceFeeAddress,
+    network,
   } = props;
 
   const [commitValue, setCommitValue] = useState<number | undefined>();
@@ -64,6 +66,7 @@ const useInscriptionFees = (props: Props) => {
           finalInscriptionValue,
           serviceFee,
           serviceFeeAddress,
+          network,
         });
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
@@ -82,6 +85,7 @@ const useInscriptionFees = (props: Props) => {
               finalInscriptionValue,
               serviceFee,
               serviceFeeAddress,
+              network,
             });
             setCommitValue(result.commitValue);
             setCommitValueBreakdown(result.valueBreakdown);

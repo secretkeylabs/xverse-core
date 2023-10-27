@@ -4,7 +4,7 @@ import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storag
 import { bytesToHex } from '@stacks/transactions';
 import { BIP32Interface } from 'bip32';
 import { WALLET_CONFIG_PATH } from '../constant';
-import { Account } from '../types/account';
+import { Account } from '../types';
 
 export interface ConfigApp {
   origin: string;

@@ -59,7 +59,7 @@ export async function getTransactionData(
     throw new ResponseError(ErrorCodes.InSufficientBalanceWithTxFee).statusCode;
   }
 
-  feeRate = await fetchBtcFeeRate();
+  feeRate = await fetchBtcFeeRate(network);
   const { newSelectedUnspentOutputs, fee } = await getFee(
     filteredUnspentOutputs,
     selectedUTXOs,

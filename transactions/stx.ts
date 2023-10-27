@@ -43,6 +43,7 @@ import {
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
+import BigNumber from 'bignumber.js';
 import { PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import {
   UnsignedContractCallTransaction,
@@ -51,7 +52,6 @@ import {
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import BigNumber from 'bignumber.js';
 
 export interface StacksRecipient {
   address: string;

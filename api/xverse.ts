@@ -10,6 +10,7 @@ import {
   CollectionsList,
   Inscription,
   InscriptionInCollectionsList,
+  NetworkType,
   OrdinalInfo,
   SignedUrlResponse,
   SponsorInfoResponse,
@@ -22,9 +23,9 @@ import {
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
 
-export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
+export async function fetchBtcFeeRate(network: NetworkType): Promise<BtcFeeResponse> {
   return axios
-    .get(`${XVERSE_API_BASE_URL}/v1/fees/btc`, {
+    .get(`${XVERSE_API_BASE_URL(network)}/v1/fees/btc`, {
       method: 'GET',
     })
     .then((response) => {
@@ -32,26 +33,31 @@ export async function fetchBtcFeeRate(): Promise<BtcFeeResponse> {
     });
 }
 
-export async function fetchStxToBtcRate(): Promise<BigNumber> {
-  return axios.get(`${XVERSE_API_BASE_URL}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI }).then((response) => {
-    return new BigNumber(response.data.stxBtcRate.toString());
-  });
+export async function fetchStxToBtcRate(network: NetworkType): Promise<BigNumber> {
+  return axios
+    .get(`${XVERSE_API_BASE_URL(network)}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
+    .then((response) => {
+      return new BigNumber(response.data.stxBtcRate.toString());
+    });
 }
 
-export async function fetchBtcToCurrencyRate({
-  fiatCurrency,
-}: {
-  fiatCurrency: SupportedCurrency;
-}): Promise<BigNumber> {
+export async function fetchBtcToCurrencyRate(
+  network: NetworkType,
+  {
+    fiatCurrency,
+  }: {
+    fiatCurrency: SupportedCurrency;
+  },
+): Promise<BigNumber> {
   return axios
-    .get(`${XVERSE_API_BASE_URL}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
+    .get(`${XVERSE_API_BASE_URL(network)}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
     .then((response) => {
       return new BigNumber(response.data.btcFiatRate.toString());
     });
 }
 
-export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
-  const url = `${XVERSE_API_BASE_URL}/v1/prices/${ft}/${fiatCurrency}`;
+export async function fetchTokenFiateRate(network: NetworkType, ft: string, fiatCurrency: string): Promise<BigNumber> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/prices/${ft}/${fiatCurrency}`;
 
   return axios
     .get<TokenFiatRateResponse>(url, { timeout: API_TIMEOUT_MILLI })
@@ -63,8 +69,12 @@ export async function fetchTokenFiateRate(ft: string, fiatCurrency: string): Pro
     });
 }
 
-export async function getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse | null> {
-  const url = `${XVERSE_API_BASE_URL}/v1/coins`;
+export async function getCoinsInfo(
+  network: NetworkType,
+  contractids: string[],
+  fiatCurrency: string,
+): Promise<CoinsResponse | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/coins`;
 
   const requestBody = {
     currency: fiatCurrency,
@@ -81,8 +91,8 @@ export async function getCoinsInfo(contractids: string[], fiatCurrency: string):
     });
 }
 
-export async function fetchAppInfo(): Promise<AppInfo | null> {
-  const url = `${XVERSE_API_BASE_URL}/v1/info`;
+export async function fetchAppInfo(network: NetworkType): Promise<AppInfo | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/info`;
 
   return axios
     .get<AppInfo>(url)
@@ -94,8 +104,8 @@ export async function fetchAppInfo(): Promise<AppInfo | null> {
     });
 }
 
-export async function fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
-  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/info?pool_version=3`, {
+export async function fetchStackingPoolInfo(network: NetworkType): Promise<StackingPoolInfo> {
+  return fetch(`${XVERSE_API_BASE_URL(network)}/v1/pool/info?pool_version=3`, {
     method: 'GET',
   })
     .then((response) => response.json())
@@ -104,8 +114,8 @@ export async function fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
     });
 }
 
-export async function fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
-  return fetch(`${XVERSE_API_BASE_URL}/v1/pool/${stxAddress}/status`, {
+export async function fetchPoolStackerInfo(network: NetworkType, stxAddress: string): Promise<StackerInfo> {
+  return fetch(`${XVERSE_API_BASE_URL(network)}/v1/pool/${stxAddress}/status`, {
     method: 'GET',
   })
     .then((response) => response.json())
@@ -114,8 +124,11 @@ export async function fetchPoolStackerInfo(stxAddress: string): Promise<StackerI
     });
 }
 
-export async function getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse | null> {
-  const url = `${XVERSE_API_BASE_URL}/v1/sign-url`;
+export async function getMoonPaySignedUrl(
+  network: NetworkType,
+  unsignedUrl: string,
+): Promise<SignedUrlResponse | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/sign-url`;
 
   const requestBody = {
     url: unsignedUrl,
@@ -131,8 +144,8 @@ export async function getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUr
     });
 }
 
-export async function getBinaceSignature(srcData: string): Promise<SignedUrlResponse | null> {
-  const url = `${XVERSE_API_BASE_URL}/v1/binance/sign`;
+export async function getBinaceSignature(network: NetworkType, srcData: string): Promise<SignedUrlResponse | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/binance/sign`;
 
   const requestBody = {
     url: srcData,
@@ -189,24 +202,29 @@ export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
     .catch(handleAxiosError);
 }
 
-export async function getOrdinalsByAddress(ordinalsAddress: string) {
-  return fetchBtcOrdinalsData(ordinalsAddress, 'Mainnet');
+export async function getOrdinalsByAddress(network: NetworkType, ordinalsAddress: string) {
+  return fetchBtcOrdinalsData(ordinalsAddress, network);
 }
 
-export async function getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
-  const ordinalInfoUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/${ordinalId}`;
+export async function getOrdinalInfo(network: NetworkType, ordinalId: string): Promise<OrdinalInfo> {
+  const ordinalInfoUrl = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/${ordinalId}`;
   const ordinalInfo = await axios.get(ordinalInfoUrl);
   return ordinalInfo.data;
 }
 
-export async function getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
-  const requestUrl = `${XVERSE_API_BASE_URL}/v1/eth/${tokenContract}/${tokenId}`;
+export async function getErc721Metadata(network: NetworkType, tokenContract: string, tokenId: string): Promise<string> {
+  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/eth/${tokenContract}/${tokenId}`;
   const erc721Metadata = await axios.get(requestUrl);
   return erc721Metadata.data;
 }
 
-export async function getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
-  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/collections`;
+export async function getCollections(
+  network: NetworkType,
+  address: string,
+  offset?: number,
+  limit?: number,
+): Promise<CollectionsList> {
+  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/collections`;
   const response = await axios.get(requestUrl, {
     params: {
       limit,
@@ -216,19 +234,23 @@ export async function getCollections(address: string, offset?: number, limit?: n
   return response.data;
 }
 
-export async function getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
-  const requestUrl = `${XVERSE_API_BASE_URL}/v1/ordinals/collections/${collectionId}`;
+export async function getCollectionMarketData(
+  network: NetworkType,
+  collectionId: string,
+): Promise<CollectionMarketDataResponse> {
+  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/collections/${collectionId}`;
   const response = await axios.get(requestUrl);
   return response.data;
 }
 
 export async function getCollectionSpecificInscriptions(
+  network: NetworkType,
   address: string,
   collectionId: string,
   offset?: number,
   limit?: number,
 ): Promise<InscriptionInCollectionsList> {
-  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/collections/${collectionId}`;
+  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/collections/${collectionId}`;
   const response = await axios.get(requestUrl, {
     params: {
       limit,
@@ -238,14 +260,18 @@ export async function getCollectionSpecificInscriptions(
   return response.data;
 }
 
-export async function getInscription(address: string, inscriptionId: string): Promise<Inscription> {
-  const requestUrl = `${XVERSE_API_BASE_URL}/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`;
+export async function getInscription(
+  network: NetworkType,
+  address: string,
+  inscriptionId: string,
+): Promise<Inscription> {
+  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`;
   const response = await axios.get(requestUrl);
   return response.data;
 }
 
-export async function getAppConfig() {
-  const appConfigUrl = `${XVERSE_API_BASE_URL}/v1/app-config`;
+export async function getAppConfig(network: NetworkType) {
+  const appConfigUrl = `${XVERSE_API_BASE_URL(network)}/v1/app-config`;
   const appConfig = await axios.get(appConfigUrl);
   return appConfig;
 }

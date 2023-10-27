@@ -1,13 +1,13 @@
 import { useCallback, useState } from 'react';
 
-import { NetworkType, UTXO } from 'types';
+import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
 
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
 
 type Props = {
   /** The seed phrase of the wallet. */
-  seedPhrase: string;
+  getSeedPhrase: () => Promise<string>;
 
   /** The account index of the seed phrase to use. */
   accountIndex: number;
@@ -39,7 +39,7 @@ type Props = {
 
 const useBrc20TransferExecute = (props: Props) => {
   const {
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     tick,
@@ -61,7 +61,7 @@ const useBrc20TransferExecute = (props: Props) => {
     if (running) return;
 
     const innerProps = {
-      seedPhrase,
+      getSeedPhrase,
       accountIndex,
       addressUtxos,
       tick,
@@ -115,7 +115,7 @@ const useBrc20TransferExecute = (props: Props) => {
 
     runTransfer();
   }, [
-    seedPhrase,
+    getSeedPhrase,
     accountIndex,
     addressUtxos,
     tick,

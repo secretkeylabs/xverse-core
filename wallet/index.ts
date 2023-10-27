@@ -13,7 +13,7 @@ import {
   publicKeyToString,
 } from '@stacks/transactions';
 import * as bip39 from 'bip39';
-import { AddressType, getAddressInfo, Network as btcAddressNetwork, validate } from 'bitcoin-address-validation';
+import { AddressType, Network as btcAddressNetwork, getAddressInfo, validate } from 'bitcoin-address-validation';
 import { networks, payments } from 'bitcoinjs-lib';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
@@ -280,6 +280,7 @@ export async function getStxAddressKeyChain(
   return deriveStxAddressKeychain(rootNode);
 }
 
+export * from './encryptionUtils';
 export { hashMessage };
 export * from './encryptionUtils';
 

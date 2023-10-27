@@ -26,19 +26,6 @@ import {
   NonFungibleToken,
   StxAddressData,
   StxAddressDataResponse,
-  TokensResponse,
-  TransactionData,
-} from '../types';
-import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
-import {
-  getNetworkURL,
-  getUniquePendingTx,
-  mapTransferTransactionData,
-  parseMempoolStxTransactionsData,
-  parseStxTransactionData,
-} from './helper';
-
-import {
   StxMempoolResponse,
   StxMempoolTransactionData,
   StxMempoolTransactionListData,
@@ -46,11 +33,21 @@ import {
   StxTransactionData,
   StxTransactionListData,
   StxTransactionResponse,
+  TokensResponse,
   Transaction,
+  TransactionData,
   TransferTransactionsData,
 } from '../types';
+import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
 import { getNftDetail } from './gamma';
+import {
+  getNetworkURL,
+  getUniquePendingTx,
+  mapTransferTransactionData,
+  parseMempoolStxTransactionsData,
+  parseStxTransactionData,
+} from './helper';
 
 // TODO: these methods needs to be refactored
 // reference https://github.com/secretkeylabs/xverse-core/pull/217/files#r1298242728

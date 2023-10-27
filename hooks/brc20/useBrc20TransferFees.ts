@@ -1,8 +1,8 @@
 import axios, { CancelToken } from 'axios';
 import { useEffect, useState } from 'react';
 
-import { UTXO } from 'types';
 import { BRC20ErrorCode, brc20TransferEstimateFees } from '../../transactions/brc20';
+import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
 
 const DUMMY_UTXO = {
@@ -39,10 +39,12 @@ type Props = {
 
   /** If true, the initial fetch will be skipped. */
   skipInitialFetch?: boolean;
+
+  network: NetworkType;
 };
 
 const useBrc20TransferFees = (props: Props) => {
-  const { addressUtxos = [], tick, amount, feeRate, revealAddress, skipInitialFetch = false } = props;
+  const { addressUtxos = [], tick, amount, feeRate, revealAddress, network, skipInitialFetch = false } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +69,7 @@ const useBrc20TransferFees = (props: Props) => {
             revealAddress,
             feeRate,
             cancelToken,
+            network,
           });
           setCommitValue(result.commitValue);
           setCommitValueBreakdown(result.valueBreakdown);
