@@ -1,5 +1,4 @@
-import { NetworkType } from 'types/network';
-import { UtxoOrdinalBundle } from '../types/api/xverse/ordinals';
+import { NetworkType, UtxoOrdinalBundle } from '../types';
 import { AddressBundleResponse, getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
 export type UtxoCacheStruct = {

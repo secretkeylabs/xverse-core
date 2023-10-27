@@ -1,12 +1,13 @@
 import { StacksTransaction } from '@stacks/transactions';
 import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
-import { CollectionMarketDataResponse, CollectionsList } from 'types/api/xverse/ordinals';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   AppInfo,
   BtcFeeResponse,
   CoinsResponse,
+  CollectionMarketDataResponse,
+  CollectionsList,
   Inscription,
   InscriptionInCollectionsList,
   NetworkType,

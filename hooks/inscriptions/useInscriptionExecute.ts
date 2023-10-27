@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { NetworkType, UTXO } from 'types';
+import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
 
 import { InscriptionErrorCode, inscriptionMintExecute } from '../../transactions/inscriptionMint';

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UTXO } from 'types';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../../api/xverseInscribe';
 import {
@@ -8,6 +7,7 @@ import {
   selectUtxosForSend,
   signNonOrdinalBtcSendTransaction,
 } from '../../transactions/btc';
+import { UTXO } from '../../types';
 import { getBtcPrivateKey } from '../../wallet';
 
 import BigNumber from 'bignumber.js';
