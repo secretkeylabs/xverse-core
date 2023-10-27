@@ -2,7 +2,6 @@ import { SingleSigSpendingCondition, createMessageSignature, deserializeTransact
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { Psbt, networks } from 'bitcoinjs-lib';
-import { UTXO } from 'types/api/esplora';
 import { fetchBtcFeeRate } from '../api';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import {
@@ -13,9 +12,7 @@ import {
   selectUnspentOutputs,
   sumUnspentOutputs,
 } from '../transactions/btc';
-import { BtcFeeResponse } from '../types/api/xverse/transaction';
-import { ErrorCodes, ResponseError } from '../types/error';
-import { NetworkType } from '../types/network';
+import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
 import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './constants';
 import { Bip32Derivation, TapBip32Derivation } from './types';
 

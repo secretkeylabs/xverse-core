@@ -1,12 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import { getUniquePendingTx, parseStxTransactionData } from 'api/helper';
-import {
-  StxMempoolTransactionData,
-  StxMempoolTransactionDataResponse,
-  StxTransactionData,
-  StxTransactionDataResponse,
-} from 'types/*';
-import { TransactionType } from 'types/api/shared/transaction';
+import { describe, expect, it } from 'vitest';
+import { StxMempoolTransactionData, StxTransactionData, StxTransactionDataResponse } from '../../types';
+import { TransactionType } from '../../types/api/shared/transaction';
 
 describe('getUniquePendingTx', () => {
   [

@@ -16,7 +16,7 @@ import {
   InscriptionExecuteOrderRequest,
   InscriptionExecuteOrderResponse,
   NetworkType,
-} from 'types';
+} from '../types';
 
 import { XVERSE_INSCRIBE_URL } from '../constant';
 

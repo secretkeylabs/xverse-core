@@ -1,4 +1,4 @@
-import { NetworkType } from 'types/network';
+import { NetworkType } from '../../../types';
 
 type Brc20TransferOrMintRequest = {
   operation: 'transfer' | 'mint';

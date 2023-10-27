@@ -1,4 +1,4 @@
-import { NetworkType } from 'types/network';
+import { NetworkType } from '../types/network';
 
 export interface BitcoinNetwork {
   bech32: string;

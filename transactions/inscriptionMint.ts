@@ -1,8 +1,8 @@
 import BigNumber from 'bignumber.js';
 
-import { NetworkType, UTXO } from 'types';
 import { getOrdinalIdsFromUtxo } from '../api/ordinals';
 import xverseInscribeApi from '../api/xverseInscribe';
+import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
 import { getBtcPrivateKey } from '../wallet';
 import { generateSignedBtcTransaction, selectUtxosForSend } from './btc';
