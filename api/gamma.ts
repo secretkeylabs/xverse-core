@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { NftCollectionData, NftDetailResponse } from 'types';
 import { GAMMA_COLLECTION_API, NFT_BASE_URI } from '../constant';
+import { NftCollectionData, NftDetailResponse } from '../types';
 
 export async function getNftDetail(
   tokenId: string,

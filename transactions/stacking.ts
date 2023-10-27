@@ -14,7 +14,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { address } from 'bitcoinjs-lib';
 import BN from 'bn.js';
-import { StacksNetwork, StacksTransaction, StxMempoolTransactionData } from 'types';
+import { StacksNetwork, StacksTransaction, StxMempoolTransactionData } from '../types';
 import { getNewNonce } from './helper';
 import { estimateContractCallFees, generateUnsignedContractCall, getNonce, setFee, setNonce } from './stx';
 
