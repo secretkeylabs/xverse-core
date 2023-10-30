@@ -54,8 +54,8 @@ async function fetchBatchData(batch: Array<NonFungibleToken>, collectionRecord: 
   const nftArray: Array<NonFungibleToken> = [];
 
   batch.forEach((nft) => {
-    const principal: string[] = nft.asset_identifier.split('::');
-    const contractInfo: string[] = principal[0].split('.');
+    const principal: string[] = nft.asset_identifier?.split('::');
+    const contractInfo: string[] = principal[0]?.split('.');
     const contractId = principal[0];
 
     if (contractInfo[1] === 'bns') {
