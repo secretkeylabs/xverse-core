@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { NFT_BASE_URI } from '../constant';
-import { NftDetailResponse } from '../types';
+import { GAMMA_COLLECTION_API, NFT_BASE_URI } from '../constant';
+import { NftCollectionData, NftDetailResponse } from '../types';
 
 export async function getNftDetail(
   tokenId: string,
@@ -19,4 +19,18 @@ export async function getNftDetail(
     .catch((error) => {
       throw error;
     });
+}
+
+export async function getNftsCollectionData(collectionId: string): Promise<NftCollectionData | undefined> {
+  try {
+    const apiUrl = `${GAMMA_COLLECTION_API}/${collectionId}?include=floorItem`;
+
+    const response = await axios.get<NftCollectionData>(apiUrl, {
+      timeout: 30000,
+    });
+
+    return response.data;
+  } catch (error) {
+    return undefined;
+  }
 }

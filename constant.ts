@@ -104,3 +104,5 @@ export const ORDINALS_URL = (network: NetworkType, inscriptionId: string) =>
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
 
 export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://api2.ordinalsbot.com/order';
+
+export const GAMMA_COLLECTION_API = 'https://api.gamma.io/nft-data-service/v1/collections';

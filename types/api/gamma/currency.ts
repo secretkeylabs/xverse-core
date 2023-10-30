@@ -32,3 +32,19 @@ export type NftDetailResponse = {
   data: NftData;
   isCompliant?: boolean;
 };
+
+export interface NftCollectionData {
+  collection: {
+    id: string;
+    contractId: string;
+    name: string;
+    description: string;
+    image: string;
+    verified: false;
+    link: string;
+    floorItem: {
+      nftId: string;
+      price: string;
+    };
+  };
+}
