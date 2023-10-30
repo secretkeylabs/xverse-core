@@ -7,7 +7,7 @@ export const nftCollection: Record<string, RecordType> = {};
 export function setCacheValue(key: string, userNftCollectionData: StacksCollectionData[]) {
   const DEFAULT_TTL = 1 * 60 * 60 * 1000; // ttl for 1 hour
   // calculate ttl expiry time from current time
-  const currentTime = new Date().getTime();
+  const currentTime = Date.now();
   const ttl = DEFAULT_TTL + currentTime;
 
   // store the data
