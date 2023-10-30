@@ -24,7 +24,7 @@ export type {
   Vin,
   Vout,
 } from './api/esplora';
-export type { NftDetailResponse } from './api/gamma/currency';
+export type { NftCollectionData, NftDetailResponse } from './api/gamma/currency';
 export * from './api/ordinals';
 export * from './api/ordinalsbot';
 export { getBnsNftName } from './api/stacks/assets';
