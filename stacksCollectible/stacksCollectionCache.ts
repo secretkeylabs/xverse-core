@@ -5,7 +5,7 @@ type RecordType = { userNftCollectionData: StacksCollectionData[]; ttl: number }
 export const nftCollection: Record<string, RecordType> = {};
 
 export function setCacheValue(key: string, userNftCollectionData: StacksCollectionData[]) {
-  const DEFAULT_TTL = 1 * 60 * 60 * 1000; // ttl for 1 hour
+  const DEFAULT_TTL = 5 * 60 * 1000; // ttl for 5 minutes
   // calculate ttl expiry time from current time
   const currentTime = Date.now();
   const ttl = DEFAULT_TTL + currentTime;
@@ -19,7 +19,7 @@ export function getCacheValue(key: string) {
   // if value doesn't exist
   if (!val) return undefined;
   // if ttl has expired
-  const currTime = new Date().getTime();
+  const currTime = Date.now();
   if (currTime > val.ttl) {
     // delete record to save computation next time expired value is requested
     delete nftCollection[key];
