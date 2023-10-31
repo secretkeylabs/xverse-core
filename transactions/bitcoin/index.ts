@@ -78,10 +78,13 @@ export const sendOrdinals = async (
       throw new Error(`No utxo found for outpoint ${outpoint}`);
     }
 
-    // If there is only 1 inscription in the utxo and it's value is less than the minimum value for a split utxo
+    const utxoBundleData = await extendedUtxo.getBundleData();
+
+    // If there is only 1 special sat range in the utxo and it's value is less than the minimum value for a split utxo
     // then we can just send the utxo
     if (
-      extendedUtxo.inscriptions.length <= 1 &&
+      utxoBundleData?.sat_ranges &&
+      utxoBundleData?.sat_ranges.length <= 1 &&
       recipientCollection.length === 1 &&
       extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_VALUE + DUST_VALUE
     ) {
@@ -172,8 +175,16 @@ export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpo
     throw new Error('No utxo found for outpoint');
   }
 
-  const inscriptions = await Promise.all(utxo.extendedUtxo.inscriptions.map((i) => i.inscription));
-  const recipients = inscriptions.map(({ location }) => ({ toAddress: context.ordinalsAddress.address, location }));
+  const bundleData = await utxo.extendedUtxo.getBundleData();
+
+  if (!bundleData) {
+    throw new Error('UTXO is not yet indexed');
+  }
+
+  const recipients = bundleData?.sat_ranges.map((s) => ({
+    toAddress: context.ordinalsAddress.address,
+    location: utxo.extendedUtxo?.outpoint + ':' + s.offset,
+  }));
 
   return sendOrdinals(context, recipients, feeRate);
 };
@@ -205,7 +216,7 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
     );
     return transaction;
   } else {
-    const nonOrdinalUtxos = (await context.ordinalsAddress.getNonOrdinalUtxos()).filter((u) => u.utxo.status.confirmed);
+    const nonOrdinalUtxos = (await context.ordinalsAddress.getCommonUtxos()).filter((u) => u.utxo.status.confirmed);
 
     if (nonOrdinalUtxos.length === 0) {
       throw new Error('No non-ordinal utxos found to recover');
@@ -255,7 +266,7 @@ export const recoverOrdinal = async (
     );
     return transaction;
   } else if (fromAddress) {
-    const ordinalUtxos = await context.paymentAddress.getOrdinalUtxos();
+    const ordinalUtxos = await context.paymentAddress.getEmbellishedUtxos();
 
     if (ordinalUtxos.length === 0) {
       throw new Error('No ordinal utxos found to recover');

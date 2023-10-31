@@ -1,3 +1,5 @@
+import { Satribute } from '../../types';
+
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
 export type WalletContext = {
@@ -50,4 +52,18 @@ export type ActionMap = {
 
 export type CompilationOptions = {
   rbfEnabled?: boolean;
+};
+
+export type TransactionOutput = {
+  address: string;
+  amount: number;
+  inscriptions?: {
+    id: string;
+    offset: number;
+  }[];
+  satributes?: {
+    satributes: Satribute[];
+    amount: number;
+    offset: number;
+  }[];
 };

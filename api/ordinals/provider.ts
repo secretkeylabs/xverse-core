@@ -15,8 +15,6 @@ const API_PREFIX = '/ordinals/v1/';
 const MAX_FALLBACK_CALLS = 10;
 
 export default class OrdinalsApi implements OrdinalsApiProvider {
-  private network: NetworkType;
-
   private customClient?: AxiosInstance;
 
   private hiroClient!: AxiosInstance;
@@ -27,7 +25,6 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
 
   constructor(options: OrdinalsApiProviderOptions) {
     const { url, network } = options;
-    this.network = network;
 
     if (url) {
       this.customClient = axios.create({

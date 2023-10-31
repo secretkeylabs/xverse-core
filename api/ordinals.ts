@@ -218,6 +218,7 @@ export type AddressBundleResponse = {
   limit: number;
   results: UtxoOrdinalBundle[];
 };
+
 export const getAddressUtxoOrdinalBundles = async (
   network: NetworkType,
   address: string,
@@ -243,7 +244,7 @@ export const getAddressUtxoOrdinalBundles = async (
   }
 
   const response = await axios.get<AddressBundleResponse>(
-    `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinal-utxo`,
+    `${XVERSE_API_BASE_URL(network)}/v2/address/${address}/ordinal-utxo`,
     {
       params,
     },
@@ -258,7 +259,7 @@ export const getUtxoOrdinalBundle = async (
   vout: number,
 ): Promise<UtxoOrdinalBundle> => {
   const response = await axios.get<UtxoOrdinalBundle>(
-    `${XVERSE_API_BASE_URL(network)}/v1/ordinal-utxo/${txid}:${vout}`,
+    `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
 };

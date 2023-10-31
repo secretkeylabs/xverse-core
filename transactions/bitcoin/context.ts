@@ -3,11 +3,9 @@ import * as btc from '@scure/btc-signer';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
-import { getOrdinalIdsFromUtxo } from '../../api/ordinals';
-import OrdinalsProvider from '../../api/ordinals/provider';
+import { UtxoCache } from '../../api/utxoCache';
 import SeedVault from '../../seedVault';
-import type { Inscription, NetworkType, UTXO } from '../../types';
-import { processPromisesBatch } from '../../utils/promises';
+import type { NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../../wallet';
 
 import { CompilationOptions, SupportedAddressType, WalletContext } from './types';
@@ -26,66 +24,20 @@ const esploraApi = {
   Testnet: esploraTestnetProvider,
 };
 
-const ordinalsMainnetProvider = new OrdinalsProvider({
-  network: 'Mainnet',
-});
-
-const ordinalsTestnetProvider = new OrdinalsProvider({
-  network: 'Testnet',
-});
-
-const ordinalsApi = {
-  Mainnet: ordinalsMainnetProvider,
-  Testnet: ordinalsTestnetProvider,
-};
-
-type InscriptionId = string;
-
-export class InscriptionContext {
-  private _inscription!: Inscription;
-
-  private _id!: InscriptionId;
-
-  private _network!: NetworkType;
-
-  constructor(id: InscriptionId, network: NetworkType) {
-    this._id = id;
-    this._network = network;
-  }
-
-  get id(): InscriptionId {
-    return this._id;
-  }
-
-  get inscription(): Promise<Inscription> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        if (this._network === 'Testnet') {
-          throw new Error('Inscriptions not available on testnet yet');
-        }
-
-        if (!this._inscription) {
-          this._inscription = await ordinalsApi[this._network].getInscription(this._id);
-        }
-        resolve(this._inscription);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-}
-
 export class ExtendedUtxo {
   private _utxo!: UTXO;
 
+  private _address!: string;
+
   private _outpoint!: string;
 
-  private _inscriptions!: InscriptionContext[];
+  private _utxoCache!: UtxoCache;
 
-  constructor(utxo: UTXO, inscriptions: InscriptionId[], network: NetworkType) {
+  constructor(utxo: UTXO, address: string, utxoCache: UtxoCache) {
     this._utxo = utxo;
+    this._address = address;
     this._outpoint = getOutpointFromUtxo(utxo);
-    this._inscriptions = inscriptions.map((inscriptionId) => new InscriptionContext(inscriptionId, network));
+    this._utxoCache = utxoCache;
   }
 
   get outpoint(): string {
@@ -96,12 +48,21 @@ export class ExtendedUtxo {
     return this._utxo;
   }
 
-  get inscriptions(): InscriptionContext[] {
-    return [...this._inscriptions];
+  async getBundleData(): Promise<UtxoOrdinalBundle | null> {
+    const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address);
+
+    return bundleData;
   }
 
-  get hasInscriptions(): boolean {
-    return this._inscriptions.length > 0;
+  /** Returns null if UTXO has not yet been indexed */
+  async isEmbellished(): Promise<boolean | null> {
+    const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address);
+
+    const hasInscriptionsOrExoticSats =
+      bundleData?.sat_ranges.some((satRange) => satRange.inscriptions.length > 0 || satRange.satributes.length > 0) ||
+      null;
+
+    return hasInscriptionsOrExoticSats;
   }
 }
 
@@ -118,6 +79,8 @@ export abstract class AddressContext {
 
   protected _seedVault!: SeedVault;
 
+  protected _utxoCache!: UtxoCache;
+
   protected _accountIndex!: bigint;
 
   constructor(
@@ -127,12 +90,14 @@ export abstract class AddressContext {
     network: NetworkType,
     accountIndex: bigint,
     seedVault: SeedVault,
+    utxoCache: UtxoCache,
   ) {
     this._type = type;
     this._address = address;
     this._publicKey = publicKey;
     this._network = network;
     this._seedVault = seedVault;
+    this._utxoCache = utxoCache;
     this._accountIndex = accountIndex;
   }
 
@@ -148,34 +113,55 @@ export abstract class AddressContext {
     if (!this._utxos) {
       const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
 
-      const utxoContexts: ExtendedUtxo[] = [];
-
-      // TODO: Enable testnet once inscriptions available
-      // TODO: Use UTXO cache
-      const populateUtxoOrdinalIds = async (utxo: UTXO): Promise<void> => {
-        const ordinalIds: InscriptionId[] = this._network === 'Testnet' ? [] : await getOrdinalIdsFromUtxo(utxo);
-
-        utxoContexts.push(new ExtendedUtxo(utxo, ordinalIds, this._network));
-      };
-
-      await processPromisesBatch(utxos, 20, populateUtxoOrdinalIds);
-
-      this._utxos = utxoContexts;
+      this._utxos = utxos.map((utxo) => new ExtendedUtxo(utxo, this._address, this._utxoCache));
     }
 
     return [...this._utxos];
   }
 
-  async getNonOrdinalUtxos(): Promise<ExtendedUtxo[]> {
+  async getUnindexedUtxos(): Promise<ExtendedUtxo[]> {
     const utxos = await this.getUtxos();
 
-    return utxos.filter((utxo) => !utxo.hasInscriptions);
+    const unindexedUtxos: ExtendedUtxo[] = [];
+
+    for (const utxo of utxos) {
+      const isEmbellished = await utxo.isEmbellished();
+      if (isEmbellished === null) {
+        unindexedUtxos.push(utxo);
+      }
+    }
+
+    return unindexedUtxos;
   }
 
-  async getOrdinalUtxos(): Promise<ExtendedUtxo[]> {
+  async getCommonUtxos(): Promise<ExtendedUtxo[]> {
     const utxos = await this.getUtxos();
 
-    return utxos.filter((utxo) => utxo.hasInscriptions);
+    const commonUtxos: ExtendedUtxo[] = [];
+
+    for (const utxo of utxos) {
+      const isEmbellished = await utxo.isEmbellished();
+      if (!isEmbellished && isEmbellished !== null) {
+        commonUtxos.push(utxo);
+      }
+    }
+
+    return commonUtxos;
+  }
+
+  async getEmbellishedUtxos(): Promise<ExtendedUtxo[]> {
+    const utxos = await this.getUtxos();
+
+    const embellishedUtxos: ExtendedUtxo[] = [];
+
+    for (const utxo of utxos) {
+      const isEmbellished = await utxo.isEmbellished();
+      if (isEmbellished) {
+        embellishedUtxos.push(utxo);
+      }
+    }
+
+    return embellishedUtxos;
   }
 
   async getUtxo(outpoint: string): Promise<ExtendedUtxo | undefined> {
@@ -191,8 +177,15 @@ export abstract class AddressContext {
 class P2shAddressContext extends AddressContext {
   private _p2sh!: ReturnType<typeof btc.p2sh>;
 
-  constructor(address: string, publicKey: string, network: NetworkType, accountIndex: bigint, seedVault: SeedVault) {
-    super('p2sh', address, publicKey, network, accountIndex, seedVault);
+  constructor(
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+  ) {
+    super('p2sh', address, publicKey, network, accountIndex, seedVault, utxoCache);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -231,8 +224,15 @@ class P2shAddressContext extends AddressContext {
 class P2wpkhAddressContext extends AddressContext {
   private _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
 
-  constructor(address: string, publicKey: string, network: NetworkType, accountIndex: bigint, seedVault: SeedVault) {
-    super('p2wpkh', address, publicKey, network, accountIndex, seedVault);
+  constructor(
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+  ) {
+    super('p2wpkh', address, publicKey, network, accountIndex, seedVault, utxoCache);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -267,8 +267,15 @@ class P2wpkhAddressContext extends AddressContext {
 class P2trAddressContext extends AddressContext {
   private _p2tr!: ReturnType<typeof btc.p2tr>;
 
-  constructor(address: string, publicKey: string, network: NetworkType, accountIndex: bigint, seedVault: SeedVault) {
-    super('p2tr', address, publicKey, network, accountIndex, seedVault);
+  constructor(
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+  ) {
+    super('p2tr', address, publicKey, network, accountIndex, seedVault, utxoCache);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -307,15 +314,16 @@ const createAddressContext = (
   network: NetworkType,
   accountIndex: bigint,
   seedVault: SeedVault,
+  utxoCache: UtxoCache,
 ): AddressContext => {
   const { type } = getAddressInfo(address);
 
   if (type === AddressType.p2sh) {
-    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault);
+    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
   } else if (type === AddressType.p2wpkh) {
-    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault);
+    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
   } else if (type === AddressType.p2tr) {
-    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault);
+    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
   } else {
     throw new Error('Unsupported payment address type');
   }
@@ -328,18 +336,32 @@ export class TransactionContext {
 
   private _network!: NetworkType;
 
-  constructor(wallet: WalletContext, seedVault: SeedVault, network: NetworkType, accountIndex: bigint) {
+  constructor(
+    wallet: WalletContext,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+    network: NetworkType,
+    accountIndex: bigint,
+  ) {
     this._paymentAddress = createAddressContext(
       wallet.btcAddress,
       wallet.btcPublicKey,
       network,
       accountIndex,
       seedVault,
+      utxoCache,
     );
     this._ordinalsAddress =
       wallet.btcAddress === wallet.ordinalsAddress
         ? this._paymentAddress
-        : createAddressContext(wallet.ordinalsAddress, wallet.ordinalsPublicKey, network, accountIndex, seedVault);
+        : createAddressContext(
+            wallet.ordinalsAddress,
+            wallet.ordinalsPublicKey,
+            network,
+            accountIndex,
+            seedVault,
+            utxoCache,
+          );
 
     this._network = network;
   }

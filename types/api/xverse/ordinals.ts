@@ -37,12 +37,50 @@ export interface InscriptionInCollectionsList {
   data: Array<Inscription>;
 }
 
-export type SatRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export type Satribute =
+  | 'UNCOMMON'
+  | 'RARE'
+  | 'EPIC'
+  | 'LEGENDARY'
+  | 'MYTHIC'
+  | 'ALPHA'
+  | 'BLOCK78'
+  | 'FIRST_TRANSACTION'
+  | 'PIZZA'
+  | 'VINTAGE'
+  | 'BLACK_UNCOMMON'
+  | 'BLACK_RARE'
+  | 'BLACK_EPIC'
+  | 'BLACK_LEGENDARY'
+  | 'BLOCK9'
+  | 'JPEG'
+  | 'OMEGA'
+  | 'FIBONACCI'
+  | 'HITMAN'
+  | 'NAKAMOTO'
+  | 'SILK_ROAD'
+  | 'PALINDROME'
+  | '1D_PALINDROME'
+  | '2D_PALINDROME'
+  | '3D_PALINDROME'
+  | 'PALIBLOCK_PALINDROME'
+  | 'PERFECT_PALINCEPTION'
+  | 'SEQUENCE_PALINDROME'
+  | 'NAME_PALINDROME';
 
-export type BundleRareSat = {
-  number: string;
-  rarity_ranking: SatRarity;
+export type BundleSatRange = {
+  year_mined: number;
+  block: number;
   offset: number;
+  range: {
+    start: string;
+    end: string;
+  };
+  satributes: Satribute[];
+  inscriptions: {
+    content_type: string;
+    id: string;
+  }[];
 };
 
 export type BundleInscription = {
@@ -56,6 +94,5 @@ export type UtxoOrdinalBundle = {
   vout: number;
   block_height: number;
   value: number;
-  sats: BundleRareSat[];
-  inscriptions: BundleInscription[];
+  sat_ranges: BundleSatRange[];
 };
