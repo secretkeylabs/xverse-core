@@ -6,9 +6,8 @@ on:
       - develop
       - main
       - master
-    label:
-      types:
-        - created
+    types:
+      - labelled
   workflow_dispatch:
 
 jobs:
@@ -31,7 +30,7 @@ jobs:
 
   create-release:
     needs:
-      - release-version
+      - test
     runs-on: ubuntu-latest
     permissions:
       contents: read
