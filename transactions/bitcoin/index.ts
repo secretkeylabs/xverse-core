@@ -1,11 +1,22 @@
 import { TransactionContext } from './context';
 import { EnhancedTransaction } from './enhancedTransaction';
-import { Action, ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './types';
+import { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './types';
 
-const compileTransaction = async (context: TransactionContext, actions: Action[], feeRate: number) => {
-  const txn = new EnhancedTransaction(context, actions, feeRate);
-
-  return txn;
+/**
+ * send bitcoin
+ * send bitcoin to multiple recipients
+ */
+export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number) => {
+  const paymentUtxos = await context.paymentAddress.getUtxos();
+  const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
+    type: ActionType.SEND_UTXO,
+    combinable: true,
+    spendable: true,
+    outpoint: utxo.outpoint,
+    toAddress,
+  }));
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  return transaction;
 };
 
 /**
@@ -23,7 +34,7 @@ export const sendBtc = async (
     amount,
     combinable: false,
   }));
-  const transaction = await compileTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
   return transaction;
 };
 
@@ -164,7 +175,7 @@ export const sendOrdinals = async (
     }
   }
 
-  const transaction = await compileTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
   return transaction;
 };
 
@@ -201,7 +212,7 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
       throw new Error('No utxo in ordinals address found to recover');
     }
 
-    const transaction = await compileTransaction(
+    const transaction = new EnhancedTransaction(
       context,
       [
         {
@@ -230,7 +241,7 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
     combinable: true,
     spendable: true,
   }));
-  const transaction = await compileTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
   return transaction;
 };
 
@@ -246,7 +257,7 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
       throw new Error('No utxo in payments address found to recover');
     }
 
-    const transaction = await compileTransaction(
+    const transaction = new EnhancedTransaction(
       context,
       [
         {
@@ -268,13 +279,28 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
     throw new Error('No ordinal utxos found to recover');
   }
 
-  const actions = ordinalUtxos.map<SendUtxoAction>((utxo) => ({
-    type: ActionType.SEND_UTXO,
-    toAddress: context.ordinalsAddress.address,
-    outpoint: utxo.outpoint,
-    combinable: false,
-    spendable: false,
-  }));
-  const transaction = await compileTransaction(context, actions, feeRate);
+  // TODO: decide between below 2 options
+  // const actions = ordinalUtxos.map<SendUtxoAction>((utxo) => ({
+  //   type: ActionType.SEND_UTXO,
+  //   toAddress: context.ordinalsAddress.address,
+  //   outpoint: utxo.outpoint,
+  //   combinable: false,
+  //   spendable: false,
+  // }));
+  const actions = await Promise.all(
+    ordinalUtxos.map<Promise<SplitUtxoAction[]>>(async (utxo) => {
+      const bundleData = await utxo.getBundleData();
+
+      return (
+        bundleData?.sat_ranges.map((s) => ({
+          type: ActionType.SPLIT_UTXO,
+          location: utxo.outpoint + ':' + s.offset,
+          toAddress: context.ordinalsAddress.address,
+        })) || []
+      );
+    }),
+  );
+
+  const transaction = new EnhancedTransaction(context, actions.flat(), feeRate);
   return transaction;
 };

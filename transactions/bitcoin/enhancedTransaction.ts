@@ -52,6 +52,7 @@ export class EnhancedTransaction {
     const allSpendableSendUtxosToSameAddress = spendableSendUtxos.every(
       (action) => action.toAddress === spendableSendUtxos[0].toAddress,
     );
+    let overrideChangeAddress: string | undefined = undefined;
 
     if (spendableSendUtxos.length > 0) {
       // Spendable send utxo actions are designed for recovery purposes, and must be the only actions in the transaction
@@ -63,6 +64,8 @@ export class EnhancedTransaction {
       } else if (!allSpendableSendUtxosToSameAddress) {
         throw new Error('Send Utxo actions must all be to the payment address if spendable');
       }
+
+      overrideChangeAddress = spendableSendUtxos[0].toAddress;
     }
 
     const {
@@ -90,6 +93,7 @@ export class EnhancedTransaction {
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
       [...sendUtxoSignActions, ...splitSignActions],
+      overrideChangeAddress,
     );
 
     // now that the transaction is built, we can sign it

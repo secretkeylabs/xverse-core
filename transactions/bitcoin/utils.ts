@@ -331,6 +331,11 @@ export const applySendBtcActionsAndFee = async (
   actions: SendBtcAction[],
   feeRate: number,
   previousSignActionList: SignActions = [],
+  /**
+   * This overrides the change address from the default payments address. It is used with the transfer action to
+   * send all funds to the destination address (with spendable and combinable set to true)
+   * */
+  overrideChangeAddress?: string,
 ) => {
   const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
@@ -508,10 +513,10 @@ export const applySendBtcActionsAndFee = async (
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           actualFee = feeWithChange;
           const change = currentChange - feeWithChange;
-          context.addOutputAddress(transaction, context.changeAddress, change);
+          context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
 
           outputs.push({
-            address: context.changeAddress,
+            address: overrideChangeAddress ?? context.changeAddress,
             amount: Number(change),
             inscriptions: hangingInscriptions.filter((inscription) => inscription.offset < change),
             satributes: hangingSatributes
