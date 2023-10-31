@@ -32,11 +32,13 @@ jobs:
         env:
           BUMP: ${{ inputs.bump }}
         run: |
+          # git config
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
           # checkout the develop branch
+          git fetch origin develop
           git checkout develop
-          # make sure the branch is up to date
-          git pull origin develop
-          # bump the package bersion and push the changes,
+          # bump the package version and push the changes,
           VERSION=$(npm version $BUMP --no-git-tag-version)
           BRANCH_NAME=release/$VERSION
           git checkout -b $BRANCH_NAME
