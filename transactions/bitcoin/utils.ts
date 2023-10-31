@@ -181,20 +181,20 @@ export const applySendUtxoActions = async (
       // so, any funds would go to the payment address as change at the end, so no need for an output
       // so, we only add an output for non-spendable actions
       context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
-    }
 
-    outputs.push({
-      address: action.toAddress,
-      amount: extendedUtxo.utxo.value,
-      inscriptions: utxoBundleData?.sat_ranges.flatMap((s) =>
-        s.inscriptions.map((i) => ({ id: i.id, offset: +s.offset })),
-      ),
-      satributes: utxoBundleData?.sat_ranges.map((s) => ({
-        satributes: s.satributes,
-        amount: Number(BigInt(s.range.end) - BigInt(s.range.start)),
-        offset: s.offset,
-      })),
-    });
+      outputs.push({
+        address: action.toAddress,
+        amount: extendedUtxo.utxo.value,
+        inscriptions: utxoBundleData?.sat_ranges.flatMap((s) =>
+          s.inscriptions.map((i) => ({ id: i.id, offset: +s.offset })),
+        ),
+        satributes: utxoBundleData?.sat_ranges.map((s) => ({
+          satributes: s.satributes,
+          amount: Number(BigInt(s.range.end) - BigInt(s.range.start)),
+          offset: s.offset,
+        })),
+      });
+    }
 
     const inputIndex = transaction.inputsLength - 1;
     signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
@@ -372,10 +372,10 @@ export const applySendBtcActionsAndFee = async (
   // sort smallest to biggest as we'll be popping off the end
   // also, unconfirmed and inscribed UTXOs are de-prioritized
   unusedPaymentUtxosWithState.sort((a, b) => {
-    if (a.isEmbellished && !b.isEmbellished) {
+    if (a.isEmbellished && !b.isEmbellished && b.isEmbellished !== undefined) {
       return -1;
     }
-    if (b.isEmbellished && !a.isEmbellished) {
+    if (b.isEmbellished && !a.isEmbellished && a.isEmbellished !== undefined) {
       return 1;
     }
     if (a.extendedUtxo.utxo.status.confirmed && !b.extendedUtxo.utxo.status.confirmed) {
@@ -395,20 +395,20 @@ export const applySendBtcActionsAndFee = async (
   const unusedPaymentUtxos = unusedPaymentUtxosWithState.map((u) => u.extendedUtxo);
 
   // add inputs and outputs for the required actions
-  let { inputValue: totalToSend, outputValue: totalSent } = await getTransactionTotals(context, transaction);
+  let { inputValue: totalInputs, outputValue: totalOutputs } = await getTransactionTotals(context, transaction);
 
   const hangingInscriptions: Exclude<TransactionOutput['inscriptions'], undefined> = [];
   const hangingSatributes: Exclude<TransactionOutput['satributes'], undefined> = [];
 
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
-    totalToSend += combinableAmount;
+    totalOutputs += combinableAmount;
 
     for (const amount of individualAmounts) {
-      totalToSend += amount;
+      totalOutputs += amount;
     }
 
     let hangingOffset = 0;
-    while (totalSent < totalToSend) {
+    while (totalOutputs > totalInputs) {
       const utxoToUse = unusedPaymentUtxos.pop();
 
       if (!utxoToUse) {
@@ -418,7 +418,7 @@ export const applySendBtcActionsAndFee = async (
       context.paymentAddress.addInput(transaction, utxoToUse, options);
       inputs.push(utxoToUse);
 
-      totalSent += BigInt(utxoToUse.utxo.value);
+      totalInputs += BigInt(utxoToUse.utxo.value);
 
       // add input signing actions
       const inputIndex = transaction.inputsLength - 1;
@@ -486,7 +486,7 @@ export const applySendBtcActionsAndFee = async (
   let actualFee = 0n;
 
   while (!complete) {
-    const currentChange = totalSent - totalToSend;
+    const currentChange = totalInputs - totalOutputs;
 
     // use this to get a conservative estimate of the fees so we don't compile too many transactions below
     const totalEstimatedFee =
@@ -572,7 +572,7 @@ export const applySendBtcActionsAndFee = async (
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }
 
-    totalSent += BigInt(utxoToUse.utxo.value);
+    totalInputs += BigInt(utxoToUse.utxo.value);
     context.paymentAddress.addInput(transaction, utxoToUse, options);
     inputs.push(utxoToUse);
 

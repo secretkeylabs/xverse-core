@@ -102,7 +102,7 @@ export class UtxoCache {
     return utxos;
   };
 
-  getUtxoByOutpoint = async (outpoint: string, address: string): Promise<UtxoOrdinalBundle | null> => {
+  getUtxoByOutpoint = async (outpoint: string, address: string): Promise<UtxoOrdinalBundle | undefined> => {
     const cache = await this._getCache(address);
 
     // check if cache is initialised and up to date
@@ -129,7 +129,7 @@ export class UtxoCache {
     return utxo;
   };
 
-  getUtxo = async (txid: string, vout: number, address: string): Promise<UtxoOrdinalBundle | null> => {
+  getUtxo = async (txid: string, vout: number, address: string): Promise<UtxoOrdinalBundle | undefined> => {
     const utxoId = `${txid}:${vout}`;
 
     return this.getUtxoByOutpoint(utxoId, address);

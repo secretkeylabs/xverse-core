@@ -48,19 +48,19 @@ export class ExtendedUtxo {
     return this._utxo;
   }
 
-  async getBundleData(): Promise<UtxoOrdinalBundle | null> {
+  async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
     const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address);
 
     return bundleData;
   }
 
-  /** Returns null if UTXO has not yet been indexed */
-  async isEmbellished(): Promise<boolean | null> {
-    const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address);
+  /** Returns undefined if UTXO has not yet been indexed */
+  async isEmbellished(): Promise<boolean | undefined> {
+    const bundleData = await this.getBundleData();
 
-    const hasInscriptionsOrExoticSats =
-      bundleData?.sat_ranges.some((satRange) => satRange.inscriptions.length > 0 || satRange.satributes.length > 0) ||
-      null;
+    const hasInscriptionsOrExoticSats = bundleData?.sat_ranges.some(
+      (satRange) => satRange.inscriptions.length > 0 || satRange.satributes.length > 0,
+    );
 
     return hasInscriptionsOrExoticSats;
   }
@@ -126,7 +126,7 @@ export abstract class AddressContext {
 
     for (const utxo of utxos) {
       const isEmbellished = await utxo.isEmbellished();
-      if (isEmbellished === null) {
+      if (isEmbellished === undefined) {
         unindexedUtxos.push(utxo);
       }
     }
@@ -141,7 +141,7 @@ export abstract class AddressContext {
 
     for (const utxo of utxos) {
       const isEmbellished = await utxo.isEmbellished();
-      if (!isEmbellished && isEmbellished !== null) {
+      if (!isEmbellished && isEmbellished !== undefined) {
         commonUtxos.push(utxo);
       }
     }
