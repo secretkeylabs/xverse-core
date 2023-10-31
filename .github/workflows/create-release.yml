@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      releases: write
+      pull-requests: write
     steps:
       - name: Create new draft release
         env:
