@@ -1,4 +1,4 @@
-name: Release & Publish Package
+name: Release & Publish Package for PR
 
 on:
   pull_request:
