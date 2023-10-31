@@ -53,13 +53,14 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Create new release PR
+      - id: create-pr
+        name: Create new release PR
         env:
           VERSION: ${{ needs.bump-version.outputs.version }}
           BRANCH_NAME: ${{ needs.bump-version.outputs.branch-name }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api \
+          PR_NUMBER=$(gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -67,6 +68,16 @@ jobs:
           -f title="release: $VERSION" \
           -f body="Created by GitHub Actions Bot" \
           -f head="$BRANCH_NAME" \
-          -f base='develop' \
-          -f "labels[]='create release'" \
-          -f "labels[]=bug"
+          -f base='develop' | jq '.number')
+          echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+      - name: Add label to release PR
+        env:
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr-number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+          --method POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          /repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels \
+          -f "labels[]=create release" \
