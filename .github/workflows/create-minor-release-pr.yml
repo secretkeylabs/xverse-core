@@ -1,0 +1,60 @@
+name: Create minor release PR
+
+on:
+  repository_dispatch:
+    inputs:
+      bump: minor
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.branch-name.outputs.version }}
+      branch-name: ${{ steps.branch-name.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: npm
+      - id: create-branch
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          # checkout the develop branch
+          git checkout develop
+          # make sure the branch is up to date
+          git pull origin develop
+          # bump the package bersion and push the changes,
+          VERSION=$(npm version $BUMP --no-git-tag-version)
+          BRANCH_NAME=release/$VERSION
+          git checkout -b $BRANCH_NAME
+          git commit -am "release $VERSION"
+          git push --set-upstream origin release/$VERSION
+      - id: branch-name
+        run: echo "version=$VERSION" >> $GITHUB_OUTPUT
+        run: echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+  create-release-pr:
+    needs:
+      - bump-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Create new release PR
+        env:
+          VERSION: ${{ needs.bump-version.outputs.version }}
+          BRANCH_NAME: ${{ needs.bump-version.outputs.branch-name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+          --method POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          /repos/$GITHUB_REPOSITORY/pulls \
+          -f title="Release $VERSION" \
+          -f body='# 🔘 PR Type\r\n- [x] Other... Please describe:\r\n\r\n# 🔄 Changes\r\n\r\nDoes this PR introduce a breaking change?\r\n\r\n- [ ] Yes, Incompatible API changes\r\n- [x] No, Adds functionality (backwards compatible)\r\n- [ ] No, Bug fixes (backwards compatible)\r\n\r\nChanges:\r\n\r\n' \
+          -f head="$BRANCH_NAME" \
+          -f base='develop'
