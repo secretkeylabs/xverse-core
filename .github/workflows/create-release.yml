@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Create new draft release
         env:
-          VERSION: ${{ needs.save-version.current-version.outputs.version }}
+          VERSION: ${{ needs.save-version.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api \
@@ -69,7 +69,7 @@ jobs:
       - name: Post test package PR comment
         if: ${{ github.event_name == 'pull_request' }}
         env:
-          VERSION: ${{ needs.save-version.current-version.outputs.version }}
+          VERSION: ${{ needs.save-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_URL: ${{ github.event.pull_request.comments_url }}
         run: |
