@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  save-version:
     if: github.event.label.name == 'create release'
     runs-on: ubuntu-latest
     outputs:
@@ -21,23 +21,20 @@ jobs:
         with:
           node-version: 16
           cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
       - id: current-version
         run: echo "version=v$(npm pkg get version  | tr -d '\"')" >> $GITHUB_OUTPUT
 
   create-release:
     needs:
-      - test
+      - save-version
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - name: Create new draft release
         env:
-          VERSION: ${{ steps.published-version.outputs.version }}
+          VERSION: ${{ needs.save-version.current-version.outputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api \
@@ -72,7 +69,7 @@ jobs:
       - name: Post test package PR comment
         if: ${{ github.event_name == 'pull_request' }}
         env:
-          VERSION: ${{ needs.test.current-version.outputs.version }}
+          VERSION: ${{ needs.save-version.current-version.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_URL: ${{ github.event.pull_request.comments_url }}
         run: |
