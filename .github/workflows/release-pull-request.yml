@@ -100,4 +100,4 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             $GITHUB_URL \
-            -d "{\"body\":\"> Test this PR with \`npm i @secretkeylabs/xverse-core@$VERSION\ --save-exact`\"}"
+            -d "{\"body\":\"> Test this PR with \`npm i --save-exact @secretkeylabs/xverse-core@$VERSION\`\"}"
