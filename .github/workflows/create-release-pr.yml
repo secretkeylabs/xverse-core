@@ -68,5 +68,5 @@ jobs:
           -f body="Created by GitHub Actions Bot" \
           -f head="$BRANCH_NAME" \
           -f base='develop' \
-          -f "labels[]='create release'"
+          -f "labels[]='create release'" \
           -f "labels[]=bug"
