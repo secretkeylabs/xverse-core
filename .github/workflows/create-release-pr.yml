@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.create-branch.outputs.version }}
-      branch-name: ${{ steps.create-branch.outputs.version }}
+      branch-name: ${{ steps.create-branch.outputs.branch-name }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -37,7 +37,7 @@ jobs:
           git checkout develop
           # bump the package version and push the changes,
           VERSION=$(npm version $BUMP --no-git-tag-version)
-          BRANCH_NAME=release/$VERSION
+          BRANCH_NAME="release/$VERSION"
           git checkout -b $BRANCH_NAME
           git commit -am "release $VERSION"
           git push --set-upstream origin release/$VERSION
