@@ -81,7 +81,7 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/$REPO/issues/$PR_ID/comments \
-          | jq ".[] | select(.user.login==\"github-actions[bot]\") | .id" \
+          | jq ".[] | select(.user.login==\"github-actions[bot]\")  | select(.body | match(\"npm i\")) | .id" \
           | xargs -I %q curl \
             -L \
             -X DELETE \
@@ -100,4 +100,4 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             $GITHUB_URL \
-            -d "{\"body\":\"> Test this PR with \`npm i @secretkeylabs/xverse-core@$VERSION\`\"}"
+            -d "{\"body\":\"> Test this PR with \`npm i @secretkeylabs/xverse-core@$VERSION\ --save-exact`\"}"
