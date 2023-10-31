@@ -38,6 +38,7 @@ jobs:
       - name: Create new draft release
         env:
           VERSION: ${{ steps.published-version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh api \
             --method POST \
