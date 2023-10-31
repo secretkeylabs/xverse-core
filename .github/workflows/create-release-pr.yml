@@ -1,9 +1,6 @@
 name: Create release PR
 
 on:
-  push:
-    branches:
-      - tim/eng-2479-create-github-action-to-manage-xverse-core-release
   workflow_dispatch:
     inputs:
       bump:
@@ -20,8 +17,8 @@ jobs:
   bump-version:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.branch-name.outputs.version }}
-      branch-name: ${{ steps.branch-name.outputs.version }}
+      version: ${{ steps.create-branch.outputs.version }}
+      branch-name: ${{ steps.create-branch.outputs.version }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -44,8 +41,6 @@ jobs:
           git checkout -b $BRANCH_NAME
           git commit -am "release $VERSION"
           git push --set-upstream origin release/$VERSION
-      - id: branch-name
-        run: |
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
