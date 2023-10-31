@@ -6,7 +6,6 @@ on:
       - develop
       - main
     types: [ labeled ]
-  workflow_dispatch:
 
 jobs:
   save-version:

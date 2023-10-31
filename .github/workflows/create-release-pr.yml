@@ -1,6 +1,8 @@
 name: Create release PR
 
 on:
+  push:
+    - tim/eng-2479-create-github-action-to-manage-xverse-core-release
   workflow_dispatch:
     inputs:
       bump:
