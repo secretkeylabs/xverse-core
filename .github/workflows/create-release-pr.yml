@@ -39,8 +39,9 @@ jobs:
           VERSION=$(npm version $BUMP --no-git-tag-version)
           BRANCH_NAME="release/$VERSION"
           git checkout -b $BRANCH_NAME
-          git commit -am "release $VERSION"
-          git push --set-upstream origin release/$VERSION
+          git commit -am "release: $VERSION"
+          git push --set-upstream origin $BRANCH_NAME
+          # save output
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
