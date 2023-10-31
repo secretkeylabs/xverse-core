@@ -51,6 +51,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      issues: write
     steps:
       - name: Create new release PR
         env:
@@ -68,3 +69,4 @@ jobs:
           -f head="$BRANCH_NAME" \
           -f base='develop' \
           -f "labels[]='create release'"
+          -f "labels[]=bug"
