@@ -1,4 +1,4 @@
-name: Create Release & release notes
+name: Create github release & release notes
 
 on:
   pull_request:
@@ -6,8 +6,7 @@ on:
       - develop
       - main
       - master
-    types:
-      - labelled
+    types: [ labeled ]
   workflow_dispatch:
 
 jobs:
