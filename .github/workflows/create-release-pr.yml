@@ -63,8 +63,8 @@ jobs:
           -H "Accept: application/vnd.github+json" \
           -H "X-GitHub-Api-Version: 2022-11-28" \
           /repos/$GITHUB_REPOSITORY/pulls \
-          -f title="Release $VERSION" \
+          -f title="release: $VERSION" \
           -f body="Created by GitHub Actions Bot" \
           -f head="$BRANCH_NAME" \
           -f base='develop' \
-          -f "labels[]=create release"
+          -f "labels[]='create release'"
