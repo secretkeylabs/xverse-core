@@ -1,9 +1,17 @@
-name: Create minor release PR
+name: Create release PR
 
 on:
-  repository_dispatch:
+  workflow_dispatch:
     inputs:
-      bump: minor
+      bump: 
+        description: 'Version bump level'
+        required: true
+        default: patch
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
 
 jobs:
   bump-version:
@@ -32,8 +40,9 @@ jobs:
           git commit -am "release $VERSION"
           git push --set-upstream origin release/$VERSION
       - id: branch-name
-        run: echo "version=$VERSION" >> $GITHUB_OUTPUT
-        run: echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
   create-release-pr:
     needs:
