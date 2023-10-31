@@ -82,4 +82,4 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             $GITHUB_URL \
-        -d "{\"body\":\"> See what's changed: https://github.com/secretkeylabs/xverse-core/releases/tag/$VERSION \"}"
+            -d "{\"body\":\"> See what's changed: https://github.com/secretkeylabs/xverse-core/releases/tag/$VERSION \"}"
