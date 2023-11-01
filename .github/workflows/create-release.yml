@@ -49,7 +49,7 @@ jobs:
             -F prerelease=false \
             -F generate_release_notes=true > release.json
           cat release.json | jq -r .body > body.md
-          echo "\nRelease URL: $(cat release.json | jq -r .html_url)" >> body.md
+          echo "\n\nDraft release: $(cat release.json | jq -r .html_url)" >> body.md
           gh api \
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
