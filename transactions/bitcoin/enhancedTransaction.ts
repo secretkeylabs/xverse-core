@@ -107,27 +107,33 @@ export class EnhancedTransaction {
 
       let runningOffset = 0;
       for (const input of inputs) {
-        if (runningOffset + input.utxo.value >= currentOffset) {
+        if (runningOffset + input.utxo.value > currentOffset) {
           const inputBundleData = await input.getBundleData();
 
           const outputInscriptions = inputBundleData?.sat_ranges
             .flatMap((s) =>
               s.inscriptions.map((i) => ({
                 id: i.id,
-                offset: runningOffset + s.offset,
+                offset: runningOffset + s.offset - currentOffset,
               })),
             )
-            .filter((i) => i.offset >= currentOffset && i.offset < currentOffset + amount);
+            .filter((i) => i.offset >= 0 && i.offset < amount);
 
           const outputSatributes = inputBundleData?.sat_ranges
-            .map((s) => ({
-              satributes: s.satributes,
-              amount:
-                Number(BigInt(s.range.end) - BigInt(s.range.start)) -
-                Math.max(0, Number(currentOffset) - (runningOffset + s.offset)),
-              offset: Math.max(runningOffset + s.offset, Number(currentOffset)),
-            }))
-            .filter((s) => s.amount >= 0);
+            .map((s) => {
+              const min = Math.max(runningOffset + s.offset - currentOffset, 0);
+              const max = Math.min(
+                runningOffset + s.offset - currentOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
+                currentOffset + amount,
+              );
+
+              return {
+                satributes: s.satributes,
+                amount: max - min,
+                offset: min,
+              };
+            })
+            .filter((s) => s.amount > 0);
 
           inscriptions.push(...(outputInscriptions || []));
           satributes.push(...(outputSatributes || []));
