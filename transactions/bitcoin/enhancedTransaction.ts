@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
 import { TransactionContext } from './context';
-import { Action, ActionMap, ActionType, CompilationOptions } from './types';
+import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
 import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions, extractActionMap } from './utils';
 
 const defaultOptions: CompilationOptions = {
@@ -85,17 +85,69 @@ export class EnhancedTransaction {
       signActions: sendBtcSignActions,
       inputs: sendBtcInputs,
       outputs: sendBtcOutputs,
-      feeOutput,
     } = await applySendBtcActionsAndFee(
       this._context,
       options,
       transaction,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
-      [...sendInputs, ...splitInputs],
       [...sendUtxoSignActions, ...splitSignActions],
       overrideChangeAddress,
     );
+
+    const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];
+    const outputs: TransactionOutput[] = [...sendOutputs, ...splitOutputs, ...sendBtcOutputs];
+
+    let currentOffset = 0;
+    for (const output of outputs) {
+      output.inscriptions = [];
+      output.satributes = [];
+
+      const { amount, inscriptions, satributes } = output;
+
+      let runningOffset = 0;
+      for (const input of inputs) {
+        if (runningOffset + input.utxo.value >= currentOffset) {
+          const inputBundleData = await input.getBundleData();
+
+          const outputInscriptions = inputBundleData?.sat_ranges
+            .flatMap((s) =>
+              s.inscriptions.map((i) => ({
+                id: i.id,
+                offset: runningOffset + s.offset,
+              })),
+            )
+            .filter((i) => i.offset >= currentOffset && i.offset < currentOffset + amount);
+
+          const outputSatributes = inputBundleData?.sat_ranges
+            .map((s) => ({
+              satributes: s.satributes,
+              amount:
+                Number(BigInt(s.range.end) - BigInt(s.range.start)) -
+                Math.max(0, Number(currentOffset) - (runningOffset + s.offset)),
+              offset: Math.max(runningOffset + s.offset, Number(currentOffset)),
+            }))
+            .filter((s) => s.amount >= 0);
+
+          inscriptions.push(...(outputInscriptions || []));
+          satributes.push(...(outputSatributes || []));
+        }
+
+        runningOffset += input.utxo.value;
+
+        if (runningOffset >= currentOffset + amount) {
+          break;
+        }
+      }
+
+      currentOffset += Number(amount);
+    }
+
+    const feeOutput: Omit<TransactionOutput, 'address'> = {
+      amount: Number(actualFee),
+      inscriptions: [],
+      satributes: [],
+    };
 
     // now that the transaction is built, we can sign it
     for (const executeSign of [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions]) {
@@ -107,8 +159,8 @@ export class EnhancedTransaction {
     return {
       actualFee,
       transaction,
-      inputs: [...sendInputs, ...splitInputs, ...sendBtcInputs],
-      outputs: [...sendOutputs, ...splitOutputs, ...sendBtcOutputs],
+      inputs,
+      outputs,
       feeOutput,
     };
   }
