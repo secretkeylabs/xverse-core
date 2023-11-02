@@ -6,12 +6,10 @@ const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
 /**
- * send bitcoin
- * send bitcoin to multiple recipients
+ * send max bitcoin
  */
 export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number) => {
   const paymentUtxos = await context.paymentAddress.getUtxos();
-  paymentUtxos.reverse();
   const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,

@@ -96,7 +96,18 @@ export class EnhancedTransaction {
     );
 
     const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];
-    const outputs: TransactionOutput[] = [...sendOutputs, ...splitOutputs, ...sendBtcOutputs];
+    const outputs: TransactionOutput[] = [
+      ...sendOutputs,
+      ...splitOutputs,
+      ...sendBtcOutputs,
+      // we add a dummy output to track the fee
+      {
+        address: '',
+        amount: Number(actualFee),
+        inscriptions: [],
+        satributes: [],
+      },
+    ];
 
     let currentOffset = 0;
     for (const output of outputs) {
@@ -149,11 +160,9 @@ export class EnhancedTransaction {
       currentOffset += Number(amount);
     }
 
-    const feeOutput: Omit<TransactionOutput, 'address'> = {
-      amount: Number(actualFee),
-      inscriptions: [],
-      satributes: [],
-    };
+    // we know there is at least the dummy fee output which we added above
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const { address, ...feeOutput } = outputs.pop()!;
 
     // now that the transaction is built, we can sign it
     for (const executeSign of [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions]) {
