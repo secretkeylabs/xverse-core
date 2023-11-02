@@ -2,17 +2,42 @@ import { TransactionContext } from './context';
 import { EnhancedTransaction } from './enhancedTransaction';
 import { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './types';
 
+const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
+const DUST_VALUE = 546; // the value of an inscription we prefer to use
+
 /**
  * send bitcoin
  * send bitcoin to multiple recipients
  */
 export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number) => {
   const paymentUtxos = await context.paymentAddress.getUtxos();
+  paymentUtxos.reverse();
   const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,
     spendable: true,
     outpoint: utxo.outpoint,
+    toAddress,
+  }));
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  return transaction;
+};
+
+/**
+ * consolidate specific utxos
+ */
+export const combineUtxos = async (
+  context: TransactionContext,
+  outpoints: string[],
+  toAddress: string,
+  feeRate: number,
+  spendable?: boolean,
+) => {
+  const actions = outpoints.map<SendUtxoAction>((outpoint) => ({
+    type: ActionType.SEND_UTXO,
+    combinable: true,
+    spendable: spendable ?? false,
+    outpoint,
     toAddress,
   }));
   const transaction = new EnhancedTransaction(context, actions, feeRate);
@@ -51,8 +76,6 @@ export const sendBtc = async (
  * - An inscription exists in a large UTXO (e.g. 10k sats) and we want to use those extra sats as fees or as change
  * - We want to move an inscription to offset of 0
  */
-const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
-const DUST_VALUE = 546; // the value of an inscription we prefer to use
 export const sendOrdinals = async (
   context: TransactionContext,
   recipients: {
@@ -278,26 +301,29 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
   if (ordinalUtxos.length === 0) {
     throw new Error('No ordinal utxos found to recover');
   }
-
-  // TODO: decide between below 2 options
-  // const actions = ordinalUtxos.map<SendUtxoAction>((utxo) => ({
-  //   type: ActionType.SEND_UTXO,
-  //   toAddress: context.ordinalsAddress.address,
-  //   outpoint: utxo.outpoint,
-  //   combinable: false,
-  //   spendable: false,
-  // }));
   const actions = await Promise.all(
     ordinalUtxos.map<Promise<SplitUtxoAction[]>>(async (utxo) => {
       const bundleData = await utxo.getBundleData();
 
-      return (
-        bundleData?.sat_ranges.map((s) => ({
+      if (!bundleData?.sat_ranges) {
+        return [] as SplitUtxoAction[];
+      }
+
+      const splitActions = bundleData.sat_ranges.map<SplitUtxoAction>((s) => ({
+        type: ActionType.SPLIT_UTXO,
+        location: utxo.outpoint + ':' + s.offset,
+        toAddress: context.ordinalsAddress.address,
+      }));
+
+      if (bundleData.sat_ranges[bundleData.sat_ranges.length - 1].offset + SPLIT_UTXO_MIN_VALUE < utxo.utxo.value) {
+        splitActions.push({
           type: ActionType.SPLIT_UTXO,
-          location: utxo.outpoint + ':' + s.offset,
-          toAddress: context.ordinalsAddress.address,
-        })) || []
-      );
+          location: utxo.outpoint + ':' + (bundleData.sat_ranges[bundleData.sat_ranges.length - 1].offset + DUST_VALUE),
+          spendable: true,
+        });
+      }
+
+      return splitActions;
     }),
   );
 

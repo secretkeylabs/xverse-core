@@ -92,6 +92,7 @@ export class EnhancedTransaction {
       transaction,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
+      [...sendInputs, ...splitInputs],
       [...sendUtxoSignActions, ...splitSignActions],
       overrideChangeAddress,
     );

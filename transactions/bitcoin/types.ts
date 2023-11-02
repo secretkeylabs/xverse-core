@@ -30,11 +30,18 @@ export type SendUtxoAction = {
   spendable: boolean;
 };
 
-export type SplitUtxoAction = {
-  type: ActionType.SPLIT_UTXO;
-  toAddress: string;
-  location: string;
-};
+export type SplitUtxoAction =
+  | {
+      type: ActionType.SPLIT_UTXO;
+      toAddress: string;
+      location: string;
+      spendable?: false;
+    }
+  | {
+      type: ActionType.SPLIT_UTXO;
+      location: string;
+      spendable: true;
+    };
 
 export type Action = SendBtcAction | SendUtxoAction | SplitUtxoAction;
 

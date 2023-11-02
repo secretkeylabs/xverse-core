@@ -159,45 +159,77 @@ export const applySendUtxoActions = async (
   const inputs: ExtendedUtxo[] = [];
   const outputs: TransactionOutput[] = [];
 
-  for (const action of actions) {
-    const { extendedUtxo, addressContext } = await context.getUtxo(action.outpoint);
-
-    if (!extendedUtxo || !addressContext) {
-      throw new Error(`UTXO not found: ${action.outpoint}`);
+  const actionMap = actions.reduce((acc, action) => {
+    const { toAddress } = action;
+    if (!acc[toAddress]) {
+      acc[toAddress] = [[], []];
     }
-
-    if (usedOutpoints.has(action.outpoint)) {
-      throw new Error(`UTXO already used: ${action.outpoint}`);
+    const [singular, combinable] = acc[toAddress];
+    if (action.combinable) {
+      acc[toAddress] = [singular, [...combinable, action]];
+    } else {
+      acc[toAddress] = [[...singular, action], combinable];
     }
+    return acc;
+  }, {} as Record<string, [SendUtxoAction[], SendUtxoAction[]]>);
 
-    const utxoBundleData = await extendedUtxo.getBundleData();
+  for (const [toAddress, [singular, combinable]] of Object.entries(actionMap)) {
+    const actionGroups = [...singular.map((action) => [action]), combinable];
 
-    addressContext.addInput(transaction, extendedUtxo, options);
-    inputs.push(extendedUtxo);
+    for (const actionGroup of actionGroups) {
+      const output: TransactionOutput = {
+        address: toAddress,
+        amount: 0,
+        inscriptions: [],
+        satributes: [],
+      };
 
-    if (!action.spendable) {
-      // we have a validator to ensure that if an action is spendable, then all must be spendable
-      // and are to the payment address (for UTXO consolidation)
-      // so, any funds would go to the payment address as change at the end, so no need for an output
-      // so, we only add an output for non-spendable actions
-      context.addOutputAddress(transaction, action.toAddress, BigInt(extendedUtxo.utxo.value));
+      for (const action of actionGroup) {
+        const { extendedUtxo, addressContext } = await context.getUtxo(action.outpoint);
 
-      outputs.push({
-        address: action.toAddress,
-        amount: extendedUtxo.utxo.value,
-        inscriptions: utxoBundleData?.sat_ranges.flatMap((s) =>
-          s.inscriptions.map((i) => ({ id: i.id, offset: +s.offset })),
-        ),
-        satributes: utxoBundleData?.sat_ranges.map((s) => ({
-          satributes: s.satributes,
-          amount: Number(BigInt(s.range.end) - BigInt(s.range.start)),
-          offset: s.offset,
-        })),
-      });
+        if (!extendedUtxo || !addressContext) {
+          throw new Error(`UTXO not found: ${action.outpoint}`);
+        }
+
+        if (usedOutpoints.has(action.outpoint)) {
+          throw new Error(`UTXO already used: ${action.outpoint}`);
+        }
+
+        addressContext.addInput(transaction, extendedUtxo, options);
+        inputs.push(extendedUtxo);
+
+        const inputIndex = transaction.inputsLength - 1;
+        signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
+
+        const utxoBundleData = await extendedUtxo.getBundleData();
+
+        if (!action.spendable) {
+          // we have a validator to ensure that if an action is spendable, then all must be spendable
+          // and are to the same address (for UTXO consolidation or max send)
+          // so, any funds would go to the address as change at the end, so no need for an output
+          // so, we only add an output for non-spendable actions
+          output.inscriptions?.push(
+            ...(utxoBundleData?.sat_ranges.flatMap((s) =>
+              s.inscriptions.map((i) => ({ id: i.id, offset: output.amount + s.offset })),
+            ) || []),
+          );
+          output.satributes?.push(
+            ...(utxoBundleData?.sat_ranges.map((s) => ({
+              satributes: s.satributes,
+              amount: Number(BigInt(s.range.end) - BigInt(s.range.start)),
+              offset: output.amount + s.offset,
+            })) || []),
+          );
+          output.amount += extendedUtxo.utxo.value;
+        }
+      }
+
+      // if output value is 0, then all actions are spendable, so we can skip this
+      if (output.amount > 0) {
+        context.addOutputAddress(transaction, toAddress, BigInt(output.amount));
+        outputs.push(output);
+      }
     }
-
-    const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
   return {
@@ -236,8 +268,31 @@ export const applySplitUtxoActions = async (
     return map;
   }, {} as Record<string, SplitUtxoAction[]>);
 
+  const outpointActionList = Object.entries(outpointActionMap);
+  // sort internal actions from smallest offset to biggest
+  outpointActionList.forEach(([, outpointActions]) => {
+    outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
+  });
+  // place spendable actions last
+  outpointActionList.sort(([, outpointActionsA], [, outpointActionsB]) => {
+    const aIsSpendable = outpointActionsA[outpointActionsA.length - 1];
+    const bIsSpendable = outpointActionsB[outpointActionsA.length - 1];
+
+    if (aIsSpendable && !bIsSpendable) {
+      return 1;
+    }
+
+    if (bIsSpendable && !aIsSpendable) {
+      return -1;
+    }
+
+    return 0;
+  });
+
   // Process actions for each outpoint
-  for (const [outpoint, outpointActions] of Object.entries(outpointActionMap)) {
+  for (let oi = 0; oi < outpointActionList.length; oi++) {
+    const [outpoint, outpointActions] = outpointActionList[oi];
+
     const { extendedUtxo, addressContext } = await context.getUtxo(outpoint);
 
     if (!extendedUtxo || !addressContext) {
@@ -246,9 +301,6 @@ export const applySplitUtxoActions = async (
 
     addressContext.addInput(transaction, extendedUtxo, options);
     inputs.push(extendedUtxo);
-
-    // sort from smallest to biggest
-    outpointActions.sort((a, b) => getOffsetFromLocation(a.location) - getOffsetFromLocation(b.location));
 
     const utxoBundleData = await extendedUtxo.getBundleData();
     const outputInscriptions = utxoBundleData?.sat_ranges.flatMap((s) =>
@@ -262,7 +314,7 @@ export const applySplitUtxoActions = async (
 
     for (let i = 0; i < outpointActions.length; i++) {
       const action = outpointActions[i];
-      const { location, toAddress } = action;
+      const { location } = action;
       const offset = getOffsetFromLocation(location);
 
       if (offset < 0) {
@@ -293,27 +345,39 @@ export const applySplitUtxoActions = async (
       }
 
       const nextAction = outpointActions[i + 1];
-      const outputEndOffset = nextAction ? getOffsetFromLocation(nextAction.location) : extendedUtxo.utxo.value;
+      const isLastActionOfLastSplitActions = !nextAction && !outpointActionList[oi + 1];
 
-      // validate there are enough sats
-      if (outputEndOffset - offset < DUST_VALUE) {
-        throw new Error(`Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as there are not enough sats`);
+      if (!isLastActionOfLastSplitActions || !action.spendable) {
+        const outputEndOffset = nextAction ? getOffsetFromLocation(nextAction.location) : extendedUtxo.utxo.value;
+
+        // validate there are enough sats
+        if (outputEndOffset - offset < DUST_VALUE) {
+          throw new Error(`Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as there are not enough sats`);
+        }
+
+        // if a split action is spendable but is not the last output, then we need to return the value to the
+        // payment to the originating address
+        const toAddress = action.spendable ? extendedUtxo.utxo.address : action.toAddress;
+        context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
+
+        outputs.push({
+          address: toAddress,
+          amount: outputEndOffset - offset,
+          inscriptions: outputInscriptions
+            ?.filter((inscription) => offset <= inscription.offset && inscription.offset < outputEndOffset)
+            .map((inscription) => ({
+              ...inscription,
+              offset: inscription.offset - offset,
+            })),
+          satributes: outputSatributes
+            ?.filter((s) => offset <= s.offset + s.amount && s.offset < outputEndOffset)
+            .map((s) => ({
+              ...s,
+              amount: Math.min(outputEndOffset, s.offset + s.amount) - Math.max(offset, s.offset) + 1,
+              offset: Math.max(0, s.offset - offset),
+            })),
+        });
       }
-      context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
-
-      outputs.push({
-        address: toAddress,
-        amount: outputEndOffset - offset,
-        inscriptions: outputInscriptions?.filter(
-          (inscription) => offset <= inscription.offset && inscription.offset < outputEndOffset,
-        ),
-        satributes: outputSatributes
-          ?.filter((s) => offset <= s.offset + s.amount && s.offset < outputEndOffset)
-          .map((s) => ({
-            ...s,
-            amount: Math.min(outputEndOffset, s.offset + s.amount) - Math.max(offset, s.offset),
-          })),
-      });
     }
 
     // add input signing
@@ -330,7 +394,8 @@ export const applySendBtcActionsAndFee = async (
   transaction: Transaction,
   actions: SendBtcAction[],
   feeRate: number,
-  previousSignActionList: SignActions = [],
+  previousInputs: ExtendedUtxo[],
+  previousSignActionList: SignActions,
   /**
    * This overrides the change address from the default payments address. It is used with the transfer action to
    * send all funds to the destination address (with spendable and combinable set to true)
@@ -405,6 +470,41 @@ export const applySendBtcActionsAndFee = async (
   const hangingInscriptions: Exclude<TransactionOutput['inscriptions'], undefined> = [];
   const hangingSatributes: Exclude<TransactionOutput['satributes'], undefined> = [];
 
+  if (totalOutputs < totalInputs) {
+    let runningOffset = 0;
+
+    for (const previousInput of previousInputs) {
+      if (runningOffset + previousInput.utxo.value < totalOutputs) {
+        runningOffset += previousInput.utxo.value;
+        continue;
+      }
+
+      const previousInputBundleData = await previousInput.getBundleData();
+
+      const overflowInscriptions = previousInputBundleData?.sat_ranges
+        .flatMap((s) =>
+          s.inscriptions.map((i) => ({
+            id: i.id,
+            offset: runningOffset + s.offset,
+          })),
+        )
+        .filter((i) => i.offset >= totalOutputs);
+
+      const overflowSatributes = previousInputBundleData?.sat_ranges
+        .map((s) => ({
+          satributes: s.satributes,
+          amount:
+            Number(BigInt(s.range.end) - BigInt(s.range.start)) -
+            Math.max(0, Number(totalOutputs) - (runningOffset + s.offset)),
+          offset: Math.max(runningOffset + s.offset, Number(totalOutputs)),
+        }))
+        .filter((s) => s.amount >= 0);
+
+      hangingInscriptions.push(...(overflowInscriptions || []));
+      hangingSatributes.push(...(overflowSatributes || []));
+    }
+  }
+
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
     totalOutputs += combinableAmount;
 
@@ -431,11 +531,9 @@ export const applySendBtcActionsAndFee = async (
 
       // store inscription and satributes for hanging output
       const utxoBundleData = await utxoToUse.getBundleData();
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       const outputInscriptions = utxoBundleData?.sat_ranges.flatMap((s) =>
         s.inscriptions.map((inscription) => ({ id: inscription.id, offset: hangingOffset + s.offset })),
       );
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       const outputSatributes = utxoBundleData?.sat_ranges.map((s) => ({
         satributes: s.satributes,
         amount: Number(BigInt(s.range.end) - BigInt(s.range.start)),
