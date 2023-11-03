@@ -8,7 +8,6 @@ import { UtxoCache } from '../../api/utxoCache';
 import SeedVault from '../../seedVault';
 import type { NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
-import { getBtcTaprootPrivateKey } from '../../wallet';
 
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
 import { CompilationOptions, SupportedAddressType, WalletContext } from './types';
@@ -173,22 +172,6 @@ export abstract class AddressContext {
     return utxos.find((utxo) => utxo.outpoint === outpoint);
   }
 
-  protected getTaprootDerivationPath({
-    account,
-    index,
-    network,
-  }: {
-    account?: bigint;
-    index: bigint;
-    network: NetworkType;
-  }) {
-    const accountIndex = account ? account.toString() : '0';
-
-    return network === 'Mainnet'
-      ? `${BTC_TAPROOT_PATH_PURPOSE}0'/${accountIndex}'/0/${index.toString()}`
-      : `${BTC_TAPROOT_PATH_PURPOSE}1'/${accountIndex}'/0/${index.toString()}`;
-  }
-
   protected async getPrivateKey(seedPhrase: string): Promise<string> {
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     const master = bip32.fromSeed(seed);
@@ -332,11 +315,7 @@ class P2trAddressContext extends AddressContext {
 
   async signInput(transaction: btc.Transaction, index: number): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await getBtcTaprootPrivateKey({
-      seedPhrase,
-      index: this._accountIndex,
-      network: this._network,
-    });
+    const privateKey = await this.getPrivateKey(seedPhrase);
     transaction.signIdx(hex.decode(privateKey), index);
   }
 
