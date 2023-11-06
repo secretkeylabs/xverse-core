@@ -79,9 +79,13 @@ export class UtxoCache {
 
   private _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(this._network, txid, vout);
 
-  private _getAllUtxos = async (btcAddress: string): Promise<UtxoCacheStruct> => {
+  private _getAllUtxos = async (btcAddress: string, onlyConfirmed = true): Promise<UtxoCacheStruct> => {
     const utxos = await this._getAddressUtxos(btcAddress);
     const utxosObject: UtxoCacheStruct = utxos.reduce((acc, utxo) => {
+      if (onlyConfirmed && !utxo.block_height) {
+        return acc;
+      }
+
       acc[`${utxo.txid}:${utxo.vout}`] = utxo;
       return acc;
     }, {} as UtxoCacheStruct);
@@ -123,9 +127,11 @@ export class UtxoCache {
     const [txid, vout] = outpoint.split(':');
     const utxo = await this._getUtxo(txid, +vout);
 
-    cache.utxos[outpoint] = utxo;
-    await this._setCache(address, cache);
-
+    if (utxo.block_height) {
+      // we only want to store confirmed utxos in the cache
+      cache.utxos[outpoint] = utxo;
+      await this._setCache(address, cache);
+    }
     return utxo;
   };
 

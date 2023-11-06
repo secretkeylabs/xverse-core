@@ -412,6 +412,28 @@ export class TransactionContext {
     return {};
   }
 
+  async getInscriptionUtxo(
+    inscriptionId: string,
+  ): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
+    for (const addressContext of [this._paymentAddress, this._ordinalsAddress]) {
+      const extendedUtxos = await addressContext.getUtxos();
+
+      for (const extendedUtxo of extendedUtxos) {
+        const bundle = await extendedUtxo.getBundleData();
+
+        if (
+          bundle?.sat_ranges.some((satRange) =>
+            satRange.inscriptions.some((inscription) => inscription.id === inscriptionId),
+          )
+        ) {
+          return { extendedUtxo, addressContext };
+        }
+      }
+    }
+
+    return {};
+  }
+
   addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }

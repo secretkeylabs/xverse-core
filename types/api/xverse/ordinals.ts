@@ -92,7 +92,7 @@ export type BundleInscription = {
 export type UtxoOrdinalBundle = {
   txid: string;
   vout: number;
-  block_height: number;
+  block_height?: number;
   value: number;
   sat_ranges: BundleSatRange[];
 };

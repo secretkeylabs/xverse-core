@@ -76,17 +76,52 @@ export const sendBtc = async (
  */
 export const sendOrdinals = async (
   context: TransactionContext,
-  recipients: {
-    toAddress: string;
-    location: string;
-  }[],
+  recipients: (
+    | {
+        toAddress: string;
+        location: string;
+      }
+    | {
+        toAddress: string;
+        inscriptionId: string;
+      }
+  )[],
   feeRate: number,
 ) => {
   if (recipients.length === 0) {
     throw new Error('Must provide at least 1 recipient');
   }
 
-  const utxoToRecipientsMap = recipients.reduce((acc, { location, toAddress }) => {
+  const embellishedRecipients = await Promise.all(
+    recipients.map(async (recipient) => {
+      if ('location' in recipient) {
+        return recipient;
+      }
+
+      const utxo = await context.getInscriptionUtxo(recipient.inscriptionId);
+
+      if (!utxo.extendedUtxo) {
+        throw new Error('No utxo found for inscription');
+      }
+
+      const bundle = await utxo.extendedUtxo.getBundleData();
+
+      const inscriptionBundle = bundle?.sat_ranges.find((b) =>
+        b.inscriptions.some((i) => i.id === recipient.inscriptionId),
+      );
+
+      if (!inscriptionBundle) {
+        throw new Error('No inscription found in utxo');
+      }
+
+      return {
+        toAddress: recipient.toAddress,
+        location: `${utxo.extendedUtxo.outpoint}:${inscriptionBundle.offset}`,
+      };
+    }),
+  );
+
+  const utxoToRecipientsMap = embellishedRecipients.reduce((acc, { location, toAddress }) => {
     const [transactionId, vout, offsetStr] = location.split(':');
     const outPoint = `${transactionId}:${vout}`;
     const offset = +offsetStr;

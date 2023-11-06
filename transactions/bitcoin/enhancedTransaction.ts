@@ -131,6 +131,7 @@ export class EnhancedTransaction {
             .filter((i) => i.offset >= 0 && i.offset < amount);
 
           const outputSatributes = inputBundleData?.sat_ranges
+            .filter((s) => s.satributes.length > 0)
             .map((s) => {
               const min = Math.max(runningOffset + s.offset - currentOffset, 0);
               const max = Math.min(
@@ -143,8 +144,7 @@ export class EnhancedTransaction {
                 amount: max - min,
                 offset: min,
               };
-            })
-            .filter((s) => s.amount > 0);
+            });
 
           inscriptions.push(...(outputInscriptions || []));
           satributes.push(...(outputSatributes || []));
