@@ -33,6 +33,7 @@ export type {
   AddressToBnsResponse,
   CoinMetaData,
   CoreInfo,
+  NftData,
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
