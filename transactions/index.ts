@@ -24,7 +24,7 @@ import {
   signMultiStxTransactions,
   signTransaction,
 } from './stx';
-export * from './bitcoin';
+export * as btcTransaction from './bitcoin';
 export * from './bitcoin/context';
 export * from './bitcoin/enhancedTransaction';
 export * from './bitcoin/types';
