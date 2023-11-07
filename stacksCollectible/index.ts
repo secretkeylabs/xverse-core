@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
+import { BNS_CONTRACT_ID } from '../constant';
 import { NftCollectionData, NftDetailResponse, NftEventsResponse, NonFungibleToken } from 'types';
 import { getNftDetail, getNftsCollectionData } from '../api/gamma';
 import { getNftsData } from '../api/stacks';
@@ -59,9 +60,10 @@ async function fetchBatchData(batch: Array<NonFungibleToken>, collectionRecord: 
     const contractId = principal[0];
 
     if (contractInfo[1] === 'bns') {
-      //no further data required for BNS, arrange into collection
+      // no further data required for BNS, arrange into collection
+      // currently stacks only supports 1 bns name per address
       const bnsCollection: StacksCollectionData = {
-        collection_id: 'bns',
+        collection_id: contractId,
         collection_name: 'BNS Names',
         total_nft: 1,
         thumbnail_nfts: [nft],
@@ -150,8 +152,8 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   //sort according to total nft in a collection
   return nftCollectionList.sort((a, b) => {
     //place bns collection at the bottom of nft list
-    if (a.collection_id === 'bns') return 1;
-    else if (b.collection_id === 'bns') return -1;
+    if (a.collection_id === BNS_CONTRACT_ID) return 1;
+    else if (b.collection_id === BNS_CONTRACT_ID) return -1;
     return b.total_nft - a.total_nft;
   });
 }

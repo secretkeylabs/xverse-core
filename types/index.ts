@@ -37,6 +37,7 @@ export type {
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
+  TokenMetaData,
 } from './api/stacks/assets';
 export * from './api/stacks/transaction';
 export * from './api/xverse/coins';
