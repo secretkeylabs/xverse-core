@@ -2,6 +2,7 @@ import { Transaction } from '@scure/btc-signer';
 
 import { UTXO } from '../../types';
 
+import { hex } from '@scure/base';
 import { ExtendedUtxo, TransactionContext } from './context';
 import {
   Action,
@@ -18,6 +19,7 @@ const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
 const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
 
 const DUST_VALUE = 546;
+const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -124,6 +126,13 @@ const getTransactionTotals = async (context: TransactionContext, transaction: Tr
   return { inputValue, outputValue };
 };
 
+export const dummySignTransaction = async (context: TransactionContext, transaction: Transaction) => {
+  const dummyPrivateKeyBuffer = hex.decode(dummyPrivateKey);
+  await context.paymentAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
+  await context.ordinalsAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
+  transaction.sign(dummyPrivateKeyBuffer);
+};
+
 const getTransactionVSize = async (context: TransactionContext, transaction: Transaction, withChange = false) => {
   try {
     const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
@@ -132,8 +141,7 @@ const getTransactionVSize = async (context: TransactionContext, transaction: Tra
       context.addOutputAddress(transactionCopy, context.changeAddress, 546n);
     }
 
-    await context.paymentAddress.signInputs(transactionCopy);
-    await context.ordinalsAddress.signInputs(transactionCopy);
+    await dummySignTransaction(context, transactionCopy);
 
     transactionCopy.finalize();
 

@@ -5,7 +5,13 @@ import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
 import { TransactionContext } from './context';
 import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
-import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions, extractActionMap } from './utils';
+import {
+  applySendBtcActionsAndFee,
+  applySendUtxoActions,
+  applySplitUtxoActions,
+  dummySignTransaction,
+  extractActionMap,
+} from './utils';
 
 const defaultOptions: CompilationOptions = {
   rbfEnabled: false,
@@ -40,7 +46,7 @@ export class EnhancedTransaction {
     this._actions = extractActionMap(actions);
   }
 
-  private async compile(options: CompilationOptions) {
+  private async compile(options: CompilationOptions, dummySign: boolean) {
     if (Object.values(this._actions).flat().length === 0) {
       throw new Error('No actions to compile');
     }
@@ -165,8 +171,12 @@ export class EnhancedTransaction {
     const { address, ...feeOutput } = outputs.pop()!;
 
     // now that the transaction is built, we can sign it
-    await this._context.paymentAddress.signInputs(transaction);
-    await this._context.ordinalsAddress.signInputs(transaction);
+    if (dummySign) {
+      await dummySignTransaction(this._context, transaction);
+    } else {
+      await this._context.paymentAddress.signInputs(transaction);
+      await this._context.ordinalsAddress.signInputs(transaction);
+    }
 
     transaction.finalize();
 
@@ -180,7 +190,10 @@ export class EnhancedTransaction {
   }
 
   async getFeeSummary(options: CompilationOptions = {}) {
-    const { actualFee, transaction, inputs, outputs, feeOutput } = await this.compile(getOptionsWithDefaults(options));
+    const { actualFee, transaction, inputs, outputs, feeOutput } = await this.compile(
+      getOptionsWithDefaults(options),
+      true,
+    );
 
     const vsize = transaction.vsize;
 
@@ -197,20 +210,17 @@ export class EnhancedTransaction {
   }
 
   async getTransactionHexAndId(options: CompilationOptions = {}) {
-    const { transaction } = await this.compile(getOptionsWithDefaults(options));
+    const { transaction } = await this.compile(getOptionsWithDefaults(options), false);
 
     return { hex: transaction.hex, id: transaction.id };
   }
 
   async broadcast(options: CompilationOptions = {}) {
-    const { transaction } = await this.compile(getOptionsWithDefaults(options));
-
-    const transactionHex = transaction.hex;
+    const { hex: transactionHex, id } = await this.getTransactionHexAndId(options);
 
     const esploraClient = new EsploraClient({ network: this._context.network });
-
     await esploraClient.sendRawTransaction(transactionHex);
 
-    return transaction.id;
+    return id;
   }
 }

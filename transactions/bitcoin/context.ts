@@ -1,18 +1,16 @@
+import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
-
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from '../../ledger/constants';
+import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
 import SeedVault from '../../seedVault';
+import { getBtcNetwork } from '../../transactions/btcNetwork';
 import type { AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
-
-import axios from 'axios';
-import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
 import { CompilationOptions, SupportedAddressType, WalletContext } from './types';
 import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
@@ -67,11 +65,7 @@ export class ExtendedUtxo {
 
     return new Promise(async (resolve, reject) => {
       try {
-        const txDataApiUrl = `${this._network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI}/${
-          this._utxo.txid
-        }/hex`;
-        const response = await axios.get(txDataApiUrl);
-        this._hex = response.data;
+        this._hex = await esploraApi[this._network].getTransactionHex(this._utxo.txid);
 
         resolve(this._hex);
       } catch (error) {
@@ -214,6 +208,7 @@ export abstract class AddressContext {
   protected abstract getDerivationPath(): string;
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
   abstract signInputs(transaction: btc.Transaction): Promise<void>;
+  abstract toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void>;
 }
 
 export class P2shAddressContext extends AddressContext {
@@ -260,6 +255,26 @@ export class P2shAddressContext extends AddressContext {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
         transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
+  }
+
+  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
+    const btcNetwork = getBtcNetwork(this._network);
+    const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privateKey, true), btcNetwork);
+    const p2sh = btc.p2sh(p2wpkh, btcNetwork);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
+        transaction.updateInput(i, {
+          witnessUtxo: {
+            script: p2sh.script,
+            amount: input.witnessUtxo?.amount ?? 0n,
+          },
+          redeemScript: p2sh.redeemScript,
+          witnessScript: p2sh.witnessScript,
+        });
       }
     }
   }
@@ -311,6 +326,26 @@ export class P2wpkhAddressContext extends AddressContext {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
         transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
+  }
+
+  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
+    const btcNetwork = getBtcNetwork(this._network);
+    const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privateKey, true), btcNetwork);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
+        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
+        // @ts-expect-error: accessing private property.
+        delete transaction.inputs[i].nonWitnessUtxo;
+        transaction.updateInput(i, {
+          witnessUtxo: {
+            script: p2wpkh.script,
+            amount: input.witnessUtxo?.amount ?? 0n,
+          },
+        });
       }
     }
   }
@@ -420,6 +455,7 @@ export class P2trAddressContext extends AddressContext {
       this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
     } catch (err) {
       if (err instanceof Error && err.message.includes('schnorr')) {
+        // ledger gives us the non-schnorr pk, so we need to remove the first byte
         this._p2tr = btc.p2tr(
           publicKeyBuff.slice(1),
           undefined,
@@ -454,6 +490,28 @@ export class P2trAddressContext extends AddressContext {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
         transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
+  }
+
+  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
+    const btcNetwork = getBtcNetwork(this._network);
+    const dummyPublicKey = secp256k1.getPublicKey(privateKey, true);
+    const p2tr = btc.p2tr(dummyPublicKey.slice(1), undefined, btcNetwork);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
+        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
+        // @ts-expect-error: accessing private property.
+        delete transaction.inputs[i].nonWitnessUtxo;
+        transaction.updateInput(i, {
+          witnessUtxo: {
+            script: p2tr.script,
+            amount: input.witnessUtxo?.amount ?? 0n,
+          },
+          tapInternalKey: dummyPublicKey,
+        });
       }
     }
   }
