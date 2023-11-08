@@ -510,7 +510,7 @@ export class P2trAddressContext extends AddressContext {
             script: p2tr.script,
             amount: input.witnessUtxo?.amount ?? 0n,
           },
-          tapInternalKey: dummyPublicKey,
+          tapInternalKey: p2tr.tapInternalKey,
         });
       }
     }
