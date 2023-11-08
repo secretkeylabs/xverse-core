@@ -1,17 +1,22 @@
-import { hex } from '@scure/base';
+import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
-import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
-
 import * as bip39 from 'bip39';
+import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
+import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
+
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
+import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from '../../ledger/constants';
 import SeedVault from '../../seedVault';
-import type { NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
+import type { AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
 
+import axios from 'axios';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
 import { CompilationOptions, SupportedAddressType, WalletContext } from './types';
-import { getOutpointFromUtxo } from './utils';
+import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
+
+export type LedgerTransport = ConstructorParameters<typeof AppClient>[0];
 
 const esploraMainnetProvider = new EsploraProvider({
   network: 'Mainnet',
@@ -27,15 +32,20 @@ const esploraApi = {
 };
 
 export class ExtendedUtxo {
+  private _network!: NetworkType;
+
   private _utxo!: UTXO;
 
   private _address!: string;
 
   private _outpoint!: string;
 
+  private _hex!: string;
+
   private _utxoCache!: UtxoCache;
 
-  constructor(utxo: UTXO, address: string, utxoCache: UtxoCache) {
+  constructor(network: NetworkType, utxo: UTXO, address: string, utxoCache: UtxoCache) {
+    this._network = network;
     this._utxo = utxo;
     this._address = address;
     this._outpoint = getOutpointFromUtxo(utxo);
@@ -48,6 +58,26 @@ export class ExtendedUtxo {
 
   get utxo(): UTXO {
     return this._utxo;
+  }
+
+  get hex(): Promise<string> {
+    if (this._hex) {
+      return Promise.resolve(this._hex);
+    }
+
+    return new Promise(async (resolve, reject) => {
+      try {
+        const txDataApiUrl = `${this._network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI}/${
+          this._utxo.txid
+        }/hex`;
+        const response = await axios.get(txDataApiUrl);
+        this._hex = response.data;
+
+        resolve(this._hex);
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
@@ -115,7 +145,7 @@ export abstract class AddressContext {
     if (!this._utxos) {
       const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
 
-      this._utxos = utxos.map((utxo) => new ExtendedUtxo(utxo, this._address, this._utxoCache));
+      this._utxos = utxos.map((utxo) => new ExtendedUtxo(this._network, utxo, this._address, this._utxoCache));
     }
 
     return [...this._utxos];
@@ -182,11 +212,11 @@ export abstract class AddressContext {
   }
 
   protected abstract getDerivationPath(): string;
-  abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): void;
-  abstract signInput(transaction: btc.Transaction, index: number): Promise<void>;
+  abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
+  abstract signInputs(transaction: btc.Transaction): Promise<void>;
 }
 
-class P2shAddressContext extends AddressContext {
+export class P2shAddressContext extends AddressContext {
   private _p2sh!: ReturnType<typeof btc.p2sh>;
 
   constructor(
@@ -206,7 +236,7 @@ class P2shAddressContext extends AddressContext {
     this._p2sh = btc.p2sh(p2wpkh, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -222,10 +252,16 @@ class P2shAddressContext extends AddressContext {
     });
   }
 
-  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+  async signInputs(transaction: btc.Transaction): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
-    transaction.signIdx(hex.decode(privateKey), index);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
+        transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
   }
 
   protected getDerivationPath(): string {
@@ -235,8 +271,8 @@ class P2shAddressContext extends AddressContext {
   }
 }
 
-class P2wpkhAddressContext extends AddressContext {
-  private _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
+export class P2wpkhAddressContext extends AddressContext {
+  protected _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
 
   constructor(
     address: string,
@@ -253,7 +289,7 @@ class P2wpkhAddressContext extends AddressContext {
     this._p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -267,10 +303,16 @@ class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+  async signInputs(transaction: btc.Transaction): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
-    transaction.signIdx(hex.decode(privateKey), index);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
+        transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
   }
 
   protected getDerivationPath(): string {
@@ -280,8 +322,88 @@ class P2wpkhAddressContext extends AddressContext {
   }
 }
 
-class P2trAddressContext extends AddressContext {
-  private _p2tr!: ReturnType<typeof btc.p2tr>;
+class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
+  private _transport!: LedgerTransport;
+
+  constructor(
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+    transport: LedgerTransport,
+  ) {
+    super(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    this._transport = transport;
+  }
+
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+    const app = new AppClient(this._transport);
+    const masterFingerPrint = await app.getMasterFingerprint();
+
+    const utxo = extendedUtxo.utxo;
+    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
+
+    const inputDerivation = [
+      Buffer.from(this._publicKey, 'hex'),
+      {
+        path: btc.bip32Path(this.getDerivationPath()),
+        fingerprint: parseInt(masterFingerPrint, 16),
+      },
+    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+
+    transaction.addInput({
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: this._p2wpkh.script,
+        amount: BigInt(utxo.value),
+      },
+      nonWitnessUtxo,
+      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
+      bip32Derivation: [inputDerivation],
+    });
+  }
+
+  async signInputs(transaction: btc.Transaction): Promise<void> {
+    let hasInputsToSign = false;
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
+        hasInputsToSign = true;
+        break;
+      }
+    }
+
+    if (!hasInputsToSign) {
+      return;
+    }
+
+    const app = new AppClient(this._transport);
+    const masterFingerPrint = await app.getMasterFingerprint();
+    const coinType = this._network === 'Mainnet' ? 0 : 1;
+    const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
+
+    const accountPolicy = new DefaultWalletPolicy(
+      'wpkh(@0/**)',
+      `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
+    );
+
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+    const signatures = await app.signPsbt(psbtBase64, accountPolicy, null);
+
+    for (const signature of signatures) {
+      transaction.updateInput(signature[0], {
+        partialSig: [[signature[1].pubkey, signature[1].signature]],
+      });
+    }
+  }
+}
+
+export class P2trAddressContext extends AddressContext {
+  protected _p2tr!: ReturnType<typeof btc.p2tr>;
 
   constructor(
     address: string,
@@ -292,13 +414,24 @@ class P2trAddressContext extends AddressContext {
     utxoCache: UtxoCache,
   ) {
     super('p2tr', address, publicKey, network, accountIndex, seedVault, utxoCache);
-
     const publicKeyBuff = hex.decode(publicKey);
 
-    this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    try {
+      this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('schnorr')) {
+        this._p2tr = btc.p2tr(
+          publicKeyBuff.slice(1),
+          undefined,
+          network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK,
+        );
+      } else {
+        throw err;
+      }
+    }
   }
 
-  addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions): void {
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
 
     transaction.addInput({
@@ -313,10 +446,16 @@ class P2trAddressContext extends AddressContext {
     });
   }
 
-  async signInput(transaction: btc.Transaction, index: number): Promise<void> {
+  async signInputs(transaction: btc.Transaction): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
-    transaction.signIdx(hex.decode(privateKey), index);
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
+        transaction.signIdx(hex.decode(privateKey), i);
+      }
+    }
   }
 
   protected getDerivationPath(): string {
@@ -326,26 +465,86 @@ class P2trAddressContext extends AddressContext {
   }
 }
 
-const createAddressContext = (
-  address: string,
-  publicKey: string,
-  network: NetworkType,
-  accountIndex: bigint,
-  seedVault: SeedVault,
-  utxoCache: UtxoCache,
-): AddressContext => {
-  const { type } = getAddressInfo(address);
+export class LedgerP2trAddressContext extends P2trAddressContext {
+  private _transport!: LedgerTransport;
 
-  if (type === AddressType.p2sh) {
-    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
-  } else if (type === AddressType.p2wpkh) {
-    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
-  } else if (type === AddressType.p2tr) {
-    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
-  } else {
-    throw new Error('Unsupported payment address type');
+  constructor(
+    address: string,
+    publicKey: string,
+    network: NetworkType,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+    transport: LedgerTransport,
+  ) {
+    super(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    this._transport = transport;
   }
-};
+
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+    const app = new AppClient(this._transport);
+    const masterFingerPrint = await app.getMasterFingerprint();
+
+    const utxo = extendedUtxo.utxo;
+    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
+
+    const inputDerivation = [
+      hex.decode(this._publicKey),
+      {
+        path: btc.bip32Path(this.getDerivationPath()),
+        fingerprint: parseInt(masterFingerPrint, 16),
+      },
+    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+
+    transaction.addInput({
+      txid: utxo.txid,
+      index: utxo.vout,
+      witnessUtxo: {
+        script: this._p2tr.script,
+        amount: BigInt(utxo.value),
+      },
+      nonWitnessUtxo,
+      tapInternalKey: this._p2tr.tapInternalKey,
+      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
+      bip32Derivation: [inputDerivation],
+    });
+  }
+
+  async signInputs(transaction: btc.Transaction): Promise<void> {
+    let hasInputsToSign = false;
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
+        hasInputsToSign = true;
+        break;
+      }
+    }
+
+    if (!hasInputsToSign) {
+      return;
+    }
+
+    const app = new AppClient(this._transport);
+    const masterFingerPrint = await app.getMasterFingerprint();
+    const coinType = this._network === 'Mainnet' ? 0 : 1;
+    const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
+
+    const accountPolicy = new DefaultWalletPolicy(
+      'tr(@0/**)',
+      `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
+    );
+
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+    const signatures = await app.signPsbt(psbtBase64, accountPolicy, null);
+
+    for (const signature of signatures) {
+      transaction.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
+    }
+  }
+}
 
 export class TransactionContext {
   private _paymentAddress!: AddressContext;
@@ -354,32 +553,9 @@ export class TransactionContext {
 
   private _network!: NetworkType;
 
-  constructor(
-    wallet: WalletContext,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    network: NetworkType,
-    accountIndex: bigint,
-  ) {
-    this._paymentAddress = createAddressContext(
-      wallet.btcAddress,
-      wallet.btcPublicKey,
-      network,
-      accountIndex,
-      seedVault,
-      utxoCache,
-    );
-    this._ordinalsAddress =
-      wallet.btcAddress === wallet.ordinalsAddress
-        ? this._paymentAddress
-        : createAddressContext(
-            wallet.ordinalsAddress,
-            wallet.ordinalsPublicKey,
-            network,
-            accountIndex,
-            seedVault,
-            utxoCache,
-          );
+  constructor(network: NetworkType, paymentAddressContext: AddressContext, ordinalsAddressContext: AddressContext) {
+    this._paymentAddress = paymentAddressContext;
+    this._ordinalsAddress = ordinalsAddressContext;
 
     this._network = network;
   }
@@ -438,3 +614,78 @@ export class TransactionContext {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 }
+
+const createAddressContext = (
+  address: string,
+  publicKey: string,
+  network: NetworkType,
+  accountIndex: bigint,
+  seedVault: SeedVault,
+  utxoCache: UtxoCache,
+  accountType?: AccountType,
+  transport?: LedgerTransport,
+): AddressContext => {
+  const { type } = getAddressInfo(address);
+
+  if (accountType === 'ledger') {
+    if (!transport) {
+      throw new Error('Ledger transport required for ledger address');
+    }
+
+    if (type === AddressType.p2wpkh) {
+      return new LedgerP2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, transport);
+    }
+    if (type === AddressType.p2tr) {
+      return new LedgerP2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, transport);
+    } else {
+      throw new Error(`Ledger support for this type of address not implemented: ${type}`);
+    }
+  }
+
+  if (type === AddressType.p2sh) {
+    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+  } else if (type === AddressType.p2wpkh) {
+    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+  } else if (type === AddressType.p2tr) {
+    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+  } else {
+    throw new Error('Unsupported payment address type');
+  }
+};
+
+export type TransactionContextOptions = {
+  wallet: WalletContext;
+  seedVault: SeedVault;
+  utxoCache: UtxoCache;
+  network: NetworkType;
+  ledgerTransport?: LedgerTransport;
+};
+export const createTransactionContext = (options: TransactionContextOptions) => {
+  const { wallet, seedVault, utxoCache, network, ledgerTransport } = options;
+
+  const paymentAddress = createAddressContext(
+    wallet.btcAddress,
+    wallet.btcPublicKey,
+    network,
+    wallet.accountIndex,
+    seedVault,
+    utxoCache,
+    wallet.accountType,
+    ledgerTransport,
+  );
+  const ordinalsAddress =
+    wallet.btcAddress === wallet.ordinalsAddress
+      ? paymentAddress
+      : createAddressContext(
+          wallet.ordinalsAddress,
+          wallet.ordinalsPublicKey,
+          network,
+          wallet.accountIndex,
+          seedVault,
+          utxoCache,
+          wallet.accountType,
+          ledgerTransport,
+        );
+
+  return new TransactionContext(network, paymentAddress, ordinalsAddress);
+};

@@ -1,4 +1,5 @@
-import { Satribute } from '../../types';
+import { Transport } from 'ledger/types';
+import { AccountType, Satribute } from '../../types';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -7,6 +8,8 @@ export type WalletContext = {
   ordinalsAddress: string;
   btcPublicKey: string;
   ordinalsPublicKey: string;
+  accountType?: AccountType;
+  accountIndex: bigint;
 };
 
 export enum ActionType {
@@ -59,6 +62,7 @@ export type ActionMap = {
 
 export type CompilationOptions = {
   rbfEnabled?: boolean;
+  ledgerTransport?: Transport;
 };
 
 export type TransactionOutput = {

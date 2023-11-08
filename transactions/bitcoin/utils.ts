@@ -19,8 +19,13 @@ const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
 
 const DUST_VALUE = 546;
 
-type SignAction = (transaction: Transaction) => Promise<void>;
-type SignActions = SignAction[];
+export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
+  if (!a || !b || a.length !== b.length) {
+    return false;
+  }
+
+  return a.every((v, i) => v === b[i]);
+};
 
 export const getOutpoint = (transactionId: string, vout: string | number) => {
   return `${transactionId}:${vout}`;
@@ -119,22 +124,16 @@ const getTransactionTotals = async (context: TransactionContext, transaction: Tr
   return { inputValue, outputValue };
 };
 
-const getTransactionVSize = async (
-  context: TransactionContext,
-  transaction: Transaction,
-  signActionList: SignActions,
-  withChange = false,
-) => {
+const getTransactionVSize = async (context: TransactionContext, transaction: Transaction, withChange = false) => {
   try {
-    const transactionCopy = transaction.clone();
+    const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
 
     if (withChange) {
       context.addOutputAddress(transactionCopy, context.changeAddress, 546n);
     }
 
-    for (const executeSign of signActionList) {
-      await executeSign(transactionCopy);
-    }
+    await context.paymentAddress.signInputs(transactionCopy);
+    await context.ordinalsAddress.signInputs(transactionCopy);
 
     transactionCopy.finalize();
 
@@ -153,7 +152,6 @@ export const applySendUtxoActions = async (
   transaction: Transaction,
   actions: SendUtxoAction[],
 ) => {
-  const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
 
   const inputs: ExtendedUtxo[] = [];
@@ -190,11 +188,8 @@ export const applySendUtxoActions = async (
           throw new Error(`UTXO already used: ${action.outpoint}`);
         }
 
-        addressContext.addInput(transaction, extendedUtxo, options);
+        await addressContext.addInput(transaction, extendedUtxo, options);
         inputs.push(extendedUtxo);
-
-        const inputIndex = transaction.inputsLength - 1;
-        signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
 
         if (!action.spendable) {
           // we have a validator to ensure that if an action is spendable, then all must be spendable
@@ -214,7 +209,6 @@ export const applySendUtxoActions = async (
   }
 
   return {
-    signActionList,
     inputs,
     outputs,
   };
@@ -226,7 +220,6 @@ export const applySplitUtxoActions = async (
   transaction: Transaction,
   actions: SplitUtxoAction[],
 ) => {
-  const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
 
   const inputs: ExtendedUtxo[] = [];
@@ -280,7 +273,7 @@ export const applySplitUtxoActions = async (
       throw new Error(`UTXO for outpoint not found: ${outpoint}`);
     }
 
-    addressContext.addInput(transaction, extendedUtxo, options);
+    await addressContext.addInput(transaction, extendedUtxo, options);
     inputs.push(extendedUtxo);
 
     for (let i = 0; i < outpointActions.length; i++) {
@@ -322,13 +315,9 @@ export const applySplitUtxoActions = async (
         outputs.push({ amount: outputEndOffset - offset, address: toAddress });
       }
     }
-
-    // add input signing
-    const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => addressContext.signInput(txn, inputIndex));
   }
 
-  return { signActionList, inputs, outputs };
+  return { inputs, outputs };
 };
 
 export const applySendBtcActionsAndFee = async (
@@ -337,14 +326,12 @@ export const applySendBtcActionsAndFee = async (
   transaction: Transaction,
   actions: SendBtcAction[],
   feeRate: number,
-  previousSignActionList: SignActions,
   /**
    * This overrides the change address from the default payments address. It is used with the transfer action to
    * send all funds to the destination address (with spendable and combinable set to true)
    * */
   overrideChangeAddress?: string,
 ) => {
-  const signActionList: SignActions = [];
   const usedOutpoints = extractUsedOutpoints(transaction);
 
   const inputs: ExtendedUtxo[] = [];
@@ -423,14 +410,10 @@ export const applySendBtcActionsAndFee = async (
         throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
       }
 
-      context.paymentAddress.addInput(transaction, utxoToUse, options);
+      await context.paymentAddress.addInput(transaction, utxoToUse, options);
       inputs.push(utxoToUse);
 
       totalInputs += BigInt(utxoToUse.utxo.value);
-
-      // add input signing actions
-      const inputIndex = transaction.inputsLength - 1;
-      signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
     }
 
     for (const amount of [combinableAmount, ...individualAmounts]) {
@@ -457,12 +440,7 @@ export const applySendBtcActionsAndFee = async (
       feeRate;
 
     if (totalEstimatedFee < currentChange) {
-      const vSizeWithChange = await getTransactionVSize(
-        context,
-        transaction,
-        [...previousSignActionList, ...signActionList],
-        true,
-      );
+      const vSizeWithChange = await getTransactionVSize(context, transaction, true);
 
       if (vSizeWithChange) {
         const feeWithChange = BigInt(vSizeWithChange * feeRate);
@@ -478,10 +456,7 @@ export const applySendBtcActionsAndFee = async (
         }
       }
 
-      const vSizeNoChange = await getTransactionVSize(context, transaction, [
-        ...previousSignActionList,
-        ...signActionList,
-      ]);
+      const vSizeNoChange = await getTransactionVSize(context, transaction);
 
       if (vSizeNoChange) {
         const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
@@ -506,16 +481,12 @@ export const applySendBtcActionsAndFee = async (
     }
 
     totalInputs += BigInt(utxoToUse.utxo.value);
-    context.paymentAddress.addInput(transaction, utxoToUse, options);
+    await context.paymentAddress.addInput(transaction, utxoToUse, options);
     inputs.push(utxoToUse);
-
-    const inputIndex = transaction.inputsLength - 1;
-    signActionList.push((txn) => context.paymentAddress.signInput(txn, inputIndex));
   }
 
   return {
     actualFee,
-    signActions: signActionList,
     inputs,
     outputs,
   };

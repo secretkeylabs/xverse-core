@@ -46,7 +46,7 @@ export class EnhancedTransaction {
     }
 
     // order actions by type. Send Utxos first, then Ordinal extraction, then payment
-    const transaction = new Transaction();
+    const transaction = new Transaction({ PSBTVersion: 0 });
 
     const spendableSendUtxos = this._actions[ActionType.SEND_UTXO].filter((action) => action.spendable);
     const allSpendableSendUtxosToSameAddress = spendableSendUtxos.every(
@@ -68,21 +68,22 @@ export class EnhancedTransaction {
       overrideChangeAddress = spendableSendUtxos[0].toAddress;
     }
 
-    const {
-      signActionList: sendUtxoSignActions,
-      inputs: sendInputs,
-      outputs: sendOutputs,
-    } = await applySendUtxoActions(this._context, options, transaction, this._actions[ActionType.SEND_UTXO]);
+    const { inputs: sendInputs, outputs: sendOutputs } = await applySendUtxoActions(
+      this._context,
+      options,
+      transaction,
+      this._actions[ActionType.SEND_UTXO],
+    );
 
-    const {
-      signActionList: splitSignActions,
-      inputs: splitInputs,
-      outputs: splitOutputs,
-    } = await applySplitUtxoActions(this._context, options, transaction, this._actions[ActionType.SPLIT_UTXO]);
+    const { inputs: splitInputs, outputs: splitOutputs } = await applySplitUtxoActions(
+      this._context,
+      options,
+      transaction,
+      this._actions[ActionType.SPLIT_UTXO],
+    );
 
     const {
       actualFee,
-      signActions: sendBtcSignActions,
       inputs: sendBtcInputs,
       outputs: sendBtcOutputs,
     } = await applySendBtcActionsAndFee(
@@ -91,7 +92,6 @@ export class EnhancedTransaction {
       transaction,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
-      [...sendUtxoSignActions, ...splitSignActions],
       overrideChangeAddress,
     );
 
@@ -165,9 +165,8 @@ export class EnhancedTransaction {
     const { address, ...feeOutput } = outputs.pop()!;
 
     // now that the transaction is built, we can sign it
-    for (const executeSign of [...sendUtxoSignActions, ...splitSignActions, ...sendBtcSignActions]) {
-      await executeSign(transaction);
-    }
+    await this._context.paymentAddress.signInputs(transaction);
+    await this._context.ordinalsAddress.signInputs(transaction);
 
     transaction.finalize();
 
