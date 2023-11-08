@@ -15,8 +15,8 @@ import {
   TransactionOutput,
 } from './types';
 // these are conservative estimates
-const ESTIMATED_VBYTES_PER_OUTPUT = 45; // actually around 50
-const ESTIMATED_VBYTES_PER_INPUT = 85; // actually around 89 or 90
+const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
+const ESTIMATED_VBYTES_PER_INPUT = 70; // actually from 75 upward
 
 const DUST_VALUE = 546;
 const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
@@ -133,12 +133,12 @@ export const dummySignTransaction = async (context: TransactionContext, transact
   transaction.sign(dummyPrivateKeyBuffer);
 };
 
-const getTransactionVSize = async (context: TransactionContext, transaction: Transaction, withChange = false) => {
+const getTransactionVSize = async (context: TransactionContext, transaction: Transaction, changeAddress = '') => {
   try {
     const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
 
-    if (withChange) {
-      context.addOutputAddress(transactionCopy, context.changeAddress, 546n);
+    if (changeAddress) {
+      context.addOutputAddress(transactionCopy, changeAddress, 546n);
     }
 
     await dummySignTransaction(context, transactionCopy);
@@ -448,13 +448,18 @@ export const applySendBtcActionsAndFee = async (
       feeRate;
 
     if (totalEstimatedFee < currentChange) {
-      const vSizeWithChange = await getTransactionVSize(context, transaction, true);
+      const vSizeWithChange = await getTransactionVSize(
+        context,
+        transaction,
+        overrideChangeAddress ?? context.changeAddress,
+      );
 
       if (vSizeWithChange) {
         const feeWithChange = BigInt(vSizeWithChange * feeRate);
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           actualFee = feeWithChange;
+
           const change = currentChange - feeWithChange;
           context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
           outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
@@ -469,7 +474,7 @@ export const applySendBtcActionsAndFee = async (
       if (vSizeNoChange) {
         const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
-        if (feeWithoutChange < currentChange) {
+        if (feeWithoutChange <= currentChange) {
           actualFee = currentChange;
           complete = true;
           break;
