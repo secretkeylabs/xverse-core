@@ -52,6 +52,16 @@ export class UtxoCache {
     await this._cacheStorageController.set(this.getAddressCacheStorageKey(address), JSON.stringify(addressCache));
   };
 
+  private _setCachedItem = async (address: string, outpoint: string, utxo: UtxoOrdinalBundle): Promise<void> => {
+    const cache = await this._getCache(address);
+    if (!cache) {
+      // this should never happen as init would run first
+      return;
+    }
+    cache.utxos[outpoint] = utxo;
+    await this._setCache(address, cache);
+  };
+
   private _getAddressUtxos = async (address: string) => {
     let allData: UtxoOrdinalBundle[] = [];
     let offset = 0;
@@ -129,8 +139,7 @@ export class UtxoCache {
 
     if (utxo.block_height) {
       // we only want to store confirmed utxos in the cache
-      cache.utxos[outpoint] = utxo;
-      await this._setCache(address, cache);
+      await this._setCachedItem(address, outpoint, utxo);
     }
     return utxo;
   };
