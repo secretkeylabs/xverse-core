@@ -22,29 +22,45 @@ export interface StacksCollectionList {
   results: Array<StacksCollectionData>;
 }
 
-async function getAllNftContracts(address: string, network: StacksNetwork): Promise<NonFungibleToken[]> {
+export async function getAllNftContracts(address: string, network: StacksNetwork): Promise<NonFungibleToken[]> {
   const listofContracts: Array<NonFungibleToken> = [];
 
   //make initial call to get the total inscriptions count and limit
   let offset = 0;
   const response = await getNftsData(address, network, 0);
   const total = response.total;
-  offset += response.limit;
+  const limit = response.limit;
+  offset += limit;
   listofContracts.push(...response.results);
 
   let listofContractPromises: Array<Promise<NftEventsResponse>> = [];
 
-  // make API calls in parallel to speed up fetching data
-  for (let i = offset; i <= total; i += response.limit) {
-    listofContractPromises.push(getNftsData(address, network, i));
+  // Make API calls in parallel to speed up fetching data
+  while (offset < total) {
+    // Add new promise to the array
+    listofContractPromises.push(getNftsData(address, network, offset));
+    offset += limit;
 
-    if (listofContractPromises.length === 4) {
+    // When we have 4 promises, or when we are processing the last batch
+    if (listofContractPromises.length === 4 || offset >= total) {
+      // Await the promises we have collected so far
       const resolvedPromises = await Promise.all(listofContractPromises);
-      resolvedPromises.forEach((resolvedPromise) => listofContracts.push(...resolvedPromise.results));
+      // Push their results into the list of contracts
+      resolvedPromises.forEach((resolvedPromise) => {
+        listofContracts.push(...resolvedPromise.results);
+      });
+      // Reset the promises array for the next batch
       listofContractPromises = [];
     }
   }
 
+  // Handle any promises left in case total count wasn't a multiple of 4
+  if (listofContractPromises.length > 0) {
+    const resolvedPromises = await Promise.all(listofContractPromises);
+    resolvedPromises.forEach((resolvedPromise) => {
+      listofContracts.push(...resolvedPromise.results);
+    });
+  }
   return listofContracts;
 }
 
