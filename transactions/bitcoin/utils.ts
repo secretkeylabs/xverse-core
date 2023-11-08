@@ -133,12 +133,17 @@ export const dummySignTransaction = async (context: TransactionContext, transact
   transaction.sign(dummyPrivateKeyBuffer);
 };
 
-const getTransactionVSize = async (context: TransactionContext, transaction: Transaction, changeAddress = '') => {
+const getTransactionVSize = async (
+  context: TransactionContext,
+  transaction: Transaction,
+  changeAddress = '',
+  change = 546n,
+) => {
   try {
     const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
 
     if (changeAddress) {
-      context.addOutputAddress(transactionCopy, changeAddress, 546n);
+      context.addOutputAddress(transactionCopy, changeAddress, change);
     }
 
     await dummySignTransaction(context, transactionCopy);
@@ -458,14 +463,23 @@ export const applySendBtcActionsAndFee = async (
         const feeWithChange = BigInt(vSizeWithChange * feeRate);
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
-          actualFee = feeWithChange;
+          // we do one last test to ensure that adding close to the actual change won't increase the fees
+          const finalVSizeWithChange = await getTransactionVSize(
+            context,
+            transaction,
+            overrideChangeAddress ?? context.changeAddress,
+            feeWithChange,
+          );
+          if (finalVSizeWithChange) {
+            actualFee = BigInt(finalVSizeWithChange * feeRate);
 
-          const change = currentChange - feeWithChange;
-          context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
-          outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
+            const change = currentChange - feeWithChange;
+            context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
+            outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
 
-          complete = true;
-          break;
+            complete = true;
+            break;
+          }
         }
       }
 
