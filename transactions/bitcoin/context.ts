@@ -611,9 +611,17 @@ export class TransactionContext {
 
   private _network!: NetworkType;
 
+  private _addressList!: AddressContext[];
+
   constructor(network: NetworkType, paymentAddressContext: AddressContext, ordinalsAddressContext: AddressContext) {
     this._paymentAddress = paymentAddressContext;
     this._ordinalsAddress = ordinalsAddressContext;
+
+    this._addressList = [this._paymentAddress];
+
+    if (paymentAddressContext !== ordinalsAddressContext) {
+      this._addressList.push(this._ordinalsAddress);
+    }
 
     this._network = network;
   }
@@ -635,7 +643,7 @@ export class TransactionContext {
   }
 
   async getUtxo(outpoint: string): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
-    for (const addressContext of [this._paymentAddress, this._ordinalsAddress]) {
+    for (const addressContext of this._addressList) {
       const extendedUtxo = await addressContext.getUtxo(outpoint);
 
       if (extendedUtxo) {
@@ -649,7 +657,7 @@ export class TransactionContext {
   async getInscriptionUtxo(
     inscriptionId: string,
   ): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
-    for (const addressContext of [this._paymentAddress, this._ordinalsAddress]) {
+    for (const addressContext of this._addressList) {
       const extendedUtxos = await addressContext.getUtxos();
 
       for (const extendedUtxo of extendedUtxos) {
