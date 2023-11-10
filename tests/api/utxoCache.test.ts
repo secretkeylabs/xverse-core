@@ -50,7 +50,7 @@ describe('UtxoCache', () => {
   });
 
   it('should fetch utxo from API and cache it if it does not exist in cache', async () => {
-    mockStorageAdapter.get = vi.fn().mockResolvedValueOnce(JSON.stringify({ utxos: {}, syncTime: 0, version: 1 }));
+    mockStorageAdapter.get = vi.fn().mockResolvedValue(JSON.stringify({ utxos: {}, syncTime: 0, version: 1 }));
 
     const mockUtxo = {
       txid: 'txid1',
