@@ -16,22 +16,7 @@ import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
 export type LedgerTransport = ConstructorParameters<typeof AppClient>[0];
 
-const esploraMainnetProvider = new EsploraProvider({
-  network: 'Mainnet',
-});
-
-const esploraTestnetProvider = new EsploraProvider({
-  network: 'Testnet',
-});
-
-const esploraApi = {
-  Mainnet: esploraMainnetProvider,
-  Testnet: esploraTestnetProvider,
-};
-
 export class ExtendedUtxo {
-  private _network!: NetworkType;
-
   private _utxo!: UTXO;
 
   private _address!: string;
@@ -42,12 +27,14 @@ export class ExtendedUtxo {
 
   private _utxoCache!: UtxoCache;
 
-  constructor(network: NetworkType, utxo: UTXO, address: string, utxoCache: UtxoCache) {
-    this._network = network;
+  private _esploraApi!: EsploraProvider;
+
+  constructor(utxo: UTXO, address: string, utxoCache: UtxoCache, esploraApi: EsploraProvider) {
     this._utxo = utxo;
     this._address = address;
     this._outpoint = getOutpointFromUtxo(utxo);
     this._utxoCache = utxoCache;
+    this._esploraApi = esploraApi;
   }
 
   get outpoint(): string {
@@ -65,7 +52,7 @@ export class ExtendedUtxo {
 
     return new Promise(async (resolve, reject) => {
       try {
-        this._hex = await esploraApi[this._network].getTransactionHex(this._utxo.txid);
+        this._hex = await this._esploraApi.getTransactionHex(this._utxo.txid);
 
         resolve(this._hex);
       } catch (error) {
@@ -109,6 +96,8 @@ export abstract class AddressContext {
 
   protected _accountIndex!: bigint;
 
+  protected _esploraApi!: EsploraProvider;
+
   constructor(
     type: SupportedAddressType,
     address: string,
@@ -117,6 +106,7 @@ export abstract class AddressContext {
     accountIndex: bigint,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
+    esploraApi: EsploraProvider,
   ) {
     this._type = type;
     this._address = address;
@@ -125,6 +115,7 @@ export abstract class AddressContext {
     this._seedVault = seedVault;
     this._utxoCache = utxoCache;
     this._accountIndex = accountIndex;
+    this._esploraApi = esploraApi;
   }
 
   get type(): SupportedAddressType {
@@ -137,9 +128,9 @@ export abstract class AddressContext {
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
     if (!this._utxos) {
-      const utxos = await esploraApi[this._network].getUnspentUtxos(this._address);
+      const utxos = await this._esploraApi.getUnspentUtxos(this._address);
 
-      this._utxos = utxos.map((utxo) => new ExtendedUtxo(this._network, utxo, this._address, this._utxoCache));
+      this._utxos = utxos.map((utxo) => new ExtendedUtxo(utxo, this._address, this._utxoCache, this._esploraApi));
     }
 
     return [...this._utxos];
@@ -221,8 +212,9 @@ export class P2shAddressContext extends AddressContext {
     accountIndex: bigint,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
+    esploraApi: EsploraProvider,
   ) {
-    super('p2sh', address, publicKey, network, accountIndex, seedVault, utxoCache);
+    super('p2sh', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -296,8 +288,9 @@ export class P2wpkhAddressContext extends AddressContext {
     accountIndex: bigint,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
+    esploraApi: EsploraProvider,
   ) {
-    super('p2wpkh', address, publicKey, network, accountIndex, seedVault, utxoCache);
+    super('p2wpkh', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
 
     const publicKeyBuff = hex.decode(publicKey);
 
@@ -357,7 +350,7 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 }
 
-class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
+export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
   private _transport!: LedgerTransport;
 
   constructor(
@@ -368,8 +361,9 @@ class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     transport: LedgerTransport,
+    esploraApi: EsploraProvider,
   ) {
-    super(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    super(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
     this._transport = transport;
   }
 
@@ -447,8 +441,9 @@ export class P2trAddressContext extends AddressContext {
     accountIndex: bigint,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
+    esploraApi: EsploraProvider,
   ) {
-    super('p2tr', address, publicKey, network, accountIndex, seedVault, utxoCache);
+    super('p2tr', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
     const publicKeyBuff = hex.decode(publicKey);
 
     try {
@@ -534,8 +529,9 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     transport: LedgerTransport,
+    esploraApi: EsploraProvider,
   ) {
-    super(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    super(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
     this._transport = transport;
   }
 
@@ -693,27 +689,47 @@ const createAddressContext = (
 ): AddressContext => {
   const { type } = getAddressInfo(address);
 
+  const esploraApi = new EsploraProvider({ network });
+
   if (accountType === 'ledger') {
     if (!transport) {
       throw new Error('Ledger transport required for ledger address');
     }
 
     if (type === AddressType.p2wpkh) {
-      return new LedgerP2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, transport);
+      return new LedgerP2wpkhAddressContext(
+        address,
+        publicKey,
+        network,
+        accountIndex,
+        seedVault,
+        utxoCache,
+        transport,
+        esploraApi,
+      );
     }
     if (type === AddressType.p2tr) {
-      return new LedgerP2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, transport);
+      return new LedgerP2trAddressContext(
+        address,
+        publicKey,
+        network,
+        accountIndex,
+        seedVault,
+        utxoCache,
+        transport,
+        esploraApi,
+      );
     } else {
       throw new Error(`Ledger support for this type of address not implemented: ${type}`);
     }
   }
 
   if (type === AddressType.p2sh) {
-    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
   } else if (type === AddressType.p2wpkh) {
-    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    return new P2wpkhAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
   } else if (type === AddressType.p2tr) {
-    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache);
+    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApi);
   } else {
     throw new Error('Unsupported payment address type');
   }
