@@ -3,15 +3,15 @@ import BigNumber from 'bignumber.js';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
-import { TransactionContext } from './context';
-import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
 import {
   applySendBtcActionsAndFee,
   applySendUtxoActions,
   applySplitUtxoActions,
   dummySignTransaction,
-  extractActionMap,
-} from './utils';
+} from './actionProcessors';
+import { TransactionContext } from './context';
+import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
+import { extractActionMap } from './utils';
 
 const defaultOptions: CompilationOptions = {
   rbfEnabled: false,
@@ -28,6 +28,12 @@ export class EnhancedTransaction {
 
   private _feeRate!: number;
 
+  private _overrideChangeAddress?: string;
+
+  get overrideChangeAddress(): string | undefined {
+    return this._overrideChangeAddress;
+  }
+
   get feeRate(): number {
     return this._feeRate;
   }
@@ -36,29 +42,23 @@ export class EnhancedTransaction {
     if (feeRate < 1) {
       throw new Error('Fee rate must be a natural number');
     }
-    this._feeRate = feeRate;
+    this._feeRate = Math.round(feeRate);
   }
 
   constructor(context: TransactionContext, actions: Action[], feeRate: number) {
     this._context = context;
     this._feeRate = feeRate;
 
-    this._actions = extractActionMap(actions);
-  }
-
-  private async compile(options: CompilationOptions, dummySign: boolean) {
-    if (Object.values(this._actions).flat().length === 0) {
-      throw new Error('No actions to compile');
+    if (!actions.length) {
+      throw new Error('No actions provided for transaction context');
     }
 
-    // order actions by type. Send Utxos first, then Ordinal extraction, then payment
-    const transaction = new Transaction({ PSBTVersion: 0 });
+    this._actions = extractActionMap(actions);
 
     const spendableSendUtxos = this._actions[ActionType.SEND_UTXO].filter((action) => action.spendable);
     const allSpendableSendUtxosToSameAddress = spendableSendUtxos.every(
       (action) => action.toAddress === spendableSendUtxos[0].toAddress,
     );
-    let overrideChangeAddress: string | undefined = undefined;
 
     if (spendableSendUtxos.length > 0) {
       // Spendable send utxo actions are designed for recovery purposes, and must be the only actions in the transaction
@@ -68,11 +68,16 @@ export class EnhancedTransaction {
       } else if (this._actions[ActionType.SPLIT_UTXO].length > 0 || this._actions[ActionType.SEND_BTC].length > 0) {
         throw new Error('Send Utxo actions must be the only actions if they are spendable');
       } else if (!allSpendableSendUtxosToSameAddress) {
-        throw new Error('Send Utxo actions must all be to the payment address if spendable');
+        throw new Error('Send Utxo actions must all be to the same address if spendable');
       }
 
-      overrideChangeAddress = spendableSendUtxos[0].toAddress;
+      this._overrideChangeAddress = spendableSendUtxos[0].toAddress;
     }
+  }
+
+  private async compile(options: CompilationOptions, dummySign: boolean) {
+    // order actions by type. Send Utxos first, then Ordinal extraction, then payment
+    const transaction = new Transaction({ PSBTVersion: 0 });
 
     const { inputs: sendInputs, outputs: sendOutputs } = await applySendUtxoActions(
       this._context,
@@ -98,7 +103,7 @@ export class EnhancedTransaction {
       transaction,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
-      overrideChangeAddress,
+      this._overrideChangeAddress,
     );
 
     const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];
@@ -199,7 +204,7 @@ export class EnhancedTransaction {
 
     const feeSummary = {
       fee: actualFee,
-      feeRate: new BigNumber(actualFee.toString()).dividedBy(vsize).toNumber(),
+      feeRate: Math.ceil(new BigNumber(actualFee.toString()).dividedBy(vsize).toNumber()),
       vsize,
       inputs,
       outputs,

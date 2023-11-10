@@ -1,3 +1,10 @@
+import { vi } from 'vitest';
+import { UtxoCache } from '../../../../api';
+import EsploraProvider from '../../../../api/esplora/esploraAPiProvider';
+import SeedVault from '../../../../seedVault';
+import { AddressContext } from '../../../../transactions/bitcoin/context';
+import type { SupportedAddressType } from '../../../../transactions/bitcoin/types';
+
 export const seedPhrase = 'action action action action action action action action action action action action';
 export const addresses = [
   {
@@ -17,3 +24,37 @@ export const addresses = [
     taprootPubKey: '9532e4d9168d235d5c253be414e197ee62598ef549efd104667599c7ee65831a',
   },
 ];
+
+export class TestAddressContext extends AddressContext {
+  constructor(
+    type: SupportedAddressType,
+    address: string,
+    publicKey: string,
+    accountIndex: bigint,
+    seedVault: SeedVault,
+    utxoCache: UtxoCache,
+  ) {
+    const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+    super(type, address, publicKey, 'Mainnet', accountIndex, seedVault, utxoCache, esploraProvider);
+  }
+
+  getUtxos = vi.fn();
+
+  getUnindexedUtxos = vi.fn();
+
+  getCommonUtxos = vi.fn();
+
+  getEmbellishedUtxos = vi.fn();
+
+  getUtxo = vi.fn();
+
+  getPrivateKey = vi.fn();
+
+  getDerivationPath = vi.fn();
+
+  addInput = vi.fn();
+
+  signInputs = vi.fn();
+
+  toDummyInputs = vi.fn();
+}

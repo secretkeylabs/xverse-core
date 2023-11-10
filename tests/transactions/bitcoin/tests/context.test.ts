@@ -1,8 +1,7 @@
 import * as btc from '@scure/btc-signer';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EsploraProvider from '../../../../api/esplora/esploraAPiProvider';
 import {
-  AddressContext,
   ExtendedUtxo,
   LedgerP2trAddressContext,
   LedgerP2wpkhAddressContext,
@@ -12,41 +11,13 @@ import {
   TransactionContext,
   createTransactionContext,
 } from '../../../../transactions/bitcoin/context';
-import type { SupportedAddressType } from '../../../../transactions/bitcoin/types';
-import { addresses } from './helpers';
+import { TestAddressContext, addresses } from './helpers';
 
 vi.mock('../../../../api/esplora/esploraAPiProvider');
 
 describe('TransactionContext', () => {
   const seedVault = vi.fn() as any;
   const utxoCache = vi.fn() as any;
-
-  class TestAddressContext extends AddressContext {
-    constructor(type: SupportedAddressType, address: string, publicKey: string, accountIndex: bigint) {
-      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
-      super(type, address, publicKey, 'Mainnet', accountIndex, seedVault, utxoCache, esploraProvider);
-    }
-
-    getUtxos = vi.fn();
-
-    getUnindexedUtxos = vi.fn();
-
-    getCommonUtxos = vi.fn();
-
-    getEmbellishedUtxos = vi.fn();
-
-    getUtxo = vi.fn();
-
-    getPrivateKey = vi.fn();
-
-    getDerivationPath = vi.fn();
-
-    addInput = vi.fn();
-
-    signInputs = vi.fn();
-
-    toDummyInputs = vi.fn();
-  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,12 +29,16 @@ describe('TransactionContext', () => {
       addresses[0].nestedSegwit,
       addresses[0].nestedSegwitPubKey,
       0n,
+      seedVault,
+      utxoCache,
     );
     const ordinalsAddressContext = new TestAddressContext(
       'p2wpkh',
       addresses[0].taproot,
       addresses[0].taprootPubKey,
       0n,
+      seedVault,
+      utxoCache,
     );
     const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
     expect(context.paymentAddress).toStrictEqual(paymentAddressContext);
@@ -76,6 +51,8 @@ describe('TransactionContext', () => {
       addresses[0].nestedSegwit,
       addresses[0].nestedSegwitPubKey,
       0n,
+      seedVault,
+      utxoCache,
     );
     const context = new TransactionContext('Mainnet', addressContext, addressContext);
     expect(context.paymentAddress).toStrictEqual(addressContext);
@@ -89,12 +66,16 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
       const utxo = await context.getUtxo('bob');
@@ -111,12 +92,16 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       paymentAddressContext.getUtxo.mockResolvedValueOnce({ txid: 'txid' });
 
@@ -134,6 +119,8 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
 
       const context = new TransactionContext('Mainnet', addressContext, addressContext);
@@ -151,12 +138,16 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       paymentAddressContext.getUtxos.mockResolvedValueOnce([]);
       ordinalsAddressContext.getUtxos.mockResolvedValueOnce([]);
@@ -176,12 +167,16 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const dummyExtendedUtxo = { getBundleData: () => ({ sat_ranges: [{ inscriptions: [{ id: 'bob' }] }] }) };
       paymentAddressContext.getUtxos.mockResolvedValueOnce([dummyExtendedUtxo]);
@@ -201,6 +196,8 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       paymentAddressContext.getUtxos.mockResolvedValueOnce([]);
 
@@ -220,6 +217,8 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const context = new TransactionContext('Mainnet', paymentAddressContext, paymentAddressContext);
 
@@ -239,6 +238,8 @@ describe('TransactionContext', () => {
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
         0n,
+        seedVault,
+        utxoCache,
       );
       const context = new TransactionContext('Testnet', paymentAddressContext, paymentAddressContext);
 
@@ -259,7 +260,7 @@ describe('ExtendedUtxo', () => {
     getUtxoByOutpoint: vi.fn(),
   } as any;
 
-  afterEach(() => {
+  beforeEach(() => {
     vi.clearAllMocks();
   });
 

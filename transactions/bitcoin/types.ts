@@ -29,8 +29,8 @@ export type SendUtxoAction = {
   type: ActionType.SEND_UTXO;
   toAddress: string;
   outpoint: string;
-  combinable: boolean;
-  spendable: boolean;
+  combinable?: boolean;
+  spendable?: boolean;
 };
 
 export type SplitUtxoAction =
