@@ -126,6 +126,10 @@ export const applySendUtxoActions = async (
       let outputAmount = 0;
 
       for (const action of actionGroup) {
+        if (options.excludeOutpointList?.includes(action.outpoint)) {
+          throw new Error(`UTXO excluded but used in send UTXO action: ${action.outpoint}`);
+        }
+
         const { extendedUtxo, addressContext } = await context.getUtxo(action.outpoint);
 
         if (!extendedUtxo || !addressContext) {
@@ -214,6 +218,10 @@ export const applySplitUtxoActions = async (
   // Process actions for each outpoint
   for (let oi = 0; oi < outpointActionList.length; oi++) {
     const [outpoint, outpointActions] = outpointActionList[oi];
+
+    if (options.excludeOutpointList?.includes(outpoint)) {
+      throw new Error(`UTXO excluded but used in split UTXO action: ${outpoint}`);
+    }
 
     const { extendedUtxo, addressContext } = await context.getUtxo(outpoint);
 
@@ -306,7 +314,7 @@ export const applySendBtcActionsAndFee = async (
 
   // get available UTXOs to spend
   const unusedPaymentUtxosRaw = (await context.paymentAddress.getUtxos()).filter(
-    (utxoData) => !usedOutpoints.has(utxoData.outpoint),
+    (utxoData) => !usedOutpoints.has(utxoData.outpoint) && !options.excludeOutpointList?.includes(utxoData.outpoint),
   );
 
   const unusedPaymentUtxosWithState = await Promise.all(

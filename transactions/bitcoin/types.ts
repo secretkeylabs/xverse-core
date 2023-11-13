@@ -63,6 +63,7 @@ export type ActionMap = {
 export type CompilationOptions = {
   rbfEnabled?: boolean;
   ledgerTransport?: Transport;
+  excludeOutpointList?: string[];
 };
 
 export type TransactionOutput = {
