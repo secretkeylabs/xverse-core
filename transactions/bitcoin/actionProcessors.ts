@@ -142,6 +142,7 @@ export const applySendUtxoActions = async (
 
         await addressContext.addInput(transaction, extendedUtxo, options);
         inputs.push(extendedUtxo);
+        usedOutpoints.add(action.outpoint);
 
         if (!action.spendable) {
           // we have a validator to ensure that if an action is spendable, then all must be spendable
@@ -201,8 +202,8 @@ export const applySplitUtxoActions = async (
   });
   // place spendable actions last
   outpointActionList.sort(([, outpointActionsA], [, outpointActionsB]) => {
-    const aIsSpendable = outpointActionsA[outpointActionsA.length - 1];
-    const bIsSpendable = outpointActionsB[outpointActionsA.length - 1];
+    const aIsSpendable = outpointActionsA[outpointActionsA.length - 1].spendable;
+    const bIsSpendable = outpointActionsB[outpointActionsA.length - 1].spendable;
 
     if (aIsSpendable && !bIsSpendable) {
       return 1;
