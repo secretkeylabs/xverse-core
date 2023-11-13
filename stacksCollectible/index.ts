@@ -20,6 +20,7 @@ export interface StacksCollectionList {
   offset: number;
   limit: number;
   total: number;
+  total_nfts: number;
   results: Array<StacksCollectionData>;
 }
 
@@ -206,6 +207,7 @@ export async function getNftCollections(
   limit: number,
 ): Promise<StacksCollectionList> {
   const nftCollectionList = await checkCacheOrFetchNFTCollection(stxAddress, network);
+  const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.total_nft, 0);
 
   const requiredSortedCollectionsData = nftCollectionList?.slice(offset, offset + limit);
 
@@ -213,6 +215,7 @@ export async function getNftCollections(
     offset,
     limit,
     total: nftCollectionList.length,
+    total_nfts,
     results: requiredSortedCollectionsData,
   };
 }
