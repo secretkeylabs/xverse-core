@@ -20,8 +20,7 @@ export const getOutpointFromLocation = (location: string) => {
 };
 
 export const getOffsetFromLocation = (location: string) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [txid, vout, offset] = location.split(':');
+  const [, , offset] = location.split(':');
   return +offset;
 };
 

@@ -1,6 +1,6 @@
 import * as btc from '@scure/btc-signer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import EsploraProvider from '../../../../api/esplora/esploraAPiProvider';
+import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
 import {
   ExtendedUtxo,
   LedgerP2trAddressContext,
@@ -10,10 +10,10 @@ import {
   P2wpkhAddressContext,
   TransactionContext,
   createTransactionContext,
-} from '../../../../transactions/bitcoin/context';
+} from '../../../transactions/bitcoin/context';
 import { TestAddressContext, addresses } from './helpers';
 
-vi.mock('../../../../api/esplora/esploraAPiProvider');
+vi.mock('../../../api/esplora/esploraAPiProvider');
 
 describe('TransactionContext', () => {
   const seedVault = vi.fn() as any;

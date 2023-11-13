@@ -1,9 +1,9 @@
 import { vi } from 'vitest';
-import { UtxoCache } from '../../../../api';
-import EsploraProvider from '../../../../api/esplora/esploraAPiProvider';
-import SeedVault from '../../../../seedVault';
-import { AddressContext } from '../../../../transactions/bitcoin/context';
-import type { SupportedAddressType } from '../../../../transactions/bitcoin/types';
+import { UtxoCache } from '../../../api';
+import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
+import SeedVault from '../../../seedVault';
+import { AddressContext } from '../../../transactions/bitcoin/context';
+import type { SupportedAddressType } from '../../../transactions/bitcoin/types';
 
 export const seedPhrase = 'action action action action action action action action action action action action';
 export const addresses = [

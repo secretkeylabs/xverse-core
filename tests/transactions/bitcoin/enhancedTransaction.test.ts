@@ -4,14 +4,14 @@ import {
   applySendUtxoActions,
   applySplitUtxoActions,
   dummySignTransaction,
-} from '../../../../transactions/bitcoin/actionProcessors';
-import { TransactionContext } from '../../../../transactions/bitcoin/context';
-import { EnhancedTransaction } from '../../../../transactions/bitcoin/enhancedTransaction';
-import { Action, ActionType } from '../../../../transactions/bitcoin/types';
+} from '../../../transactions/bitcoin/actionProcessors';
+import { TransactionContext } from '../../../transactions/bitcoin/context';
+import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
+import { Action, ActionType } from '../../../transactions/bitcoin/types';
 import { TestAddressContext, addresses } from './helpers';
 
-vi.mock('../../../../transactions/bitcoin/actionProcessors');
-vi.mock('../../../../transactions/bitcoin/context');
+vi.mock('../../../transactions/bitcoin/actionProcessors');
+vi.mock('../../../transactions/bitcoin/context');
 
 describe('EnhancedTransaction constructor', () => {
   const seedVault = vi.fn() as any;
