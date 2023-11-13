@@ -203,7 +203,7 @@ export const applySplitUtxoActions = async (
   // place spendable actions last
   outpointActionList.sort(([, outpointActionsA], [, outpointActionsB]) => {
     const aIsSpendable = outpointActionsA[outpointActionsA.length - 1].spendable;
-    const bIsSpendable = outpointActionsB[outpointActionsA.length - 1].spendable;
+    const bIsSpendable = outpointActionsB[outpointActionsB.length - 1].spendable;
 
     if (aIsSpendable && !bIsSpendable) {
       return 1;
