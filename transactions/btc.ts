@@ -57,6 +57,7 @@ export function selectUnspentOutputs(
   amountSats: BigNumber,
   unspentOutputs: Array<UTXO>,
   pinnedOutput?: UTXO,
+  feeRate?: number,
 ): Array<UTXO> {
   const inputs: Array<UTXO> = [];
   let sumValue = 0;
@@ -66,27 +67,38 @@ export function selectUnspentOutputs(
     sumValue += pinnedOutput.value;
   }
 
-  // Sort UTXOs based on value from largest to smallest
+  // Sort UTXOs based on value from largest to smallest, deprioritising unconfirmed UTXOs
   // This will give close to the optimal spend of UTXOs to minimise fees
   unspentOutputs.sort((a, b) => {
-    const diff = b.value - a.value;
-    if (diff !== 0) {
-      return diff;
-    }
+    const aConfirmed = a.status.confirmed;
+    const bConfirmed = b.status.confirmed;
 
-    // if values are equal, we put the newer UTXO first to have a chance at CPFP
-    if (a.status.block_time && b.status.block_time) {
-      return a.status.block_time - b.status.block_time;
-    } else if (a.status.block_time) {
-      return 1;
-    } else if (b.status.block_time) {
+    // put confirmed UTXOs first
+    if (aConfirmed && !bConfirmed) {
       return -1;
+    } else if (!aConfirmed && bConfirmed) {
+      return 1;
     }
 
-    return 0;
+    return b.value - a.value;
   });
 
+  // this is slightly lower than the min vBytes of a segwit input
+  const minVBytesForInput = 70;
+  const dustThresholdAtFeeRate = feeRate ? minVBytesForInput * feeRate : undefined;
+
   unspentOutputs.forEach((unspentOutput) => {
+    if (dustThresholdAtFeeRate && dustThresholdAtFeeRate > unspentOutput.value) {
+      // adding this UTXO as an input would result in the fee rate decreasing
+      // as it adds more vBytes to the transaction that it can pay for at the fee rate
+      // so we skip it. This is to avoid adding dust UTXOs to the transaction.
+
+      // e.g. a UTXO worth 1000 sats would be dust at a fee rate of 15 sats/vByte
+      // because adding it as an input would increase the vBytes of the transaction by at least 70
+      // which would add a fee of 70 * 15 = 1050 sats, which is less than the value of the UTXO
+      return;
+    }
+
     if (amountSats.toNumber() > sumValue) {
       inputs.push(unspentOutput);
       sumValue += unspentOutput.value;
@@ -292,7 +304,7 @@ export async function getFee(
     const newSatsToSend = satsToSend.plus(calculatedFee);
 
     // Select unspent outputs
-    iSelectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, unspentOutputs, pinnedOutput);
+    iSelectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, unspentOutputs, pinnedOutput, selectedFeeRate);
     sumSelectedOutputs = sumUnspentOutputs(iSelectedUnspentOutputs);
 
     // Check if select output count has changed since last iteration
@@ -377,7 +389,12 @@ export async function getBtcFees(
     });
 
     // Select unspent outputs
-    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs);
+    const selectedUnspentOutputs = selectUnspentOutputs(
+      satsToSend,
+      unspentOutputs,
+      undefined,
+      feeRateInput ? Number(feeRateInput) : undefined,
+    );
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
@@ -444,7 +461,12 @@ export async function getBtcFeesForOrdinalSend(
     const satsToSend = new BigNumber(ordinalUtxo.value);
 
     // Select unspent outputs
-    const selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
+    const selectedUnspentOutputs = selectUnspentOutputs(
+      satsToSend,
+      filteredUnspentOutputs,
+      ordinalUtxo,
+      feeRateInput ? Number(feeRateInput) : undefined,
+    );
 
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
