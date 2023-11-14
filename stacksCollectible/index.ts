@@ -190,7 +190,7 @@ async function checkCacheOrFetchNFTCollection(
     return cachedValue;
   }
 
-  const nfts = await getAllNftContracts(stxAddress, network, 200);
+  const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
 
   const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
 
