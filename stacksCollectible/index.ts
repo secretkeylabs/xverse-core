@@ -29,9 +29,9 @@ export async function getAllNftContracts(address: string, network: StacksNetwork
 
   //make initial call to get the total inscriptions count and limit
   let offset = 0;
-  const response = await getNftsData(address, network, 0);
+  const limit = 200;
+  const response = await getNftsData(address, network, offset, limit);
   const total = response.total;
-  const limit = response.limit;
   offset += limit;
   listofContracts.push(...response.results);
 
