@@ -268,7 +268,7 @@ export async function getNftsData(
   const apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
 
   const response = await axios.get<NftEventsResponse>(apiUrl, {
-    timeout: 30000,
+    timeout: 10000,
     params: {
       principal: stxAddress,
       offset: offset,
