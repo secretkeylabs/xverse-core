@@ -137,8 +137,6 @@ export async function generateUnsignedSTXTokenTransfer(
   memo?: string,
   sponsored?: boolean,
   anchorMode?: AnchorMode,
-  postConditions?: PostCondition[],
-  postConditionMode?: PostConditionMode,
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
@@ -151,8 +149,6 @@ export async function generateUnsignedSTXTokenTransfer(
     fee: 0,
     sponsored,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
-    postConditionMode,
-    postConditions,
   };
 
   return makeUnsignedSTXTokenTransfer(txOptions);
@@ -194,8 +190,6 @@ export async function generateUnsignedStxTokenTransferTransaction(
       memo,
       sponsored,
       anchorMode,
-      postConditions,
-      postConditionMode,
     );
     fee = await estimateFees(unsignedTx, network);
     total = amountBigint + fee;

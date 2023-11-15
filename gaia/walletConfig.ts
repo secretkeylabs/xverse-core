@@ -1,10 +1,10 @@
 import { decryptContent, encryptContent, getPublicKeyFromPrivate } from '@stacks/encryption';
 import { FetchFn, createFetchFn } from '@stacks/network';
 import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storage';
-import { bytesToHex } from '@stacks/transactions';
 import { BIP32Interface } from 'bip32';
 import { WALLET_CONFIG_PATH } from '../constant';
 import { Account } from '../types';
+import { buf2hex } from '../utils/arrayBuffers';
 
 export interface ConfigApp {
   origin: string;
@@ -35,7 +35,7 @@ export const deriveConfigPrivateKey = (rootNode: BIP32Interface): Uint8Array => 
 };
 
 export async function deriveWalletConfigKey(rootNode: BIP32Interface): Promise<string> {
-  return bytesToHex(deriveConfigPrivateKey(rootNode));
+  return buf2hex(deriveConfigPrivateKey(rootNode));
 }
 
 export const createWalletGaiaConfig = async ({

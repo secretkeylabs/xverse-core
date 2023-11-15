@@ -2,7 +2,7 @@ import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   AssetInfo,
-  BufferReader,
+  BytesReader,
   createAssetInfo,
   deserializeCV,
   deserializeStacksMessage,
@@ -41,7 +41,7 @@ export function makeNonFungiblePostCondition(options: PostConditionsOptions): Po
   const assetInfo: AssetInfo = createAssetInfo(contractAddress, contractName, assetName);
   return makeStandardNonFungiblePostCondition(
     stxAddress,
-    NonFungibleConditionCode.DoesNotOwn,
+    NonFungibleConditionCode.Sends,
     assetInfo,
     hexToCV(amount.toString()),
   );
@@ -110,7 +110,7 @@ export const extractFromPayload = (payload: any) => {
     ? (postConditions?.map(
         (arg: string) =>
           deserializeStacksMessage(
-            new BufferReader(hexStringToBuffer(arg)),
+            new BytesReader(hexStringToBuffer(arg)),
             StacksMessageType.PostCondition,
           ) as PostCondition,
       ) as PostCondition[])
