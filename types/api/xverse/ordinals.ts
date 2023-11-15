@@ -25,6 +25,7 @@ export interface CollectionsList {
   limit: number;
   offset: number;
   total: number;
+  total_inscriptions: number;
   results: Array<InscriptionCollectionsData>;
 }
 

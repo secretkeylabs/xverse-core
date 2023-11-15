@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
+import { BNS_CONTRACT_ID } from '../constant';
 import { NftCollectionData, NftDetailResponse, NftEventsResponse, NonFungibleToken } from 'types';
 import { getNftDetail, getNftsCollectionData } from '../api/gamma';
 import { getNftsData } from '../api/stacks';
@@ -19,32 +20,49 @@ export interface StacksCollectionList {
   offset: number;
   limit: number;
   total: number;
+  total_nfts: number;
   results: Array<StacksCollectionData>;
 }
 
-async function getAllNftContracts(address: string, network: StacksNetwork): Promise<NonFungibleToken[]> {
+export async function getAllNftContracts(address: string, network: StacksNetwork): Promise<NonFungibleToken[]> {
   const listofContracts: Array<NonFungibleToken> = [];
 
   //make initial call to get the total inscriptions count and limit
   let offset = 0;
   const response = await getNftsData(address, network, 0);
   const total = response.total;
-  offset += response.limit;
+  const limit = response.limit;
+  offset += limit;
   listofContracts.push(...response.results);
 
   let listofContractPromises: Array<Promise<NftEventsResponse>> = [];
 
-  // make API calls in parallel to speed up fetching data
-  for (let i = offset; i <= total; i += response.limit) {
-    listofContractPromises.push(getNftsData(address, network, i));
+  // Make API calls in parallel to speed up fetching data
+  while (offset < total) {
+    // Add new promise to the array
+    listofContractPromises.push(getNftsData(address, network, offset));
+    offset += limit;
 
-    if (listofContractPromises.length === 4) {
+    // When we have 4 promises, or when we are processing the last batch
+    if (listofContractPromises.length === 4 || offset >= total) {
+      // Await the promises we have collected so far
       const resolvedPromises = await Promise.all(listofContractPromises);
-      resolvedPromises.forEach((resolvedPromise) => listofContracts.push(...resolvedPromise.results));
+      // Push their results into the list of contracts
+      resolvedPromises.forEach((resolvedPromise) => {
+        listofContracts.push(...resolvedPromise.results);
+      });
+      // Reset the promises array for the next batch
       listofContractPromises = [];
     }
   }
 
+  // Handle any promises left in case total count wasn't a multiple of 4
+  if (listofContractPromises.length > 0) {
+    const resolvedPromises = await Promise.all(listofContractPromises);
+    resolvedPromises.forEach((resolvedPromise) => {
+      listofContracts.push(...resolvedPromise.results);
+    });
+  }
   return listofContracts;
 }
 
@@ -59,9 +77,10 @@ async function fetchBatchData(batch: Array<NonFungibleToken>, collectionRecord: 
     const contractId = principal[0];
 
     if (contractInfo[1] === 'bns') {
-      //no further data required for BNS, arrange into collection
+      // no further data required for BNS, arrange into collection
+      // currently stacks only supports 1 bns name per address
       const bnsCollection: StacksCollectionData = {
-        collection_id: 'bns',
+        collection_id: contractId,
         collection_name: 'BNS Names',
         total_nft: 1,
         thumbnail_nfts: [nft],
@@ -150,8 +169,8 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   //sort according to total nft in a collection
   return nftCollectionList.sort((a, b) => {
     //place bns collection at the bottom of nft list
-    if (a.collection_id === 'bns') return 1;
-    else if (b.collection_id === 'bns') return -1;
+    if (a.collection_id === BNS_CONTRACT_ID) return 1;
+    else if (b.collection_id === BNS_CONTRACT_ID) return -1;
     return b.total_nft - a.total_nft;
   });
 }
@@ -188,6 +207,7 @@ export async function getNftCollections(
   limit: number,
 ): Promise<StacksCollectionList> {
   const nftCollectionList = await checkCacheOrFetchNFTCollection(stxAddress, network);
+  const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.total_nft, 0);
 
   const requiredSortedCollectionsData = nftCollectionList?.slice(offset, offset + limit);
 
@@ -195,6 +215,7 @@ export async function getNftCollections(
     offset,
     limit,
     total: nftCollectionList.length,
+    total_nfts,
     results: requiredSortedCollectionsData,
   };
 }

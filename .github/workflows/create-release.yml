@@ -1,0 +1,58 @@
+name: Create github release & release notes
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    types: [ labeled ]
+
+jobs:
+  save-version:
+    if: github.event.label.name == 'create release'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.current-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: npm
+      - id: current-version
+        run: echo "version=v$(npm pkg get version  | tr -d '\"')" >> $GITHUB_OUTPUT
+
+  create-release:
+    needs:
+      - save-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - id: create-draft-release
+        name: Create new draft release
+        env:
+          VERSION: ${{ needs.save-version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          PR_ID: ${{ github.event.pull_request.number }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$GITHUB_REPOSITORY/releases \
+            -f tag_name=$VERSION \
+            -f target_commitish='develop' \
+            -f name=$VERSION \
+            -F draft=true \
+            -F prerelease=false \
+            -F generate_release_notes=true > release.json
+          cat release.json | jq -r .body > body.md
+          echo "\n\nDraft release: $(cat release.json | jq -r .html_url)" >> body.md
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$GITHUB_REPOSITORY/pulls/$PR_ID \
+            -F 'body=@body.md'
