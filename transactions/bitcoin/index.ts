@@ -62,6 +62,61 @@ export const sendBtc = async (
 };
 
 /**
+ * Send inscriptions or bundles
+ * This sends the full UTXO to the recipient, even if there are other satributes or inscriptions in it
+ */
+export const sendOrdinals = async (
+  context: TransactionContext,
+  recipients: (
+    | {
+        toAddress: string;
+        outpoint: string;
+      }
+    | {
+        toAddress: string;
+        inscriptionId: string;
+      }
+  )[],
+  feeRate: number,
+) => {
+  if (recipients.length === 0) {
+    throw new Error('Must provide at least 1 recipient');
+  }
+
+  // TODO: if recipient is non taproot/native segwit, we need to pad the UTXO to 1000 sats
+  // https://linear.app/xverseapp/issue/ENG-2190/btc-dust-error-when-broadcasting-ordinal-transfer
+  const embellishedRecipients = await Promise.all(
+    recipients.map(async (recipient) => {
+      if ('outpoint' in recipient) {
+        return recipient;
+      }
+
+      const utxo = await context.getInscriptionUtxo(recipient.inscriptionId);
+
+      if (!utxo.extendedUtxo) {
+        throw new Error('No utxo found for inscription');
+      }
+
+      return {
+        toAddress: recipient.toAddress,
+        outpoint: utxo.extendedUtxo.outpoint,
+      };
+    }),
+  );
+
+  const actions = embellishedRecipients.map<SendUtxoAction>(({ toAddress, outpoint }) => ({
+    type: ActionType.SEND_UTXO,
+    toAddress,
+    outpoint,
+    combinable: false,
+    spendable: false,
+  }));
+
+  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  return transaction;
+};
+
+/**
  * send inscription
  * send multiple inscription to 1 recipient
  * send multiple inscription to multiple recipients
@@ -74,7 +129,7 @@ export const sendBtc = async (
  * - An inscription exists in a large UTXO (e.g. 10k sats) and we want to use those extra sats as fees or as change
  * - We want to move an inscription to offset of 0
  */
-export const sendOrdinals = async (
+export const sendOrdinalsWithSplit = async (
   context: TransactionContext,
   recipients: (
     | {
@@ -253,7 +308,7 @@ export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpo
     location: utxo.extendedUtxo?.outpoint + ':' + s.offset,
   }));
 
-  return sendOrdinals(context, recipients, feeRate);
+  return sendOrdinalsWithSplit(context, recipients, feeRate);
 };
 
 export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {

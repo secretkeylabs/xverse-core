@@ -3,10 +3,13 @@ import { Action, ActionType } from '../../../transactions/bitcoin/types';
 import {
   areByteArraysEqual,
   extractActionMap,
+  extractUsedOutpoints,
   getOffsetFromLocation,
   getOutpoint,
   getOutpointFromLocation,
   getOutpointFromUtxo,
+  getSortedAvailablePaymentUtxos,
+  getTransactionTotals,
 } from '../../../transactions/bitcoin/utils';
 
 describe('areByteArraysEqual', () => {
@@ -250,5 +253,301 @@ describe('extractActionMap', () => {
     ];
 
     expect(() => extractActionMap(actions)).throws('duplicate UTXO being spent: 1234:0');
+  });
+});
+
+describe('getSortedAvailablePaymentUtxos', () => {
+  const utxoMap = {
+    embellished500: {
+      outpoint: '1234:6',
+      utxo: { value: 500, status: { confirmed: true } },
+      isEmbellished: () => true,
+    },
+    embellished1500: {
+      outpoint: '1234:4',
+      utxo: { value: 1500, status: { confirmed: true } },
+      isEmbellished: () => true,
+    },
+    unconfirmed500: {
+      outpoint: '1234:5',
+      utxo: { value: 500, status: { confirmed: false } },
+      isEmbellished: () => false,
+    },
+    unconfirmed2500: {
+      outpoint: '1234:3',
+      utxo: { value: 2500, status: { confirmed: false } },
+      isEmbellished: () => false,
+    },
+    confirmed1000: {
+      outpoint: '1234:0',
+      utxo: { value: 1000, status: { confirmed: true } },
+      isEmbellished: () => false,
+    },
+    confirmed2000: {
+      outpoint: '1234:1',
+      utxo: { value: 2000, status: { confirmed: true } },
+      isEmbellished: () => false,
+    },
+    confirmed3000: {
+      outpoint: '1234:2',
+      utxo: { value: 3000, status: { confirmed: true } },
+      isEmbellished: () => false,
+    },
+  };
+
+  it('should get the utxos in correct order', async () => {
+    const testUtxos = [
+      utxoMap.confirmed1000,
+      utxoMap.embellished1500,
+      utxoMap.confirmed3000,
+      utxoMap.unconfirmed2500,
+      utxoMap.embellished500,
+      utxoMap.unconfirmed500,
+      utxoMap.confirmed2000,
+    ];
+    const addressContext = {
+      getUtxos: async () => testUtxos,
+    };
+    const context = {
+      paymentAddress: addressContext,
+    } as any;
+
+    const utxos = await getSortedAvailablePaymentUtxos(context, new Set());
+
+    // order should be: embellished, unconfirmed, confirmed
+    // and internally by value
+    expect(utxos).toEqual([
+      utxoMap.embellished500,
+      utxoMap.embellished1500,
+      utxoMap.unconfirmed500,
+      utxoMap.unconfirmed2500,
+      utxoMap.confirmed1000,
+      utxoMap.confirmed2000,
+      utxoMap.confirmed3000,
+    ]);
+  });
+
+  it('should not include utxos in excludeOutpointList', async () => {
+    const testUtxos = [
+      utxoMap.confirmed1000,
+      utxoMap.embellished1500,
+      utxoMap.confirmed3000,
+      utxoMap.unconfirmed2500,
+      utxoMap.embellished500,
+      utxoMap.unconfirmed500,
+      utxoMap.confirmed2000,
+    ];
+    const addressContext = {
+      getUtxos: async () => testUtxos,
+    };
+    const context = {
+      paymentAddress: addressContext,
+    } as any;
+
+    const utxos = await getSortedAvailablePaymentUtxos(
+      context,
+      new Set([utxoMap.embellished500.outpoint, utxoMap.confirmed1000.outpoint, utxoMap.confirmed3000.outpoint]),
+    );
+
+    // order should be: embellished, unconfirmed, confirmed
+    // and internally by value
+    expect(utxos).toEqual([
+      utxoMap.embellished1500,
+      utxoMap.unconfirmed500,
+      utxoMap.unconfirmed2500,
+      utxoMap.confirmed2000,
+    ]);
+  });
+});
+
+describe('getTransactionTotals', () => {
+  it('should get the correct totals', async () => {
+    const dummyInputs = [
+      {
+        witnessUtxo: {
+          amount: 1000n,
+        },
+      },
+      {
+        witnessUtxo: {
+          amount: 3000n,
+        },
+      },
+      {
+        witnessUtxo: {
+          amount: 500n,
+        },
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+      {
+        amount: 2500n,
+      },
+      {
+        amount: 200n,
+      },
+    ];
+
+    const transaction = {
+      inputsLength: 3,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 3,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+    expect(inputValue).toEqual(4500n);
+    expect(outputValue).toEqual(3200n);
+  });
+
+  it('throw on input without amount', async () => {
+    const dummyInputs = [
+      {
+        witnessUtxo: {
+          amount: 1000n,
+        },
+      },
+      {
+        witnessUtxo: {},
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+    ];
+
+    const transaction = {
+      inputsLength: 2,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 1,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
+      'Invalid input found on transaction at index 1',
+    );
+  });
+
+  it('throw on output without amount', async () => {
+    const dummyInputs = [
+      {
+        witnessUtxo: {
+          amount: 1000n,
+        },
+      },
+      {
+        witnessUtxo: {
+          amount: 2000n,
+        },
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+      {},
+    ];
+
+    const transaction = {
+      inputsLength: 2,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 2,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
+      'Invalid output found on transaction at index 1',
+    );
+  });
+});
+
+describe('extractUsedOutpoints', () => {
+  it('extracts outpoints correctly', async () => {
+    const dummyInputs = [
+      {
+        index: 0,
+        txid: Buffer.from('1234', 'hex'),
+      },
+      {
+        index: 11,
+        txid: Buffer.from('4321', 'hex'),
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+      {},
+    ];
+
+    const transaction = {
+      inputsLength: 2,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 2,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    const outpoints = await extractUsedOutpoints(transaction as any);
+
+    expect(outpoints).toEqual(new Set(['1234:0', '4321:11']));
+  });
+
+  it('throws on invalid outpoint - no txid', async () => {
+    const dummyInputs = [
+      {
+        index: 0,
+      },
+      {
+        index: 11,
+        txid: Buffer.from('4321', 'hex'),
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+      {},
+    ];
+
+    const transaction = {
+      inputsLength: 2,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 2,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    expect(() => extractUsedOutpoints(transaction as any)).throws('Invalid input found on transaction at index 0');
+  });
+
+  it('throws on invalid outpoint - no vout', async () => {
+    const dummyInputs = [
+      {
+        index: 0,
+        txid: Buffer.from('1234', 'hex'),
+      },
+      {
+        txid: Buffer.from('4321', 'hex'),
+      },
+    ];
+    const dummyOutputs = [
+      {
+        amount: 500n,
+      },
+      {},
+    ];
+
+    const transaction = {
+      inputsLength: 2,
+      getInput: (i: number) => dummyInputs[i],
+      outputsLength: 2,
+      getOutput: (i: number) => dummyOutputs[i],
+    } as any;
+
+    expect(() => extractUsedOutpoints(transaction as any)).throws('Invalid input found on transaction at index 1');
   });
 });

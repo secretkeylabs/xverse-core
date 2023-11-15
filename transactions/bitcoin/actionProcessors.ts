@@ -1,98 +1,21 @@
-import { hex } from '@scure/base';
 import { Transaction } from '@scure/btc-signer';
 import { ExtendedUtxo, TransactionContext } from './context';
 import { CompilationOptions, SendBtcAction, SendUtxoAction, SplitUtxoAction, TransactionOutput } from './types';
-import { getOffsetFromLocation, getOutpoint, getOutpointFromLocation } from './utils';
+import {
+  extractUsedOutpoints,
+  getOffsetFromLocation,
+  getOutpointFromLocation,
+  getSortedAvailablePaymentUtxos,
+  getTransactionTotals,
+  getTransactionVSize,
+  getVbytesForIO,
+} from './utils';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
 const ESTIMATED_VBYTES_PER_INPUT = 70; // actually from 75 upward
 
 const DUST_VALUE = 546;
-const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
-
-export const dummySignTransaction = async (context: TransactionContext, transaction: Transaction) => {
-  const dummyPrivateKeyBuffer = hex.decode(dummyPrivateKey);
-  await context.paymentAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
-  await context.ordinalsAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
-  transaction.sign(dummyPrivateKeyBuffer);
-};
-
-const getTransactionVSize = async (
-  context: TransactionContext,
-  transaction: Transaction,
-  changeAddress = '',
-  change = 546n,
-) => {
-  try {
-    const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
-
-    if (changeAddress) {
-      context.addOutputAddress(transactionCopy, changeAddress, change);
-    }
-
-    await dummySignTransaction(context, transactionCopy);
-
-    transactionCopy.finalize();
-
-    return transactionCopy.vsize;
-  } catch (e) {
-    if (e.message === 'Outputs spends more than inputs amount') {
-      return undefined;
-    }
-    throw e;
-  }
-};
-
-const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
-  const usedOutpoints = new Set<string>();
-
-  const inputCount = transaction.inputsLength;
-  for (let i = 0; i < inputCount; i++) {
-    const input = transaction.getInput(i);
-
-    if (!input.txid || (!input.index && input.index !== 0)) {
-      throw new Error(`Invalid input found on transaction at index ${i}`);
-    }
-
-    const outpoint = getOutpoint(Buffer.from(input.txid).toString('hex'), input.index);
-    usedOutpoints.add(outpoint);
-  }
-
-  return usedOutpoints;
-};
-
-const getTransactionTotals = async (context: TransactionContext, transaction: Transaction) => {
-  let inputValue = 0n;
-  let outputValue = 0n;
-
-  const inputCount = transaction.inputsLength;
-  for (let i = 0; i < inputCount; i++) {
-    const input = transaction.getInput(i);
-
-    if (!input.txid || (!input.index && input.index !== 0)) {
-      throw new Error(`Invalid input found on transaction at index ${i}`);
-    }
-
-    const outpoint = getOutpoint(Buffer.from(input.txid).toString('hex'), input.index);
-    const { extendedUtxo } = await context.getUtxo(outpoint);
-
-    if (!extendedUtxo) {
-      throw new Error(`Transaction input UTXO not found: ${outpoint}`);
-    }
-
-    inputValue += BigInt(extendedUtxo.utxo.value);
-  }
-
-  const outputCount = transaction.outputsLength;
-  for (let i = 0; i < outputCount; i++) {
-    const output = transaction.getOutput(i);
-
-    outputValue += output.amount ?? 0n;
-  }
-
-  return { inputValue, outputValue };
-};
 
 export const applySendUtxoActions = async (
   context: TransactionContext,
@@ -314,44 +237,13 @@ export const applySendBtcActionsAndFee = async (
   }
 
   // get available UTXOs to spend
-  const unusedPaymentUtxosRaw = (await context.paymentAddress.getUtxos()).filter(
-    (utxoData) => !usedOutpoints.has(utxoData.outpoint) && !options.excludeOutpointList?.includes(utxoData.outpoint),
+  const unusedPaymentUtxos = await getSortedAvailablePaymentUtxos(
+    context,
+    new Set([...(options.excludeOutpointList ?? []), ...usedOutpoints]),
   );
-
-  const unusedPaymentUtxosWithState = await Promise.all(
-    unusedPaymentUtxosRaw.map(async (extendedUtxo) => {
-      const isEmbellished = await extendedUtxo.isEmbellished();
-      return { extendedUtxo, isEmbellished };
-    }),
-  );
-
-  // sort smallest to biggest as we'll be popping off the end
-  // also, unconfirmed and inscribed UTXOs are de-prioritized
-  unusedPaymentUtxosWithState.sort((a, b) => {
-    if (a.isEmbellished && !b.isEmbellished && b.isEmbellished !== undefined) {
-      return -1;
-    }
-    if (b.isEmbellished && !a.isEmbellished && a.isEmbellished !== undefined) {
-      return 1;
-    }
-    if (a.extendedUtxo.utxo.status.confirmed && !b.extendedUtxo.utxo.status.confirmed) {
-      return 1;
-    }
-    if (b.extendedUtxo.utxo.status.confirmed && !a.extendedUtxo.utxo.status.confirmed) {
-      return -1;
-    }
-    const diff = a.extendedUtxo.utxo.value - b.extendedUtxo.utxo.value;
-    if (diff !== 0) {
-      return diff;
-    }
-    // this is just for consistent sorting
-    return a.extendedUtxo.outpoint.localeCompare(b.extendedUtxo.outpoint);
-  });
-
-  const unusedPaymentUtxos = unusedPaymentUtxosWithState.map((u) => u.extendedUtxo);
 
   // add inputs and outputs for the required actions
-  let { inputValue: totalInputs, outputValue: totalOutputs } = await getTransactionTotals(context, transaction);
+  let { inputValue: totalInputs, outputValue: totalOutputs } = await getTransactionTotals(transaction);
 
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
     totalOutputs += combinableAmount;
@@ -387,6 +279,10 @@ export const applySendBtcActionsAndFee = async (
   let complete = false;
   let actualFee = 0n;
 
+  // we get the exact fee rate for an input of the address (changes per address type)
+  const { inputSize } = await getVbytesForIO(context, context.paymentAddress);
+  const inputDustValueAtFeeRate = BigInt(inputSize * feeRate);
+
   while (!complete) {
     const currentChange = totalInputs - totalOutputs;
 
@@ -412,7 +308,7 @@ export const applySendBtcActionsAndFee = async (
             context,
             transaction,
             overrideChangeAddress ?? context.changeAddress,
-            feeWithChange,
+            currentChange - feeWithChange,
           );
           if (finalVSizeWithChange) {
             actualFee = BigInt(finalVSizeWithChange * feeRate);
@@ -443,7 +339,7 @@ export const applySendBtcActionsAndFee = async (
     let utxoToUse = unusedPaymentUtxos.pop();
 
     // ensure UTXO is not dust at selected fee rate
-    while (utxoToUse && ESTIMATED_VBYTES_PER_INPUT * feeRate > utxoToUse.utxo.value) {
+    while (utxoToUse && inputDustValueAtFeeRate > utxoToUse.utxo.value) {
       utxoToUse = unusedPaymentUtxos.pop();
     }
 

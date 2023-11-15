@@ -3,12 +3,7 @@ import BigNumber from 'bignumber.js';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
-import {
-  applySendBtcActionsAndFee,
-  applySendUtxoActions,
-  applySplitUtxoActions,
-  dummySignTransaction,
-} from './actionProcessors';
+import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions } from './actionProcessors';
 import { TransactionContext } from './context';
 import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
 import { extractActionMap } from './utils';
@@ -178,10 +173,9 @@ export class EnhancedTransaction {
 
     // now that the transaction is built, we can sign it
     if (dummySign) {
-      await dummySignTransaction(this._context, transaction);
+      await this._context.dummySignTransaction(transaction);
     } else {
-      await this._context.paymentAddress.signInputs(transaction);
-      await this._context.ordinalsAddress.signInputs(transaction);
+      await this._context.signTransaction(transaction);
     }
 
     transaction.finalize();

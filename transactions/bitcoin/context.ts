@@ -196,6 +196,11 @@ export abstract class AddressContext {
     return btcChild.privateKey!.toString('hex');
   }
 
+  async prepareInputs(_transaction: btc.Transaction): Promise<void> {
+    // no-op
+    // this can be implemented by subclasses if they need to do something before signing
+  }
+
   protected abstract getDerivationPath(): string;
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
   abstract signInputs(transaction: btc.Transaction): Promise<void>;
@@ -225,6 +230,7 @@ export class P2shAddressContext extends AddressContext {
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
+    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -235,6 +241,7 @@ export class P2shAddressContext extends AddressContext {
       },
       redeemScript: this._p2sh.redeemScript,
       witnessScript: this._p2sh.witnessScript,
+      nonWitnessUtxo,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
@@ -259,6 +266,11 @@ export class P2shAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
+        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
+        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
+        // TODO: Update once released
+        // @ts-expect-error: accessing private property.
+        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2sh.script,
@@ -299,6 +311,7 @@ export class P2wpkhAddressContext extends AddressContext {
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
+    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -307,6 +320,7 @@ export class P2wpkhAddressContext extends AddressContext {
         script: this._p2wpkh.script,
         amount: BigInt(utxo.value),
       },
+      nonWitnessUtxo,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
@@ -331,6 +345,8 @@ export class P2wpkhAddressContext extends AddressContext {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
         // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
+        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
+        // TODO: Update once released
         // @ts-expect-error: accessing private property.
         delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
@@ -367,12 +383,9 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     this._transport = transport;
   }
 
-  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+  async prepareInputs(transaction: btc.Transaction): Promise<void> {
     const app = new AppClient(this._transport);
     const masterFingerPrint = await app.getMasterFingerprint();
-
-    const utxo = extendedUtxo.utxo;
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     const inputDerivation = [
       Buffer.from(this._publicKey, 'hex'),
@@ -382,17 +395,14 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       },
     ] as [Uint8Array, { path: number[]; fingerprint: number }];
 
-    transaction.addInput({
-      txid: utxo.txid,
-      index: utxo.vout,
-      witnessUtxo: {
-        script: this._p2wpkh.script,
-        amount: BigInt(utxo.value),
-      },
-      nonWitnessUtxo,
-      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
-      bip32Derivation: [inputDerivation],
-    });
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
+        transaction.updateInput(i, {
+          bip32Derivation: [inputDerivation],
+        });
+      }
+    }
   }
 
   async signInputs(transaction: btc.Transaction): Promise<void> {
@@ -464,6 +474,7 @@ export class P2trAddressContext extends AddressContext {
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
+    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -473,6 +484,7 @@ export class P2trAddressContext extends AddressContext {
         amount: BigInt(utxo.value),
       },
       tapInternalKey: hex.decode(this._publicKey),
+      nonWitnessUtxo,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
@@ -498,6 +510,8 @@ export class P2trAddressContext extends AddressContext {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
         // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
+        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
+        // TODO: Update once released
         // @ts-expect-error: accessing private property.
         delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
@@ -536,19 +550,8 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
   }
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
-    const app = new AppClient(this._transport);
-    const masterFingerPrint = await app.getMasterFingerprint();
-
     const utxo = extendedUtxo.utxo;
     const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
-
-    const inputDerivation = [
-      hex.decode(this._publicKey),
-      {
-        path: btc.bip32Path(this.getDerivationPath()),
-        fingerprint: parseInt(masterFingerPrint, 16),
-      },
-    ] as [Uint8Array, { path: number[]; fingerprint: number }];
 
     transaction.addInput({
       txid: utxo.txid,
@@ -560,8 +563,29 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       nonWitnessUtxo,
       tapInternalKey: this._p2tr.tapInternalKey,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
-      bip32Derivation: [inputDerivation],
     });
+  }
+
+  async prepareInputs(transaction: btc.Transaction): Promise<void> {
+    const app = new AppClient(this._transport);
+    const masterFingerPrint = await app.getMasterFingerprint();
+
+    const inputDerivation = [
+      hex.decode(this._publicKey),
+      {
+        path: btc.bip32Path(this.getDerivationPath()),
+        fingerprint: parseInt(masterFingerPrint, 16),
+      },
+    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
+        transaction.updateInput(i, {
+          bip32Derivation: [inputDerivation],
+        });
+      }
+    }
   }
 
   async signInputs(transaction: btc.Transaction): Promise<void> {
@@ -674,6 +698,35 @@ export class TransactionContext {
 
   addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+  }
+
+  async signTransaction(transaction: btc.Transaction): Promise<void> {
+    await this.paymentAddress.prepareInputs(transaction);
+    await this.ordinalsAddress.prepareInputs(transaction);
+
+    await this.paymentAddress.signInputs(transaction);
+    await this.ordinalsAddress.signInputs(transaction);
+  }
+
+  async signPsbt(psbtBase64: string): Promise<string> {
+    const txn = btc.Transaction.fromPSBT(Buffer.from(psbtBase64, 'base64'));
+
+    await this.signTransaction(txn);
+
+    const psbt = txn.toPSBT();
+    const psbtBase64Signed = base64.encode(psbt);
+
+    return psbtBase64Signed;
+  }
+
+  async dummySignTransaction(transaction: btc.Transaction) {
+    const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
+    const dummyPrivateKeyBuffer = hex.decode(dummyPrivateKey);
+
+    await this.paymentAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
+    await this.ordinalsAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
+
+    transaction.sign(dummyPrivateKeyBuffer);
   }
 }
 

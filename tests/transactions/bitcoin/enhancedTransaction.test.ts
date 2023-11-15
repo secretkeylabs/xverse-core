@@ -3,7 +3,6 @@ import {
   applySendBtcActionsAndFee,
   applySendUtxoActions,
   applySplitUtxoActions,
-  dummySignTransaction,
 } from '../../../transactions/bitcoin/actionProcessors';
 import { TransactionContext } from '../../../transactions/bitcoin/context';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
@@ -434,7 +433,6 @@ describe('EnhancedTransaction summary', () => {
       },
     });
 
-    expect(vi.mocked(dummySignTransaction)).toHaveBeenCalledTimes(1);
     expect(paymentAddressContext.signInputs).not.toHaveBeenCalled();
     expect(ordinalsAddressContext.signInputs).not.toHaveBeenCalled();
   });
