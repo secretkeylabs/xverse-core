@@ -55,16 +55,17 @@ const embellishTaprootInputs = (
   masterFingerPrint: string,
 ): boolean => {
   const coinType = getCoinType(network);
+  const publicKeyBuff = hex.decode(publicKey);
   const inputDerivation = [
-    hex.decode(publicKey),
+    publicKeyBuff,
     {
       path: btc.bip32Path(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`),
       fingerprint: parseInt(masterFingerPrint, 16),
     },
   ] as [Uint8Array, { path: number[]; fingerprint: number }];
 
-  const publicKeyBuff = hex.decode(publicKey);
-  const p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+  const schnorrPublicKey = publicKeyBuff.length === 32 ? publicKeyBuff : publicKeyBuff.slice(1);
+  const p2tr = btc.p2tr(schnorrPublicKey, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
 
   let hasTaprootInputs = false;
   for (let i = 0; i < transaction.inputsLength; i++) {
@@ -78,6 +79,21 @@ const embellishTaprootInputs = (
   }
 
   return hasTaprootInputs;
+};
+
+const getIoTotals = (txn: btc.Transaction) => {
+  let inputTotal = 0n;
+  let outputTotal = 0n;
+
+  for (let i = 0; i < txn.inputsLength; i++) {
+    inputTotal += txn.getInput(i).witnessUtxo?.amount || 0n;
+  }
+
+  for (let i = 0; i < txn.outputsLength; i++) {
+    outputTotal += txn.getOutput(i).amount || 0n;
+  }
+
+  return { inputTotal, outputTotal };
 };
 
 export async function signLedgerPSBT({
@@ -104,6 +120,21 @@ export async function signLedgerPSBT({
 
   // Get account details from ledger to not rely on state
   const masterFingerPrint = await app.getMasterFingerprint();
+
+  const { inputTotal, outputTotal } = getIoTotals(txn);
+
+  if (inputTotal < outputTotal) {
+    // There is a bug in Ledger that if the inputs are greater than the outputs, then it will fail to sign
+    // Their workaround is to add a dummy input that is not related to the Ledger addresses
+    txn.addInput({
+      txid: '0000000000000000000000000000000000000000000000000000000000000000',
+      index: 0,
+      witnessUtxo: {
+        script: Buffer.alloc(0),
+        amount: outputTotal,
+      },
+    });
+  }
 
   if (embellishNativeSegwitInputs(txn, nativeSegwitPubKey, network, addressIndex, masterFingerPrint)) {
     const psbt = txn.toPSBT(0);
@@ -134,7 +165,9 @@ export async function signLedgerPSBT({
       `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
     );
 
-    const signatures = await app.signPsbt(psbtBase64, accountPolicy, null);
+    const signatures = await app.signPsbt(psbtBase64, accountPolicy, null, () => {
+      console.log('Input signed');
+    });
 
     for (const signature of signatures) {
       txn.updateInput(signature[0], {
