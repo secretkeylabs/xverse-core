@@ -7,6 +7,7 @@ export type UtxoCacheStruct = {
 
 type UtxoCacheStorage = {
   version: number;
+  xVersion: number;
   syncTime: number;
   utxos: UtxoCacheStruct;
 };
@@ -21,6 +22,8 @@ type UtxoCacheConfig = {
   cacheStorageController: StorageAdapter;
   network: NetworkType;
 };
+
+const CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 export class UtxoCache {
   private readonly _cacheStorageController: StorageAdapter;
@@ -37,10 +40,18 @@ export class UtxoCache {
   private getAddressCacheStorageKey = (address: string) => `utxoCache-${address}`;
 
   private _getCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
-    const cache = await this._cacheStorageController.get(this.getAddressCacheStorageKey(address));
-    if (cache) {
+    const cacheStr = await this._cacheStorageController.get(this.getAddressCacheStorageKey(address));
+    if (cacheStr) {
       try {
-        return JSON.parse(cache);
+        let cache = JSON.parse(cacheStr) as UtxoCacheStorage;
+
+        // check if cache TTL is expired
+        const now = Date.now();
+        if (now - cache.syncTime > CACHE_TTL) {
+          cache = await this._initCache(address);
+        }
+
+        return cache;
       } catch (err) {
         console.error(err);
       }
@@ -67,6 +78,8 @@ export class UtxoCache {
     let offset = 0;
     let totalCount = 1;
     let limit = 60;
+    let xVersion!: number;
+
     while (offset < totalCount) {
       const response: AddressBundleResponse = await getAddressUtxoOrdinalBundles(
         this._network,
@@ -78,19 +91,22 @@ export class UtxoCache {
         },
       );
 
-      const { results, total, limit: actualLimit } = response;
+      const { results, total, limit: actualLimit, xVersion: serverXVersion } = response;
       limit = actualLimit;
       allData = allData.concat(results);
       totalCount = total;
       offset += limit;
+      xVersion = serverXVersion;
     }
-    return allData;
+
+    return [allData, xVersion] as const;
   };
 
   private _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(this._network, txid, vout);
 
-  private _getAllUtxos = async (btcAddress: string, onlyConfirmed = true): Promise<UtxoCacheStruct> => {
-    const utxos = await this._getAddressUtxos(btcAddress);
+  private _getAllUtxos = async (btcAddress: string, onlyConfirmed = true) => {
+    const [utxos, xVersion] = await this._getAddressUtxos(btcAddress);
+
     const utxosObject: UtxoCacheStruct = utxos.reduce((acc, utxo) => {
       if (onlyConfirmed && !utxo.block_height) {
         return acc;
@@ -99,21 +115,23 @@ export class UtxoCache {
       acc[`${utxo.txid}:${utxo.vout}`] = utxo;
       return acc;
     }, {} as UtxoCacheStruct);
-    return utxosObject;
+
+    return [utxosObject, xVersion] as const;
   };
 
-  private _initCache = async (address: string): Promise<UtxoCacheStruct> => {
-    const utxos = await this._getAllUtxos(address);
+  private _initCache = async (address: string): Promise<UtxoCacheStorage> => {
+    const [utxos, xVersion] = await this._getAllUtxos(address);
 
     const cacheToStore: UtxoCacheStorage = {
       version: this.VERSION,
       syncTime: Date.now(),
       utxos,
+      xVersion,
     };
 
     await this._setCache(address, cacheToStore);
 
-    return utxos;
+    return cacheToStore;
   };
 
   getUtxoByOutpoint = async (outpoint: string, address: string): Promise<UtxoOrdinalBundle | undefined> => {
@@ -121,12 +139,9 @@ export class UtxoCache {
 
     // check if cache is initialised and up to date
     if (!cache || cache.version !== this.VERSION) {
-      const utxos = await this._initCache(address);
+      const { utxos } = await this._initCache(address);
       return utxos[outpoint];
     }
-
-    // TODO: check how old cache is and clean/refresh it if older than X amount of time
-    // TODO: get version from API and clear cache if newer version is available (e.g. new satributes added)
 
     // if utxo in cache already, return it
     if (outpoint in cache.utxos) {
@@ -135,7 +150,12 @@ export class UtxoCache {
 
     // if not, get it from the API and add it to the cache
     const [txid, vout] = outpoint.split(':');
-    const utxo = await this._getUtxo(txid, +vout);
+    const { xVersion, ...utxo } = await this._getUtxo(txid, +vout);
+
+    if (cache.xVersion !== xVersion) {
+      // if server deployed update to satributes, the xVersion will be bumped, so we need to resync
+      await this._initCache(address);
+    }
 
     if (utxo.block_height) {
       // we only want to store confirmed utxos in the cache

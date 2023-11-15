@@ -83,8 +83,6 @@ export const sendOrdinals = async (
     throw new Error('Must provide at least 1 recipient');
   }
 
-  // TODO: if recipient is non taproot/native segwit, we need to pad the UTXO to 1000 sats
-  // https://linear.app/xverseapp/issue/ENG-2190/btc-dust-error-when-broadcasting-ordinal-transfer
   const embellishedRecipients = await Promise.all(
     recipients.map(async (recipient) => {
       if ('outpoint' in recipient) {

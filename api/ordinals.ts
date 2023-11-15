@@ -213,6 +213,7 @@ export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Accou
   inscription.address === account.ordinalsAddress;
 
 export type AddressBundleResponse = {
+  xVersion: number;
   total: number;
   offset: number;
   limit: number;
@@ -253,12 +254,8 @@ export const getAddressUtxoOrdinalBundles = async (
   return response.data;
 };
 
-export const getUtxoOrdinalBundle = async (
-  network: NetworkType,
-  txid: string,
-  vout: number,
-): Promise<UtxoOrdinalBundle> => {
-  const response = await axios.get<UtxoOrdinalBundle>(
+export const getUtxoOrdinalBundle = async (network: NetworkType, txid: string, vout: number) => {
+  const response = await axios.get<UtxoOrdinalBundle & { xVersion: number }>(
     `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;

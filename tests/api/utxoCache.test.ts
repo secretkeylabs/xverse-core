@@ -41,16 +41,20 @@ describe('UtxoCache', () => {
   });
 
   it('should return cached utxo if it exists', async () => {
+    MockDate.set(0);
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify({ version: 1, syncTime: 0, utxos: mockCache }));
+      .mockResolvedValueOnce(JSON.stringify({ version: 1, syncTime: 0, utxos: mockCache, xVersion: 1 }));
 
     const utxo = await utxoCache.getUtxoByOutpoint('txid1:0', 'address1');
     expect(utxo).toEqual(mockCache['txid1:0']);
   });
 
   it('should fetch utxo from API and cache it if it does not exist in cache', async () => {
-    mockStorageAdapter.get = vi.fn().mockResolvedValue(JSON.stringify({ utxos: {}, syncTime: 0, version: 1 }));
+    MockDate.set(0);
+    mockStorageAdapter.get = vi
+      .fn()
+      .mockResolvedValue(JSON.stringify({ utxos: {}, syncTime: 0, version: 1, xVersion: 1 }));
 
     const mockUtxo = {
       txid: 'txid1',
@@ -59,7 +63,7 @@ describe('UtxoCache', () => {
       value: 456,
       sat_ranges: [],
     };
-    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce(mockUtxo);
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 1, ...mockUtxo });
 
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid1:0', 'address1');
     expect(cachedValue).toEqual(mockUtxo);
@@ -73,6 +77,7 @@ describe('UtxoCache', () => {
         },
         syncTime: 0,
         version: 1,
+        xVersion: 1,
       }),
     );
   });
@@ -101,12 +106,14 @@ describe('UtxoCache', () => {
       offset: 0,
       results: [mockUtxos[0]],
       total: 2,
+      xVersion: 1,
     });
     vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
       limit: 1,
       offset: 1,
       results: [mockUtxos[1]],
       total: 2,
+      xVersion: 1,
     });
     MockDate.set(0);
 
@@ -128,6 +135,193 @@ describe('UtxoCache', () => {
           'txid1:0': mockUtxos[0],
           'txid2:0': mockUtxos[1],
         },
+        xVersion: 1,
+      }),
+    );
+  });
+
+  it('should re-initialise cache if xVersion changes', async () => {
+    MockDate.set(5);
+    mockStorageAdapter.get = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify({ version: 1, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+
+    const mockUtxos = [
+      {
+        txid: 'txid1',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid2',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid3',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+    ];
+
+    const mockUtxo = {
+      txid: 'txid3',
+      vout: 0,
+      block_height: 123,
+      value: 456,
+      sat_ranges: [],
+    };
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 2, ...mockUtxo });
+
+    vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
+      limit: 60,
+      offset: 0,
+      results: mockUtxos,
+      total: 2,
+      xVersion: 2,
+    });
+
+    const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+
+    expect(cachedValue).toEqual(mockUtxo);
+
+    expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('Mainnet', 'txid3', 0);
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+      'utxoCache-address1',
+      JSON.stringify({
+        version: 1,
+        syncTime: 5,
+        utxos: {
+          'txid1:0': mockUtxos[0],
+          'txid2:0': mockUtxos[1],
+          'txid3:0': mockUtxos[2],
+        },
+        xVersion: 2,
+      }),
+    );
+  });
+
+  it('should re-initialise cache if version changes', async () => {
+    MockDate.set(5);
+    mockStorageAdapter.get = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify({ version: 0, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+
+    const mockUtxos = [
+      {
+        txid: 'txid1',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid2',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid3',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+    ];
+
+    vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
+      limit: 60,
+      offset: 0,
+      results: mockUtxos,
+      total: 2,
+      xVersion: 1,
+    });
+
+    const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+
+    expect(cachedValue).toEqual(mockUtxos[2]);
+
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+      'utxoCache-address1',
+      JSON.stringify({
+        version: 1,
+        syncTime: 5,
+        utxos: {
+          'txid1:0': mockUtxos[0],
+          'txid2:0': mockUtxos[1],
+          'txid3:0': mockUtxos[2],
+        },
+        xVersion: 1,
+      }),
+    );
+  });
+
+  it('should re-initialise cache if TTL expires', async () => {
+    const msInYear = 1000 * 60 * 60 * 24 * 365;
+    MockDate.set(msInYear);
+
+    mockStorageAdapter.get = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify({ version: 0, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+
+    const mockUtxos = [
+      {
+        txid: 'txid1',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid2',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+      {
+        txid: 'txid3',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+      },
+    ];
+
+    vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
+      limit: 60,
+      offset: 0,
+      results: mockUtxos,
+      total: 2,
+      xVersion: 1,
+    });
+
+    const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+
+    expect(cachedValue).toEqual(mockUtxos[2]);
+
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+      'utxoCache-address1',
+      JSON.stringify({
+        version: 1,
+        syncTime: msInYear,
+        utxos: {
+          'txid1:0': mockUtxos[0],
+          'txid2:0': mockUtxos[1],
+          'txid3:0': mockUtxos[2],
+        },
+        xVersion: 1,
       }),
     );
   });
