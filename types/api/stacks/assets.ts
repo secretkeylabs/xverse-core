@@ -30,18 +30,33 @@ export interface NftData {
   rarity_score: string;
 }
 
-interface NftIdValue {
+type NftIdValue = {
   hex: string;
   repr: string;
-}
+};
 
-export interface NonFungibleToken {
+export type NonFungibleTokenApiResponse = {
+  asset_identifier: string;
+  value: NftIdValue;
+  tx_id: string;
+};
+
+export type NonFungibleTokenOld = NonFungibleTokenApiResponse & {
   asset_identifier: string;
   value: NftIdValue;
   tx_id: string;
   data?: NftData | null;
   name?: string;
-}
+};
+
+export type NonFungibleToken = NonFungibleTokenApiResponse & {
+  name?: string;
+  identifier: {
+    tokenId: string;
+    contractName: string;
+    contractAddress: string;
+  };
+};
 
 export type AccountAssetsListData = {
   assetsList: Array<NonFungibleToken>;
@@ -49,12 +64,12 @@ export type AccountAssetsListData = {
 };
 
 export type NftsListData = {
-  nftsList: Array<NonFungibleToken>;
+  nftsList: Array<NonFungibleTokenOld>;
   total: number;
 };
 
 export interface NftEventsResponse {
-  results: NonFungibleToken[];
+  results: NonFungibleTokenApiResponse[];
   total: number;
   limit: number;
   offset: number;

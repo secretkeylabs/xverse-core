@@ -37,6 +37,8 @@ export type {
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
+  NonFungibleTokenApiResponse,
+  NonFungibleTokenOld,
   TokenMetaData,
 } from './api/stacks/assets';
 export * from './api/stacks/transaction';
