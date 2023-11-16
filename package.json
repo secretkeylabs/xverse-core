@@ -9,6 +9,7 @@
     "@scure/base": "^1.1.1",
     "@scure/btc-signer": "1.1.0",
     "@stacks/auth": "^6.9.0",
+    "@stacks/connect": "^7.4.1",
     "@stacks/encryption": "6.9.0",
     "@stacks/network": "6.8.1",
     "@stacks/storage": "^6.9.0",
