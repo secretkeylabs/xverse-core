@@ -62,9 +62,9 @@ export async function getTokenTransferRequest(
   return unsignedSendStxTx;
 }
 
-export const isMultiSig = (tx: StacksTransaction) => {
+export const isMultiSig = (tx: StacksTransaction): boolean => {
   const hashMode = tx.auth.spendingCondition.hashMode as MultiSigHashMode | SingleSigHashMode;
-  return hashMode === AddressHashMode.SerializeP2SH || AddressHashMode.SerializeP2WSH;
+  return hashMode === AddressHashMode.SerializeP2SH || AddressHashMode.SerializeP2WSH ? true : false;
 };
 
 const cleanMemoString = (memo: string): string => memo.replace('\u0000', '');
