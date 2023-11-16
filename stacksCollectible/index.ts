@@ -176,12 +176,7 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   });
 }
 
-export async function getNftCollections(
-  stxAddress: string,
-  network: StacksNetwork,
-  offset: number,
-  limit: number,
-): Promise<StacksCollectionList> {
+export async function getNftCollections(stxAddress: string, network: StacksNetwork): Promise<StacksCollectionList> {
   const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
 
   const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
@@ -190,10 +185,8 @@ export async function getNftCollections(
 
   const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.total_nft, 0);
 
-  const requiredSortedCollectionsData = nftCollectionList?.slice(offset, offset + limit);
-
   return {
     total_nfts,
-    results: requiredSortedCollectionsData,
+    results: nftCollectionList,
   };
 }
