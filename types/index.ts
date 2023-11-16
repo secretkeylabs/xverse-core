@@ -46,6 +46,7 @@ export * from './api/xverse/sponsor';
 export type { Pool, StackerInfo, StackingData, StackingPoolInfo, StackingStateData } from './api/xverse/stacking';
 export * from './api/xverse/transaction';
 export * from './api/xverse/wallet';
+export * from './api/xverse/appConfig';
 export * from './api/xverseInscribe';
 export type { SupportedCurrency } from './currency';
 export * from './error';
