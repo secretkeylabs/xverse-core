@@ -24,14 +24,17 @@ export interface StacksCollectionList {
   results: Array<StacksCollectionData>;
 }
 
-export async function getAllNftContracts(address: string, network: StacksNetwork): Promise<NonFungibleToken[]> {
+export async function getAllNftContracts(
+  address: string,
+  network: StacksNetwork,
+  limit: number,
+): Promise<NonFungibleToken[]> {
   const listofContracts: Array<NonFungibleToken> = [];
 
   //make initial call to get the total inscriptions count and limit
   let offset = 0;
-  const response = await getNftsData(address, network, 0);
+  const response = await getNftsData(address, network, offset, limit);
   const total = response.total;
-  const limit = response.limit;
   offset += limit;
   listofContracts.push(...response.results);
 
@@ -40,7 +43,7 @@ export async function getAllNftContracts(address: string, network: StacksNetwork
   // Make API calls in parallel to speed up fetching data
   while (offset < total) {
     // Add new promise to the array
-    listofContractPromises.push(getNftsData(address, network, offset));
+    listofContractPromises.push(getNftsData(address, network, offset, limit));
     offset += limit;
 
     // When we have 4 promises, or when we are processing the last batch
@@ -187,7 +190,7 @@ async function checkCacheOrFetchNFTCollection(
     return cachedValue;
   }
 
-  const nfts = await getAllNftContracts(stxAddress, network);
+  const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
 
   const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
 
