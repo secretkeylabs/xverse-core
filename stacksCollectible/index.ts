@@ -77,8 +77,8 @@ async function fetchNftData(
     const contractId = principal[0];
 
     const tokenId = nft.value.repr.replace('u', '');
-    const contractName = contractInfo[0];
-    const contractAddress = contractInfo[1];
+    const contractAddress = contractInfo[0];
+    const contractName = contractInfo[1];
 
     const nftData = {
       ...nft,
