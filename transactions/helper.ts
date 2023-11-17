@@ -2,6 +2,7 @@ import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   AssetInfo,
+  Authorization,
   BytesReader,
   createAssetInfo,
   deserializeCV,
@@ -192,6 +193,7 @@ export const createDeployContractRequest = async (
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
   walletAddress: string,
+  auth?: Authorization,
 ) => {
   const { codeBody, contractName, postConditionMode } = payload;
   const { postConds } = extractFromPayload(payload);
@@ -211,6 +213,9 @@ export const createDeployContractRequest = async (
   const { fee } = contractDeployTx.auth.spendingCondition;
   if (feeMultipliers) {
     contractDeployTx.setFee(fee * BigInt(feeMultipliers.otherTxMultiplier));
+  }
+  if (auth) {
+    contractDeployTx.auth = auth;
   }
 
   return {

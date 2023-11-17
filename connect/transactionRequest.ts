@@ -3,6 +3,7 @@ import { StacksNetwork } from '@stacks/network';
 import {
   AddressHashMode,
   addressToString,
+  Authorization,
   AuthType,
   cvToValue,
   MultiSigHashMode,
@@ -26,9 +27,13 @@ export async function getContractCallPromises(
   stxAddress: string,
   network: StacksNetwork,
   stxPublicKey: string,
+  auth: Authorization,
 ) {
   const [unSignedContractCall, contractInterface, coinsMetaData, showPostConditionMessage] =
     await createContractCallPromises(payload, stxAddress, network, stxPublicKey);
+  if (auth) {
+    unSignedContractCall.auth = auth;
+  }
   return {
     unSignedContractCall,
     contractInterface,
@@ -45,6 +50,7 @@ export async function getTokenTransferRequest(
   feeMultipliers: FeesMultipliers,
   network: StacksNetwork,
   stxPendingTransactions: StxPendingTxData,
+  auth: Authorization,
 ) {
   const unsignedSendStxTx: StacksTransaction = await generateUnsignedStxTokenTransferTransaction(
     recipient,
@@ -58,6 +64,9 @@ export async function getTokenTransferRequest(
   const fee: bigint = BigInt(unsignedSendStxTx.auth.spendingCondition.fee.toString()) ?? BigInt(0);
   if (feeMultipliers?.stxSendTxMultiplier) {
     unsignedSendStxTx.setFee(fee * BigInt(feeMultipliers.stxSendTxMultiplier));
+  }
+  if (auth) {
+    unsignedSendStxTx.auth = auth;
   }
   return unsignedSendStxTx;
 }
