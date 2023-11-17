@@ -1,12 +1,12 @@
 import { cvToJSON, hexToCV } from '@stacks/transactions';
 import { hexToString } from '../../helper';
 
-export interface Attribute {
+export type Attribute = {
   value: string;
   trait_type: string;
-}
+};
 
-export interface TokenMetaData {
+export type TokenMetaData = {
   image_url: string;
   image_type: string;
   image_protocol: string;
@@ -16,9 +16,9 @@ export interface TokenMetaData {
   asset_id: string;
   name: string;
   contract_id: string;
-}
+};
 
-export interface NftData {
+export type NftData = {
   asset_id: string;
   collection_contract_id: string;
   token_id: number;
@@ -28,9 +28,9 @@ export interface NftData {
   rarity_rank: string;
   collection_count: number;
   rarity_score: string;
-}
+};
 
-type NftIdValue = {
+export type NftIdValue = {
   hex: string;
   repr: string;
 };
@@ -71,9 +71,11 @@ export interface NftEventsResponse {
   limit: number;
   offset: number;
 }
+
 export interface AddressToBnsResponse {
   names: string[];
 }
+
 export interface PoxData {
   contract_id: string;
   first_burnchain_block_height: number;
@@ -85,6 +87,7 @@ export interface PoxData {
   total_liquid_supply_ustx: string;
   next_reward_cycle_in: number;
 }
+
 export interface DelegationInfo {
   delegated: boolean;
   amount?: string;
@@ -119,6 +122,28 @@ export interface CoinMetaData {
     cached_image: string;
   };
 }
+
+export type NftDetailResponse = {
+  result: boolean;
+  data: NftData;
+  isCompliant?: boolean;
+};
+
+export type NftCollectionData = {
+  collection: {
+    id: string;
+    contractId: string;
+    name: string;
+    description: string;
+    image: string;
+    verified: false;
+    link: string;
+    floorItem: {
+      nftId: string;
+      price: string;
+    };
+  };
+};
 
 export function getBnsNftName(nft: NonFungibleToken) {
   const hex = nft.value.hex;
