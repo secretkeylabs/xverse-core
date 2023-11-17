@@ -51,8 +51,8 @@ describe('getAllNftContracts', () => {
 
     const address = 'SP3RW6BW9F5STYG2K8XS5EP5PM33E0DNQT4XEG864';
     const network = new StacksMainnet();
-    const limit = 10;
-    const totalItems = 35; // Total should not be a multiple of the limit to test edge cases
+    const limit = 200;
+    const totalItems = 3500; // Total should not be a multiple of the limit to test edge cases
     const expectedCalls = Math.ceil(totalItems / limit);
 
     for (let i = 0; i < expectedCalls; i++) {
@@ -61,7 +61,7 @@ describe('getAllNftContracts', () => {
       vi.mocked(getNftsData).mockResolvedValueOnce(await mockResponse(offset, responseLimit, totalItems));
     }
 
-    const contracts = await getAllNftContracts(address, network);
+    const contracts = await getAllNftContracts(address, network, limit);
 
     expect(vi.mocked(getNftsData)).toHaveBeenCalledTimes(expectedCalls);
     expect(contracts).toHaveLength(totalItems);

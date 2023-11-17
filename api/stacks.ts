@@ -264,6 +264,7 @@ export async function getNftsData(
   stxAddress: string,
   network: StacksNetwork,
   offset: number,
+  limit?: number,
 ): Promise<NftEventsResponse> {
   const apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
 
@@ -271,7 +272,8 @@ export async function getNftsData(
     timeout: 10000,
     params: {
       principal: stxAddress,
-      offset: offset,
+      offset,
+      limit,
     },
   });
 

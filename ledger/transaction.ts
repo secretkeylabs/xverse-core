@@ -51,7 +51,12 @@ export async function getTransactionData(
   // Get total sats to send (including custom fee)
   const amountSats = recipients.reduce((acc, value) => acc.plus(value.amountSats), new BigNumber(0));
 
-  let selectedUTXOs = selectUnspentOutputs(amountSats, filteredUnspentOutputs, ordinalUtxo);
+  let selectedUTXOs = selectUnspentOutputs(
+    amountSats,
+    filteredUnspentOutputs,
+    ordinalUtxo,
+    feeRateInput ? Number(feeRateInput) : undefined,
+  );
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
   if (sumOfSelectedUTXOs.isLessThan(amountSats)) {

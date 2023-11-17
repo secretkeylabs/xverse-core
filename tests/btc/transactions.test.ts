@@ -3,7 +3,6 @@ import BigNumber from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import * as XverseAPIFunctions from '../../api/xverse';
-import * as BTCFunctions from '../../transactions/btc.utils';
 import {
   Recipient,
   calculateFee,
@@ -14,16 +13,84 @@ import {
   getBtcFeesForOrdinalSend,
   getBtcFeesForOrdinalTransaction,
   getFee,
-  getOrdinalUtxo,
   selectUnspentOutputs,
   signBtcTransaction,
   signOrdinalSendTransaction,
   signOrdinalTransaction,
   sumUnspentOutputs,
 } from '../../transactions/btc';
-import { Inscription, UTXO } from '../../types';
+import * as BTCFunctions from '../../transactions/btc.utils';
+import { UTXO } from '../../types';
 import { getBtcPrivateKey } from '../../wallet';
 import { testSeed } from '../mocks/restore.mock';
+
+describe('UTXO selection', () => {
+  const createUtxo = (value: number, confirmed: boolean): UTXO => ({
+    address: 'address',
+    txid: 'txid',
+    vout: 0,
+    value,
+    status: {
+      confirmed,
+      block_height: confirmed ? 123123 : undefined,
+      block_time: confirmed ? 1677048365 : undefined,
+      block_hash: confirmed ? 'block_hash' : undefined,
+    },
+  });
+
+  it('selects UTXO of highest value first', () => {
+    const testUtxos = [createUtxo(10000, true), createUtxo(20000, true)];
+
+    const utxos = selectUnspentOutputs(new BigNumber(10000), [...testUtxos], undefined, 22);
+
+    expect(utxos.length).eq(1);
+    expect(utxos[0]).toBe(testUtxos[1]);
+  });
+
+  it('selects multiple UTXOs if needed', () => {
+    const testUtxos = [createUtxo(10000, true), createUtxo(20000, true)];
+
+    const utxos = selectUnspentOutputs(new BigNumber(25000), [...testUtxos], undefined, 22);
+
+    expect(utxos.length).eq(2);
+    expect(utxos[0]).toBe(testUtxos[1]);
+    expect(utxos[1]).toBe(testUtxos[0]);
+  });
+
+  it('deprioritises unconfirmed UTXOs', () => {
+    const testUtxos = [createUtxo(10000, true), createUtxo(20000, true), createUtxo(30000, false)];
+
+    const utxos = selectUnspentOutputs(new BigNumber(10000), [...testUtxos], undefined, 22);
+    expect(utxos.length).eq(1);
+    expect(utxos[0]).toBe(testUtxos[1]);
+  });
+
+  it('Uses unconfirmed UTXOs if sats to send high enough', () => {
+    const testUtxos = [createUtxo(10000, true), createUtxo(20000, true), createUtxo(30000, false)];
+
+    let utxos = selectUnspentOutputs(new BigNumber(30000), [...testUtxos], undefined, 22);
+    expect(utxos.length).eq(2);
+    expect(utxos[0]).toBe(testUtxos[1]);
+    expect(utxos[1]).toBe(testUtxos[0]);
+
+    utxos = selectUnspentOutputs(new BigNumber(40000), [...testUtxos], undefined, 22);
+    expect(utxos.length).eq(3);
+    expect(utxos[0]).toBe(testUtxos[1]);
+    expect(utxos[1]).toBe(testUtxos[0]);
+    expect(utxos[2]).toBe(testUtxos[2]);
+  });
+
+  it('Ignores UTXOs if they are dust at desired fee rate', () => {
+    const testUtxos = [createUtxo(10000, true), createUtxo(20000, true), createUtxo(30000, false)];
+
+    // This should make the 10000 UTXO dust at the desired fee rate
+    // as adding it would increase the fee by 10500 (more than the value of the UTXO)
+    const utxos = selectUnspentOutputs(new BigNumber(30000), [...testUtxos], undefined, 150);
+    expect(utxos.length).eq(2);
+    expect(utxos[0]).toBe(testUtxos[1]);
+    expect(utxos[1]).toBe(testUtxos[2]);
+  });
+});
 
 describe('bitcoin transactions', () => {
   afterEach(() => {
