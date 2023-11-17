@@ -50,7 +50,7 @@ export async function getTokenTransferRequest(
   feeMultipliers: FeesMultipliers,
   network: StacksNetwork,
   stxPendingTransactions: StxPendingTxData,
-  auth: Authorization,
+  auth?: Authorization,
 ) {
   const unsignedSendStxTx: StacksTransaction = await generateUnsignedStxTokenTransferTransaction(
     recipient,
