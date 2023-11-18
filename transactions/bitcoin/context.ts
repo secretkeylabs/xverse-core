@@ -726,7 +726,9 @@ export class TransactionContext {
     await this.paymentAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
     await this.ordinalsAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
 
-    transaction.sign(dummyPrivateKeyBuffer);
+    if (transaction.inputsLength > 0) {
+      transaction.sign(dummyPrivateKeyBuffer);
+    }
   }
 }
 
