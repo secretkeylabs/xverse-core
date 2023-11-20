@@ -145,10 +145,12 @@ export function organizeNFTsIntoCollection(
     }
   }
 
-  Object.keys(organized).forEach((collectionKey) => {
-    organized[collectionKey].all_nfts = organized[collectionKey].all_nfts.sort((a, b) => {
-      return a.identifier.tokenId < b.identifier.tokenId ? -1 : 1;
-    });
+  // sort and unique all_nfts
+  Object.values(organized).forEach((collection) => {
+    const sorted = collection.all_nfts.sort((a, b) => (a.identifier.tokenId < b.identifier.tokenId ? -1 : 1));
+    const unique = new Map(sorted.map((nft) => [nft.identifier.tokenId, nft]));
+    collection.all_nfts = Array.from(unique.values());
+    collection.total_nft = collection.all_nfts.length;
   });
 
   return organized;
