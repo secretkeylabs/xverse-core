@@ -117,7 +117,7 @@ export function organizeNFTsIntoCollection(
 
     if (contractInfo[1] === 'bns') {
       // currently stacks only supports 1 bns name per address
-      collectionRecord.bns = {
+      organised.bns = {
         collection_id: contractId,
         collection_name: 'BNS Names',
         total_nft: 1,
