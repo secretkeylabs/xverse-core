@@ -74,17 +74,15 @@ describe('getAllNftContracts', () => {
 
 describe('organizeNFTsIntoCollection', () => {
   describe('real address returning duplicated holdings', () => {
-    it('should return a copy of collectionRecord', () => {
-      const collectionRecord = {};
+    it('should return a empty object', () => {
       const nftArray: NonFungibleToken[] = [];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
+      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {};
       expect(result).toStrictEqual(expected);
     });
     it('should return sorted all_nfts', () => {
-      const collectionRecord = {};
       const nftArray: NonFungibleToken[] = [
         {
           asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
@@ -102,7 +100,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
+      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {
         'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys': {
@@ -125,14 +123,12 @@ describe('organizeNFTsIntoCollection', () => {
           collection_id: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys',
           collection_name: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys',
           floor_price: 0,
-          total_nft: 1,
         },
       };
       expect(result).toStrictEqual(expected);
     });
 
     it('should sort bns names', () => {
-      const collectionRecord = {};
       const nftArray: NonFungibleToken[] = [
         {
           asset_identifier: 'SP000000000000000000002Q6VF78.bns::names',
@@ -164,31 +160,9 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
+      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {
-        'SP000000000000000000002Q6VF78.bns': {
-          all_nfts: [
-            {
-              asset_identifier: 'SP000000000000000000002Q6VF78.bns::names',
-              block_height: 30124,
-              tx_id: '0x0eadd48d421907991ba56bbdd707f77c67e341c3ababbc0290a3e0fcac006fac',
-              value: {
-                hex: '0x0c00000002046e616d65020000000464756c62096e616d6573706163650200000003627463',
-                repr: '(tuple (name 0x64756c62) (namespace 0x627463))',
-              },
-              identifier: {
-                tokenId: '(tuple (name 0x64756c62) (namespace 0x627463))',
-                contractName: 'names',
-                contractAddress: 'SP000000000000000000002Q6VF78.bns',
-              },
-            },
-          ],
-          collection_id: 'SP000000000000000000002Q6VF78.bns',
-          collection_name: 'SP000000000000000000002Q6VF78.bns',
-          floor_price: 0,
-          total_nft: 1,
-        },
         'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys': {
           all_nfts: [
             {
@@ -209,14 +183,32 @@ describe('organizeNFTsIntoCollection', () => {
           collection_id: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys',
           collection_name: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys',
           floor_price: 0,
-          total_nft: 1,
+        },
+        bns: {
+          all_nfts: [
+            {
+              asset_identifier: 'SP000000000000000000002Q6VF78.bns::names',
+              block_height: 30124,
+              tx_id: '0x0eadd48d421907991ba56bbdd707f77c67e341c3ababbc0290a3e0fcac006fac',
+              value: {
+                hex: '0x0c00000002046e616d65020000000464756c62096e616d6573706163650200000003627463',
+                repr: '(tuple (name 0x64756c62) (namespace 0x627463))',
+              },
+              identifier: {
+                tokenId: '(tuple (name 0x64756c62) (namespace 0x627463))',
+                contractName: 'names',
+                contractAddress: 'SP000000000000000000002Q6VF78.bns',
+              },
+            },
+          ],
+          collection_id: 'SP000000000000000000002Q6VF78.bns',
+          collection_name: 'BNS Names',
         },
       };
       expect(result).toStrictEqual(expected);
     });
 
     it('should return sorted all_nfts by tokenId', () => {
-      const collectionRecord = {};
       const nftArray: NonFungibleToken[] = [
         {
           asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
@@ -248,7 +240,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
+      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expectedAllNfts = [
         {
@@ -285,7 +277,6 @@ describe('organizeNFTsIntoCollection', () => {
     });
 
     it('should return no duplicates', () => {
-      const collectionRecord = {};
       const nftArray: NonFungibleToken[] = [
         {
           asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
@@ -331,7 +322,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
+      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expectedAllNfts = [
         {
