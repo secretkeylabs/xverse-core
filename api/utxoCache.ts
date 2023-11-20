@@ -78,7 +78,6 @@ export class UtxoCache {
 
   private getAllUtxos = async (btcAddress: string): Promise<UtxoCacheStruct> => {
     const utxos = await this._getAddressUtxos(btcAddress);
-    console.log(utxos);
     const utxosObject: UtxoCacheStruct = utxos.reduce((acc, utxo) => {
       acc[`${utxo.txid}:${utxo.vout}`] = utxo;
       return acc;
