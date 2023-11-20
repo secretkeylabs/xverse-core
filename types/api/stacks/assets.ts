@@ -39,6 +39,7 @@ export type NonFungibleTokenApiResponse = {
   asset_identifier: string;
   value: NftIdValue;
   tx_id: string;
+  block_height: number;
 };
 
 export type NonFungibleTokenOld = NonFungibleTokenApiResponse & {
