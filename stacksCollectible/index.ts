@@ -11,7 +11,6 @@ export interface StacksCollectionData {
   collection_id: string | null;
   collection_name: string | null;
   total_nft: number;
-  thumbnail_nfts: NonFungibleToken[]; //stores a max of four nfts
   all_nfts: NonFungibleToken[]; //stores entire list of nft in collection
   floor_price?: number;
 }
@@ -122,7 +121,6 @@ export function organizeNFTsIntoCollection(
         collection_id: contractId,
         collection_name: 'BNS Names',
         total_nft: 1,
-        thumbnail_nfts: [nft],
         all_nfts: [nft],
       };
     }
@@ -132,11 +130,7 @@ export function organizeNFTsIntoCollection(
     // group NFTs into collections
     if (organized[contractId]) {
       const data = organized[contractId];
-
       data.all_nfts.push(nft);
-      if (data.total_nft < 4) {
-        data?.thumbnail_nfts.push(nft);
-      }
       data.total_nft += 1;
     } else {
       organized[contractId] = {
@@ -144,7 +138,6 @@ export function organizeNFTsIntoCollection(
         collection_name: collectionData?.collection?.name ?? contractId,
         total_nft: 1,
         all_nfts: [nft],
-        thumbnail_nfts: [nft],
         floor_price: collectionData?.collection?.floorItem?.price
           ? microstacksToStx(new BigNumber(collectionData?.collection?.floorItem?.price)).toNumber()
           : 0,
