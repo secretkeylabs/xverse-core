@@ -277,9 +277,75 @@ describe('organizeNFTsIntoCollection', () => {
       expect(result).toStrictEqual(expected);
     });
 
-    // it('should return sorted all_nfts', () => {
+    it('should return sorted all_nfts by tokenId', () => {
+      const collectionRecord = {};
+      const nftArray: NonFungibleToken[] = [
+        {
+          asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
+          block_height: 56107,
+          tx_id: '0x90a81c4c6b364b1b7034c0a2cc10f142662c7d2af251e1fd31252a2b4b453f27',
+          value: {
+            hex: '0x01000000000000000000000000000007c2',
+            repr: 'u1986',
+          },
+          identifier: {
+            tokenId: '1986',
+            contractName: 'mutant-monkeys',
+            contractAddress: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7',
+          },
+        },
+        {
+          asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
+          block_height: 56107,
+          tx_id: '0x90a81c4c6b364b1b7034c0a2cc10f142662c7d2af251e1fd31252a2b4b453f27',
+          value: {
+            hex: '0x01000000000000000000000000000007c2',
+            repr: 'u1222',
+          },
+          identifier: {
+            tokenId: '1222',
+            contractName: 'mutant-monkeys',
+            contractAddress: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7',
+          },
+        },
+      ];
+      const nftCollectionDataArray: NftCollectionData[] = [];
+      const result = organizeNFTsIntoCollection(collectionRecord, nftArray, nftCollectionDataArray);
 
-    // });
+      const expectedAllNfts = [
+        {
+          asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
+          block_height: 56107,
+          tx_id: '0x90a81c4c6b364b1b7034c0a2cc10f142662c7d2af251e1fd31252a2b4b453f27',
+          value: {
+            hex: '0x01000000000000000000000000000007c2',
+            repr: 'u1222',
+          },
+          identifier: {
+            tokenId: '1222',
+            contractName: 'mutant-monkeys',
+            contractAddress: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7',
+          },
+        },
+        {
+          asset_identifier: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys::mutant-monkeys',
+          block_height: 56107,
+          tx_id: '0x90a81c4c6b364b1b7034c0a2cc10f142662c7d2af251e1fd31252a2b4b453f27',
+          value: {
+            hex: '0x01000000000000000000000000000007c2',
+            repr: 'u1986',
+          },
+          identifier: {
+            tokenId: '1986',
+            contractName: 'mutant-monkeys',
+            contractAddress: 'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7',
+          },
+        },
+      ];
+      const resultAllNfts = result['SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys'].all_nfts;
+      console.log(resultAllNfts);
+      expect(resultAllNfts).toStrictEqual(expectedAllNfts);
+    });
     // it('should return no duplicates', () => {
 
     // });

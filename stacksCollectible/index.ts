@@ -151,6 +151,13 @@ export function organizeNFTsIntoCollection(
       };
     }
   }
+
+  Object.keys(organized).forEach((collectionKey) => {
+    organized[collectionKey].all_nfts = organized[collectionKey].all_nfts.sort((a, b) => {
+      return a.identifier.tokenId < b.identifier.tokenId ? -1 : 1;
+    });
+  });
+
   return organized;
 }
 
