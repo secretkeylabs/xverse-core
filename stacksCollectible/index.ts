@@ -131,7 +131,6 @@ export function organizeNFTsIntoCollection(
     if (organized[contractId]) {
       const data = organized[contractId];
       data.all_nfts.push(nft);
-      data.total_nft += 1;
     } else {
       organized[contractId] = {
         collection_id: contractId,
