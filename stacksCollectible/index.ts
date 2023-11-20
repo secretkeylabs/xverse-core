@@ -162,9 +162,7 @@ async function fetchNFTCollectionDetailsRecord(
 
   const { collectionData, nftArray } = await fetchNftData(nfts);
 
-  organizeNFTsIntoCollection(collectionRecord, nftArray, collectionData);
-
-  return collectionRecord;
+  return organizeNFTsIntoCollection(collectionRecord, nftArray, collectionData);
 }
 
 function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
