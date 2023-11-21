@@ -169,7 +169,7 @@ export const getVbytesForIO = async (context: TransactionContext, addressContext
   const emptySize = await getTransactionVSize(context, dummyTransaction);
 
   const utxo = addressUtxos[0];
-  addressContext.addInput(dummyTransaction, utxo);
+  await addressContext.addInput(dummyTransaction, utxo);
 
   const vsizeWithInput = await getTransactionVSize(context, dummyTransaction);
 
