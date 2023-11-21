@@ -76,6 +76,7 @@ jobs:
           PR_NUMBER: ${{ steps.create-pr.outputs.pr-number }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          sleep 3
           gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \
