@@ -24,6 +24,7 @@ import {
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
+  NonFungibleTokenOld,
   StxAddressData,
   StxAddressDataResponse,
   StxMempoolResponse,
@@ -264,6 +265,7 @@ export async function getNftsData(
   stxAddress: string,
   network: StacksNetwork,
   offset: number,
+  limit?: number,
 ): Promise<NftEventsResponse> {
   const apiUrl = `${getNetworkURL(network)}/extended/v1/tokens/nft/holdings`;
 
@@ -271,7 +273,8 @@ export async function getNftsData(
     timeout: 10000,
     params: {
       principal: stxAddress,
-      offset: offset,
+      offset,
+      limit,
     },
   });
 
@@ -281,7 +284,7 @@ export async function getNftsData(
 export async function getNfts(stxAddress: string, network: StacksNetwork, offset: number): Promise<NftsListData> {
   const nfts = await getNftsData(stxAddress, network, offset);
 
-  for (const nft of nfts.results) {
+  for (const nft of nfts.results as NonFungibleTokenOld[]) {
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
 

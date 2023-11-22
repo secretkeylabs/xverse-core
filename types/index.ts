@@ -24,21 +24,9 @@ export type {
   Vin,
   Vout,
 } from './api/esplora';
-export type { NftCollectionData, NftDetailResponse } from './api/gamma/currency';
 export * from './api/ordinals';
 export * from './api/ordinalsbot';
-export { getBnsNftName } from './api/stacks/assets';
-export type {
-  AccountAssetsListData,
-  AddressToBnsResponse,
-  CoinMetaData,
-  CoreInfo,
-  NftData,
-  NftEventsResponse,
-  NftsListData,
-  NonFungibleToken,
-  TokenMetaData,
-} from './api/stacks/assets';
+export * from './api/stacks/assets';
 export * from './api/stacks/transaction';
 export * from './api/xverse/coins';
 export * from './api/xverse/ordinals';
