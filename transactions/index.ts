@@ -39,6 +39,7 @@ import {
   generateUnsignedDelegateTransaction,
   generateUnsignedRevokeTransaction,
 } from './stacking';
+export { default as rbf } from './rbf';
 
 export {
   ExecuteTransferProgressCodes,
