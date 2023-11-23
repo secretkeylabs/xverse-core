@@ -54,12 +54,12 @@ const getRbfRecommendedFees = (transaction: Transaction, mempoolFees: Recommende
   if (minimumRbfFeeRate < medium) {
     return {
       medium: {
-        fee: medium,
-        feeRate: 0, // TODO
+        fee: 0, // TODO
+        feeRate: medium,
       },
       high: {
-        fee: high,
-        feeRate: 0, // TODO
+        fee: 0, // TODO
+        feeRate: high,
       },
     };
   }
@@ -68,12 +68,12 @@ const getRbfRecommendedFees = (transaction: Transaction, mempoolFees: Recommende
     const higher = Math.ceil(high * 1.2);
     return {
       high: {
-        fee: high,
-        feeRate: 0, // TODO
+        fee: 0, // TODO
+        feeRate: high,
       },
       higher: {
-        fee: higher,
-        feeRate: 0, // TODO
+        fee: 0, // TODO
+        feeRate: higher,
       },
     };
   }
@@ -83,12 +83,12 @@ const getRbfRecommendedFees = (transaction: Transaction, mempoolFees: Recommende
 
   return {
     higher: {
-      fee: higher,
-      feeRate: 0, // TODO
+      fee: 0, // TODO
+      feeRate: higher,
     },
     highest: {
-      fee: highest,
-      feeRate: 0, // TODO
+      fee: 0, // TODO
+      feeRate: highest,
     },
   };
 };
