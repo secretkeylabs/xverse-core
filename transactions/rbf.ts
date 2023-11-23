@@ -118,7 +118,10 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
       throw new Error('Unrecognised account type');
     }
 
-    const publicKeyBuffTr = hex.decode(wallet.ordinalsPublicKey);
+    let publicKeyBuffTr = hex.decode(wallet.ordinalsPublicKey);
+    if (publicKeyBuffTr.length === 33) {
+      publicKeyBuffTr = publicKeyBuffTr.slice(1);
+    }
     const p2tr = btc.p2tr(publicKeyBuffTr, undefined, network);
 
     const tx = new btc.Transaction();
