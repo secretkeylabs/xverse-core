@@ -1,16 +1,17 @@
-import { hex } from '@scure/base';
+import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
+import { signLedgerPSBT } from '../ledger/psbt';
+import { Transport } from '../ledger/types';
 import SeedVault from '../seedVault';
-import { NetworkType } from '../types';
+import { AccountType, NetworkType } from '../types';
 import { RecommendedFeeResponse, Transaction, UTXO } from '../types/api/esplora';
 import { bip32 } from '../utils/bip32';
 import { getBitcoinDerivationPath, getTaprootDerivationPath } from '../wallet';
 
 // TODO: A lot of the below can be done much more easily with the consolidation logic
 // TODO: so we should refactor this file to use that once merged
-// TODO: without it there will also have to be a separate RBF module for ledger, so we can merge them once it's in
 
 const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -51,12 +52,21 @@ type RBFProps = {
   seedVault: SeedVault;
   addressIndex: number;
   network: NetworkType;
+  accountType: AccountType;
 };
 
 type TierFees = {
   enoughFunds: boolean;
   fee?: number;
   feeRate: number;
+};
+
+type SoftwareCompileOptions = {
+  feeRate: number;
+};
+
+type LedgerCompileOptions = SoftwareCompileOptions & {
+  ledgerTransport: Transport;
 };
 
 type RbfRecommendedFees = {
@@ -66,7 +76,9 @@ type RbfRecommendedFees = {
   highest?: TierFees;
 };
 
-class RbfTransaction {
+type InstanceCompileOptions<T> = T extends { accountType: 'software' } ? SoftwareCompileOptions : LedgerCompileOptions;
+
+class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
   private baseTx: btc.Transaction;
 
   private initialInputTotal!: number;
@@ -75,7 +87,7 @@ class RbfTransaction {
 
   private transaction!: Transaction;
 
-  private p2sh!: btc.P2Ret;
+  private p2btc!: btc.P2Ret;
 
   private p2tr!: btc.P2TROut;
 
@@ -85,7 +97,7 @@ class RbfTransaction {
 
   private paymentUtxos?: UTXO[];
 
-  constructor(transaction: Transaction, wallet: RBFProps) {
+  constructor(transaction: Transaction, wallet: P) {
     if (transaction.status.confirmed) {
       throw new Error('Transaction is already confirmed');
     }
@@ -95,9 +107,16 @@ class RbfTransaction {
 
     const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
 
+    let p2btc: btc.P2Ret;
     const publicKeyBuff = hex.decode(wallet.btcPublicKey);
-    const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
-    const p2sh = btc.p2sh(p2wpkh, network);
+    if (wallet.accountType === 'software') {
+      const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
+      p2btc = btc.p2sh(p2wpkh, network);
+    } else if (wallet.accountType === 'ledger') {
+      p2btc = btc.p2wpkh(publicKeyBuff, network);
+    } else {
+      throw new Error('Unrecognised account type');
+    }
 
     const publicKeyBuffTr = hex.decode(wallet.ordinalsPublicKey);
     const p2tr = btc.p2tr(publicKeyBuffTr, undefined, network);
@@ -127,12 +146,12 @@ class RbfTransaction {
         tx.updateInput(tx.inputsLength - 1, {
           tapInternalKey: publicKeyBuffTr,
         });
-      } else if (areByteArraysEqual(witnessUtxoScript, p2sh.script)) {
+      } else if (areByteArraysEqual(witnessUtxoScript, p2btc.script)) {
         // input from payments address
         // these are undefined for p2wpkh (ledger) addresses
         tx.updateInput(tx.inputsLength - 1, {
-          redeemScript: p2sh.redeemScript,
-          witnessScript: p2sh.witnessScript,
+          redeemScript: p2btc.redeemScript,
+          witnessScript: p2btc.witnessScript,
         });
       } else {
         throw new Error('Input found that is not from wallet. Cannot proceed with RBF.');
@@ -164,7 +183,7 @@ class RbfTransaction {
     this.initialOutputTotal = outputsTotal;
     this.transaction = transaction;
     this.network = network;
-    this.p2sh = p2sh;
+    this.p2btc = p2btc;
     this.p2tr = p2tr;
   }
 
@@ -198,7 +217,8 @@ class RbfTransaction {
     return bip32.fromSeed(seed);
   };
 
-  private signTx = async (tx: btc.Transaction) => {
+  private signTxSoftware = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
+    const tx = transaction.clone();
     const master = await this.getBip32Master();
 
     const btcDerivationPath = getBitcoinDerivationPath({
@@ -223,22 +243,72 @@ class RbfTransaction {
 
       if (areByteArraysEqual(input.witnessUtxo?.script, this.p2tr.script)) {
         tx.signIdx(trpk, i);
-      } else if (areByteArraysEqual(input.witnessUtxo?.script, this.p2sh.script)) {
+      } else if (areByteArraysEqual(input.witnessUtxo?.script, this.p2btc.script)) {
         tx.signIdx(btcpk, i);
       } else {
         throw new Error(`Cannot sign input at index ${i}`);
       }
     }
+
+    return tx;
+  };
+
+  private signTxLedger = async (transaction: btc.Transaction, options?: O): Promise<btc.Transaction> => {
+    if (!options?.ledgerTransport) {
+      throw new Error('Options are required for non-dummy transactions');
+    }
+
+    const txnPsbt = transaction.toPSBT(0);
+    const signedPsbtBase64 = await signLedgerPSBT({
+      addressIndex: this.wallet.addressIndex,
+      finalize: false,
+      nativeSegwitPubKey: this.wallet.btcPublicKey,
+      network: this.wallet.network,
+      psbtInputBase64: base64.encode(txnPsbt),
+      taprootPubKey: this.wallet.ordinalsPublicKey,
+      transport: options.ledgerTransport,
+    });
+
+    const signedTransaction = btc.Transaction.fromPSBT(base64.decode(signedPsbtBase64));
+
+    return signedTransaction;
+  };
+
+  private dummySignTransaction = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
+    const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
+
+    const tx = transaction.clone();
+
+    tx.sign(hex.decode(dummyPrivateKey));
+    tx.finalize();
+
+    return tx;
+  };
+
+  private signTx = async (tx: btc.Transaction, isDummy: boolean, options?: O): Promise<btc.Transaction> => {
+    if (isDummy) {
+      return this.dummySignTransaction(tx);
+    }
+
+    if (this.wallet.accountType === 'software') {
+      return this.signTxSoftware(tx);
+    }
+
+    return this.signTxLedger(tx, options);
   };
 
   private getTxSize = async (tx: btc.Transaction) => {
     const txCopy = tx.clone();
-    await this.signTx(txCopy);
-    txCopy.finalize();
-    return txCopy.vsize;
+    const signedTxCopy = await this.signTx(txCopy, true);
+    signedTxCopy.finalize();
+    return signedTxCopy.vsize;
   };
 
-  private compileTransaction = async (desiredFeeRate: number) => {
+  private compileTransaction = async (desiredFeeRate: number, isDummy: boolean, options?: O) => {
+    if (!isDummy && !options) {
+      throw new Error('Options are required for non-dummy transactions');
+    }
+
     const tx = this.baseTx.clone();
 
     const paymentUtxos = await this.getPaymentUtxos();
@@ -264,11 +334,11 @@ class RbfTransaction {
           txid: utxo.txid,
           index: utxo.vout,
           witnessUtxo: {
-            script: this.p2sh.script,
+            script: this.p2btc.script,
             amount: BigInt(utxo.value),
           },
-          redeemScript: this.p2sh.redeemScript,
-          witnessScript: this.p2sh.witnessScript,
+          redeemScript: this.p2btc.redeemScript,
+          witnessScript: this.p2btc.witnessScript,
           sequence: 0xfffffffd,
         });
         inputsTotal += utxo.value;
@@ -292,11 +362,11 @@ class RbfTransaction {
       }
     }
 
-    await this.signTx(tx);
-    tx.finalize();
+    const signedTransaction = await this.signTx(tx, isDummy, options);
+    signedTransaction.finalize();
 
     return {
-      transaction: tx,
+      transaction: signedTransaction,
       fee: actualFee,
     };
   };
@@ -308,8 +378,8 @@ class RbfTransaction {
     higherFeeRate: number,
   ): Promise<RbfRecommendedFees> => {
     const [lowerTx, higherTx] = await Promise.allSettled([
-      this.compileTransaction(lowerFeeRate),
-      this.compileTransaction(higherFeeRate),
+      this.compileTransaction(lowerFeeRate, true),
+      this.compileTransaction(higherFeeRate, true),
     ]);
     return {
       [lowerName]: {
@@ -346,8 +416,8 @@ class RbfTransaction {
     );
   };
 
-  getReplacementTransaction = async (feeRate: number) => {
-    const { transaction, fee } = await this.compileTransaction(feeRate);
+  getReplacementTransaction = async (options: O) => {
+    const { transaction, fee } = await this.compileTransaction(options.feeRate, false, options);
     return {
       transaction,
       hex: transaction.hex,
