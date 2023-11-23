@@ -118,6 +118,8 @@ export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UTXO>, p2sh
         amount: BigInt(output.value),
       },
       redeemScript: p2sh.redeemScript ? p2sh.redeemScript : Buffer.alloc(0),
+      // enable RBF on our txns by setting the sequence number to < 0xfffffffe
+      sequence: 0xfffffffd,
     });
   });
 }
@@ -137,6 +139,8 @@ export function addInputsTaproot(
         amount: BigInt(output.value),
       },
       tapInternalKey: internalPubKey,
+      // enable RBF on our txns by setting the sequence number to < 0xfffffffe
+      sequence: 0xfffffffd,
     });
   });
 }
