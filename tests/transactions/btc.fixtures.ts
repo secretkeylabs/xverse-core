@@ -88,8 +88,8 @@ export const selectUtxosForSendSuccessFixtures: SelectUtxoSendSuccessFixture[] =
       feeRate: 10,
       expected: {
         selectedUtxos: [utxo792k, utxo384k],
-        change: 381220,
-        fee: 2780,
+        change: 381210,
+        fee: 2790,
       },
     },
   ],
