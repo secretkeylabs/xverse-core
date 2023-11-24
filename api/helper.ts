@@ -383,7 +383,7 @@ export const getNetworkURL = (network: StacksNetwork): string => {
 };
 
 export function getFetchableUrl(uri: string, protocol: string): string | null {
-  const publicIpfs = 'https://cf-ipfs.com/ipfs';
+  const publicIpfs = 'https://gamma.mypinata.cloud/ipfs';
   if (protocol === 'http') return uri;
   if (protocol === 'ipfs') {
     const url = uri.split('//');
