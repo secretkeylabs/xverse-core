@@ -50,7 +50,7 @@ type RBFProps = {
   btcPublicKey: string;
   ordinalsPublicKey: string;
   seedVault: SeedVault;
-  addressIndex: number;
+  accountId: number;
   network: NetworkType;
   accountType: AccountType;
 };
@@ -223,14 +223,14 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     const master = await this.getBip32Master();
 
     const btcDerivationPath = getBitcoinDerivationPath({
-      index: BigInt(this.wallet.addressIndex),
+      index: BigInt(this.wallet.accountId),
       network: this.wallet.network,
     });
     const btcChild = master.derivePath(btcDerivationPath);
     const btcpk = hex.decode(btcChild.privateKey!.toString('hex'));
 
     const trDerivationPath = getTaprootDerivationPath({
-      index: BigInt(this.wallet.addressIndex),
+      index: BigInt(this.wallet.accountId),
       network: this.wallet.network,
     });
     const trChild = master.derivePath(trDerivationPath);
@@ -261,7 +261,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
 
     const txnPsbt = transaction.toPSBT(0);
     const signedPsbtBase64 = await signLedgerPSBT({
-      addressIndex: this.wallet.addressIndex,
+      addressIndex: this.wallet.accountId,
       finalize: false,
       nativeSegwitPubKey: this.wallet.btcPublicKey,
       network: this.wallet.network,
