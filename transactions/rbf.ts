@@ -5,8 +5,8 @@ import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { signLedgerPSBT } from '../ledger/psbt';
 import { Transport } from '../ledger/types';
 import SeedVault from '../seedVault';
-import { AccountType, NetworkType } from '../types';
-import { RecommendedFeeResponse, Transaction, UTXO } from '../types/api/esplora';
+import { AccountType, BtcTransactionData, NetworkType } from '../types';
+import { RecommendedFeeResponse, UTXO } from '../types/api/esplora';
 import { bip32 } from '../utils/bip32';
 import { getBitcoinDerivationPath, getTaprootDerivationPath } from '../wallet';
 
@@ -21,27 +21,27 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
   return a.every((v, i) => v === b[i]);
 };
 
-const getRbfTransactionSummary = (transaction: Transaction) => {
+const getRbfTransactionSummary = (transaction: BtcTransactionData) => {
   const transactionVSize = transaction.weight / 4;
 
-  const currentTransactionInputTotals = transaction.vin.reduce((total, input) => total + input.prevout.value, 0);
-  const currentTransactionOutputTotals = transaction.vout.reduce((total, output) => total + output.value, 0);
+  const currentTransactionInputTotals = transaction.inputs.reduce((total, input) => total + input.prevout.value, 0);
+  const currentTransactionOutputTotals = transaction.outputs.reduce((total, output) => total + output.value, 0);
 
   const currentFee = currentTransactionInputTotals - currentTransactionOutputTotals;
   const currentFeeRate = Math.ceil(currentFee / transactionVSize);
 
-  const minimumRbfFee = Math.ceil(transaction.fee + transactionVSize);
+  const minimumRbfFee = Math.ceil(transaction.fees + transactionVSize);
   const minimumRbfFeeRate = Math.ceil(minimumRbfFee / transactionVSize);
 
   return { currentFee, currentFeeRate, minimumRbfFee, minimumRbfFeeRate };
 };
 
-const isTransactionRbfEnabled = (transaction: Transaction) => {
-  if (transaction.status.confirmed) {
+const isTransactionRbfEnabled = (transaction: BtcTransactionData) => {
+  if (transaction.confirmed) {
     return false;
   }
 
-  return transaction.vin.some((input) => input.sequence < 0xffffffff - 1);
+  return transaction.inputs.some((input) => input.sequence < 0xffffffff - 1);
 };
 
 type RBFProps = {
@@ -85,7 +85,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
 
   private initialOutputTotal!: number;
 
-  private transaction!: Transaction;
+  private transaction!: BtcTransactionData;
 
   private p2btc!: btc.P2Ret;
 
@@ -97,8 +97,8 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
 
   private paymentUtxos?: UTXO[];
 
-  constructor(transaction: Transaction, wallet: P) {
-    if (transaction.status.confirmed) {
+  constructor(transaction: BtcTransactionData, wallet: P) {
+    if (transaction.confirmed) {
       throw new Error('Transaction is already confirmed');
     }
     if (!isTransactionRbfEnabled(transaction)) {
@@ -127,7 +127,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     let inputsTotal = 0;
     let outputsTotal = 0;
 
-    for (const input of transaction.vin) {
+    for (const input of transaction.inputs) {
       const witnessUtxoScript = Buffer.from(input.prevout.scriptpubkey, 'hex');
 
       tx.addInput({
@@ -159,7 +159,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
       }
     }
 
-    const outputs = transaction.vout.map((output) => ({
+    const outputs = transaction.outputs.map((output) => ({
       value: output.value,
       address: output.scriptpubkey_address,
     }));
@@ -323,7 +323,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
       const size = await this.getTxSize(tx);
 
       const change = inputsTotal - outputsTotal;
-      const newFee = Math.max(size * desiredFeeRate, this.transaction.fee + size);
+      const newFee = Math.max(size * desiredFeeRate, this.transaction.fees + size);
       if (newFee > change) {
         const utxo = paymentUtxos.shift();
 
@@ -349,7 +349,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
         actualFee = change;
         txWithChange.addOutputAddress(this.wallet.btcAddress, BigInt(Math.floor(change)), this.network);
         const sizeWithChange = await this.getTxSize(txWithChange);
-        const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fee + sizeWithChange);
+        const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fees + sizeWithChange);
 
         if (newFeeWithChange + 1000 < change) {
           // add change output
