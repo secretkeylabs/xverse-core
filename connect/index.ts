@@ -11,6 +11,10 @@ export type AuthRequest = {
     redirect_uri: string;
     public_keys: string[];
     scopes?: string[];
+    appDetails?: {
+      icon?: string;
+      name?: string;
+    };
   };
 };
 
