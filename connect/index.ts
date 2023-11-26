@@ -62,3 +62,6 @@ export async function createAuthResponse(
     },
   });
 }
+
+export * from './signature';
+export * from './bip322Signature';
