@@ -35,6 +35,7 @@ import {
   setNonce,
   signMultiStxTransactions,
   signTransaction,
+  StacksRecipient,
 } from './stx';
 
 import {
@@ -96,4 +97,4 @@ export {
   getBtcFeeRate,
   isCustomFeesAllowed,
 };
-export type { PSBTInput, PSBTOutput, ParsedPSBT, SignedBtcTx, Recipient };
+export type { PSBTInput, PSBTOutput, ParsedPSBT, SignedBtcTx, Recipient, StacksRecipient };
