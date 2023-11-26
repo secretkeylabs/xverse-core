@@ -1,4 +1,16 @@
-import { signBtcTransaction } from './btc';
+import type { SignedBtcTx, Recipient } from './btc';
+import {
+  getBtcFees,
+  getBtcFeesForOrdinalSend,
+  getBtcFeesForNonOrdinalBtcSend,
+  getBtcFeesForOrdinalTransaction,
+  getBtcFeeRate,
+  isCustomFeesAllowed,
+  signBtcTransaction,
+  signOrdinalTransaction,
+  signNonOrdinalBtcSendTransaction,
+  signOrdinalSendTransaction,
+} from './btc';
 import {
   createContractCallPromises,
   createDeployContractRequest,
@@ -74,5 +86,14 @@ export {
   signBtcTransaction,
   signMultiStxTransactions,
   signTransaction,
+  signOrdinalTransaction,
+  signNonOrdinalBtcSendTransaction,
+  signOrdinalSendTransaction,
+  getBtcFees,
+  getBtcFeesForOrdinalSend,
+  getBtcFeesForNonOrdinalBtcSend,
+  getBtcFeesForOrdinalTransaction,
+  getBtcFeeRate,
+  isCustomFeesAllowed,
 };
-export type { PSBTInput, PSBTOutput, ParsedPSBT };
+export type { PSBTInput, PSBTOutput, ParsedPSBT, SignedBtcTx, Recipient };
