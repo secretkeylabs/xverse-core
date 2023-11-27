@@ -1,6 +1,7 @@
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
+import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { NetworkType } from '../types';
 import { getCoinType } from './helper';
@@ -14,13 +15,13 @@ const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   return a.every((v, i) => v === b[i]);
 };
 
-const embellishNativeSegwitInputs = (
+const embellishNativeSegwitInputs = async (
   transaction: btc.Transaction,
   publicKey: string,
   network: NetworkType,
   addressIndex: number,
   masterFingerPrint: string,
-): boolean => {
+): Promise<boolean> => {
   const coinType = getCoinType(network);
   const inputDerivation = [
     hex.decode(publicKey),
@@ -37,6 +38,14 @@ const embellishNativeSegwitInputs = (
   for (let i = 0; i < transaction.inputsLength; i++) {
     const input = transaction.getInput(i);
     if (areByteArraysEqual(input.witnessUtxo?.script, p2wpkh.script)) {
+      if (!input.nonWitnessUtxo && input.txid) {
+        const esploraProvider = new EsploraProvider({ network: network });
+        const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
+        transaction.updateInput(i, {
+          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+        });
+      }
+
       transaction.updateInput(i, {
         bip32Derivation: [inputDerivation],
       });
@@ -47,13 +56,13 @@ const embellishNativeSegwitInputs = (
   return hasNativeSegwitInputs;
 };
 
-const embellishTaprootInputs = (
+const embellishTaprootInputs = async (
   transaction: btc.Transaction,
   publicKey: string,
   network: NetworkType,
   addressIndex: number,
   masterFingerPrint: string,
-): boolean => {
+): Promise<boolean> => {
   const coinType = getCoinType(network);
   const publicKeyBuff = hex.decode(publicKey);
   const inputDerivation = [
@@ -71,6 +80,14 @@ const embellishTaprootInputs = (
   for (let i = 0; i < transaction.inputsLength; i++) {
     const input = transaction.getInput(i);
     if (areByteArraysEqual(input.witnessUtxo?.script, p2tr.script)) {
+      if (!input.nonWitnessUtxo && input.txid) {
+        const esploraProvider = new EsploraProvider({ network: network });
+        const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
+        transaction.updateInput(i, {
+          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+        });
+      }
+
       transaction.updateInput(i, {
         bip32Derivation: [inputDerivation],
       });
@@ -131,12 +148,12 @@ export async function signLedgerPSBT({
       index: 0,
       witnessUtxo: {
         script: Buffer.alloc(0),
-        amount: outputTotal,
+        amount: outputTotal - inputTotal,
       },
     });
   }
 
-  if (embellishNativeSegwitInputs(txn, nativeSegwitPubKey, network, addressIndex, masterFingerPrint)) {
+  if (await embellishNativeSegwitInputs(txn, nativeSegwitPubKey, network, addressIndex, masterFingerPrint)) {
     const psbt = txn.toPSBT(0);
     const psbtBase64 = base64.encode(psbt);
 
@@ -155,7 +172,7 @@ export async function signLedgerPSBT({
     }
   }
 
-  if (embellishTaprootInputs(txn, taprootPubKey, network, addressIndex, masterFingerPrint)) {
+  if (await embellishTaprootInputs(txn, taprootPubKey, network, addressIndex, masterFingerPrint)) {
     const psbt = txn.toPSBT(0);
     const psbtBase64 = base64.encode(psbt);
 

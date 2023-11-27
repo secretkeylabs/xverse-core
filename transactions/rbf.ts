@@ -118,7 +118,7 @@ class RbfTransaction {
     const schnorrPublicKeyBuff = publicKeyBuffTr.length === 33 ? publicKeyBuffTr.slice(1) : publicKeyBuffTr;
     const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, network);
 
-    const tx = new btc.Transaction();
+    const tx = new btc.Transaction({ PSBTVersion: 0 });
 
     let inputsTotal = 0;
     let outputsTotal = 0;
@@ -215,7 +215,7 @@ class RbfTransaction {
   };
 
   private signTxSoftware = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
-    const tx = transaction.clone();
+    const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
     const master = await this.getBip32Master();
 
     const btcDerivationPath = getBitcoinDerivationPath({
@@ -280,7 +280,7 @@ class RbfTransaction {
     const schnorrPublicKeyBuff = publicKey.length === 33 ? publicKey.slice(1) : publicKey;
     const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, this.network);
 
-    const tx = transaction.clone();
+    const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
 
     for (let i = 0; i < tx.inputsLength; i++) {
       const input = tx.getInput(i);
@@ -292,7 +292,7 @@ class RbfTransaction {
           },
           tapInternalKey: publicKey,
         });
-      } else {
+      } else if (input.redeemScript) {
         tx.updateInput(i, {
           witnessUtxo: {
             script: p2sh.script,
@@ -300,6 +300,13 @@ class RbfTransaction {
           },
           redeemScript: p2sh.redeemScript,
           witnessScript: p2sh.witnessScript,
+        });
+      } else {
+        tx.updateInput(i, {
+          witnessUtxo: {
+            script: p2wpkh.script,
+            amount: input.witnessUtxo!.amount,
+          },
         });
       }
     }
@@ -326,7 +333,7 @@ class RbfTransaction {
   };
 
   private getTxSize = async (tx: btc.Transaction) => {
-    const txCopy = tx.clone();
+    const txCopy = btc.Transaction.fromPSBT(tx.toPSBT(0));
     const signedTxCopy = await this.signTx(txCopy, true);
     signedTxCopy.finalize();
     return signedTxCopy.vsize;
@@ -337,7 +344,7 @@ class RbfTransaction {
       throw new Error('Options are required for non-dummy transactions');
     }
 
-    const tx = this.baseTx.clone();
+    const tx = btc.Transaction.fromPSBT(this.baseTx.toPSBT(0));
 
     const paymentUtxos = await this.getPaymentUtxos();
 
@@ -372,7 +379,7 @@ class RbfTransaction {
         inputsTotal += utxo.value;
       } else {
         // check if we can add change output
-        const txWithChange = tx.clone();
+        const txWithChange = btc.Transaction.fromPSBT(tx.toPSBT(0));
         actualFee = change;
         txWithChange.addOutputAddress(this.wallet.btcAddress, BigInt(Math.floor(change)), this.network);
         const sizeWithChange = await this.getTxSize(txWithChange);
