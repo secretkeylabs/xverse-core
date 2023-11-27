@@ -62,12 +62,9 @@ type TierFees = {
   feeRate: number;
 };
 
-type SoftwareCompileOptions = {
+type CompileOptions = {
   feeRate: number;
-};
-
-type LedgerCompileOptions = SoftwareCompileOptions & {
-  ledgerTransport: Transport;
+  ledgerTransport?: Transport;
 };
 
 type RbfRecommendedFees = {
@@ -77,9 +74,7 @@ type RbfRecommendedFees = {
   highest?: TierFees;
 };
 
-type InstanceCompileOptions<T> = T extends { accountType: 'software' } ? SoftwareCompileOptions : LedgerCompileOptions;
-
-class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
+class RbfTransaction {
   private baseTx: btc.Transaction;
 
   private initialInputTotal!: number;
@@ -98,7 +93,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
 
   private paymentUtxos?: UTXO[];
 
-  constructor(transaction: BtcTransactionData, wallet: P) {
+  constructor(transaction: BtcTransactionData, wallet: RBFProps) {
     if (transaction.confirmed) {
       throw new Error('Transaction is already confirmed');
     }
@@ -255,7 +250,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     return tx;
   };
 
-  private signTxLedger = async (transaction: btc.Transaction, options?: O): Promise<btc.Transaction> => {
+  private signTxLedger = async (transaction: btc.Transaction, options?: CompileOptions): Promise<btc.Transaction> => {
     if (!options?.ledgerTransport) {
       throw new Error('Options are required for non-dummy transactions');
     }
@@ -314,7 +309,11 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     return tx;
   };
 
-  private signTx = async (tx: btc.Transaction, isDummy: boolean, options?: O): Promise<btc.Transaction> => {
+  private signTx = async (
+    tx: btc.Transaction,
+    isDummy: boolean,
+    options?: CompileOptions,
+  ): Promise<btc.Transaction> => {
     if (isDummy) {
       return this.dummySignTransaction(tx);
     }
@@ -333,7 +332,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     return signedTxCopy.vsize;
   };
 
-  private compileTransaction = async (desiredFeeRate: number, isDummy: boolean, options?: O) => {
+  private compileTransaction = async (desiredFeeRate: number, isDummy: boolean, options?: CompileOptions) => {
     if (!isDummy && !options) {
       throw new Error('Options are required for non-dummy transactions');
     }
@@ -448,7 +447,7 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     return this.constructRecommendedFees('higher', higher, 'highest', highest);
   };
 
-  getReplacementTransaction = async (options: O) => {
+  getReplacementTransaction = async (options: CompileOptions) => {
     const { transaction, fee } = await this.compileTransaction(options.feeRate, false, options);
     return {
       transaction,
