@@ -4,6 +4,7 @@ import XordApiProvider from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
+  AddressBundleResponse,
   Brc20HistoryTransactionData,
   BtcOrdinal,
   FungibleToken,
@@ -12,7 +13,7 @@ import {
   InscriptionRequestResponse,
   NetworkType,
   UTXO,
-  UtxoOrdinalBundle,
+  UtxoBundleResponse,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -216,12 +217,6 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
 
-export type AddressBundleResponse = {
-  total: number;
-  offset: number;
-  limit: number;
-  results: UtxoOrdinalBundle[];
-};
 export const getAddressUtxoOrdinalBundles = async (
   network: NetworkType,
   address: string,
@@ -247,7 +242,7 @@ export const getAddressUtxoOrdinalBundles = async (
   }
 
   const response = await axios.get<AddressBundleResponse>(
-    `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinal-utxo`,
+    `${XVERSE_API_BASE_URL(network)}/v2/address/${address}/ordinal-utxo`,
     {
       params,
     },
@@ -260,9 +255,9 @@ export const getUtxoOrdinalBundle = async (
   network: NetworkType,
   txid: string,
   vout: number,
-): Promise<UtxoOrdinalBundle> => {
-  const response = await axios.get<UtxoOrdinalBundle>(
-    `${XVERSE_API_BASE_URL(network)}/v1/ordinal-utxo/${txid}:${vout}`,
+): Promise<UtxoBundleResponse> => {
+  const response = await axios.get<UtxoBundleResponse>(
+    `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
 };
