@@ -421,7 +421,7 @@ export async function getBtcFees(
 
     return { fee, selectedFeeRate };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -501,7 +501,7 @@ export async function getBtcFeesForOrdinalSend(
 
     return { fee, selectedFeeRate };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -591,7 +591,7 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 
     return { fee: calculatedFee, selectedFeeRate: new BigNumber(feeRateInput || selectedFeeRate) };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -783,7 +783,7 @@ export async function signBtcTransaction(
     };
     return await Promise.resolve(signedBtcTx);
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 

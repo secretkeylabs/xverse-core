@@ -40,3 +40,4 @@ export * from './error';
 export * from './mixpanel';
 export * from './network';
 export * from './wallet';
+export * from './currency';

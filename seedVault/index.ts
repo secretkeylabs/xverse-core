@@ -24,7 +24,7 @@ export enum SeedVaultStorageKeys {
   SEED_VAULT_VERSION = 'seedVaultVersion',
 }
 
-class SeedVault {
+export class SeedVault {
   private readonly _secureStorageAdapter: StorageAdapter;
 
   private readonly _cryptoUtilsAdapter: CryptoUtilsAdapter;
