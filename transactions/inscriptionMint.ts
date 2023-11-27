@@ -32,6 +32,7 @@ type EstimateProps = {
   serviceFee?: number;
   serviceFeeAddress?: string;
   network: NetworkType;
+  repetitions?: number;
 };
 
 type BaseEstimateResult = {
@@ -64,6 +65,7 @@ type ExecuteProps = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
+  repetitions?: number;
 };
 
 export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): Promise<EstimateResult> {
@@ -77,6 +79,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     serviceFee,
     serviceFeeAddress,
     network,
+    repetitions,
   } = estimateProps;
 
   // a service fee of below 546 will result in a dust UTXO
@@ -112,18 +115,20 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     );
   }
 
-  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getInscriptionFeeEstimate(
-    network,
-    {
-      contentLength: content.length,
-      contentType,
-      revealAddress,
-      feeRate,
-      inscriptionValue,
-    },
-  );
+  const {
+    chainFee: revealChainFee,
+    serviceFee: revealServiceFee,
+    totalInscriptionValue,
+  } = await xverseInscribeApi.getInscriptionFeeEstimate(network, {
+    contentLength: content.length,
+    contentType,
+    revealAddress,
+    feeRate,
+    inscriptionValue,
+    repetitions,
+  });
 
-  const commitValue = new BigNumber(inscriptionValue).plus(revealChainFee).plus(revealServiceFee);
+  const commitValue = new BigNumber(totalInscriptionValue).plus(revealChainFee).plus(revealServiceFee);
 
   const recipients = [{ address: revealAddress, amountSats: new BigNumber(commitValue) }];
 
@@ -178,6 +183,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     serviceFee,
     serviceFeeAddress,
     finalInscriptionValue,
+    repetitions,
   } = executeProps;
 
   if (!addressUtxos.length) {
@@ -227,6 +233,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     feeRate,
     revealAddress,
     inscriptionValue,
+    repetitions,
   });
 
   const recipients = [{ address: commitAddress, amountSats: new BigNumber(commitValue) }];
@@ -244,6 +251,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     availableUtxos: addressUtxos,
     feeRate,
     network,
+    useUnconfirmed: false,
   });
 
   if (!bestUtxoData) {

@@ -4,9 +4,11 @@ export type InscriptionCostEstimateRequest = {
   inscriptionValue: number;
   contentLength: number;
   contentType: string;
+  repetitions?: number;
 };
 
 export type InscriptionCostEstimateResponse = {
+  totalInscriptionValue: number;
   inscriptionValue: number;
   chainFee: number;
   serviceFee: number;
@@ -18,6 +20,7 @@ type InscriptionCreateOrderBaseRequest = {
   revealAddress: string;
   inscriptionValue?: number;
   contentType: string;
+  repetitions?: number;
 };
 
 type InscriptionCreateTextOrderRequest = InscriptionCreateOrderBaseRequest & {
@@ -35,6 +38,7 @@ export type InscriptionCreateOrderResponse = {
   commitValue: number;
   commitValueBreakdown: {
     inscriptionValue: number;
+    totalInscriptionValue: number;
     chainFee: number;
     serviceFee: number;
   };
