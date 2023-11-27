@@ -438,15 +438,14 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
     }
 
     if (minimumRbfFeeRate < high) {
-      return this.constructRecommendedFees('high', high, 'higher', Math.ceil(high * 1.2));
+      const higher = Math.max(high + 1, Math.ceil(high * 1.2));
+      return this.constructRecommendedFees('high', high, 'higher', higher);
     }
 
-    return this.constructRecommendedFees(
-      'higher',
-      Math.ceil(minimumRbfFeeRate * 1.1),
-      'highest',
-      Math.ceil(minimumRbfFeeRate * 1.2),
-    );
+    const higher = Math.ceil(minimumRbfFeeRate * 1.1);
+    const highest = Math.max(higher + 1, Math.ceil(minimumRbfFeeRate * 1.2));
+
+    return this.constructRecommendedFees('higher', higher, 'highest', highest);
   };
 
   getReplacementTransaction = async (options: O) => {
