@@ -21,7 +21,7 @@ export interface EsploraApiProviderOptions {
   url?: string;
 }
 
-export default class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApiProvider {
+export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApiProvider {
   _network: NetworkType;
 
   blockcypherApi!: AxiosInstance;
@@ -171,3 +171,4 @@ export default class BitcoinEsploraApiProvider extends ApiInstance implements Bi
     return data;
   }
 }
+export default BitcoinEsploraApiProvider;

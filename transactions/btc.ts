@@ -425,7 +425,7 @@ export async function getBtcFees(
 
     return { fee, selectedFeeRate };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -505,7 +505,7 @@ export async function getBtcFeesForOrdinalSend(
 
     return { fee, selectedFeeRate };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -595,7 +595,7 @@ export async function getBtcFeesForNonOrdinalBtcSend(
 
     return { fee: calculatedFee, selectedFeeRate: new BigNumber(feeRateInput || selectedFeeRate) };
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -787,7 +787,7 @@ export async function signBtcTransaction(
     };
     return await Promise.resolve(signedBtcTx);
   } catch (error) {
-    return Promise.reject(error.toString());
+    return Promise.reject((error as any).toString());
   }
 }
 
@@ -811,8 +811,10 @@ export async function signOrdinalSendTransaction(
   // Make sure ordinal utxo is removed from utxo set used for fees
   // This can be true if ordinal utxo is from the payment address
 
+  const ordinalUtxoInPaymentAddress = unspentOutputs.some(
+    (u) => u.txid === ordinalUtxo.txid && u.vout === ordinalUtxo.vout,
+  );
   const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
-  const ordinalUtxoInPaymentAddress = filteredUnspentOutputs.length < unspentOutputs.length;
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
 
