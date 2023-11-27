@@ -23,16 +23,16 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
 };
 
 const getRbfTransactionSummary = (transaction: BtcTransactionData) => {
-  const transactionVSize = transaction.weight / 4;
+  const transactionVSize = Math.ceil(transaction.weight / 4);
 
   const currentTransactionInputTotals = transaction.inputs.reduce((total, input) => total + input.prevout.value, 0);
   const currentTransactionOutputTotals = transaction.outputs.reduce((total, output) => total + output.value, 0);
 
   const currentFee = currentTransactionInputTotals - currentTransactionOutputTotals;
-  const currentFeeRate = Math.ceil(currentFee / transactionVSize);
+  const currentFeeRate = +(currentFee / transactionVSize).toFixed(2);
 
-  const minimumRbfFee = Math.ceil(transaction.fees + transactionVSize);
-  const minimumRbfFeeRate = Math.ceil(minimumRbfFee / transactionVSize);
+  const minimumRbfFee = Math.ceil(currentFee + transactionVSize);
+  const minimumRbfFeeRate = Math.ceil(+(minimumRbfFee / transactionVSize).toFixed(2));
 
   return { currentFee, currentFeeRate, minimumRbfFee, minimumRbfFeeRate };
 };
@@ -432,11 +432,11 @@ class RbfTransaction {
     const medium = halfHourFee;
     const high = Math.max(fastestFee, medium + 1);
 
-    if (minimumRbfFeeRate < medium) {
+    if (minimumRbfFeeRate <= medium) {
       return this.constructRecommendedFees('medium', medium, 'high', high);
     }
 
-    if (minimumRbfFeeRate < high) {
+    if (minimumRbfFeeRate <= high) {
       const higher = Math.max(high + 1, Math.ceil(high * 1.2));
       return this.constructRecommendedFees('high', high, 'higher', higher);
     }
