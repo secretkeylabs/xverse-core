@@ -111,6 +111,19 @@ export class OrdinalsApi implements OrdinalsApiProvider {
     }
   }
 
+  async getAllInscriptions(address: string): Promise<ordinalsType.Inscription[]> {
+    const firstPage = await this.getInscriptions(address, 0, 100);
+    const results = [...firstPage.results];
+
+    // we do this sequentially to avoid rate limiting
+    while (results.length < firstPage.total) {
+      const nextPage = await this.getInscriptions(address, results.length, firstPage.limit);
+      results.push(...nextPage.results);
+    }
+
+    return results;
+  }
+
   async getInscriptions(address: string, offset: number, limit: number): Promise<ordinalsType.InscriptionsList> {
     const url = 'inscriptions';
     const params = {
