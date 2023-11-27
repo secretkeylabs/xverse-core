@@ -162,7 +162,9 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
   }
 
   async getRecommendedFees(): Promise<esplora.RecommendedFeeResponse> {
-    const data: esplora.RecommendedFeeResponse = await this.httpGet('/v1/fees/recommended');
+    // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
+    // TODO: move this out of here
+    const data: esplora.RecommendedFeeResponse = await axios.get('https://mempool.space/api/v1/fees/recommended');
     return data;
   }
 
