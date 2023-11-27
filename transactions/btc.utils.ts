@@ -40,7 +40,7 @@ export function buildTransactionAndGetMetadata(props: {
   try {
     tx.finalize();
   } catch (e) {
-    if (e.message === 'Outputs spends more than inputs amount') {
+    if ((e as any).message === 'Outputs spends more than inputs amount') {
       return undefined;
     }
     throw e;

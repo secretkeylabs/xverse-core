@@ -1,5 +1,6 @@
 import axios from 'axios';
 import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import XordApiProvider from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
@@ -47,28 +48,31 @@ export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkT
   const btcClient = new BitcoinEsploraApiProvider({
     network,
   });
-  const addressUTXOs = await btcClient.getUnspentUtxos(btcAddress);
+  const xordClient = new XordApiProvider({
+    network,
+  });
+
+  const [addressUTXOs, inscriptions] = await Promise.all([
+    btcClient.getUnspentUtxos(btcAddress),
+    xordClient.getAllInscriptions(btcAddress),
+  ]);
   const ordinals: BtcOrdinal[] = [];
 
-  await Promise.all(
-    addressUTXOs
-      .filter((utxo) => utxo.status.confirmed) // we can only detect ordinals from confirmed utxos
-      .map(async (utxo: UTXO) => {
-        const ordinalContentUrl = `${XVERSE_INSCRIBE_URL(network)}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+  const utxoMap = addressUTXOs.reduce((acc, utxo) => {
+    acc[`${utxo.txid}:${utxo.vout}`] = utxo;
+    return acc;
+  }, {} as Record<string, UTXO>);
 
-        const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
-
-        if (ordinalIds.data.length > 0) {
-          ordinalIds.data.forEach((ordinalId) => {
-            ordinals.push({
-              id: ordinalId,
-              confirmationTime: utxo.status.block_time || 0,
-              utxo,
-            });
-          });
-        }
-      }),
-  );
+  inscriptions.forEach((inscription) => {
+    const utxo = utxoMap[inscription.output];
+    if (utxo) {
+      ordinals.push({
+        id: inscription.id,
+        confirmationTime: utxo.status.block_time || 0,
+        utxo,
+      });
+    }
+  });
 
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }

@@ -5,3 +5,4 @@ export * from './gamma';
 export * from './ordinals';
 export * from './esplora/esploraAPiProvider';
 export * from './ordinals/provider';
+export { getNetworkURL, parseStxTransactionData } from './helper';
