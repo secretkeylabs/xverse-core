@@ -7,13 +7,18 @@ import {
   AddressBundleResponse,
   Brc20HistoryTransactionData,
   BtcOrdinal,
+  Bundle,
+  BundleSatRange,
   FungibleToken,
   HiroApiBrc20TxHistoryResponse,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
+  RareSatsType,
+  SatRangeInscription,
   UTXO,
   UtxoBundleResponse,
+  UtxoOrdinalBundle,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -260,4 +265,80 @@ export const getUtxoOrdinalBundle = async (
     `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
+};
+
+export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
+  const generalBundleInfo = {
+    txid: apiBundle.txid,
+    vout: apiBundle.vout,
+    block_height: apiBundle.block_height,
+    value: apiBundle.value,
+  };
+
+  const commonUnknownRange: BundleSatRange = {
+    range: {
+      start: '0',
+      end: '0',
+    },
+    yearMined: 0,
+    block: 0,
+    offset: 0,
+    satributes: ['COMMON'],
+    inscriptions: [],
+    totalSats: apiBundle.value,
+  };
+
+  // if bundle has and empty sat ranges, it means that it's a common/unknown bundle
+  if (!apiBundle.sat_ranges.length) {
+    return {
+      ...generalBundleInfo,
+      satRanges: [commonUnknownRange],
+      inscriptions: [],
+      satributes: [['COMMON']],
+      totalExoticSats: 0,
+    };
+  }
+
+  const satRanges = apiBundle.sat_ranges.map((satRange) => {
+    const { year_mined: yearMined, ...satRangeProps } = satRange;
+    return {
+      ...satRangeProps,
+      totalSats: Number(BigInt(satRange.range.end) - BigInt(satRange.range.start)),
+      yearMined,
+      // we want to common/unknown inscriptions to be shown as a additional row from common/unknown row
+      satributes:
+        !satRange.satributes.length && satRange.inscriptions.length
+          ? (['COMMON'] as RareSatsType[])
+          : satRange.satributes,
+    };
+  });
+
+  // if totalExotics doesn't match the value of the bundle,
+  // it means that the bundle is not fully exotic and we need to add a common unknown sat range more
+  let totalExoticSats = 0;
+  let totalCommonUnknownInscribedSats = 0;
+  satRanges.forEach((satRange) => {
+    if (satRange.satributes.includes('COMMON')) {
+      totalCommonUnknownInscribedSats += satRange.totalSats;
+    } else {
+      totalExoticSats += satRange.totalSats;
+    }
+  });
+  if (totalExoticSats !== apiBundle.value) {
+    satRanges.push({
+      ...commonUnknownRange,
+      totalSats: apiBundle.value - (totalExoticSats + totalCommonUnknownInscribedSats),
+    });
+  }
+
+  const inscriptions = satRanges.reduce((acc, curr) => [...acc, ...curr.inscriptions], [] as SatRangeInscription[]);
+  const satributes = satRanges.reduce((acc, curr) => [...acc, curr.satributes], [] as RareSatsType[][]);
+
+  return {
+    ...generalBundleInfo,
+    satRanges,
+    inscriptions,
+    satributes,
+    totalExoticSats,
+  };
 };

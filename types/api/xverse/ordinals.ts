@@ -105,3 +105,15 @@ export type AddressBundleResponse = {
 } & XVersion;
 
 export type UtxoBundleResponse = UtxoOrdinalBundle & XVersion;
+
+export type BundleSatRange = Omit<SatRange, 'year_mined'> & {
+  totalSats: number;
+  yearMined: number;
+};
+
+export type Bundle = Omit<UtxoOrdinalBundle, 'sat_ranges'> & {
+  satRanges: BundleSatRange[];
+  inscriptions: SatRangeInscription[];
+  satributes: RareSatsType[][];
+  totalExoticSats: number;
+};
