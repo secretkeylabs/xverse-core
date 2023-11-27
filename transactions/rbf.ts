@@ -1,3 +1,4 @@
+import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
@@ -276,12 +277,39 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
   };
 
   private dummySignTransaction = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
-    const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
+    const dummyPrivateKey = hex.decode('0000000000000000000000000000000000000000000000000000000000000001');
+    const publicKey = secp256k1.getPublicKey(dummyPrivateKey, true);
+    const p2wpkh = btc.p2wpkh(publicKey, this.network);
+    const p2sh = btc.p2sh(p2wpkh, this.network);
+
+    const schnorrPublicKeyBuff = publicKey.length === 33 ? publicKey.slice(1) : publicKey;
+    const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, this.network);
 
     const tx = transaction.clone();
 
-    tx.sign(hex.decode(dummyPrivateKey));
-    tx.finalize();
+    for (let i = 0; i < tx.inputsLength; i++) {
+      const input = tx.getInput(i);
+      if (input.tapInternalKey) {
+        tx.updateInput(i, {
+          witnessUtxo: {
+            script: p2tr.script,
+            amount: input.witnessUtxo!.amount,
+          },
+          tapInternalKey: publicKey,
+        });
+      } else {
+        tx.updateInput(i, {
+          witnessUtxo: {
+            script: p2sh.script,
+            amount: input.witnessUtxo!.amount,
+          },
+          redeemScript: p2sh.redeemScript,
+          witnessScript: p2sh.witnessScript,
+        });
+      }
+    }
+
+    tx.sign(dummyPrivateKey);
 
     return tx;
   };
@@ -399,7 +427,11 @@ class RbfTransaction<P extends RBFProps, O extends InstanceCompileOptions<P>> {
   getRbfRecommendedFees = async (mempoolFees: RecommendedFeeResponse): Promise<RbfRecommendedFees> => {
     const { minimumRbfFeeRate } = getRbfTransactionSummary(this.transaction);
 
-    const { halfHourFee: medium, fastestFee: high } = mempoolFees;
+    const { halfHourFee, fastestFee } = mempoolFees;
+
+    // For testnet, medium and high are the same
+    const medium = halfHourFee;
+    const high = Math.max(fastestFee, medium + 1);
 
     if (minimumRbfFeeRate < medium) {
       return this.constructRecommendedFees('medium', medium, 'high', high);
