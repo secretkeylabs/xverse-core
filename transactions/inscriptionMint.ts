@@ -234,6 +234,8 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     revealAddress,
     inscriptionValue,
     repetitions,
+    appServiceFee: serviceFee,
+    appServiceFeeAddress: serviceFeeAddress,
   });
 
   const recipients = [{ address: commitAddress, amountSats: new BigNumber(commitValue) }];

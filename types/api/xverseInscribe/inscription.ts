@@ -21,6 +21,8 @@ type InscriptionCreateOrderBaseRequest = {
   inscriptionValue?: number;
   contentType: string;
   repetitions?: number;
+  appServiceFee?: number;
+  appServiceFeeAddress?: string;
 };
 
 type InscriptionCreateTextOrderRequest = InscriptionCreateOrderBaseRequest & {
