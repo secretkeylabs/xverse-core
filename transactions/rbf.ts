@@ -141,7 +141,7 @@ class RbfTransaction {
       if (areByteArraysEqual(witnessUtxoScript, p2tr.script)) {
         // input from ordinals address
         tx.updateInput(tx.inputsLength - 1, {
-          tapInternalKey: publicKeyBuffTr,
+          tapInternalKey: p2tr.tapInternalKey,
         });
       } else if (areByteArraysEqual(witnessUtxoScript, p2btc.script)) {
         // input from payments address
