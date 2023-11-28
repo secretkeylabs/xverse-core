@@ -70,6 +70,7 @@ describe('inscriptionMintFeeEstimate', () => {
       commitChainFee: 1100,
       externalServiceFee: 5000,
       inscriptionValue: 1000,
+      totalInscriptionValue: 1000,
       revealChainFee: 1000,
       revealServiceFee: 2000,
     });
@@ -79,6 +80,7 @@ describe('inscriptionMintFeeEstimate', () => {
     vi.mocked(xverseInscribeApi.getInscriptionFeeEstimate).mockResolvedValue({
       chainFee: 1000,
       inscriptionValue: 546,
+      totalInscriptionValue: 546,
       serviceFee: 2000,
       vSize: 100,
     });

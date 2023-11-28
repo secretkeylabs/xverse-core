@@ -35,19 +35,15 @@ type EstimateProps = {
   repetitions?: number;
 };
 
-type BaseEstimateResult = {
+type EstimateResult = {
   commitValue: number;
   valueBreakdown: {
     commitChainFee: number;
     revealChainFee: number;
     revealServiceFee: number;
     externalServiceFee?: number;
-  };
-};
-
-type EstimateResult = BaseEstimateResult & {
-  valueBreakdown: {
     inscriptionValue: number;
+    totalInscriptionValue: number;
   };
 };
 
@@ -163,6 +159,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
       revealChainFee,
       revealServiceFee,
       inscriptionValue,
+      totalInscriptionValue,
       externalServiceFee: serviceFee,
     },
   };
