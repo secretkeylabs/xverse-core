@@ -428,7 +428,7 @@ class RbfTransaction {
 
       return {
         fee: tx.fee,
-        feeRate: feeRate,
+        feeRate,
         enoughFunds: true,
       };
     } catch (e) {
@@ -438,7 +438,7 @@ class RbfTransaction {
 
       return {
         fee: undefined,
-        feeRate: feeRate,
+        feeRate,
         enoughFunds: false,
       };
     }
