@@ -290,7 +290,7 @@ class RbfTransaction {
             script: p2tr.script,
             amount: input.witnessUtxo!.amount,
           },
-          tapInternalKey: publicKey,
+          tapInternalKey: p2tr.tapInternalKey,
         });
       } else if (input.redeemScript) {
         tx.updateInput(i, {
