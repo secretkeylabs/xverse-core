@@ -23,7 +23,8 @@ describe('inscriptionMintFeeEstimate', () => {
   it('calculates fee estimate correctly', async () => {
     vi.mocked(xverseInscribeApi.getInscriptionFeeEstimate).mockResolvedValue({
       chainFee: 1000,
-      inscriptionValue: 546,
+      inscriptionValue: 1000,
+      totalInscriptionValue: 1000,
       serviceFee: 2000,
       vSize: 100,
     });
