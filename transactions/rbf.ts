@@ -412,22 +412,36 @@ class RbfTransaction {
     higherName: keyof RbfRecommendedFees,
     higherFeeRate: number,
   ): Promise<RbfRecommendedFees> => {
-    const [lowerTx, higherTx] = await Promise.allSettled([
-      this.compileTransaction(lowerFeeRate, true),
-      this.compileTransaction(higherFeeRate, true),
+    const [lowerTx, higherTx] = await Promise.all([
+      this.getRbfFeeSummary(lowerFeeRate),
+      this.getRbfFeeSummary(higherFeeRate),
     ]);
     return {
-      [lowerName]: {
-        fee: lowerTx.status === 'fulfilled' ? lowerTx.value.fee : undefined,
-        feeRate: lowerFeeRate,
-        enoughFunds: lowerTx.status === 'fulfilled',
-      },
-      [higherName]: {
-        fee: higherTx.status === 'fulfilled' ? higherTx.value.fee : undefined,
-        feeRate: higherFeeRate,
-        enoughFunds: higherTx.status === 'fulfilled',
-      },
+      [lowerName]: lowerTx,
+      [higherName]: higherTx,
     };
+  };
+
+  getRbfFeeSummary = async (feeRate: number): Promise<TierFees> => {
+    try {
+      const tx = await this.compileTransaction(feeRate, true);
+
+      return {
+        fee: tx.fee,
+        feeRate: feeRate,
+        enoughFunds: true,
+      };
+    } catch (e) {
+      if (!e.message.includes('Not enough funds')) {
+        throw e;
+      }
+
+      return {
+        fee: undefined,
+        feeRate: feeRate,
+        enoughFunds: false,
+      };
+    }
   };
 
   getRbfRecommendedFees = async (mempoolFees: RecommendedFeeResponse): Promise<RbfRecommendedFees> => {
