@@ -9,6 +9,8 @@ type CommitValueBreakdown = {
   revealChainFee: number;
   revealServiceFee: number;
   externalServiceFee?: number;
+  inscriptionValue: number;
+  totalInscriptionValue: number;
 };
 
 type Props = {
