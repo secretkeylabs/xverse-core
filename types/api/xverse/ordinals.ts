@@ -69,7 +69,9 @@ export const Sattributes = [
 ] as const;
 export type SattributesType = (typeof Sattributes)[number];
 
-export type RareSatsType = RoadArmorRareSatsType | SattributesType;
+// ({} & string) is a workaround to support our types and also allow any string for unsupported types
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type RareSatsType = RoadArmorRareSatsType | SattributesType | ({} & string);
 
 export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
 

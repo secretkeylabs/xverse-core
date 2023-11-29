@@ -15,7 +15,11 @@ import {
   InscriptionRequestResponse,
   NetworkType,
   RareSatsType,
+  RoadArmorRareSats,
+  RoadArmorRareSatsType,
   SatRangeInscription,
+  Sattributes,
+  SattributesType,
   UTXO,
   UtxoBundleResponse,
   UtxoOrdinalBundle,
@@ -299,31 +303,52 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
     };
   }
 
-  const satRanges = apiBundle.sat_ranges.map((satRange) => {
-    const { year_mined: yearMined, ...satRangeProps } = satRange;
-    return {
-      ...satRangeProps,
-      totalSats: Number(BigInt(satRange.range.end) - BigInt(satRange.range.start)),
-      yearMined,
-      // we want to common/unknown inscriptions to be shown as a additional row from common/unknown row
-      satributes:
-        !satRange.satributes.length && satRange.inscriptions.length
-          ? (['COMMON'] as RareSatsType[])
-          : satRange.satributes,
-    };
-  });
-
-  // if totalExotics doesn't match the value of the bundle,
-  // it means that the bundle is not fully exotic and we need to add a common unknown sat range more
   let totalExoticSats = 0;
   let totalCommonUnknownInscribedSats = 0;
-  satRanges.forEach((satRange) => {
-    if (satRange.satributes.includes('COMMON')) {
-      totalCommonUnknownInscribedSats += satRange.totalSats;
-    } else {
-      totalExoticSats += satRange.totalSats;
+  const satRanges: BundleSatRange[] = [];
+
+  apiBundle.sat_ranges.forEach((satRange) => {
+    const { year_mined: yearMined, ...satRangeProps } = satRange;
+
+    // filter out unsupported satributes
+    const supportedSatributes = satRange.satributes.filter(
+      (satribute) =>
+        RoadArmorRareSats.includes(satribute as RoadArmorRareSatsType) ||
+        Sattributes.includes(satribute as SattributesType),
+    );
+
+    const rangeWithUnsupportedSatsAndWithoutInscriptions =
+      satRange.satributes.length === 1 && !satRange.inscriptions.length && !supportedSatributes.length;
+    // if range has no inscriptions and only unsupported satributes, we skip it
+    if (rangeWithUnsupportedSatsAndWithoutInscriptions) {
+      return;
     }
+
+    // if range has inscribed sats of unsupported type or unknown, we map it to a common/unknown sat range
+    const satributes = !supportedSatributes.length ? (['COMMON'] as RareSatsType[]) : supportedSatributes;
+
+    const totalSats = Number(BigInt(satRange.range.end) - BigInt(satRange.range.start));
+
+    if (satributes.includes('COMMON')) {
+      totalCommonUnknownInscribedSats += totalSats;
+    } else {
+      totalExoticSats += totalSats;
+    }
+
+    const range = {
+      ...satRangeProps,
+      totalSats,
+      yearMined,
+      satributes,
+      // only one inscription per range is supported
+      inscriptions: satRange.inscriptions.length > 1 ? [satRange.inscriptions[0]] : satRange.inscriptions,
+    };
+
+    satRanges.push(range);
   });
+
+  // if totalExoticSats doesn't match the value of the bundle,
+  // it means that the bundle is not fully exotic and we need to add a common unknown sat range
   if (totalExoticSats !== apiBundle.value) {
     satRanges.push({
       ...commonUnknownRange,

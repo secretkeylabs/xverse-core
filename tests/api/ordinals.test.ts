@@ -206,6 +206,11 @@ describe('rareSats', () => {
                   id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
                   inscription_number: 11067474,
                 },
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067484,
+                },
               ],
             },
             {
@@ -296,6 +301,155 @@ describe('rareSats', () => {
             },
           ],
           totalExoticSats: 1,
+        },
+      },
+      {
+        name: 'types not supported by the frontend',
+        input: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 10,
+          vout: 0,
+          sat_ranges: [
+            {
+              year_mined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['BLOCK9_450'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067474,
+                },
+              ],
+            },
+            {
+              year_mined: 2009,
+              block: 11,
+              offset: 1,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['1D_PALINDROME', '2D_PALINDROME', 'BLOCK9_450'],
+              inscriptions: [],
+            },
+            {
+              year_mined: 2009,
+              block: 11,
+              offset: 2,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['PIZZA', 'BLOCK9_450'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067475,
+                },
+              ],
+            },
+            {
+              year_mined: 2009,
+              block: 11,
+              offset: 3,
+              range: {
+                start: '34234320000004',
+                end: '34234320000005',
+              },
+              satributes: ['BLOCK9_450'],
+              inscriptions: [],
+            },
+          ],
+        },
+        expected: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 10,
+          vout: 0,
+          inscriptions: [
+            {
+              content_type: 'image/png',
+              id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+              inscription_number: 11067474,
+            },
+            {
+              content_type: 'image/png',
+              id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+              inscription_number: 11067475,
+            },
+          ],
+          satributes: [['COMMON'], ['1D_PALINDROME', '2D_PALINDROME'], ['PIZZA'], ['COMMON']],
+          satRanges: [
+            {
+              yearMined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['COMMON'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067474,
+                },
+              ],
+              totalSats: 1,
+            },
+            {
+              yearMined: 2009,
+              block: 11,
+              offset: 1,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['1D_PALINDROME', '2D_PALINDROME'],
+              inscriptions: [],
+              totalSats: 1,
+            },
+            {
+              yearMined: 2009,
+              block: 11,
+              offset: 2,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['PIZZA'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067475,
+                },
+              ],
+              totalSats: 1,
+            },
+            {
+              range: {
+                start: '0',
+                end: '0',
+              },
+              yearMined: 0,
+              block: 0,
+              offset: 0,
+              satributes: ['COMMON'],
+              inscriptions: [],
+              totalSats: 7,
+            },
+          ],
+          totalExoticSats: 2,
         },
       },
       {
