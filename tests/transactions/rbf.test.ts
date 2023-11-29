@@ -38,10 +38,7 @@ describe.skip('Replace By Fee', () => {
 
   describe('transaction summary', () => {
     it('should generate correct summary', () => {
-      const summary = rbf.getRbfTransactionSummary({
-        weight: 440,
-        fees: 20000,
-      } as any);
+      const summary = rbf.getRbfTransactionSummary('Mainnet', 'txid');
       expect(summary).toEqual({
         currentFee: 20000, // sum of inputs minus sum of outputs
         currentFeeRate: 181.82, // currentFee / vsize with vsize being weight / 4
@@ -51,7 +48,7 @@ describe.skip('Replace By Fee', () => {
     });
 
     it('should generate summary for complete test txn', () => {
-      const summary = rbf.getRbfTransactionSummary(rbfTransaction);
+      const summary = rbf.getRbfTransactionSummary('Mainnet', 'txid');
       expect(summary).toEqual({
         currentFee: 33288,
         currentFeeRate: 66.71,
