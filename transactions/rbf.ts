@@ -24,7 +24,8 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
 const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string) => {
   const esploraProvider = new EsploraProvider({ network });
   const transaction = await esploraProvider.getTransaction(txid);
-  let vsize = transaction.weight / 4;
+  const transactionVSize = transaction.weight / 4;
+  let totalVSize = transaction.weight / 4;
   let fee = transaction.fee;
 
   const outspends = await esploraProvider.getTransactionOutspends(txid);
@@ -35,21 +36,24 @@ const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string)
     }
 
     const descendantTxid = outspend.txid;
-    const { vsize: descendantVsize, fee: descendantFee } = await getTransactionChainSizeAndFee(network, descendantTxid);
-    vsize += descendantVsize;
+    const { totalVSize: descendantVsize, fee: descendantFee } = await getTransactionChainSizeAndFee(
+      network,
+      descendantTxid,
+    );
+    totalVSize += descendantVsize;
     fee += descendantFee;
   }
 
-  return { vsize, fee };
+  return { transactionVSize, totalVSize, fee };
 };
 
 const getRbfTransactionSummary = async (network: NetworkType, txid: string) => {
-  const { vsize, fee } = await getTransactionChainSizeAndFee(network, txid);
+  const { transactionVSize, totalVSize, fee } = await getTransactionChainSizeAndFee(network, txid);
 
-  const currentFeeRate = +(fee / vsize).toFixed(2);
+  const currentFeeRate = +(fee / totalVSize).toFixed(2);
 
-  const minimumRbfFee = Math.ceil(fee + vsize);
-  const minimumRbfFeeRate = Math.ceil(+(minimumRbfFee / vsize).toFixed(2));
+  const minimumRbfFee = Math.ceil(fee + totalVSize);
+  const minimumRbfFeeRate = Math.ceil(+(minimumRbfFee / transactionVSize).toFixed(2));
 
   return { currentFee: fee, currentFeeRate, minimumRbfFee, minimumRbfFeeRate };
 };
