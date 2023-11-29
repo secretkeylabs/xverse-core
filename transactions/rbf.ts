@@ -25,10 +25,7 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
 const getRbfTransactionSummary = (transaction: BtcTransactionData) => {
   const transactionVSize = Math.ceil(transaction.weight / 4);
 
-  const currentTransactionInputTotals = transaction.inputs.reduce((total, input) => total + input.prevout.value, 0);
-  const currentTransactionOutputTotals = transaction.outputs.reduce((total, output) => total + output.value, 0);
-
-  const currentFee = currentTransactionInputTotals - currentTransactionOutputTotals;
+  const currentFee = transaction.fees;
   const currentFeeRate = +(currentFee / transactionVSize).toFixed(2);
 
   const minimumRbfFee = Math.ceil(currentFee + transactionVSize);
