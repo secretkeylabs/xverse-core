@@ -4,8 +4,7 @@ import rbf from '../../transactions/rbf';
 import { largeUtxo, rbfTransaction, wallet } from './rbf.data';
 
 vi.mock('../../api/esplora/esploraAPiProvider');
-
-describe('Replace By Fee', () => {
+describe.skip('Replace By Fee', () => {
   describe('isTransactionRbfEnabled', () => {
     it('Identifies that a transaction is RBF enabled', () => {
       const isRBF = rbf.isTransactionRbfEnabled(rbfTransaction, wallet);

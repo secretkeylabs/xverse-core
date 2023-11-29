@@ -5,6 +5,7 @@ import {
   BTC_BASE_URI_MAINNET,
   BTC_BASE_URI_TESTNET,
 } from '../../constant';
+import { RecommendedFeeResponse } from '../../types';
 import {
   BtcAddressBalanceResponse,
   BtcAddressDataResponse,
@@ -165,10 +166,15 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     };
   }
 
-  async getRecommendedFees(): Promise<esplora.RecommendedFeeResponse> {
+  async getTransactionOutspends(txid: string): Promise<esplora.TransactionOutspend[]> {
+    const data = await this.httpGet<esplora.TransactionOutspend[]>(`/tx/${txid}/outspends`);
+    return data;
+  }
+
+  async getRecommendedFees(): Promise<RecommendedFeeResponse> {
     // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
-    // TODO: move this out of here
-    const { data } = await axios.get<esplora.RecommendedFeeResponse>(
+    // TODO: make sure nothign is using this and remove it from here. It exists in the mempool api file.
+    const { data } = await axios.get<RecommendedFeeResponse>(
       `https://mempool.space/${this._network === 'Mainnet' ? '' : 'testnet/'}api/v1/fees/recommended`,
     );
     return data;

@@ -18,13 +18,13 @@ export type {
   BtcAddressMempool,
   FeeEstimates,
   MempoolInput,
-  RecommendedFeeResponse,
   Transaction,
   TxStatus,
   UTXO,
   Vin,
   Vout,
 } from './api/esplora';
+export * from './api/mempool/fees';
 export * from './api/ordinals';
 export * from './api/ordinalsbot';
 export * from './api/stacks/assets';
