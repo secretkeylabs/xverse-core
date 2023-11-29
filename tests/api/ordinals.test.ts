@@ -1,5 +1,5 @@
-import { mapRareSatsAPIResponseToBundle } from 'api';
-import { Bundle, UtxoOrdinalBundle } from 'types';
+import { mapRareSatsAPIResponseToBundle } from '../../api/ordinals';
+import { Bundle, UtxoOrdinalBundle } from '../../types/api/xverse/ordinals';
 import { describe, expect, it } from 'vitest';
 
 describe('rareSats', () => {
@@ -246,6 +246,11 @@ describe('rareSats', () => {
             {
               content_type: 'image/png',
               id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+              inscription_number: 11067484,
+            },
+            {
+              content_type: 'image/png',
+              id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
               inscription_number: 11067475,
             },
           ],
@@ -265,6 +270,11 @@ describe('rareSats', () => {
                   content_type: 'image/png',
                   id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
                   inscription_number: 11067474,
+                },
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067484,
                 },
               ],
               totalSats: 1,
@@ -319,7 +329,7 @@ describe('rareSats', () => {
                 start: '34234320000000',
                 end: '34234320000001',
               },
-              satributes: ['BLOCK9_450'],
+              satributes: ['INVALID_SAT_1'],
               inscriptions: [
                 {
                   content_type: 'image/png',
@@ -336,7 +346,7 @@ describe('rareSats', () => {
                 start: '34234320000003',
                 end: '34234320000004',
               },
-              satributes: ['1D_PALINDROME', '2D_PALINDROME', 'BLOCK9_450'],
+              satributes: ['1D_PALINDROME', '2D_PALINDROME', 'INVALID_SAT_1'],
               inscriptions: [],
             },
             {
@@ -347,7 +357,18 @@ describe('rareSats', () => {
                 start: '34234320000003',
                 end: '34234320000004',
               },
-              satributes: ['PIZZA', 'BLOCK9_450'],
+              satributes: ['INVALID_SAT_1', 'INVALID_SAT_2'],
+              inscriptions: [],
+            },
+            {
+              year_mined: 2009,
+              block: 11,
+              offset: 3,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['PIZZA', 'INVALID_SAT_1'],
               inscriptions: [
                 {
                   content_type: 'image/png',
@@ -359,12 +380,12 @@ describe('rareSats', () => {
             {
               year_mined: 2009,
               block: 11,
-              offset: 3,
+              offset: 4,
               range: {
                 start: '34234320000004',
                 end: '34234320000005',
               },
-              satributes: ['BLOCK9_450'],
+              satributes: ['INVALID_SAT_1'],
               inscriptions: [],
             },
           ],
@@ -421,7 +442,7 @@ describe('rareSats', () => {
             {
               yearMined: 2009,
               block: 11,
-              offset: 2,
+              offset: 3,
               range: {
                 start: '34234320000003',
                 end: '34234320000004',
@@ -480,6 +501,109 @@ describe('rareSats', () => {
               satributes: ['COMMON'],
               inscriptions: [],
               totalSats: 10,
+            },
+          ],
+          totalExoticSats: 0,
+        },
+      },
+      {
+        name: 'exotics count towards total sats',
+        input: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 2,
+          vout: 0,
+          sat_ranges: [
+            {
+              year_mined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: [],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067475,
+                },
+              ],
+            },
+            {
+              year_mined: 2009,
+              block: 10,
+              offset: 1,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: [],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067476,
+                },
+              ],
+            },
+          ],
+        },
+        expected: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 2,
+          vout: 0,
+          inscriptions: [
+            {
+              content_type: 'image/png',
+              id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+              inscription_number: 11067475,
+            },
+            {
+              content_type: 'image/png',
+              id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+              inscription_number: 11067476,
+            },
+          ],
+          satributes: [['COMMON'], ['COMMON']],
+          satRanges: [
+            {
+              yearMined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['COMMON'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067475,
+                },
+              ],
+              totalSats: 1,
+            },
+            {
+              yearMined: 2009,
+              block: 10,
+              offset: 1,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['COMMON'],
+              inscriptions: [
+                {
+                  content_type: 'image/png',
+                  id: '6b186d467d817e4d086a9d1bf93785d736df6431c1cc9c305571161d616d05d0i0',
+                  inscription_number: 11067476,
+                },
+              ],
+              totalSats: 1,
             },
           ],
           totalExoticSats: 0,

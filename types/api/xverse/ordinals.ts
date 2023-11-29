@@ -71,7 +71,9 @@ export type SatributesType = (typeof Satributes)[number];
 
 // ({} & string) is a workaround to support our types and also allow any string for unsupported types
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type RareSatsType = RodarmorRareSatsType | SatributesType | ({} & string);
+export type RareSatsTypeApi = RodarmorRareSatsType | SatributesType | ({} & string);
+
+export type RareSatsType = RodarmorRareSatsType | SatributesType;
 
 export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
 
@@ -83,7 +85,7 @@ export type SatRange = {
   year_mined: number;
   block: number;
   offset: number;
-  satributes: RareSatsType[];
+  satributes: RareSatsTypeApi[];
   inscriptions: SatRangeInscription[];
 };
 
@@ -108,9 +110,10 @@ export type AddressBundleResponse = {
 
 export type UtxoBundleResponse = UtxoOrdinalBundle & XVersion;
 
-export type BundleSatRange = Omit<SatRange, 'year_mined'> & {
+export type BundleSatRange = Omit<SatRange, 'year_mined' | 'satributes'> & {
   totalSats: number;
   yearMined: number;
+  satributes: RareSatsType[];
 };
 
 export type Bundle = Omit<UtxoOrdinalBundle, 'sat_ranges'> & {

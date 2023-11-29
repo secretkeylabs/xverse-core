@@ -292,7 +292,7 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
     totalSats: apiBundle.value,
   };
 
-  // if bundle has and empty sat ranges, it means that it's a common/unknown bundle
+  // if bundle has empty sat ranges, it means that it's a common/unknown bundle
   if (!apiBundle.sat_ranges.length) {
     return {
       ...generalBundleInfo,
@@ -311,14 +311,14 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
     const { year_mined: yearMined, ...satRangeProps } = satRange;
 
     // filter out unsupported satributes
+    // filter is not able to infer the type of the array, so we need to cast it
     const supportedSatributes = satRange.satributes.filter(
       (satribute) =>
         RodarmorRareSats.includes(satribute as RodarmorRareSatsType) ||
         Satributes.includes(satribute as SatributesType),
-    );
+    ) as RareSatsType[];
 
-    const rangeWithUnsupportedSatsAndWithoutInscriptions =
-      satRange.satributes.length === 1 && !satRange.inscriptions.length && !supportedSatributes.length;
+    const rangeWithUnsupportedSatsAndWithoutInscriptions = !satRange.inscriptions.length && !supportedSatributes.length;
     // if range has no inscriptions and only unsupported satributes, we skip it
     if (rangeWithUnsupportedSatsAndWithoutInscriptions) {
       return;
@@ -340,19 +340,18 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
       totalSats,
       yearMined,
       satributes,
-      // only one inscription per range is supported
-      inscriptions: satRange.inscriptions.length > 1 ? [satRange.inscriptions[0]] : satRange.inscriptions,
     };
 
     satRanges.push(range);
   });
 
-  // if totalExoticSats doesn't match the value of the bundle,
-  // it means that the bundle is not fully exotic and we need to add a common unknown sat range
-  if (totalExoticSats !== apiBundle.value) {
+  // if totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value,
+  // it means that the bundle has common/unknown sats and we need to add a common/unknown sat range
+  const totalExoticSatsAndCommonUnknownInscribedSats = totalExoticSats + totalCommonUnknownInscribedSats;
+  if (totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value) {
     satRanges.push({
       ...commonUnknownRange,
-      totalSats: apiBundle.value - (totalExoticSats + totalCommonUnknownInscribedSats),
+      totalSats: apiBundle.value - totalExoticSatsAndCommonUnknownInscribedSats,
     });
   }
 
