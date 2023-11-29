@@ -137,6 +137,7 @@ export async function createNativeSegwitPsbt(
       },
       nonWitnessUtxo: transactionMap[utxo.txid],
       bip32Derivation: inputDerivation,
+      sequence: 0xfffffffd,
     });
   }
 
@@ -199,6 +200,7 @@ export async function createTaprootPsbt(
       },
       tapBip32Derivation: inputDerivation,
       tapInternalKey,
+      sequence: 0xfffffffd,
     });
   }
 
@@ -271,6 +273,7 @@ export async function createMixedPsbt(
         },
         nonWitnessUtxo: transactionMap[utxo.txid],
         bip32Derivation: inputDerivation,
+        sequence: 0xfffffffd,
       });
     } else {
       // Adding Taproot input
@@ -283,6 +286,7 @@ export async function createMixedPsbt(
         },
         tapBip32Derivation: taprootInputDerivation,
         tapInternalKey,
+        sequence: 0xfffffffd,
       });
     }
   }

@@ -4,6 +4,7 @@ export * from './inscriptionMint';
 export * from './psbt';
 export * from './stacking';
 export * from './stx';
+export { default as rbf } from './rbf';
 export {
   createContractCallPromises,
   createDeployContractRequest,
