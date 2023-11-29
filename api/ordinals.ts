@@ -15,11 +15,11 @@ import {
   InscriptionRequestResponse,
   NetworkType,
   RareSatsType,
-  RoadArmorRareSats,
-  RoadArmorRareSatsType,
+  RodarmorRareSats,
+  RodarmorRareSatsType,
   SatRangeInscription,
-  Sattributes,
-  SattributesType,
+  Satributes,
+  SatributesType,
   UTXO,
   UtxoBundleResponse,
   UtxoOrdinalBundle,
@@ -313,8 +313,8 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
     // filter out unsupported satributes
     const supportedSatributes = satRange.satributes.filter(
       (satribute) =>
-        RoadArmorRareSats.includes(satribute as RoadArmorRareSatsType) ||
-        Sattributes.includes(satribute as SattributesType),
+        RodarmorRareSats.includes(satribute as RodarmorRareSatsType) ||
+        Satributes.includes(satribute as SatributesType),
     );
 
     const rangeWithUnsupportedSatsAndWithoutInscriptions =

@@ -38,10 +38,10 @@ export interface InscriptionInCollectionsList {
   data: Array<Inscription>;
 }
 
-export const RoadArmorRareSats = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
-export type RoadArmorRareSatsType = (typeof RoadArmorRareSats)[number];
+export const RodarmorRareSats = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
+export type RodarmorRareSatsType = (typeof RodarmorRareSats)[number];
 
-export const Sattributes = [
+export const Satributes = [
   'BLACK_LEGENDARY',
   'BLACK_EPIC',
   'BLACK_RARE',
@@ -67,11 +67,11 @@ export const Sattributes = [
   'HITMAN',
   'SILK_ROAD',
 ] as const;
-export type SattributesType = (typeof Sattributes)[number];
+export type SatributesType = (typeof Satributes)[number];
 
 // ({} & string) is a workaround to support our types and also allow any string for unsupported types
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type RareSatsType = RoadArmorRareSatsType | SattributesType | ({} & string);
+export type RareSatsType = RodarmorRareSatsType | SatributesType | ({} & string);
 
 export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
 
