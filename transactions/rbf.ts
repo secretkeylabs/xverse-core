@@ -34,15 +34,41 @@ const getRbfTransactionSummary = (transaction: BtcTransactionData) => {
   return { currentFee, currentFeeRate, minimumRbfFee, minimumRbfFeeRate };
 };
 
-const isTransactionRbfEnabled = (transaction: BtcTransactionData) => {
+const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFProps) => {
   if (transaction.confirmed) {
     return false;
   }
 
-  return transaction.inputs.some((input) => input.sequence < 0xffffffff - 1);
+  const inputsEnabled = transaction.inputs.some((input) => input.sequence < 0xffffffff - 1);
+
+  if (!inputsEnabled) {
+    return false;
+  }
+
+  const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+
+  let p2btc: btc.P2Ret;
+  const publicKeyBuff = hex.decode(wallet.btcPublicKey);
+  if (wallet.accountType === 'software') {
+    const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
+    p2btc = btc.p2sh(p2wpkh, network);
+  } else if (wallet.accountType === 'ledger') {
+    p2btc = btc.p2wpkh(publicKeyBuff, network);
+  } else {
+    throw new Error('Unrecognised account type');
+  }
+
+  const publicKeyBuffTr = hex.decode(wallet.ordinalsPublicKey);
+  const schnorrPublicKeyBuff = publicKeyBuffTr.length === 33 ? publicKeyBuffTr.slice(1) : publicKeyBuffTr;
+  const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, network);
+
+  return transaction.inputs.every((input) => {
+    const witnessUtxoScript = Buffer.from(input.prevout.scriptpubkey, 'hex');
+    return areByteArraysEqual(witnessUtxoScript, p2tr.script) || areByteArraysEqual(witnessUtxoScript, p2btc.script);
+  });
 };
 
-type RBFProps = {
+export type RBFProps = {
   btcAddress: string;
   ordinalsAddress: string;
   btcPublicKey: string;
@@ -94,7 +120,7 @@ class RbfTransaction {
     if (transaction.confirmed) {
       throw new Error('Transaction is already confirmed');
     }
-    if (!isTransactionRbfEnabled(transaction)) {
+    if (!isTransactionRbfEnabled(transaction, wallet)) {
       throw new Error('Not RBF enabled transaction');
     }
 
