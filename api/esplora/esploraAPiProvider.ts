@@ -171,6 +171,9 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     return data;
   }
 
+  /**
+   * @deprecated use mempoolApi.getRecommendedFees instead
+   */
   async getRecommendedFees(): Promise<RecommendedFeeResponse> {
     // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
     // TODO: make sure nothign is using this and remove it from here. It exists in the mempool api file.
