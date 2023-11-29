@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import EsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import rbf from '../../transactions/rbf';
-import { rbfTransaction, wallet } from './rbf.data';
+import { largeUtxo, rbfTransaction, wallet } from './rbf.data';
+
+vi.mock('../../api/esplora/esploraAPiProvider');
 
 describe('Replace By Fee', () => {
   describe('isTransactionRbfEnabled', () => {
@@ -61,6 +64,8 @@ describe('Replace By Fee', () => {
 
   describe('RbfTransaction', () => {
     it('getRbfRecommendedFees', async () => {
+      vi.mocked(EsploraApiProvider).mockImplementation(() => ({ getUnspentUtxos: () => Promise.resolve([]) } as any));
+
       const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
       const recommendedFees = await rbfTxn.getRbfRecommendedFees({
         economyFee: 23,
@@ -80,6 +85,51 @@ describe('Replace By Fee', () => {
           fee: 45696,
           feeRate: 84,
         },
+      });
+    });
+
+    it('getRbfFeeSummary throws on low fee rate', async () => {
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      await expect(() => rbfTxn.getRbfFeeSummary(50)).rejects.toThrow('Fee rate is below RBF minimum fee rate');
+    });
+
+    it('getRbfFeeSummary works with no extra inputs', async () => {
+      vi.mocked(EsploraApiProvider).mockImplementation(() => ({ getUnspentUtxos: () => Promise.resolve([]) } as any));
+
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const feeSummary = await rbfTxn.getRbfFeeSummary(68);
+      expect(feeSummary).toEqual({
+        enoughFunds: true,
+        fee: 36992,
+        feeRate: 68,
+      });
+    });
+
+    it('getRbfFeeSummary returns not enough funds if no additional UTXOs', async () => {
+      vi.mocked(EsploraApiProvider).mockImplementation(() => ({ getUnspentUtxos: () => Promise.resolve([]) } as any));
+
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const feeSummary = await rbfTxn.getRbfFeeSummary(1000000);
+
+      expect(feeSummary).toEqual({
+        enoughFunds: false,
+        fee: undefined,
+        feeRate: 1000000,
+      });
+    });
+
+    it('getRbfFeeSummary returns with additional UTXOs', async () => {
+      vi.mocked(EsploraApiProvider).mockImplementation(
+        () => ({ getUnspentUtxos: () => Promise.resolve([largeUtxo]) } as any),
+      );
+
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const feeSummary = await rbfTxn.getRbfFeeSummary(1000000);
+
+      expect(feeSummary).toEqual({
+        enoughFunds: true,
+        fee: 635000000,
+        feeRate: 1000000,
       });
     });
   });

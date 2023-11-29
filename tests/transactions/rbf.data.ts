@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { RBFProps } from '../../transactions/rbf';
-import { BtcTransactionData } from '../../types';
+import { BtcTransactionData, UTXO } from '../../types';
 
 /* eslint-disable max-len */
 export const rbfTransaction: BtcTransactionData = {
@@ -142,4 +142,17 @@ export const wallet: RBFProps = {
   accountId: 0,
   network: 'Mainnet',
   accountType: 'software',
+};
+
+export const largeUtxo: UTXO = {
+  txid: 'bb01711d83a22efcb10a8f025d17e61a09a53fafb22c4faf831df0cbdf104b40',
+  vout: 0,
+  status: {
+    confirmed: true,
+    block_height: 790416,
+    block_hash: '0000000000000000000353903f91b9280da1bfa205469d8fee2d9e79af9a1878',
+    block_time: 1684480442,
+  },
+  value: 1000000000,
+  address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
 };

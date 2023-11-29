@@ -116,6 +116,8 @@ class RbfTransaction {
 
   private paymentUtxos?: UTXO[];
 
+  private minimumRbfFeeRate!: number;
+
   constructor(transaction: BtcTransactionData, wallet: RBFProps) {
     if (transaction.confirmed) {
       throw new Error('Transaction is already confirmed');
@@ -197,6 +199,8 @@ class RbfTransaction {
       outputsTotal += prevOutput.value;
     }
 
+    const { minimumRbfFeeRate } = getRbfTransactionSummary(transaction);
+
     this.wallet = wallet;
     this.baseTx = tx;
     this.initialInputTotal = inputsTotal;
@@ -205,6 +209,7 @@ class RbfTransaction {
     this.network = network;
     this.p2btc = p2btc;
     this.p2tr = p2tr;
+    this.minimumRbfFeeRate = minimumRbfFeeRate;
   }
 
   private getPaymentUtxos = async () => {
@@ -446,6 +451,10 @@ class RbfTransaction {
   };
 
   getRbfFeeSummary = async (feeRate: number): Promise<TierFees> => {
+    if (feeRate < this.minimumRbfFeeRate) {
+      throw new Error('Fee rate is below RBF minimum fee rate');
+    }
+
     try {
       const tx = await this.compileTransaction(feeRate, true);
 
