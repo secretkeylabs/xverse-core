@@ -4,6 +4,7 @@ import rbf from '../../transactions/rbf';
 describe('Replace By Fee', () => {
   describe('isTransactionRbfEnabled', () => {
     it.each([
+      ['confirmed', [{ confirmed: true }], false],
       ['single input max', [{ sequence: 0xffffffff }], false],
       ['single input max - 1', [{ sequence: 0xffffffff - 1 }], false],
       ['single input enabled high', [{ sequence: 0xffffffff - 2 }], true],
@@ -27,32 +28,13 @@ describe('Replace By Fee', () => {
     it('should generate correct summary', () => {
       const summary = rbf.getRbfTransactionSummary({
         weight: 440,
-        inputs: [
-          {
-            prevout: {
-              value: 100000,
-            },
-          },
-          {
-            prevout: {
-              value: 50000,
-            },
-          },
-        ],
-        outputs: [
-          {
-            value: 80000,
-          },
-          {
-            value: 50000,
-          },
-        ],
+        fees: 20000,
       } as any);
       expect(summary).toEqual({
-        currentFee: 20000,
-        currentFeeRate: 181.82,
-        minimumRbfFee: 20110,
-        minimumRbfFeeRate: 183,
+        currentFee: 20000, // sum of inputs minus sum of outputs
+        currentFeeRate: 181.82, // currentFee / vsize with vsize being weight / 4
+        minimumRbfFee: 20110, // currentFee + vsize of txn
+        minimumRbfFeeRate: 183, // minimumRbfFee / vsize
       });
     });
   });

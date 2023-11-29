@@ -280,6 +280,7 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     changeAddress,
     new BigNumber(commitChainFees),
     network,
+    false,
   );
 
   const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder(network, {
