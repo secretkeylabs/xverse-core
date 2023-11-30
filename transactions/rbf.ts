@@ -439,15 +439,15 @@ class RbfTransaction {
         // check if we can add change output
         const txWithChange = btc.Transaction.fromPSBT(tx.toPSBT(0));
         actualFee = change;
-        txWithChange.addOutputAddress(this.wallet.btcAddress, BigInt(Math.floor(change)), this.network);
+        txWithChange.addOutputAddress(this.wallet.btcAddress, BigInt(change), this.network);
         const sizeWithChange = await this.getTxSize(txWithChange);
         const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fees + sizeWithChange);
 
         if (newFeeWithChange + 1000 < change) {
           // add change output
-          actualFee = newFeeWithChange;
-          const actualChange = change - newFeeWithChange;
-          tx.addOutputAddress(this.wallet.btcAddress, BigInt(Math.floor(actualChange)), this.network);
+          actualFee = Math.ceil(newFeeWithChange);
+          const actualChange = change - actualFee;
+          tx.addOutputAddress(this.wallet.btcAddress, BigInt(actualChange), this.network);
           outputsTotal += actualChange;
         }
 
@@ -480,7 +480,8 @@ class RbfTransaction {
     };
   };
 
-  getRbfFeeSummary = async (feeRate: number): Promise<TierFees> => {
+  getRbfFeeSummary = async (feeRateRaw: number): Promise<TierFees> => {
+    const feeRate = Math.ceil(feeRateRaw);
     const minimumRbfFeeRate = await this.getMinimumRbfFeeRate();
 
     if (feeRate < minimumRbfFeeRate) {
@@ -525,8 +526,8 @@ class RbfTransaction {
       return this.constructRecommendedFees('high', high, 'higher', higher);
     }
 
-    const higher = Math.ceil(minimumRbfFeeRate * 1.1);
-    const highest = Math.max(higher + 1, Math.ceil(minimumRbfFeeRate * 1.2));
+    const higher = minimumRbfFeeRate * 1.1;
+    const highest = Math.max(higher + 1, minimumRbfFeeRate * 1.2);
 
     return this.constructRecommendedFees('higher', higher, 'highest', highest);
   };
