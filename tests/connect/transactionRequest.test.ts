@@ -2,7 +2,7 @@ import { BigNumber } from 'bignumber.js';
 import { TransactionTypes, ContractCallPayload, STXTransferPayload, ContractDeployPayload } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { txPayloadToRequest } from 'connect';
-import { microstacksToStx, stxToMicrostacks } from 'currency';
+import { microstacksToStx } from 'currency';
 import {
   createContractCallPromises,
   generateContractDeployTransaction,
@@ -47,6 +47,7 @@ describe('txPayloadToRequest', () => {
     // Mock data
     const mockContractDeploy = {
       codeBody:
+        // eslint-disable-next-line max-len
         '\n(define-fungible-token connect-token)\n(begin (ft-mint? connect-token u10000000 tx-sender))\n\n(define-public (transfer\n    (recipient principal)\n    (amount uint)\n  )\n  (ok (ft-transfer? connect-token amount tx-sender recipient))\n)\n\n(define-public (faucet)\n  (ok (ft-mint? connect-token u100 tx-sender))\n)\n\n(define-non-fungible-token hello-nft uint)\n(begin (nft-mint? hello-nft u1 tx-sender))\n(begin (nft-mint? hello-nft u2 tx-sender))\n',
       contractName: 'demo-deploy-1701352463789',
       network: new StacksTestnet(),
@@ -89,6 +90,7 @@ describe('txPayloadToRequest', () => {
       postConditionMode: 2,
       postConditions: [
         '000216483cd5c1c96119e132aa12b76df34f003c85f9af01000000000007a120',
+        // eslint-disable-next-line max-len
         '010316e685b016b3b6cd9ebf35f38e5ae29392e2acd51d0f616c65782d7661756c742d76312d3116e685b016b3b6cd9ebf35f38e5ae29392e2acd51d176167653030302d676f7665726e616e63652d746f6b656e04616c657803000000001a612f25',
       ],
       publicKey: '03f746046bacb5ff6254124bbdadbe28ca1cfefbd9cd160403667a772f25f298ab',
