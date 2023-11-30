@@ -21,9 +21,19 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
   return a.every((v, i) => v === b[i]);
 };
 
-const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string) => {
+const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string, depth = 1) => {
+  if (depth > 30) {
+    // This should never happen as bitcoins limit is 25. This is a recursion safety check.
+    throw new Error('Too many chained transactions');
+  }
+
   const esploraProvider = new EsploraProvider({ network });
   const transaction = await esploraProvider.getTransaction(txid);
+
+  if (!transaction || transaction.status.confirmed) {
+    throw new Error('Invalid transaction for RBF detected.');
+  }
+
   const transactionVSize = transaction.weight / 4;
   let totalVSize = transaction.weight / 4;
   let fee = transaction.fee;
@@ -39,6 +49,7 @@ const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string)
     const { totalVSize: descendantVsize, fee: descendantFee } = await getTransactionChainSizeAndFee(
       network,
       descendantTxid,
+      depth + 1,
     );
     totalVSize += descendantVsize;
     fee += descendantFee;
