@@ -18,6 +18,7 @@ export type {
   BtcAddressMempool,
   FeeEstimates,
   MempoolInput,
+  RecommendedFeeResponse,
   Transaction,
   TxStatus,
   UTXO,
@@ -35,9 +36,9 @@ export type { Pool, StackerInfo, StackingData, StackingPoolInfo, StackingStateDa
 export * from './api/xverse/transaction';
 export * from './api/xverse/wallet';
 export * from './api/xverseInscribe';
+export * from './currency';
 export type { SupportedCurrency } from './currency';
 export * from './error';
 export * from './mixpanel';
 export * from './network';
 export * from './wallet';
-export * from './currency';

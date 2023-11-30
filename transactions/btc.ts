@@ -108,7 +108,7 @@ export function selectUnspentOutputs(
   return inputs;
 }
 
-export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UTXO>, p2sh: any) {
+export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UTXO>, p2sh: any, rbfEnabled = true) {
   unspentOutputs.forEach((output) => {
     tx.addInput({
       txid: output.txid,
@@ -118,6 +118,8 @@ export function addInputs(tx: btc.Transaction, unspentOutputs: Array<UTXO>, p2sh
         amount: BigInt(output.value),
       },
       redeemScript: p2sh.redeemScript ? p2sh.redeemScript : Buffer.alloc(0),
+      // enable RBF on our txns by setting the sequence number to < 0xfffffffe
+      sequence: rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   });
 }
@@ -137,6 +139,8 @@ export function addInputsTaproot(
         amount: BigInt(output.value),
       },
       tapInternalKey: internalPubKey,
+      // enable RBF on our txns by setting the sequence number to < 0xfffffffe
+      sequence: 0xfffffffd,
     });
   });
 }
@@ -166,6 +170,7 @@ export async function generateSignedBtcTransaction(
   changeAddress: string,
   feeSats: BigNumber,
   selectedNetwork: NetworkType,
+  rbfEnabled = true,
 ): Promise<btc.Transaction> {
   const privKey = hex.decode(privateKey);
   const tx = new btc.Transaction();
@@ -183,7 +188,7 @@ export async function generateSignedBtcTransaction(
 
   const changeSats = sumValue.minus(satsToSend).minus(feeSats);
 
-  addInputs(tx, selectedUnspentOutputs, p2sh);
+  addInputs(tx, selectedUnspentOutputs, p2sh, rbfEnabled);
 
   recipients.forEach((recipient) => {
     addOutput(tx, recipient.address, recipient.amountSats, btcNetwork);

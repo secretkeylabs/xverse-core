@@ -4,14 +4,24 @@ import XordApiProvider from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
+  AddressBundleResponse,
   Brc20HistoryTransactionData,
   BtcOrdinal,
+  Bundle,
+  BundleSatRange,
   FungibleToken,
   HiroApiBrc20TxHistoryResponse,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
+  RareSatsType,
+  RodarmorRareSats,
+  RodarmorRareSatsType,
+  SatRangeInscription,
+  Satributes,
+  SatributesType,
   UTXO,
+  UtxoBundleResponse,
   UtxoOrdinalBundle,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
@@ -216,12 +226,6 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
 
-export type AddressBundleResponse = {
-  total: number;
-  offset: number;
-  limit: number;
-  results: UtxoOrdinalBundle[];
-};
 export const getAddressUtxoOrdinalBundles = async (
   network: NetworkType,
   address: string,
@@ -247,7 +251,7 @@ export const getAddressUtxoOrdinalBundles = async (
   }
 
   const response = await axios.get<AddressBundleResponse>(
-    `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinal-utxo`,
+    `${XVERSE_API_BASE_URL(network)}/v2/address/${address}/ordinal-utxo`,
     {
       params,
     },
@@ -260,9 +264,105 @@ export const getUtxoOrdinalBundle = async (
   network: NetworkType,
   txid: string,
   vout: number,
-): Promise<UtxoOrdinalBundle> => {
-  const response = await axios.get<UtxoOrdinalBundle>(
-    `${XVERSE_API_BASE_URL(network)}/v1/ordinal-utxo/${txid}:${vout}`,
+): Promise<UtxoBundleResponse> => {
+  const response = await axios.get<UtxoBundleResponse>(
+    `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
+};
+
+export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
+  const generalBundleInfo = {
+    txid: apiBundle.txid,
+    vout: apiBundle.vout,
+    block_height: apiBundle.block_height,
+    value: apiBundle.value,
+  };
+
+  const commonUnknownRange: BundleSatRange = {
+    range: {
+      start: '0',
+      end: '0',
+    },
+    yearMined: 0,
+    block: 0,
+    offset: 0,
+    satributes: ['COMMON'],
+    inscriptions: [],
+    totalSats: apiBundle.value,
+  };
+
+  // if bundle has empty sat ranges, it means that it's a common/unknown bundle
+  if (!apiBundle.sat_ranges.length) {
+    return {
+      ...generalBundleInfo,
+      satRanges: [commonUnknownRange],
+      inscriptions: [],
+      satributes: [['COMMON']],
+      totalExoticSats: 0,
+    };
+  }
+
+  let totalExoticSats = 0;
+  let totalCommonUnknownInscribedSats = 0;
+  const satRanges: BundleSatRange[] = [];
+
+  apiBundle.sat_ranges.forEach((satRange) => {
+    const { year_mined: yearMined, ...satRangeProps } = satRange;
+
+    // filter out unsupported satributes
+    // filter is not able to infer the type of the array, so we need to cast it
+    const supportedSatributes = satRange.satributes.filter(
+      (satribute) =>
+        RodarmorRareSats.includes(satribute as RodarmorRareSatsType) ||
+        Satributes.includes(satribute as SatributesType),
+    ) as RareSatsType[];
+
+    const rangeWithUnsupportedSatsAndWithoutInscriptions = !satRange.inscriptions.length && !supportedSatributes.length;
+    // if range has no inscriptions and only unsupported satributes, we skip it
+    if (rangeWithUnsupportedSatsAndWithoutInscriptions) {
+      return;
+    }
+
+    // if range has inscribed sats of unsupported type or unknown, we map it to a common/unknown sat range
+    const satributes = !supportedSatributes.length ? (['COMMON'] as RareSatsType[]) : supportedSatributes;
+
+    const totalSats = Number(BigInt(satRange.range.end) - BigInt(satRange.range.start));
+
+    if (satributes.includes('COMMON')) {
+      totalCommonUnknownInscribedSats += totalSats;
+    } else {
+      totalExoticSats += totalSats;
+    }
+
+    const range = {
+      ...satRangeProps,
+      totalSats,
+      yearMined,
+      satributes,
+    };
+
+    satRanges.push(range);
+  });
+
+  // if totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value,
+  // it means that the bundle has common/unknown sats and we need to add a common/unknown sat range
+  const totalExoticSatsAndCommonUnknownInscribedSats = totalExoticSats + totalCommonUnknownInscribedSats;
+  if (totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value) {
+    satRanges.push({
+      ...commonUnknownRange,
+      totalSats: apiBundle.value - totalExoticSatsAndCommonUnknownInscribedSats,
+    });
+  }
+
+  const inscriptions = satRanges.reduce((acc, curr) => [...acc, ...curr.inscriptions], [] as SatRangeInscription[]);
+  const satributes = satRanges.reduce((acc, curr) => [...acc, curr.satributes], [] as RareSatsType[][]);
+
+  return {
+    ...generalBundleInfo,
+    satRanges,
+    inscriptions,
+    satributes,
+    totalExoticSats,
+  };
 };
