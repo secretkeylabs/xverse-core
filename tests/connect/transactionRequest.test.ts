@@ -1,6 +1,8 @@
+import { BigNumber } from 'bignumber.js';
 import { TransactionTypes, ContractCallPayload, STXTransferPayload, ContractDeployPayload } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { txPayloadToRequest } from 'connect';
+import { microstacksToStx, stxToMicrostacks } from 'currency';
 import {
   createContractCallPromises,
   generateContractDeployTransaction,
@@ -32,9 +34,10 @@ describe('txPayloadToRequest', () => {
     );
 
     const result = txPayloadToRequest(unsignedSendStxTx);
-
     expect(result).toBeDefined();
-    expect((result as STXTransferPayload).amount).toEqual(mockTokenTransferPayload.amount);
+    expect((result as STXTransferPayload).amount).toEqual(
+      microstacksToStx(new BigNumber(mockTokenTransferPayload.amount)).toString(),
+    );
     expect((result as STXTransferPayload).recipient).toEqual(mockTokenTransferPayload.recipient);
     expect((result as STXTransferPayload).memo).toEqual(mockTokenTransferPayload.memo);
     expect((result as STXTransferPayload).txType).toEqual(mockTokenTransferPayload.txType);
