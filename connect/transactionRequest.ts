@@ -1,4 +1,10 @@
-import { TransactionPayload, TransactionTypes } from '@stacks/connect';
+import {
+  TransactionPayload,
+  TransactionTypes,
+  ContractCallPayload,
+  STXTransferPayload,
+  ContractDeployPayload,
+} from '@stacks/connect';
 import { StacksNetwork } from '@stacks/network';
 import {
   AddressHashMode,
@@ -19,15 +25,14 @@ import { BigNumber } from 'bignumber.js';
 import { createContractCallPromises, generateUnsignedStxTokenTransferTransaction } from '../transactions';
 import { FeesMultipliers, StxPendingTxData } from '../types';
 import { buf2hex } from '../utils/arrayBuffers';
-
-const STX_DECIMALS = 6;
+import { STX_DECIMALS } from '../constant';
 
 export async function getContractCallPromises(
   payload: TransactionPayload,
   stxAddress: string,
   network: StacksNetwork,
   stxPublicKey: string,
-  auth: Authorization,
+  auth?: Authorization,
 ) {
   const [unSignedContractCall, contractInterface, coinsMetaData, showPostConditionMessage] =
     await createContractCallPromises(payload, stxAddress, network, stxPublicKey);
@@ -49,13 +54,13 @@ export async function getTokenTransferRequest(
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
   network: StacksNetwork,
-  stxPendingTransactions: StxPendingTxData,
+  stxPendingTransactions?: StxPendingTxData,
   auth?: Authorization,
 ) {
   const unsignedSendStxTx: StacksTransaction = await generateUnsignedStxTokenTransferTransaction(
     recipient,
     amount,
-    memo!,
+    memo,
     stxPendingTransactions?.pendingTransactions ?? [],
     stxPublicKey,
     network,
@@ -87,42 +92,45 @@ export const txPayloadToRequest = (
   stxAddress?: string,
   attachment?: string,
 ): TransactionPayload => {
+  const { payload, auth, postConditions, postConditionMode, anchorMode } = stacksTransaction;
+  const encodedPostConditions = encodePostConditions(postConditions.values as PostCondition[]);
   const transactionRequest = {
     attachment,
     stxAddress,
-    sponsored: stacksTransaction.auth.authType === AuthType.Sponsored,
-    nonce: Number(stacksTransaction.auth.spendingCondition.nonce),
-    fee: Number(stacksTransaction.auth.spendingCondition.fee),
-    postConditions: encodePostConditions(stacksTransaction.postConditions.values as any[]),
-    postConditionMode: stacksTransaction.postConditionMode,
-    anchorMode: stacksTransaction.anchorMode,
-  } as any;
-
-  switch (stacksTransaction.payload.payloadType) {
+    sponsored: auth.authType === AuthType.Sponsored,
+    nonce: Number(auth.spendingCondition.nonce),
+    fee: Number(auth.spendingCondition.fee),
+    postConditions: encodedPostConditions,
+    postConditionMode: postConditionMode,
+    anchorMode: anchorMode,
+  } as TransactionPayload;
+  switch (payload.payloadType) {
     case PayloadType.TokenTransfer:
-      transactionRequest.txType = TransactionTypes.STXTransfer;
-      transactionRequest.recipient = cvToValue(stacksTransaction.payload.recipient, true);
-      transactionRequest.amount = new BigNumber(Number(stacksTransaction.payload.amount))
-        .shiftedBy(-STX_DECIMALS)
+      const memo = cleanMemoString(payload.memo.content);
+      (transactionRequest as STXTransferPayload).txType = TransactionTypes.STXTransfer;
+      (transactionRequest as STXTransferPayload).recipient = cvToValue(payload.recipient, true);
+      (transactionRequest as STXTransferPayload).amount = new BigNumber(Number(payload.amount))
         .toNumber()
         .toLocaleString('en-US', { maximumFractionDigits: STX_DECIMALS });
-      transactionRequest.memo = cleanMemoString(stacksTransaction.payload.memo.content);
+      (transactionRequest as STXTransferPayload).memo = memo;
       break;
     case PayloadType.ContractCall:
-      transactionRequest.txType = TransactionTypes.ContractCall;
-      transactionRequest.contractName = stacksTransaction.payload.contractName.content;
-      transactionRequest.contractAddress = addressToString(stacksTransaction.payload.contractAddress);
-      transactionRequest.functionArgs = stacksTransaction.payload.functionArgs.map((arg) =>
+      (transactionRequest as ContractCallPayload).txType = TransactionTypes.ContractCall;
+      (transactionRequest as ContractCallPayload).contractName = payload.contractName.content;
+      (transactionRequest as ContractCallPayload).contractAddress = addressToString(payload.contractAddress);
+      (transactionRequest as ContractCallPayload).functionArgs = payload.functionArgs.map((arg) =>
         Buffer.from(serializeCV(arg)).toString('hex'),
       );
-      transactionRequest.functionName = stacksTransaction.payload.functionName.content;
+      (transactionRequest as ContractCallPayload).functionName = payload.functionName.content;
       break;
     case PayloadType.SmartContract:
     case PayloadType.VersionedSmartContract:
-      transactionRequest.txType = TransactionTypes.ContractDeploy;
-      transactionRequest.contractName = stacksTransaction.payload.contractName.content;
-      transactionRequest.codeBody = stacksTransaction.payload.codeBody.content;
-      transactionRequest.clarityVersion = (stacksTransaction.payload as VersionedSmartContractPayload).clarityVersion;
+      (transactionRequest as ContractDeployPayload).txType = TransactionTypes.ContractDeploy;
+      (transactionRequest as ContractDeployPayload).contractName = payload.contractName.content;
+      (transactionRequest as ContractDeployPayload).codeBody = payload.codeBody.content;
+      (transactionRequest as ContractDeployPayload ).clarityVersion = (
+        payload as VersionedSmartContractPayload
+      ).clarityVersion;
       break;
     default:
       throw new Error('Unsupported tx type');

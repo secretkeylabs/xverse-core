@@ -3,7 +3,6 @@ import {
   AddressHashMode,
   AddressVersion,
   AnchorMode,
-  Authorization,
   ChainID,
   ClarityValue,
   LengthPrefixedString,
