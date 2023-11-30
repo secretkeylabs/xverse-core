@@ -607,6 +607,7 @@ export type SelectUtxosForSendProps = {
   feeRate: number;
   pinnedUtxos?: UTXO[];
   network: NetworkType;
+  useUnconfirmed?: boolean;
 };
 
 export type TransactionUtxoSelectionMetadata = {
@@ -627,6 +628,7 @@ export function selectUtxosForSend({
   feeRate,
   pinnedUtxos = [],
   network,
+  useUnconfirmed = true,
 }: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
   if (recipients.length === 0) {
     throw new Error('Must have at least one recipient');
@@ -640,7 +642,8 @@ export function selectUtxosForSend({
 
   const sortedUtxos = availableUtxos.filter((utxo) => {
     const utxoLocation = `${utxo.txid}:${utxo.vout}`;
-    return !pinnedLocations.has(utxoLocation);
+    const isConfirmed = utxo.status.confirmed;
+    return (useUnconfirmed || isConfirmed) && !pinnedLocations.has(utxoLocation);
   });
   sortedUtxos.sort((a, b) => a.value - b.value);
 
