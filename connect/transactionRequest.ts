@@ -110,6 +110,7 @@ export const txPayloadToRequest = (
       (transactionRequest as STXTransferPayload).txType = TransactionTypes.STXTransfer;
       (transactionRequest as STXTransferPayload).recipient = cvToValue(payload.recipient, true);
       (transactionRequest as STXTransferPayload).amount = new BigNumber(Number(payload.amount))
+        .shiftedBy(-STX_DECIMALS)
         .toNumber()
         .toLocaleString('en-US', { maximumFractionDigits: STX_DECIMALS });
       (transactionRequest as STXTransferPayload).memo = memo;
@@ -128,7 +129,7 @@ export const txPayloadToRequest = (
       (transactionRequest as ContractDeployPayload).txType = TransactionTypes.ContractDeploy;
       (transactionRequest as ContractDeployPayload).contractName = payload.contractName.content;
       (transactionRequest as ContractDeployPayload).codeBody = payload.codeBody.content;
-      (transactionRequest as ContractDeployPayload ).clarityVersion = (
+      (transactionRequest as ContractDeployPayload).clarityVersion = (
         payload as VersionedSmartContractPayload
       ).clarityVersion;
       break;
