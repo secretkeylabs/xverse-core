@@ -148,6 +148,10 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     return this.httpGet<esplora.Transaction>(`/tx/${txid}`);
   }
 
+  async getTransactionHex(txid: string): Promise<string> {
+    return this.httpGet<string>(`/tx/${txid}/hex`);
+  }
+
   async getAddressMempoolTransactions(address: string): Promise<esplora.BtcAddressMempool[]> {
     return this.httpGet<esplora.BtcAddressMempool[]>(`/address/${address}/txs/mempool`);
   }
@@ -162,7 +166,11 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
   }
 
   async getRecommendedFees(): Promise<esplora.RecommendedFeeResponse> {
-    const data: esplora.RecommendedFeeResponse = await this.httpGet('/v1/fees/recommended');
+    // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
+    // TODO: move this out of here
+    const { data } = await axios.get<esplora.RecommendedFeeResponse>(
+      `https://mempool.space/${this._network === 'Mainnet' ? '' : 'testnet/'}api/v1/fees/recommended`,
+    );
     return data;
   }
 

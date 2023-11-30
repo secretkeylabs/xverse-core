@@ -38,18 +38,55 @@ export interface InscriptionInCollectionsList {
   data: Array<Inscription>;
 }
 
-export type SatRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
+export const RodarmorRareSats = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
+export type RodarmorRareSatsType = (typeof RodarmorRareSats)[number];
 
-export type BundleRareSat = {
-  number: string;
-  rarity_ranking: SatRarity;
-  offset: number;
-};
+export const Satributes = [
+  'BLACK_LEGENDARY',
+  'BLACK_EPIC',
+  'BLACK_RARE',
+  'BLACK_UNCOMMON',
+  'FIBONACCI',
+  '1D_PALINDROME',
+  '2D_PALINDROME',
+  '3D_PALINDROME',
+  'SEQUENCE_PALINDROME',
+  'PERFECT_PALINCEPTION',
+  'PALIBLOCK_PALINDROME',
+  'PALINDROME',
+  'NAME_PALINDROME',
+  'ALPHA',
+  'OMEGA',
+  'FIRST_TRANSACTION',
+  'BLOCK9',
+  'BLOCK78',
+  'NAKAMOTO',
+  'VINTAGE',
+  'PIZZA',
+  'JPEG',
+  'HITMAN',
+  'SILK_ROAD',
+] as const;
+export type SatributesType = (typeof Satributes)[number];
 
-export type BundleInscription = {
-  id: string;
+// ({} & string) is a workaround to support our types and also allow any string for unsupported types
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type RareSatsTypeApi = RodarmorRareSatsType | SatributesType | ({} & string);
+
+export type RareSatsType = RodarmorRareSatsType | SatributesType;
+
+export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
+
+export type SatRange = {
+  range: {
+    start: string;
+    end: string;
+  };
+  year_mined: number;
+  block: number;
   offset: number;
-  content_type: string;
+  satributes: RareSatsTypeApi[];
+  inscriptions: SatRangeInscription[];
 };
 
 export type UtxoOrdinalBundle = {
@@ -57,6 +94,31 @@ export type UtxoOrdinalBundle = {
   vout: number;
   block_height: number;
   value: number;
-  sats: BundleRareSat[];
-  inscriptions: BundleInscription[];
+  sat_ranges: SatRange[];
+};
+
+export type XVersion = {
+  xVersion: number;
+};
+
+export type AddressBundleResponse = {
+  total: number;
+  offset: number;
+  limit: number;
+  results: UtxoOrdinalBundle[];
+} & XVersion;
+
+export type UtxoBundleResponse = UtxoOrdinalBundle & XVersion;
+
+export type BundleSatRange = Omit<SatRange, 'year_mined' | 'satributes'> & {
+  totalSats: number;
+  yearMined: number;
+  satributes: RareSatsType[];
+};
+
+export type Bundle = Omit<UtxoOrdinalBundle, 'sat_ranges'> & {
+  satRanges: BundleSatRange[];
+  inscriptions: SatRangeInscription[];
+  satributes: RareSatsType[][];
+  totalExoticSats: number;
 };

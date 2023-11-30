@@ -611,6 +611,7 @@ describe('brc20TransferExecute', () => {
             mockedChangeAddress,
             new BigNumber(1070),
             'Mainnet',
+            false,
           );
           break;
 

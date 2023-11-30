@@ -403,6 +403,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     changeAddress,
     new BigNumber(commitChainFees),
     network,
+    false,
   );
 
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;
