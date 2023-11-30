@@ -129,8 +129,8 @@ export const txPayloadToRequest = (
       (transactionRequest as ContractDeployPayload).txType = TransactionTypes.ContractDeploy;
       (transactionRequest as ContractDeployPayload).contractName = payload.contractName.content;
       (transactionRequest as ContractDeployPayload).codeBody = payload.codeBody.content;
-      (transactionRequest as ContractDeployPayload).clarityVersion = (
-        payload as VersionedSmartContractPayload
+      (transactionRequest as any).clarityVersion = (
+        stacksTransaction.payload as VersionedSmartContractPayload
       ).clarityVersion;
       break;
     default:
