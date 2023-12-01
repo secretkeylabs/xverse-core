@@ -53,9 +53,9 @@ export async function getTransactionData(
 
   let selectedUTXOs = selectUnspentOutputs(
     amountSats,
+    feeRateInput ? Number(feeRateInput) : feeRate.regular,
     filteredUnspentOutputs,
     ordinalUtxo,
-    feeRateInput ? Number(feeRateInput) : undefined,
   );
   let sumOfSelectedUTXOs = sumUnspentOutputs(selectedUTXOs);
 
