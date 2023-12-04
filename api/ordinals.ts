@@ -1,5 +1,5 @@
 import axios from 'axios';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import XordApiProvider from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
@@ -54,16 +54,17 @@ const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   return 0;
 };
 
-export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkType): Promise<BtcOrdinal[]> {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
+export async function fetchBtcOrdinalsData(
+  btcAddress: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<BtcOrdinal[]> {
   const xordClient = new XordApiProvider({
     network,
   });
 
   const [addressUTXOs, inscriptions] = await Promise.all([
-    btcClient.getUnspentUtxos(btcAddress),
+    esploraProvider.getUnspentUtxos(btcAddress),
     xordClient.getAllInscriptions(btcAddress),
   ]);
   const ordinals: BtcOrdinal[] = [];
@@ -117,11 +118,12 @@ export async function getTextOrdinalContent(network: NetworkType, inscriptionId:
     });
 }
 
-export async function getNonOrdinalUtxo(address: string, network: NetworkType): Promise<Array<UTXO>> {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(address);
+export async function getNonOrdinalUtxo(
+  address: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<Array<UTXO>> {
+  const unspentOutputs = await esploraProvider.getUnspentUtxos(address);
   const nonOrdinalOutputs: Array<UTXO> = [];
 
   for (let i = 0; i < unspentOutputs.length; i++) {

@@ -18,6 +18,7 @@ const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
 const embellishNativeSegwitInputs = async (
   transaction: btc.Transaction,
   publicKey: string,
+  esploraProvider: EsploraProvider,
   network: NetworkType,
   addressIndex: number,
   masterFingerPrint: string,
@@ -39,7 +40,6 @@ const embellishNativeSegwitInputs = async (
     const input = transaction.getInput(i);
     if (areByteArraysEqual(input.witnessUtxo?.script, p2wpkh.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
-        const esploraProvider = new EsploraProvider({ network: network });
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
         transaction.updateInput(i, {
           nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
@@ -115,6 +115,7 @@ const getIoTotals = (txn: btc.Transaction) => {
 
 export async function signLedgerPSBT({
   transport,
+  esploraProvider,
   network,
   addressIndex,
   psbtInputBase64,
@@ -123,6 +124,7 @@ export async function signLedgerPSBT({
   nativeSegwitPubKey,
 }: {
   transport: Transport;
+  esploraProvider: EsploraProvider;
   network: NetworkType;
   addressIndex: number;
   psbtInputBase64: string;
@@ -153,7 +155,16 @@ export async function signLedgerPSBT({
     });
   }
 
-  if (await embellishNativeSegwitInputs(txn, nativeSegwitPubKey, network, addressIndex, masterFingerPrint)) {
+  if (
+    await embellishNativeSegwitInputs(
+      txn,
+      nativeSegwitPubKey,
+      esploraProvider,
+      network,
+      addressIndex,
+      masterFingerPrint,
+    )
+  ) {
     const psbt = txn.toPSBT(0);
     const psbtBase64 = base64.encode(psbt);
 

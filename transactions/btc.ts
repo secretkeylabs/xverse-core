@@ -4,7 +4,7 @@ import * as secp256k1 from '@noble/secp256k1';
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import BigNumber from 'bignumber.js';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { fetchBtcFeeRate } from '../api/xverse';
 import { BtcFeeResponse, ErrorCodes, Inscription, NetworkType, ResponseError, UTXO } from '../types';
 import { getBtcPrivateKey, getBtcTaprootPrivateKey } from '../wallet';
@@ -374,15 +374,13 @@ export async function calculateOrdinalSendFee(
 export async function getBtcFees(
   recipients: Array<Recipient>,
   btcAddress: string,
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   feeMode?: string,
   feeRateInput?: string,
 ): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
   try {
-    const btcClient = new BitcoinEsploraApiProvider({
-      network,
-    });
-    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+    const unspentOutputs = await esploraProvider.getUnspentUtxos(btcAddress);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
     feeRate = await getBtcFeeRate(network);
@@ -447,16 +445,14 @@ export async function getBtcFeesForOrdinalSend(
   recipientAddress: string,
   ordinalUtxo: UTXO,
   btcAddress: string,
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   addressOrdinalsUtxos: UTXO[],
   feeMode?: string,
   feeRateInput?: string,
 ): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
   try {
-    const btcClient = new BitcoinEsploraApiProvider({
-      network,
-    });
-    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+    const unspentOutputs = await esploraProvider.getUnspentUtxos(btcAddress);
     const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
     let feeRate: BtcFeeResponse = defaultFeeRate;
 
@@ -514,21 +510,28 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
   recipientAddress: string;
   btcAddress: string;
   ordinalsAddress: string;
+  esploraProvider: EsploraApiProvider;
   network: NetworkType;
   ordinal: Inscription;
   isRecover?: boolean;
   feeMode?: string;
   feeRateInput?: string;
 }): Promise<{ fee: BigNumber; selectedFeeRate?: BigNumber }> {
-  const { recipientAddress, btcAddress, ordinalsAddress, network, ordinal, isRecover, feeMode, feeRateInput } =
-    feeParams;
-  const btcClient = new BitcoinEsploraApiProvider({
+  const {
+    recipientAddress,
+    btcAddress,
+    ordinalsAddress,
+    esploraProvider,
     network,
-  });
+    ordinal,
+    isRecover,
+    feeMode,
+    feeRateInput,
+  } = feeParams;
   const address = isRecover ? btcAddress : ordinalsAddress;
-  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const addressUtxos = await esploraProvider.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(esploraProvider, network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
@@ -536,6 +539,7 @@ export async function getBtcFeesForOrdinalTransaction(feeParams: {
     recipientAddress,
     ordUtxo,
     btcAddress,
+    esploraProvider,
     network,
     addressOrdinalsUtxos,
     feeMode,
@@ -716,15 +720,13 @@ export async function signBtcTransaction(
   btcAddress: string,
   accountIndex: number,
   seedPhrase: string,
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   fee?: BigNumber,
 ): Promise<SignedBtcTx> {
   try {
     // Get sender address unspent outputs
-    const btcClient = new BitcoinEsploraApiProvider({
-      network,
-    });
-    const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+    const unspentOutputs = await esploraProvider.getUnspentUtxos(btcAddress);
     let feeRate: BtcFeeResponse = defaultFeeRate;
     let feePerVByte: BigNumber = new BigNumber(0);
 
@@ -806,16 +808,13 @@ export async function signOrdinalSendTransaction(
   btcAddress: string,
   accountIndex: number,
   seedPhrase: string,
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   addressOrdinalsUtxos: UTXO[],
   fee?: BigNumber,
 ): Promise<SignedBtcTx> {
   // Get sender address unspent outputs
-
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(btcAddress);
+  const unspentOutputs = await esploraProvider.getUnspentUtxos(btcAddress);
 
   // Make sure ordinal utxo is removed from utxo set used for fees
   // This can be true if ordinal utxo is from the payment address
@@ -942,20 +941,28 @@ export async function signOrdinalTransaction(ordinalTxParams: {
   ordinalsAddress: string;
   accountIndex: number;
   seedPhrase: string;
+  esploraProvider: EsploraApiProvider;
   network: NetworkType;
   ordinal: Inscription;
   fee?: BigNumber;
   isRecover?: boolean;
 }): Promise<SignedBtcTx> {
-  const { recipientAddress, btcAddress, ordinalsAddress, accountIndex, seedPhrase, network, ordinal, fee, isRecover } =
-    ordinalTxParams;
-  const btcClient = new BitcoinEsploraApiProvider({
+  const {
+    recipientAddress,
+    btcAddress,
+    ordinalsAddress,
+    accountIndex,
+    seedPhrase,
+    esploraProvider,
     network,
-  });
+    ordinal,
+    fee,
+    isRecover,
+  } = ordinalTxParams;
   const address = isRecover ? btcAddress : ordinalsAddress;
-  const addressUtxos = await btcClient.getUnspentUtxos(address);
+  const addressUtxos = await esploraProvider.getUnspentUtxos(address);
   const ordUtxo = getOrdinalUtxo(addressUtxos, ordinal);
-  const addressOrdinalsUtxos = await getOrdinalsUtxos(network, btcAddress);
+  const addressOrdinalsUtxos = await getOrdinalsUtxos(esploraProvider, network, btcAddress);
   if (!ordUtxo) {
     throw new ResponseError(ErrorCodes.OrdinalUtxoNotfound);
   }
@@ -965,6 +972,7 @@ export async function signOrdinalTransaction(ordinalTxParams: {
     btcAddress,
     accountIndex,
     seedPhrase,
+    esploraProvider,
     network,
     addressOrdinalsUtxos,
     fee,

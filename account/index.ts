@@ -1,6 +1,7 @@
-import { StacksMainnet, StacksNetwork } from '@stacks/network';
+import { StacksNetwork } from '@stacks/network';
 import * as bip39 from 'bip39';
 import { fetchBtcTransactionsData, getBnsName, getConfirmedTransactions } from '../api';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import {
   connectToGaiaHubWithConfig,
   createWalletGaiaConfig,
@@ -9,7 +10,7 @@ import {
   getOrCreateWalletConfig,
   updateWalletConfig,
 } from '../gaia';
-import { Account, BtcTransactionData, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
+import { Account, BtcTransactionData, SettingsNetwork, StxTransactionListData } from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { getWalletFromRootNode, walletFromSeedPhrase } from '../wallet';
 import { GAIA_HUB_URL } from './../constant';
@@ -59,17 +60,17 @@ export async function checkAccountActivity(
   btcAddress: string,
   ordinalsAddress: string,
   selectedNetwork: StacksNetwork,
+  esploraProvider: EsploraApiProvider,
 ) {
   const stxTxHistory: StxTransactionListData = await getConfirmedTransactions({
     stxAddress,
     network: selectedNetwork,
   });
   if (stxTxHistory.totalCount !== 0) return true;
-  const networkType: NetworkType = selectedNetwork === new StacksMainnet() ? 'Mainnet' : 'Testnet';
   const btcTxHistory: BtcTransactionData[] = await fetchBtcTransactionsData(
     btcAddress,
     ordinalsAddress,
-    networkType,
+    esploraProvider,
     true,
   );
   return btcTxHistory.length !== 0;

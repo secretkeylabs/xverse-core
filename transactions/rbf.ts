@@ -21,13 +21,12 @@ const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array
   return a.every((v, i) => v === b[i]);
 };
 
-const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string, depth = 1) => {
+const getTransactionChainSizeAndFee = async (esploraProvider: EsploraProvider, txid: string, depth = 1) => {
   if (depth > 30) {
     // This should never happen as bitcoins limit is 25. This is a recursion safety check.
     throw new Error('Too many chained transactions');
   }
 
-  const esploraProvider = new EsploraProvider({ network });
   const transaction = await esploraProvider.getTransaction(txid);
 
   if (!transaction || transaction.status.confirmed) {
@@ -47,7 +46,7 @@ const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string,
 
     const descendantTxid = outspend.txid;
     const { totalVSize: descendantVsize, fee: descendantFee } = await getTransactionChainSizeAndFee(
-      network,
+      esploraProvider,
       descendantTxid,
       depth + 1,
     );
@@ -58,8 +57,8 @@ const getTransactionChainSizeAndFee = async (network: NetworkType, txid: string,
   return { transactionVSize, totalVSize, fee };
 };
 
-const getRbfTransactionSummary = async (network: NetworkType, txid: string) => {
-  const { transactionVSize, totalVSize, fee } = await getTransactionChainSizeAndFee(network, txid);
+const getRbfTransactionSummary = async (esploraProvider: EsploraProvider, txid: string) => {
+  const { transactionVSize, totalVSize, fee } = await getTransactionChainSizeAndFee(esploraProvider, txid);
 
   const currentFeeRate = +(fee / totalVSize).toFixed(2);
 
@@ -112,6 +111,7 @@ export type RBFProps = {
   accountId: number;
   network: NetworkType;
   accountType: AccountType;
+  esploraProvider: EsploraProvider;
 };
 
 type TierFees = {
@@ -148,6 +148,8 @@ class RbfTransaction {
   private network!: typeof btc.NETWORK;
 
   private wallet!: RBFProps;
+
+  private esploraProvider!: EsploraProvider;
 
   private _paymentUtxos?: UTXO[];
 
@@ -246,7 +248,7 @@ class RbfTransaction {
 
   private getMinimumRbfFeeRate = async () => {
     if (!this._minimumRbfFeeRate) {
-      const { minimumRbfFeeRate } = await getRbfTransactionSummary(this.wallet.network, this.transaction.txid);
+      const { minimumRbfFeeRate } = await getRbfTransactionSummary(this.esploraProvider, this.transaction.txid);
       this._minimumRbfFeeRate = minimumRbfFeeRate;
     }
 
@@ -255,8 +257,7 @@ class RbfTransaction {
 
   private getPaymentUtxos = async () => {
     if (!this._paymentUtxos) {
-      const esploraProvider = new EsploraProvider({ network: this.wallet.network });
-      this._paymentUtxos = await esploraProvider.getUnspentUtxos(this.wallet.btcAddress);
+      this._paymentUtxos = await this.esploraProvider.getUnspentUtxos(this.wallet.btcAddress);
 
       this._paymentUtxos.sort((a, b) => {
         const aConfirmed = a.status.confirmed;
@@ -329,6 +330,7 @@ class RbfTransaction {
       addressIndex: this.wallet.accountId,
       finalize: false,
       nativeSegwitPubKey: this.wallet.btcPublicKey,
+      esploraProvider: this.esploraProvider,
       network: this.wallet.network,
       psbtInputBase64: base64.encode(txnPsbt),
       taprootPubKey: this.wallet.ordinalsPublicKey,
