@@ -9,6 +9,8 @@ type CommitValueBreakdown = {
   revealChainFee: number;
   revealServiceFee: number;
   externalServiceFee?: number;
+  inscriptionValue: number;
+  totalInscriptionValue: number;
 };
 
 type Props = {
@@ -21,6 +23,7 @@ type Props = {
   serviceFee?: number;
   serviceFeeAddress?: string;
   network: NetworkType;
+  repetitions?: number;
 };
 
 const DUMMY_UTXO = {
@@ -42,6 +45,7 @@ const useInscriptionFees = (props: Props) => {
     serviceFee,
     serviceFeeAddress,
     network,
+    repetitions,
   } = props;
 
   const [commitValue, setCommitValue] = useState<number | undefined>();
@@ -67,6 +71,7 @@ const useInscriptionFees = (props: Props) => {
           serviceFee,
           serviceFeeAddress,
           network,
+          repetitions,
         });
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
@@ -86,6 +91,7 @@ const useInscriptionFees = (props: Props) => {
               serviceFee,
               serviceFeeAddress,
               network,
+              repetitions,
             });
             setCommitValue(result.commitValue);
             setCommitValueBreakdown(result.valueBreakdown);
