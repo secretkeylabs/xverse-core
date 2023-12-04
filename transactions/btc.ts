@@ -16,10 +16,10 @@ const MINIMUM_CHANGE_OUTPUT_SATS = 1000;
 export const defaultFeeRate = {
   limits: {
     min: 5,
-    max: 10,
+    max: 50,
   },
-  regular: 5,
-  priority: 10,
+  regular: 12,
+  priority: 20,
 };
 
 export interface Recipient {
@@ -55,9 +55,9 @@ export async function isCustomFeesAllowed(network: NetworkType, customFees: stri
 
 export function selectUnspentOutputs(
   amountSats: BigNumber,
+  feeRate: number,
   unspentOutputs: Array<UTXO>,
   pinnedOutput?: UTXO,
-  feeRate?: number,
 ): Array<UTXO> {
   const inputs: Array<UTXO> = [];
   let sumValue = 0;
@@ -309,7 +309,7 @@ export async function getFee(
     const newSatsToSend = satsToSend.plus(calculatedFee);
 
     // Select unspent outputs
-    iSelectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, unspentOutputs, pinnedOutput, selectedFeeRate);
+    iSelectedUnspentOutputs = selectUnspentOutputs(newSatsToSend, selectedFeeRate, unspentOutputs, pinnedOutput);
     sumSelectedOutputs = sumUnspentOutputs(iSelectedUnspentOutputs);
 
     // Check if select output count has changed since last iteration
@@ -396,9 +396,9 @@ export async function getBtcFees(
     // Select unspent outputs
     const selectedUnspentOutputs = selectUnspentOutputs(
       satsToSend,
+      feeRateInput ? Number(feeRateInput) : feeRate.regular,
       unspentOutputs,
       undefined,
-      feeRateInput ? Number(feeRateInput) : undefined,
     );
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
@@ -468,9 +468,9 @@ export async function getBtcFeesForOrdinalSend(
     // Select unspent outputs
     const selectedUnspentOutputs = selectUnspentOutputs(
       satsToSend,
+      feeRateInput ? Number(feeRateInput) : feeRate.regular,
       filteredUnspentOutputs,
       ordinalUtxo,
-      feeRateInput ? Number(feeRateInput) : undefined,
     );
 
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
@@ -607,6 +607,7 @@ export type SelectUtxosForSendProps = {
   feeRate: number;
   pinnedUtxos?: UTXO[];
   network: NetworkType;
+  useUnconfirmed?: boolean;
 };
 
 export type TransactionUtxoSelectionMetadata = {
@@ -627,6 +628,7 @@ export function selectUtxosForSend({
   feeRate,
   pinnedUtxos = [],
   network,
+  useUnconfirmed = true,
 }: SelectUtxosForSendProps): TransactionUtxoSelectionMetadata | undefined {
   if (recipients.length === 0) {
     throw new Error('Must have at least one recipient');
@@ -640,7 +642,8 @@ export function selectUtxosForSend({
 
   const sortedUtxos = availableUtxos.filter((utxo) => {
     const utxoLocation = `${utxo.txid}:${utxo.vout}`;
-    return !pinnedLocations.has(utxoLocation);
+    const isConfirmed = utxo.status.confirmed;
+    return (useUnconfirmed || isConfirmed) && !pinnedLocations.has(utxoLocation);
   });
   sortedUtxos.sort((a, b) => a.value - b.value);
 
@@ -739,7 +742,12 @@ export async function signBtcTransaction(
     });
 
     // Select unspent outputs
-    let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, unspentOutputs);
+    let selectedUnspentOutputs = selectUnspentOutputs(
+      satsToSend,
+      // TODO: refactor this to use actual desired fee rate
+      feeRate.regular,
+      unspentOutputs,
+    );
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
     if (sumSelectedOutputs.isLessThan(satsToSend)) {
@@ -842,7 +850,13 @@ export async function signOrdinalSendTransaction(
   let satsToSend = fee ? fee.plus(new BigNumber(ordinalUtxo.value)) : new BigNumber(ordinalUtxo.value);
 
   // Select unspent outputs
-  let selectedUnspentOutputs = selectUnspentOutputs(satsToSend, filteredUnspentOutputs, ordinalUtxo);
+  let selectedUnspentOutputs = selectUnspentOutputs(
+    satsToSend,
+    // TODO: refactor this to use actual desired fee rate
+    feeRate.regular,
+    filteredUnspentOutputs,
+    ordinalUtxo,
+  );
 
   const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 

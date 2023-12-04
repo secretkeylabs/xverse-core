@@ -34,7 +34,7 @@ const getInscriptionFeeEstimate = async (
   requestBody: InscriptionCostEstimateRequest,
 ): Promise<InscriptionCostEstimateResponse> => {
   const response = await apiClients[network].post<InscriptionCostEstimateResponse>(
-    '/v1/inscriptions/cost-estimate',
+    '/v2/inscriptions/cost-estimate',
     requestBody,
   );
   return response.data;
@@ -45,7 +45,7 @@ const createInscriptionOrder = async (
   requestBody: InscriptionCreateOrderRequest,
 ): Promise<InscriptionCreateOrderResponse> => {
   const response = await apiClients[network].post<InscriptionCreateOrderResponse>(
-    '/v1/inscriptions/place-order',
+    '/v2/inscriptions/place-order',
     requestBody,
   );
   return response.data;
@@ -55,7 +55,7 @@ const executeInscriptionOrder = async (
   requestBody: InscriptionExecuteOrderRequest,
 ): Promise<InscriptionExecuteOrderResponse> => {
   const response = await apiClients[network].post<InscriptionExecuteOrderResponse>(
-    '/v1/inscriptions/execute-order',
+    '/v2/inscriptions/execute-order',
     requestBody,
   );
   return response.data;
