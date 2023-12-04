@@ -19,7 +19,6 @@ import {
   serializePostCondition,
   SingleSigHashMode,
   StacksTransaction,
-  VersionedSmartContractPayload,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { createContractCallPromises, generateUnsignedStxTokenTransferTransaction } from '../transactions';
@@ -91,10 +90,10 @@ export const txPayloadToRequest = (
   stacksTransaction: StacksTransaction,
   stxAddress?: string,
   attachment?: string,
-): TransactionPayload => {
+): Partial<TransactionPayload> => {
   const { payload, auth, postConditions, postConditionMode, anchorMode } = stacksTransaction;
   const encodedPostConditions = encodePostConditions(postConditions.values as PostCondition[]);
-  const transactionRequest = {
+  const transactionRequest: Partial<TransactionPayload> = {
     attachment,
     stxAddress,
     sponsored: auth.authType === AuthType.Sponsored,
@@ -103,39 +102,40 @@ export const txPayloadToRequest = (
     postConditions: encodedPostConditions,
     postConditionMode: postConditionMode,
     anchorMode: anchorMode,
-  } as TransactionPayload;
+  };
   switch (payload.payloadType) {
     case PayloadType.TokenTransfer:
-      const memo = cleanMemoString(payload.memo.content);
-      (transactionRequest as STXTransferPayload).txType = TransactionTypes.STXTransfer;
-      (transactionRequest as STXTransferPayload).recipient = cvToValue(payload.recipient, true);
-      (transactionRequest as STXTransferPayload).amount = new BigNumber(Number(payload.amount))
-        .shiftedBy(-STX_DECIMALS)
-        .toNumber()
-        .toLocaleString('en-US', { maximumFractionDigits: STX_DECIMALS });
-      (transactionRequest as STXTransferPayload).memo = memo;
-      break;
+      const stxTransferPayload: Partial<STXTransferPayload> = {
+        ...transactionRequest,
+        txType: TransactionTypes.STXTransfer,
+        recipient: cvToValue(payload.recipient, true),
+        amount: new BigNumber(Number(payload.amount))
+          .shiftedBy(-STX_DECIMALS)
+          .toNumber()
+          .toLocaleString('en-US', { maximumFractionDigits: STX_DECIMALS }),
+        memo: cleanMemoString(payload.memo.content),
+      };
+      return stxTransferPayload;
     case PayloadType.ContractCall:
-      (transactionRequest as ContractCallPayload).txType = TransactionTypes.ContractCall;
-      (transactionRequest as ContractCallPayload).contractName = payload.contractName.content;
-      (transactionRequest as ContractCallPayload).contractAddress = addressToString(payload.contractAddress);
-      (transactionRequest as ContractCallPayload).functionArgs = payload.functionArgs.map((arg) =>
-        Buffer.from(serializeCV(arg)).toString('hex'),
-      );
-      (transactionRequest as ContractCallPayload).functionName = payload.functionName.content;
-      break;
+      const contractCallPayload: Partial<ContractCallPayload> = {
+        ...transactionRequest,
+        txType: TransactionTypes.ContractCall,
+        contractName: payload.contractName.content,
+        contractAddress: addressToString(payload.contractAddress),
+        functionArgs: payload.functionArgs.map((arg) => Buffer.from(serializeCV(arg)).toString('hex')),
+        functionName: payload.functionName.content,
+      };
+      return contractCallPayload;
     case PayloadType.SmartContract:
     case PayloadType.VersionedSmartContract:
-      (transactionRequest as ContractDeployPayload).txType = TransactionTypes.ContractDeploy;
-      (transactionRequest as ContractDeployPayload).contractName = payload.contractName.content;
-      (transactionRequest as ContractDeployPayload).codeBody = payload.codeBody.content;
-      (transactionRequest as any).clarityVersion = (
-        stacksTransaction.payload as VersionedSmartContractPayload
-      ).clarityVersion;
-      break;
+      const contractDeployPayload: Partial<ContractDeployPayload> = {
+        ...transactionRequest,
+        txType: TransactionTypes.ContractDeploy,
+        contractName: payload.contractName.content,
+        codeBody: payload.codeBody.content,
+      };
+      return contractDeployPayload;
     default:
       throw new Error('Unsupported tx type');
   }
-
-  return transactionRequest;
 };

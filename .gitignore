@@ -105,3 +105,8 @@ dist
 
 # vitest
 *.ts.snap
+
+.vscode/*
+
+# Local History for Visual Studio Code
+.history/

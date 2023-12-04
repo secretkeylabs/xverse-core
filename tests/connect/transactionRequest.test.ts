@@ -34,13 +34,16 @@ describe('txPayloadToRequest', () => {
     );
 
     const result = txPayloadToRequest(unsignedSendStxTx);
+
     expect(result).toBeDefined();
-    expect((result as STXTransferPayload).amount).toEqual(
-      microstacksToStx(new BigNumber(mockTokenTransferPayload.amount)).toString(),
+    expect(result).toEqual(
+      expect.objectContaining({
+        amount: microstacksToStx(new BigNumber(mockTokenTransferPayload.amount)).toString(),
+        recipient: mockTokenTransferPayload.recipient,
+        memo: mockTokenTransferPayload.memo,
+        txType: mockTokenTransferPayload.txType,
+      }),
     );
-    expect((result as STXTransferPayload).recipient).toEqual(mockTokenTransferPayload.recipient);
-    expect((result as STXTransferPayload).memo).toEqual(mockTokenTransferPayload.memo);
-    expect((result as STXTransferPayload).txType).toEqual(mockTokenTransferPayload.txType);
   });
 
   it('should convert ContractDeploy payload to TransactionPayload', async () => {
@@ -67,8 +70,12 @@ describe('txPayloadToRequest', () => {
     const result = txPayloadToRequest(unsignedSendStxTx);
 
     expect(result).toBeDefined();
-    expect((result as ContractDeployPayload).codeBody).toEqual(mockContractDeploy.codeBody);
-    expect((result as ContractDeployPayload).contractName).toEqual(mockContractDeploy.contractName);
+    expect(result).toEqual(
+      expect.objectContaining({
+        codeBody: mockContractDeploy.codeBody,
+        contractName: mockContractDeploy.contractName,
+      }),
+    );
   });
 
   it('should convert ContractCall payload to TransactionPayload', async () => {

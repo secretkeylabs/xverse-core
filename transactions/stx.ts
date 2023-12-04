@@ -173,15 +173,11 @@ export async function generateUnsignedStxTokenTransferTransaction(
   network: StacksNetwork,
   sponsored?: boolean,
   anchorMode?: AnchorMode,
-  postConditions?: PostCondition[],
-  postConditionMode?: PostConditionMode,
   nonce?: bigint,
 ): Promise<StacksTransaction> {
   try {
     let unsignedTx: StacksTransaction | null = null;
     let fee = BigInt(0);
-    let total = BigInt(0);
-    const amountBigint = BigInt(amount);
     unsignedTx = await generateUnsignedSTXTokenTransfer(
       publicKey,
       recipientAddress,
@@ -192,7 +188,6 @@ export async function generateUnsignedStxTokenTransferTransaction(
       anchorMode,
     );
     fee = await estimateFees(unsignedTx, network);
-    total = amountBigint + fee;
     unsignedTx.setFee(fee);
     const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     if (nonce) {
