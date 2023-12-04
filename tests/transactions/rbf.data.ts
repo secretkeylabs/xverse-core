@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import EsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import { RBFProps } from '../../transactions/rbf';
 import { BtcTransactionData, Transaction, UTXO } from '../../types';
 
@@ -253,7 +254,7 @@ export const rbfEsploraTransaction: Transaction = {
   ],
 };
 
-export const wallet: RBFProps = {
+export const constructOptions = (esploraProvider?: EsploraApiProvider): RBFProps => ({
   btcAddress: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
   btcPublicKey: '032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff',
   ordinalsAddress: 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq',
@@ -262,9 +263,10 @@ export const wallet: RBFProps = {
     getSeed: () => 'seed',
   } as any,
   accountId: 0,
+  esploraProvider: esploraProvider || ({} as any),
   network: 'Mainnet',
   accountType: 'software',
-};
+});
 
 export const largeUtxo: UTXO = {
   txid: 'bb01711d83a22efcb10a8f025d17e61a09a53fafb22c4faf831df0cbdf104b40',

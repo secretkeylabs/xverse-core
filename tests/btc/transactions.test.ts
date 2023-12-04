@@ -296,10 +296,17 @@ describe('bitcoin transactions', () => {
     const feeRate = defaultFeeRate;
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
+    const mockEsploraProvider = {
+      getUnspentUtxos: vi.fn(),
+    };
+    mockEsploraProvider.getUnspentUtxos.mockResolvedValueOnce(utxos);
 
-    const { fee } = await getBtcFees(recipients, changeAddress, network);
+    const { fee } = await getBtcFees(
+      recipients,
+      changeAddress,
+      mockEsploraProvider as any as BitcoinEsploraApiProvider,
+      network,
+    );
 
     // expect transaction size to be 294 bytes;
     const txSize = 294;
@@ -364,11 +371,6 @@ describe('bitcoin transactions', () => {
     const feeRate = defaultFeeRate;
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
-
     const ordinalUtxos = [
       {
         status: {
@@ -384,10 +386,17 @@ describe('bitcoin transactions', () => {
       },
     ];
 
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(utxos);
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(ordinalOutputs);
+
     const { fee } = await getBtcFeesForOrdinalSend(
       recipientAddress,
       ordinalOutputs[0],
       btcAddress,
+      esploraMock as any as BitcoinEsploraApiProvider,
       network,
       ordinalUtxos,
     );
@@ -564,15 +573,24 @@ describe('bitcoin transactions', () => {
     };
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(utxos);
 
-    const signedTx = await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
+    const signedTx = await signBtcTransaction(
+      recipients,
+      btcAddress,
+      0,
+      testSeed,
+      esploraMock as any as BitcoinEsploraApiProvider,
+      network,
+    );
 
     const tx =
       '020000000001038d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3fdffffff8c9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3fdffffff8e9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3fdffffff02400d0300000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388aca0860100000000001976a914574e13c50c3450713ff252a9ad7604db865135e888ac02483045022100b3633b3efc5049daa3a13b79b0c2003f926e1b6c19d20c288b3748608461eb070220648e681052ac71b737d9e4c92f6cdd1d628b5e358f2201974dad36854eb838310121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff02483045022100b48a4002b1d92370582d6922b78b717a4c935155191fb50adee44052e5f749f80220191a2b52514711c52f7b41b1cbd0289eb395cd24893bba943833bf74e72858ad0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0247304402203ea2f07f523f8b62587aa59a87cb952b3edf22c5fb5f8770c88f8cb146a4661002203218d643b5cf6a0da9fb8a3a2cffe755929f99054a805457e156712ddc8f388e0121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
     expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize * feeRate.regular);
     expect(signedTx.signedTx).toEqual(tx);
   });
@@ -656,14 +674,25 @@ describe('bitcoin transactions', () => {
     const feeRate = defaultFeeRate;
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
     const customFees = new BigNumber(500);
 
-    const signedTx = await signBtcTransaction(recipients, btcAddress, 0, testSeed, network, customFees);
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(utxos);
+
+    const signedTx = await signBtcTransaction(
+      recipients,
+      btcAddress,
+      0,
+      testSeed,
+      esploraMock as any as BitcoinEsploraApiProvider,
+      network,
+      customFees,
+    );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
     expect(signedTx.fee.toNumber()).eq(customFees.toNumber());
   });
 
@@ -755,15 +784,24 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockImplementation(() => Promise.resolve(utxos));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(utxos);
 
     await expect(async () => {
-      await signBtcTransaction(recipients, btcAddress, 0, testSeed, network);
+      await signBtcTransaction(
+        recipients,
+        btcAddress,
+        0,
+        testSeed,
+        esploraMock as any as BitcoinEsploraApiProvider,
+        network,
+      );
     }).rejects.toThrowError('601');
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
   });
 
   it('can create and sign ordinal send transaction', async () => {
@@ -825,11 +863,6 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
-
     const recipients = [
       {
         address: recipientAddress,
@@ -848,12 +881,18 @@ describe('bitcoin transactions', () => {
 
     const sumSelectedOutputs = sumUnspentOutputs(selectedUnspentOutputs);
 
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValueOnce(utxos);
+
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
       ordinalOutputs[0],
       btcAddress,
       0,
       testSeed,
+      esploraMock as any as BitcoinEsploraApiProvider,
       network,
       [ordinalOutputs[0]],
     );
@@ -871,7 +910,7 @@ describe('bitcoin transactions', () => {
     );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
 
     // Needs a better transaction size calculator
     expect(signedTx.fee.toNumber()).eq(fee.toNumber());
@@ -948,14 +987,18 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
-    const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
-    fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+      getOrdinalsUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValue(utxos);
+    esploraMock.getOrdinalsUtxos.mockResolvedValue(ordinalOutputs);
+
     const { fee } = await getBtcFeesForOrdinalTransaction({
       recipientAddress,
       btcAddress,
       ordinalsAddress,
+      esploraProvider: esploraMock as any as BitcoinEsploraApiProvider,
       network,
       ordinal: ordinal as Inscription,
     });
@@ -1036,8 +1079,12 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-    fetchUtxoSpy.mockReturnValueOnce(Promise.resolve(utxos)).mockReturnValueOnce(Promise.resolve(utxos));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+      getOrdinalsUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValue(utxos);
+
     const fetchOrdinalsUtxoSpy = vi.spyOn(BTCFunctions, 'getOrdinalsUtxos');
     fetchOrdinalsUtxoSpy.mockReturnValue(Promise.resolve(ordinalOutputs));
 
@@ -1047,6 +1094,7 @@ describe('bitcoin transactions', () => {
       ordinalsAddress,
       accountIndex: 0,
       seedPhrase: testSeed,
+      esploraProvider: esploraMock as any as BitcoinEsploraApiProvider,
       network,
       ordinal: ordinal as Inscription,
     });
@@ -1123,10 +1171,12 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+      getOrdinalsUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValue(utxos);
+    esploraMock.getOrdinalsUtxos.mockResolvedValue(ordinalOutputs);
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
@@ -1134,6 +1184,7 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
+      esploraMock as any as BitcoinEsploraApiProvider,
       network,
       [ordinalOutputs[0]],
     );
@@ -1141,7 +1192,7 @@ describe('bitcoin transactions', () => {
     const expectedTx =
       '020000000001024301a0618b6e3b06a03299ff753a937c31a894351bfd50b3ef0c1988b6cc41550200000017160014883999913cffa58d317d4533c94cb94878788db3fdffffff8d9df5a92a53ca644ef51e53dcb51d041779a5e78a2e50b29d374da792bb2b1f0200000017160014883999913cffa58d317d4533c94cb94878788db3fdffffff0280380100000000001976a914fe5c6cac4dd74c23ec8477757298eb137c50ff6388acde1c0000000000001976a914b101d5205c77b52f057cb66498572f3ffe16738688ac02483045022100c41bf44caae4f84d1244cd149de50ea398fca60acc6c35ca9a0f2f8cecc5f3db0220141d7ea586eac7e20abc5e0ddee090ab84a5561ba3361d4636e61737a666f6e40121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff0248304502210086a1161881664d09065a0e50bbf7dc4c32e01f4c7123cfff8a73637608fa25d6022060e1af3ee4b9b4fb3b22c74f246c05908f1754d83f7b6f335b903ff9e7d2bc030121032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff00000000';
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(1);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
     expect(signedTx.signedTx).eq(expectedTx);
     // Needs a better transaction size calculator
     expect(signedTx.fee.toNumber()).eq(signedTx.tx.vsize * feeRate.regular);
@@ -1207,10 +1258,12 @@ describe('bitcoin transactions', () => {
 
     fetchFeeRateSpy.mockImplementation(() => Promise.resolve(feeRate));
 
-    const fetchUtxoSpy = vi.spyOn(BitcoinEsploraApiProvider.prototype, 'getUnspentUtxos');
-
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(utxos));
-    fetchUtxoSpy.mockImplementationOnce(() => Promise.resolve(ordinalOutputs));
+    const esploraMock = {
+      getUnspentUtxos: vi.fn(),
+      getOrdinalsUtxos: vi.fn(),
+    };
+    esploraMock.getUnspentUtxos.mockResolvedValue(utxos);
+    esploraMock.getOrdinalsUtxos.mockResolvedValue(ordinalOutputs);
 
     const signedTx = await signOrdinalSendTransaction(
       recipientAddress,
@@ -1218,13 +1271,14 @@ describe('bitcoin transactions', () => {
       btcAddress,
       0,
       testSeed,
+      esploraMock as any as BitcoinEsploraApiProvider,
       network,
       [ordinalOutputs[0]],
       customFeeAmount,
     );
 
     expect(fetchFeeRateSpy).toHaveBeenCalledTimes(0);
-    expect(fetchUtxoSpy).toHaveBeenCalledTimes(1);
+    expect(esploraMock.getUnspentUtxos).toHaveBeenCalledTimes(1);
     expect(signedTx.fee.toNumber()).eq(customFeeAmount.toNumber());
   });
 });

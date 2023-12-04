@@ -147,36 +147,34 @@ class RbfTransaction {
 
   private network!: typeof btc.NETWORK;
 
-  private wallet!: RBFProps;
-
-  private esploraProvider!: EsploraProvider;
+  private options!: RBFProps;
 
   private _paymentUtxos?: UTXO[];
 
   private _minimumRbfFeeRate?: number;
 
-  constructor(transaction: BtcTransactionData, wallet: RBFProps) {
+  constructor(transaction: BtcTransactionData, options: RBFProps) {
     if (transaction.confirmed) {
       throw new Error('Transaction is already confirmed');
     }
-    if (!isTransactionRbfEnabled(transaction, wallet)) {
+    if (!isTransactionRbfEnabled(transaction, options)) {
       throw new Error('Not RBF enabled transaction');
     }
 
-    const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+    const network = options.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
 
     let p2btc: btc.P2Ret;
-    const publicKeyBuff = hex.decode(wallet.btcPublicKey);
-    if (wallet.accountType === 'software') {
+    const publicKeyBuff = hex.decode(options.btcPublicKey);
+    if (options.accountType === 'software') {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
       p2btc = btc.p2sh(p2wpkh, network);
-    } else if (wallet.accountType === 'ledger') {
+    } else if (options.accountType === 'ledger') {
       p2btc = btc.p2wpkh(publicKeyBuff, network);
     } else {
       throw new Error('Unrecognised account type');
     }
 
-    const publicKeyBuffTr = hex.decode(wallet.ordinalsPublicKey);
+    const publicKeyBuffTr = hex.decode(options.ordinalsPublicKey);
     const schnorrPublicKeyBuff = publicKeyBuffTr.length === 33 ? publicKeyBuffTr.slice(1) : publicKeyBuffTr;
     const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, network);
 
@@ -225,7 +223,7 @@ class RbfTransaction {
     // we'll keep the same outputs as the original transaction
     // and we assume that any change that would have been returned was going to the payments address if the last
     // output is not the payments address, we'll add it as a normal output, assuming that there was no change
-    while (outputs.length > 1 || (outputs[0] && outputs[0].address !== wallet.btcAddress)) {
+    while (outputs.length > 1 || (outputs[0] && outputs[0].address !== options.btcAddress)) {
       const [prevOutput] = outputs.splice(0, 1);
 
       if (!prevOutput.address) {
@@ -236,7 +234,7 @@ class RbfTransaction {
       outputsTotal += prevOutput.value;
     }
 
-    this.wallet = wallet;
+    this.options = options;
     this.baseTx = tx;
     this.initialInputTotal = inputsTotal;
     this.initialOutputTotal = outputsTotal;
@@ -248,7 +246,7 @@ class RbfTransaction {
 
   private getMinimumRbfFeeRate = async () => {
     if (!this._minimumRbfFeeRate) {
-      const { minimumRbfFeeRate } = await getRbfTransactionSummary(this.esploraProvider, this.transaction.txid);
+      const { minimumRbfFeeRate } = await getRbfTransactionSummary(this.options.esploraProvider, this.transaction.txid);
       this._minimumRbfFeeRate = minimumRbfFeeRate;
     }
 
@@ -257,7 +255,7 @@ class RbfTransaction {
 
   private getPaymentUtxos = async () => {
     if (!this._paymentUtxos) {
-      this._paymentUtxos = await this.esploraProvider.getUnspentUtxos(this.wallet.btcAddress);
+      this._paymentUtxos = await this.options.esploraProvider.getUnspentUtxos(this.options.btcAddress);
 
       this._paymentUtxos.sort((a, b) => {
         const aConfirmed = a.status.confirmed;
@@ -279,7 +277,7 @@ class RbfTransaction {
 
   private getBip32Master = async () => {
     // keep this method short so seed phrase is as short lived as possible
-    const seedPhrase = await this.wallet.seedVault.getSeed();
+    const seedPhrase = await this.options.seedVault.getSeed();
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     return bip32.fromSeed(seed);
   };
@@ -289,15 +287,15 @@ class RbfTransaction {
     const master = await this.getBip32Master();
 
     const btcDerivationPath = getBitcoinDerivationPath({
-      index: BigInt(this.wallet.accountId),
-      network: this.wallet.network,
+      index: BigInt(this.options.accountId),
+      network: this.options.network,
     });
     const btcChild = master.derivePath(btcDerivationPath);
     const btcpk = hex.decode(btcChild.privateKey!.toString('hex'));
 
     const trDerivationPath = getTaprootDerivationPath({
-      index: BigInt(this.wallet.accountId),
-      network: this.wallet.network,
+      index: BigInt(this.options.accountId),
+      network: this.options.network,
     });
     const trChild = master.derivePath(trDerivationPath);
     let trpk = hex.decode(trChild.privateKey!.toString('hex'));
@@ -327,13 +325,13 @@ class RbfTransaction {
 
     const txnPsbt = transaction.toPSBT(0);
     const signedPsbtBase64 = await signLedgerPSBT({
-      addressIndex: this.wallet.accountId,
+      addressIndex: this.options.accountId,
       finalize: false,
-      nativeSegwitPubKey: this.wallet.btcPublicKey,
-      esploraProvider: this.esploraProvider,
-      network: this.wallet.network,
+      nativeSegwitPubKey: this.options.btcPublicKey,
+      esploraProvider: this.options.esploraProvider,
+      network: this.options.network,
       psbtInputBase64: base64.encode(txnPsbt),
-      taprootPubKey: this.wallet.ordinalsPublicKey,
+      taprootPubKey: this.options.ordinalsPublicKey,
       transport: options.ledgerTransport,
     });
 
@@ -396,7 +394,7 @@ class RbfTransaction {
       return this.dummySignTransaction(tx);
     }
 
-    if (this.wallet.accountType === 'software') {
+    if (this.options.accountType === 'software') {
       return this.signTxSoftware(tx);
     }
 
@@ -452,7 +450,7 @@ class RbfTransaction {
         // check if we can add change output
         const txWithChange = btc.Transaction.fromPSBT(tx.toPSBT(0));
         actualFee = change;
-        txWithChange.addOutputAddress(this.wallet.btcAddress, BigInt(change), this.network);
+        txWithChange.addOutputAddress(this.options.btcAddress, BigInt(change), this.network);
         const sizeWithChange = await this.getTxSize(txWithChange);
         const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fees + sizeWithChange);
 
@@ -460,7 +458,7 @@ class RbfTransaction {
           // add change output
           actualFee = Math.ceil(newFeeWithChange);
           const actualChange = change - actualFee;
-          tx.addOutputAddress(this.wallet.btcAddress, BigInt(actualChange), this.network);
+          tx.addOutputAddress(this.options.btcAddress, BigInt(actualChange), this.network);
           outputsTotal += actualChange;
         }
 
