@@ -27,6 +27,7 @@ jobs:
           cache: npm
       - id: create-branch
         env:
+          GH_TOKEN: ${{ github.token }}
           BUMP: ${{ inputs.bump }}
         run: |
           # git config
