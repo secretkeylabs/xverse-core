@@ -34,4 +34,4 @@ jobs:
           git config user.email "<>"
           # run shell script
           cd scripts
-          ./create-release.sh
+          ./create-release-pr.sh
