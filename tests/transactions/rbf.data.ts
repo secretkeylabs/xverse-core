@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { RBFProps } from '../../transactions/rbf';
-import { BtcTransactionData, UTXO } from '../../types';
+import { BtcTransactionData, Transaction, UTXO } from '../../types';
 
 /* eslint-disable max-len */
 export const rbfTransaction: BtcTransactionData = {
@@ -129,6 +129,128 @@ export const rbfTransaction: BtcTransactionData = {
   txStatus: 'pending',
   isOrdinal: false,
   recipientAddress: 'bc1pzpnpmsdxczgwmua8aqtf329u27cc52nckndc0zu6l0mrp3jtt7xq7fl98j',
+};
+
+export const rbfEsploraTransaction: Transaction = {
+  txid: 'eb3ddbc9fb830b4470da0d723958a5819d8239f8bd9e4675d913f93631f3e025',
+  version: 2,
+  fee: 33288,
+  size: 699,
+  weight: 1995,
+  locktime: 0,
+  status: {
+    confirmed: false,
+  },
+  vin: [
+    {
+      txid: '0ea74611a82a58325b5aa9df6d299c47c7e163fc44cf7ae2e20892fd9d5a5ab2',
+      vout: 1,
+      prevout: {
+        scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+        scriptpubkey_asm:
+          'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+        scriptpubkey_type: 'v1_p2tr',
+        scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+        value: 600,
+      },
+      scriptsig: '',
+      scriptsig_asm: '',
+      is_coinbase: false,
+      sequence: 4294967293,
+    },
+    {
+      txid: '0ea74611a82a58325b5aa9df6d299c47c7e163fc44cf7ae2e20892fd9d5a5ab2',
+      vout: 0,
+      prevout: {
+        scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+        scriptpubkey_asm:
+          'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+        scriptpubkey_type: 'v1_p2tr',
+        scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+        value: 600,
+      },
+      scriptsig: '',
+      scriptsig_asm: '',
+      is_coinbase: false,
+      sequence: 4294967293,
+    },
+    {
+      txid: '1ce21439d00ab3b88871527a81c9df8f3116aeb82ecd0a08c0f9b91b4efc28c3',
+      vout: 1,
+      prevout: {
+        scriptpubkey: '51201bcb99a624c563811c17f19ddec38c8985f4256b68e2e9bc0a690a91dae30b57',
+        scriptpubkey_asm:
+          'OP_PUSHNUM_1 OP_PUSHBYTES_32 10661dc1a6c090edf3a7e81698a8bc57b18a2a78b4db878b9afbf630c64b5f8c',
+        scriptpubkey_type: 'v1_p2tr',
+        scriptpubkey_address: 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq',
+        value: 546,
+      },
+      scriptsig: '',
+      scriptsig_asm: '',
+      is_coinbase: false,
+      sequence: 4294967293,
+    },
+    {
+      txid: '0ea74611a82a58325b5aa9df6d299c47c7e163fc44cf7ae2e20892fd9d5a5ab2',
+      vout: 2,
+      prevout: {
+        scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+        scriptpubkey_asm:
+          'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+        scriptpubkey_type: 'v1_p2tr',
+        scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+        value: 39965541,
+      },
+      scriptsig: '',
+      scriptsig_asm: '',
+      is_coinbase: false,
+      sequence: 4294967295,
+    },
+  ],
+  vout: [
+    {
+      scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+      value: 1200,
+    },
+    {
+      scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+      value: 546,
+    },
+    {
+      scriptpubkey: '512010661dc1a6c090edf3a7e81698a8bc57b18a2a78b4db878b9afbf630c64b5f8c',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 10661dc1a6c090edf3a7e81698a8bc57b18a2a78b4db878b9afbf630c64b5f8c',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: 'bc1pzpnpmsdxczgwmua8aqtf329u27cc52nckndc0zu6l0mrp3jtt7xq7fl98j',
+      value: 317000,
+    },
+    {
+      scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+      value: 600,
+    },
+    {
+      scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+      value: 600,
+    },
+    {
+      scriptpubkey: 'a91405205028abaa2a0de49be6228e1f31131ea7f2b087',
+      scriptpubkey_asm: 'OP_PUSHNUM_1 OP_PUSHBYTES_32 c8d078e4a73432bb0f5f19ace8578e356b1031a8a68e7905765d8e996a76cc82',
+      scriptpubkey_type: 'v1_p2tr',
+      scriptpubkey_address: '32A81f7NmkRBq5pYBxGbR989pX3rmSedxr',
+      value: 39614053,
+    },
+  ],
 };
 
 export const wallet: RBFProps = {

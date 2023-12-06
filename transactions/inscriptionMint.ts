@@ -141,6 +141,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     availableUtxos: addressUtxos,
     feeRate,
     network,
+    useUnconfirmed: false,
   });
 
   if (!bestUtxoData) {

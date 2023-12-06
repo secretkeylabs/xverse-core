@@ -41,7 +41,7 @@ describe('UTXO selection', () => {
   it('selects UTXO of highest value first', () => {
     const testUtxos = [createUtxo(10000, true), createUtxo(20000, true)];
 
-    const utxos = selectUnspentOutputs(new BigNumber(10000), [...testUtxos], undefined, 22);
+    const utxos = selectUnspentOutputs(new BigNumber(10000), 22, [...testUtxos], undefined);
 
     expect(utxos.length).eq(1);
     expect(utxos[0]).toBe(testUtxos[1]);
@@ -50,7 +50,7 @@ describe('UTXO selection', () => {
   it('selects multiple UTXOs if needed', () => {
     const testUtxos = [createUtxo(10000, true), createUtxo(20000, true)];
 
-    const utxos = selectUnspentOutputs(new BigNumber(25000), [...testUtxos], undefined, 22);
+    const utxos = selectUnspentOutputs(new BigNumber(25000), 22, [...testUtxos], undefined);
 
     expect(utxos.length).eq(2);
     expect(utxos[0]).toBe(testUtxos[1]);
@@ -60,7 +60,7 @@ describe('UTXO selection', () => {
   it('deprioritises unconfirmed UTXOs', () => {
     const testUtxos = [createUtxo(10000, true), createUtxo(20000, true), createUtxo(30000, false)];
 
-    const utxos = selectUnspentOutputs(new BigNumber(10000), [...testUtxos], undefined, 22);
+    const utxos = selectUnspentOutputs(new BigNumber(10000), 22, [...testUtxos], undefined);
     expect(utxos.length).eq(1);
     expect(utxos[0]).toBe(testUtxos[1]);
   });
@@ -68,12 +68,12 @@ describe('UTXO selection', () => {
   it('Uses unconfirmed UTXOs if sats to send high enough', () => {
     const testUtxos = [createUtxo(10000, true), createUtxo(20000, true), createUtxo(30000, false)];
 
-    let utxos = selectUnspentOutputs(new BigNumber(30000), [...testUtxos], undefined, 22);
+    let utxos = selectUnspentOutputs(new BigNumber(30000), 22, [...testUtxos], undefined);
     expect(utxos.length).eq(2);
     expect(utxos[0]).toBe(testUtxos[1]);
     expect(utxos[1]).toBe(testUtxos[0]);
 
-    utxos = selectUnspentOutputs(new BigNumber(40000), [...testUtxos], undefined, 22);
+    utxos = selectUnspentOutputs(new BigNumber(40000), 22, [...testUtxos], undefined);
     expect(utxos.length).eq(3);
     expect(utxos[0]).toBe(testUtxos[1]);
     expect(utxos[1]).toBe(testUtxos[0]);
@@ -85,7 +85,7 @@ describe('UTXO selection', () => {
 
     // This should make the 10000 UTXO dust at the desired fee rate
     // as adding it would increase the fee by 10500 (more than the value of the UTXO)
-    const utxos = selectUnspentOutputs(new BigNumber(30000), [...testUtxos], undefined, 150);
+    const utxos = selectUnspentOutputs(new BigNumber(30000), 150, [...testUtxos], undefined);
     expect(utxos.length).eq(2);
     expect(utxos[0]).toBe(testUtxos[1]);
     expect(utxos[1]).toBe(testUtxos[2]);
@@ -462,7 +462,7 @@ describe('bitcoin transactions', () => {
 
     const feeRate = defaultFeeRate;
 
-    const selectedUnspentOutputs = selectUnspentOutputs(new BigNumber(satsToSend), utxos);
+    const selectedUnspentOutputs = selectUnspentOutputs(new BigNumber(satsToSend), feeRate.regular, utxos);
 
     const fee = await calculateFee(
       selectedUnspentOutputs,
@@ -841,6 +841,7 @@ describe('bitcoin transactions', () => {
 
     const selectedUnspentOutputs = selectUnspentOutputs(
       new BigNumber(ordinalOutputs[0].value),
+      feeRate.regular,
       filteredUnspentOutputs,
       ordinalOutputs[0],
     );
