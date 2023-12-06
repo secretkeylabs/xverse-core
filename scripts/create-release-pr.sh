@@ -1,5 +1,12 @@
 #! /bin/bash
 
+##
+# create-release-pr.sh for xverse-core
+#
+# NOTE: make sure you git commit your work before running this.
+# Alternatively trigger it from the github action
+#
+
 if [[ -z "$BUMP" ]]; then
   echo "BUMP is required. major|minor|patch"
   exit 1
@@ -58,7 +65,6 @@ gh api \
 echo -e "\n--- Update PR to $b with description ---"
 
 PR_ID=$(cat pr-$b.json | jq -r .number)
-
 gh api \
   --method PATCH \
   -H "Accept: application/vnd.github+json" \

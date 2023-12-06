@@ -16,6 +16,9 @@ on:
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       version: ${{ steps.create-branch.outputs.version }}
       branch-name: ${{ steps.create-branch.outputs.branch-name }}
