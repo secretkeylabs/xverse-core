@@ -17,7 +17,7 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
 
   constructor(options: EsploraApiProviderOptions) {
     const { url, network } = options;
-    const baseURL = url || network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET;
+    const baseURL = url || (network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET);
 
     super({ baseURL });
 
