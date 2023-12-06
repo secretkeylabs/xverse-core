@@ -14,24 +14,22 @@ on:
           - major
 
 jobs:
-  bump-version:
+  create-release-pr:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-    outputs:
-      version: ${{ steps.create-branch.outputs.version }}
-      branch-name: ${{ steps.create-branch.outputs.branch-name }}
+      issues: write
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 16
           cache: npm
-      - id: create-branch
+      - id: run-create-release-pr-sh
         env:
-          GH_TOKEN: ${{ github.token }}
           BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           # git config
           git config user.name "GitHub Actions Bot"
