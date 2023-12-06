@@ -106,7 +106,7 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     return data;
   }
 
-  async getLatestBlockHash(height: number): Promise<string> {
+  async getBlockHash(height: number): Promise<string> {
     const data = await this.httpGet<string>(`/block-height/${height}`);
     return data;
   }
