@@ -32,54 +32,6 @@ jobs:
           # git config
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          # checkout the develop branch
-          git fetch origin develop
-          git checkout develop
-          # bump the package version and push the changes,
-          VERSION=$(npm version $BUMP --no-git-tag-version)
-          BRANCH_NAME="release/$VERSION"
-          git checkout -b $BRANCH_NAME
-          git commit -am "release: $VERSION"
-          git push --set-upstream origin $BRANCH_NAME
-          # save output
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
-  create-release-pr:
-    needs:
-      - bump-version
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-    steps:
-      - id: create-pr
-        name: Create new release PR
-        env:
-          VERSION: ${{ needs.bump-version.outputs.version }}
-          BRANCH_NAME: ${{ needs.bump-version.outputs.branch-name }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER=$(gh api \
-          --method POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          /repos/$GITHUB_REPOSITORY/pulls \
-          -f title="release: $VERSION" \
-          -f body="Created by GitHub Actions Bot" \
-          -f head="$BRANCH_NAME" \
-          -f base='develop' | jq '.number')
-          echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
-      - name: Add label to release PR
-        env:
-          PR_NUMBER: ${{ steps.create-pr.outputs.pr-number }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          sleep 3
-          gh api \
-          --method POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          /repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels \
-          -f "labels[]=create release" \
+          # run shell script
+          cd scripts
+          ./create-release-pr.sh
