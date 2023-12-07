@@ -1,4 +1,4 @@
-name: Publish Github Release
+name: Publish to GPR & Publish Github Release
 
 on:
   pull_request:
@@ -7,8 +7,27 @@ on:
     types: [ closed ]
 
 jobs:
-  publish-github-release:
+  publish-gpr:
     if: ${{ github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')}}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          registry-url: https://npm.pkg.github.com/
+      - run: |
+          npm ci
+          npm test
+          npm run build:esm
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  publish-github-release:
+    needs: publish-gpr
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,11 +49,13 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             /repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID \
+            -f target_commitish="develop" \
             -F draft=false \
             -F make_latest=true > release.json
           # update PR description
           cat release.json | jq -r .body > body.md
           echo -e "\n\nPublished release: $(cat release.json | jq -r .html_url)" >> body.md
+          echo -e "\nTo install: \`npm i --save-exact @secretkeylabs/xverse-core@$(cat release.json | jq -r .tag_name | sed 's/v//')\`" >> body.md
           gh api \
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
