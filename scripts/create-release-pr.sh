@@ -80,7 +80,7 @@ gh api \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   /repos/{owner}/{repo}/issues/$PR_ID/labels \
-  -f "labels[]=RID_$RELEASE_ID" \
+  -f "labels[]=RID_$RELEASE_ID"
 
 # clean up temp files
 # rm pr-$b.json
