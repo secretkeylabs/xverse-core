@@ -1,27 +1,24 @@
 import { BtcTransactionData } from '../types/api/blockcypher/wallet';
-import { NetworkType } from '../types/network';
-import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
-import BitcoinEsploraApiProvider from './esplora/esploraAPiProvider';
 import * as esplora from '../types/api/esplora';
+import EsploraApiProvider from './esplora/esploraAPiProvider';
+import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
 
-export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, network: NetworkType) {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
+export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, esploraProvider: EsploraApiProvider) {
   const transactions: BtcTransactionData[] = [];
-  const txResponse: esplora.Transaction[] = await btcClient.getAddressTransactions(ordinalsAddress);
+  const txResponse: esplora.Transaction[] = await esploraProvider.getAddressTransactions(ordinalsAddress);
   txResponse.forEach((tx) => {
     transactions.push(parseOrdinalsBtcTransactions(tx, ordinalsAddress));
   });
   return transactions.filter((tx) => tx.incoming);
 }
 
-export async function fetchBtcPaymentTransactions(btcAddress: string, ordinalsAddress: string, network: NetworkType) {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
+export async function fetchBtcPaymentTransactions(
+  btcAddress: string,
+  ordinalsAddress: string,
+  esploraProvider: EsploraApiProvider,
+) {
   const transactions: BtcTransactionData[] = [];
-  const txResponse: esplora.Transaction[] = await btcClient.getAddressTransactions(btcAddress);
+  const txResponse: esplora.Transaction[] = await esploraProvider.getAddressTransactions(btcAddress);
   txResponse.forEach((tx) => {
     transactions.push(parseBtcTransactionData(tx, btcAddress, ordinalsAddress));
   });
@@ -31,15 +28,15 @@ export async function fetchBtcPaymentTransactions(btcAddress: string, ordinalsAd
 export async function fetchBtcTransactionsData(
   btcAddress: string,
   ordinalsAddress: string,
-  network: NetworkType,
+  esploraProvider: EsploraApiProvider,
   withOrdinals: boolean,
 ): Promise<BtcTransactionData[]> {
   if (withOrdinals) {
-    const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, network);
-    const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, network);
+    const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, esploraProvider);
+    const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, esploraProvider);
     return [...new Set([...paymentTransactions, ...ordinalsTransactions])];
   }
-  const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, network);
+  const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, esploraProvider);
   return paymentTransactions;
 }
 
@@ -47,13 +44,10 @@ export async function fetchBtcTransaction(
   id: string,
   btcAddress: string,
   ordinalsAddress: string,
-  network: NetworkType,
+  esploraProvider: EsploraApiProvider,
   isOrdinal?: boolean,
 ) {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const txResponse: esplora.Transaction = await btcClient.getTransaction(id);
+  const txResponse: esplora.Transaction = await esploraProvider.getTransaction(id);
   const transaction: BtcTransactionData = isOrdinal
     ? parseOrdinalsBtcTransactions(txResponse, ordinalsAddress)
     : parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);

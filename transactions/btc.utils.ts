@@ -2,6 +2,7 @@ import { hex } from '@scure/base';
 import BigNumber from 'bignumber.js';
 
 import { getOrdinalsByAddress } from '../api';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { NetworkType, UTXO } from '../types';
 import type { Recipient, TransactionUtxoSelectionMetadata } from './btc';
 import { createTransaction } from './btc';
@@ -217,7 +218,7 @@ export function selectOptimalUtxos({
 }
 
 // get ordinals utxos in btc address
-export async function getOrdinalsUtxos(network: NetworkType, btcAddress: string) {
-  const ordinals = await getOrdinalsByAddress(network, btcAddress);
+export async function getOrdinalsUtxos(esploraProvider: EsploraApiProvider, network: NetworkType, btcAddress: string) {
+  const ordinals = await getOrdinalsByAddress(esploraProvider, network, btcAddress);
   return ordinals.map((item) => item.utxo);
 }

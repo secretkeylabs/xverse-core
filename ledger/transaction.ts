@@ -3,7 +3,7 @@ import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { Psbt, networks } from 'bitcoinjs-lib';
 import { fetchBtcFeeRate } from '../api';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import {
   Recipient,
   defaultFeeRate,
@@ -26,6 +26,7 @@ import { Bip32Derivation, TapBip32Derivation } from './types';
  * @returns the selected utxos, the change value and the fee
  * */
 export async function getTransactionData(
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   senderAddress: string,
   recipients: Array<Recipient>,
@@ -33,10 +34,7 @@ export async function getTransactionData(
   ordinalUtxo?: UTXO,
 ) {
   // Get sender address unspent outputs
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs: UTXO[] = await btcClient.getUnspentUtxos(senderAddress);
+  const unspentOutputs: UTXO[] = await esploraProvider.getUnspentUtxos(senderAddress);
 
   let filteredUnspentOutputs = unspentOutputs;
 

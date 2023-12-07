@@ -1,26 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
-import EsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import rbf from '../../transactions/rbf';
-import { largeUtxo, rbfEsploraTransaction, rbfTransaction, wallet } from './rbf.data';
+import { constructOptions, largeUtxo, rbfEsploraTransaction, rbfTransaction } from './rbf.data';
 
 vi.mock('../../api/esplora/esploraAPiProvider');
 
 describe('Replace By Fee', () => {
   describe('isTransactionRbfEnabled', () => {
     it('Identifies that a transaction is RBF enabled', () => {
-      const isRBF = rbf.isTransactionRbfEnabled(rbfTransaction, wallet);
+      const isRBF = rbf.isTransactionRbfEnabled(rbfTransaction, constructOptions());
       expect(isRBF).toEqual(true);
     });
 
     it('Identifies that a confirmed transaction is not RBF enabled', () => {
       const txn = { ...rbfTransaction, confirmed: true };
-      const isRBF = rbf.isTransactionRbfEnabled(txn, wallet);
+      const isRBF = rbf.isTransactionRbfEnabled(txn, constructOptions());
       expect(isRBF).toEqual(false);
     });
 
     it('Identifies that a transaction without RBF inputs is not RBF enabled', () => {
       const txn = { ...rbfTransaction, inputs: [{ sequence: 0xffffffff } as any] };
-      const isRBF = rbf.isTransactionRbfEnabled(txn, wallet);
+      const isRBF = rbf.isTransactionRbfEnabled(txn, constructOptions());
       expect(isRBF).toEqual(false);
     });
 
@@ -32,21 +31,18 @@ describe('Replace By Fee', () => {
           { sequence: 0xfffffffd, prevout: { scriptpubkey: 'otherAddressKey' } } as any,
         ],
       };
-      const isRBF = rbf.isTransactionRbfEnabled(txn, wallet);
+      const isRBF = rbf.isTransactionRbfEnabled(txn, constructOptions());
       expect(isRBF).toEqual(false);
     });
   });
 
   describe('transaction summary', () => {
     it('should generate summary for complete test txn', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
-      const summary = await rbf.getRbfTransactionSummary('Mainnet', 'txid');
+      const esploraProvider = {
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
+      const summary = await rbf.getRbfTransactionSummary(esploraProvider, 'txid');
       expect(summary).toEqual({
         currentFee: 33288,
         currentFeeRate: 66.74,
@@ -58,16 +54,13 @@ describe('Replace By Fee', () => {
 
   describe('RbfTransaction', () => {
     it('getRbfRecommendedFees', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getUnspentUtxos: () => Promise.resolve([]),
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
+      const esploraProvider = {
+        getUnspentUtxos: () => Promise.resolve([]),
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
 
-      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, constructOptions(esploraProvider));
       const recommendedFees = await rbfTxn.getRbfRecommendedFees({
         economyFee: 23,
         fastestFee: 70,
@@ -90,30 +83,24 @@ describe('Replace By Fee', () => {
     });
 
     it('getRbfFeeSummary throws on low fee rate', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getUnspentUtxos: () => Promise.resolve([]),
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
+      const esploraProvider = {
+        getUnspentUtxos: () => Promise.resolve([]),
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
 
-      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, constructOptions(esploraProvider));
       await expect(() => rbfTxn.getRbfFeeSummary(50)).rejects.toThrow('Fee rate is below RBF minimum fee rate');
     });
 
     it('getRbfFeeSummary works with no extra inputs', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getUnspentUtxos: () => Promise.resolve([]),
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
+      const esploraProvider = {
+        getUnspentUtxos: () => Promise.resolve([]),
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
 
-      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, constructOptions(esploraProvider));
       const feeSummary = await rbfTxn.getRbfFeeSummary(68);
       expect(feeSummary).toEqual({
         enoughFunds: true,
@@ -123,16 +110,13 @@ describe('Replace By Fee', () => {
     });
 
     it('getRbfFeeSummary returns not enough funds if no additional UTXOs', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getUnspentUtxos: () => Promise.resolve([]),
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
+      const esploraProvider = {
+        getUnspentUtxos: () => Promise.resolve([]),
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
 
-      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, constructOptions(esploraProvider));
       const feeSummary = await rbfTxn.getRbfFeeSummary(1000000);
 
       expect(feeSummary).toEqual({
@@ -143,16 +127,13 @@ describe('Replace By Fee', () => {
     });
 
     it('getRbfFeeSummary returns with additional UTXOs', async () => {
-      vi.mocked(EsploraApiProvider).mockImplementation(
-        () =>
-          ({
-            getUnspentUtxos: () => Promise.resolve([largeUtxo]),
-            getTransaction: () => Promise.resolve(rbfEsploraTransaction),
-            getTransactionOutspends: () => Promise.resolve([]),
-          } as any),
-      );
+      const esploraProvider = {
+        getUnspentUtxos: () => Promise.resolve([largeUtxo]),
+        getTransaction: () => Promise.resolve(rbfEsploraTransaction),
+        getTransactionOutspends: () => Promise.resolve([]),
+      } as any;
 
-      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, wallet);
+      const rbfTxn = new rbf.RbfTransaction(rbfTransaction, constructOptions(esploraProvider));
       const feeSummary = await rbfTxn.getRbfFeeSummary(1000000);
 
       expect(feeSummary).toEqual({
