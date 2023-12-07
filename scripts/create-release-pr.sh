@@ -49,6 +49,7 @@ gh api \
 
 cat release.json | jq -r .body > body.md
 echo -e "\n\nDraft release: $(cat release.json | jq -r .html_url)" >> body.md
+echo -e "\nTo trigger npm publish: Merge Commit this PR" >> body.md
 
 echo -e "\n--- Create PR to $b ---"
 

@@ -11,8 +11,9 @@ jobs:
     if: ${{ github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')}}
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
+      issues: write
     steps:
       - id: publish-linked-draft-release
         name: Publish linked draft release
