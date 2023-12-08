@@ -69,11 +69,11 @@ export type CompilationOptions = {
 export type TransactionOutput = {
   address: string;
   amount: number;
-  inscriptions?: {
+  inscriptions: {
     id: string;
     offset: number;
   }[];
-  satributes?: {
+  satributes: {
     satributes: Satribute[];
     amount: number;
     offset: number;

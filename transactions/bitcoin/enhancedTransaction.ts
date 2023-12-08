@@ -103,7 +103,7 @@ export class EnhancedTransaction {
     );
 
     const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];
-    const outputs: TransactionOutput[] = [
+    const outputsRaw: Omit<TransactionOutput, 'inscriptions' | 'satributes'>[] = [
       ...sendOutputs,
       ...splitOutputs,
       ...sendBtcOutputs,
@@ -111,15 +111,14 @@ export class EnhancedTransaction {
       {
         address: '',
         amount: Number(actualFee),
-        inscriptions: [],
-        satributes: [],
       },
     ];
+    const outputs: TransactionOutput[] = [];
 
     let currentOffset = 0;
-    for (const output of outputs) {
-      output.inscriptions = [];
-      output.satributes = [];
+    for (const outputRaw of outputsRaw) {
+      const output: TransactionOutput = { ...outputRaw, inscriptions: [], satributes: [] };
+      outputs.push(output);
 
       const { amount, inscriptions, satributes } = output;
 
