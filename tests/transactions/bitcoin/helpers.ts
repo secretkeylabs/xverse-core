@@ -40,8 +40,6 @@ export class TestAddressContext extends AddressContext {
 
   getUtxos = vi.fn();
 
-  getUnindexedUtxos = vi.fn();
-
   getCommonUtxos = vi.fn();
 
   getEmbellishedUtxos = vi.fn();

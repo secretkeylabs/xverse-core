@@ -141,21 +141,6 @@ export abstract class AddressContext {
     return [...this._utxos];
   }
 
-  async getUnindexedUtxos(): Promise<ExtendedUtxo[]> {
-    const utxos = await this.getUtxos();
-
-    const unindexedUtxos: ExtendedUtxo[] = [];
-
-    for (const utxo of utxos) {
-      const isEmbellished = await utxo.isEmbellished();
-      if (isEmbellished === undefined) {
-        unindexedUtxos.push(utxo);
-      }
-    }
-
-    return unindexedUtxos;
-  }
-
   async getCommonUtxos(): Promise<ExtendedUtxo[]> {
     const utxos = await this.getUtxos();
 
