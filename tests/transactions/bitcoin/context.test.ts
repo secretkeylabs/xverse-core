@@ -365,13 +365,16 @@ describe('createTransactionContext', () => {
 
   it('creates transaction context with correct addresses - p2sh + p2tr', () => {
     const context = createTransactionContext({
-      wallet: {
-        accountIndex: 0n,
+      account: {
+        id: 0,
         btcAddress: addresses[0].nestedSegwit,
         btcPublicKey: addresses[0].nestedSegwitPubKey,
         ordinalsAddress: addresses[0].taproot,
         ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
+        stxAddress: '',
+        masterPubKey: '',
+        stxPublicKey: '',
       },
       network: 'Mainnet',
       seedVault,
@@ -384,13 +387,16 @@ describe('createTransactionContext', () => {
 
   it('creates transaction context with correct addresses - p2wpkh + p2tr', () => {
     const context = createTransactionContext({
-      wallet: {
-        accountIndex: 0n,
+      account: {
+        id: 0,
         btcAddress: addresses[0].nativeSegwit,
         btcPublicKey: addresses[0].nativeSegwitPubKey,
         ordinalsAddress: addresses[0].taproot,
         ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
+        stxAddress: '',
+        masterPubKey: '',
+        stxPublicKey: '',
       },
       network: 'Mainnet',
       seedVault,
@@ -403,13 +409,16 @@ describe('createTransactionContext', () => {
 
   it('creates transaction context with correct addresses - p2wpkh + p2wpkh', () => {
     const context = createTransactionContext({
-      wallet: {
-        accountIndex: 0n,
+      account: {
+        id: 0,
         btcAddress: addresses[0].nativeSegwit,
         btcPublicKey: addresses[0].nativeSegwitPubKey,
         ordinalsAddress: addresses[0].nativeSegwit,
         ordinalsPublicKey: addresses[0].nativeSegwitPubKey,
         accountType: 'software',
+        stxAddress: '',
+        masterPubKey: '',
+        stxPublicKey: '',
       },
       network: 'Mainnet',
       seedVault,
@@ -423,13 +432,17 @@ describe('createTransactionContext', () => {
 
   it('creates transaction context with correct addresses - ledger p2wpkh + p2tr', () => {
     const context = createTransactionContext({
-      wallet: {
-        accountIndex: 0n,
+      account: {
+        id: 0,
+        deviceAccountIndex: 0,
         btcAddress: addresses[0].nativeSegwit,
         btcPublicKey: addresses[0].nativeSegwitPubKey,
         ordinalsAddress: addresses[0].taproot,
         ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'ledger',
+        stxAddress: '',
+        masterPubKey: '',
+        stxPublicKey: '',
       },
       network: 'Mainnet',
       seedVault,

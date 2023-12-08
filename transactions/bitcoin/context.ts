@@ -9,9 +9,9 @@ import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
 import SeedVault from '../../seedVault';
 import { getBtcNetwork } from '../../transactions/btcNetwork';
-import type { AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
+import type { Account, AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
-import { CompilationOptions, SupportedAddressType, WalletContext } from './types';
+import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
 export type LedgerTransport = ConstructorParameters<typeof AppClient>[0];
@@ -94,7 +94,7 @@ export abstract class AddressContext {
 
   protected _utxoCache!: UtxoCache;
 
-  protected _accountIndex!: bigint;
+  protected _accountIndex!: number;
 
   protected _esploraApi!: EsploraProvider;
 
@@ -103,7 +103,7 @@ export abstract class AddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     esploraApi: EsploraProvider,
@@ -214,7 +214,7 @@ export class P2shAddressContext extends AddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     esploraApi: EsploraProvider,
@@ -297,7 +297,7 @@ export class P2wpkhAddressContext extends AddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     esploraApi: EsploraProvider,
@@ -373,7 +373,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     transport: LedgerTransport,
@@ -448,7 +448,7 @@ export class P2trAddressContext extends AddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     esploraApi: EsploraProvider,
@@ -539,7 +539,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     address: string,
     publicKey: string,
     network: NetworkType,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
     transport: LedgerTransport,
@@ -732,16 +732,26 @@ export class TransactionContext {
   }
 }
 
-const createAddressContext = (
-  address: string,
-  publicKey: string,
-  network: NetworkType,
-  accountIndex: bigint,
-  seedVault: SeedVault,
-  utxoCache: UtxoCache,
-  accountType?: AccountType,
-  transport?: LedgerTransport,
-): AddressContext => {
+type CreateAddressContextProps = {
+  address: string;
+  publicKey: string;
+  network: NetworkType;
+  accountIndex: number;
+  seedVault: SeedVault;
+  utxoCache: UtxoCache;
+  accountType?: AccountType;
+  transport?: LedgerTransport;
+};
+const createAddressContext = ({
+  address,
+  publicKey,
+  network,
+  accountIndex,
+  seedVault,
+  utxoCache,
+  accountType,
+  transport,
+}: CreateAddressContextProps): AddressContext => {
   const { type } = getAddressInfo(address);
 
   const esploraApi = new EsploraProvider({ network });
@@ -791,38 +801,42 @@ const createAddressContext = (
 };
 
 export type TransactionContextOptions = {
-  wallet: WalletContext;
+  account: Account;
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   network: NetworkType;
   ledgerTransport?: LedgerTransport;
 };
 export const createTransactionContext = (options: TransactionContextOptions) => {
-  const { wallet, seedVault, utxoCache, network, ledgerTransport } = options;
+  const { account, seedVault, utxoCache, network, ledgerTransport } = options;
 
-  const paymentAddress = createAddressContext(
-    wallet.btcAddress,
-    wallet.btcPublicKey,
+  const accountIndex = account.accountType === 'software' ? account.id : account.deviceAccountIndex;
+  if (accountIndex === undefined) {
+    throw new Error('Cannot identify the account index');
+  }
+  const paymentAddress = createAddressContext({
+    address: account.btcAddress,
+    publicKey: account.btcPublicKey,
     network,
-    wallet.accountIndex,
-    seedVault,
-    utxoCache,
-    wallet.accountType,
-    ledgerTransport,
-  );
+    accountIndex,
+    seedVault: seedVault,
+    utxoCache: utxoCache,
+    accountType: account.accountType,
+    transport: ledgerTransport,
+  });
   const ordinalsAddress =
-    wallet.btcAddress === wallet.ordinalsAddress
+    account.btcAddress === account.ordinalsAddress
       ? paymentAddress
-      : createAddressContext(
-          wallet.ordinalsAddress,
-          wallet.ordinalsPublicKey,
+      : createAddressContext({
+          address: account.ordinalsAddress,
+          publicKey: account.ordinalsPublicKey,
           network,
-          wallet.accountIndex,
-          seedVault,
-          utxoCache,
-          wallet.accountType,
-          ledgerTransport,
-        );
+          accountIndex,
+          seedVault: seedVault,
+          utxoCache: utxoCache,
+          accountType: account.accountType,
+          transport: ledgerTransport,
+        });
 
   return new TransactionContext(network, paymentAddress, ordinalsAddress);
 };

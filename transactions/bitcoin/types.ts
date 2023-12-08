@@ -1,16 +1,7 @@
 import { Transport } from 'ledger/types';
-import { AccountType, Satribute } from '../../types';
+import { Satribute } from '../../types';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
-
-export type WalletContext = {
-  btcAddress: string;
-  ordinalsAddress: string;
-  btcPublicKey: string;
-  ordinalsPublicKey: string;
-  accountType?: AccountType;
-  accountIndex: bigint;
-};
 
 export enum ActionType {
   SEND_BTC = 'sendBtc',
