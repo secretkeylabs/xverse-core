@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ActionType } from 'transactions';
+import { btcTransaction } from 'transactions';
 import { applySendBtcActionsAndFee } from '../../../transactions/bitcoin/actionProcessors';
 import {
   extractUsedOutpoints,
@@ -49,7 +49,7 @@ describe('applySendBtcActionsAndFee', () => {
         transaction as any,
         [
           {
-            type: ActionType.SEND_BTC,
+            type: btcTransaction.ActionType.SEND_BTC,
             toAddress: 'address',
             amount: 2000n,
             combinable: true,
@@ -489,37 +489,37 @@ describe('applySendBtcActionsAndFee', () => {
       transaction as any,
       [
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address',
           amount: 1000n,
           combinable: true,
         },
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address3',
           amount: 900n,
           combinable: false,
         },
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address',
           amount: 2000n,
           combinable: true,
         },
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address2',
           amount: 500n,
           combinable: true,
         },
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address',
           amount: 1000n,
           combinable: false,
         },
         {
-          type: ActionType.SEND_BTC,
+          type: btcTransaction.ActionType.SEND_BTC,
           toAddress: 'address2',
           amount: 2000n,
           combinable: true,

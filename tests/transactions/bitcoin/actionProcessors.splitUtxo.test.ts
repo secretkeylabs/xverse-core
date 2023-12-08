@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ActionType } from 'transactions';
+import { btcTransaction } from '../../../transactions';
 import { applySplitUtxoActions } from '../../../transactions/bitcoin/actionProcessors';
 
 describe('applySplitUtxoActions', () => {
@@ -14,7 +14,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions({} as any, {}, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
           toAddress: 'address',
         },
@@ -30,7 +30,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions({} as any, { excludeOutpointList: ['f00d:0'] }, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
           toAddress: 'address',
         },
@@ -48,7 +48,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
           toAddress: 'address',
         },
@@ -67,7 +67,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:-1',
           toAddress: 'address',
         },
@@ -86,7 +86,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:100',
           toAddress: 'address',
         },
@@ -109,7 +109,7 @@ describe('applySplitUtxoActions', () => {
     await expect(() =>
       applySplitUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:600',
           toAddress: 'address',
         },
@@ -132,17 +132,17 @@ describe('applySplitUtxoActions', () => {
 
     const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
         toAddress: 'address1',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:5000',
         toAddress: 'address3',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:2000',
         toAddress: 'address2',
       },
@@ -188,27 +188,27 @@ describe('applySplitUtxoActions', () => {
 
     const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
         toAddress: 'address1',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:1000',
         toAddress: 'address4',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:5000',
         toAddress: 'address3',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:6000',
         toAddress: 'address5',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:2000',
         toAddress: 'address2',
       },
@@ -267,27 +267,27 @@ describe('applySplitUtxoActions', () => {
 
     const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
         toAddress: 'address1',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:5000',
         spendable: true,
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:1000',
         toAddress: 'address4',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:6000',
         spendable: true,
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:2000',
         toAddress: 'address2',
       },
@@ -342,27 +342,27 @@ describe('applySplitUtxoActions', () => {
 
     const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
         toAddress: 'address1',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:5000',
         spendable: true,
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:1000',
         toAddress: 'address4',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:1:6000',
         toAddress: 'address5',
       },
       {
-        type: ActionType.SPLIT_UTXO,
+        type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:2000',
         toAddress: 'address2',
       },

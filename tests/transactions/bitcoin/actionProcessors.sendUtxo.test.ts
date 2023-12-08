@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ActionType } from 'transactions';
+import { btcTransaction } from 'transactions';
 import { applySendUtxoActions } from '../../../transactions/bitcoin/actionProcessors';
 
 describe('applySendUtxoActions', () => {
@@ -8,7 +8,7 @@ describe('applySendUtxoActions', () => {
     await expect(() =>
       applySendUtxoActions({} as any, { excludeOutpointList: ['txid:0'] }, { inputsLength: 0 } as any, [
         {
-          type: ActionType.SEND_UTXO,
+          type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'txid:0',
           toAddress: 'address',
         },
@@ -25,7 +25,7 @@ describe('applySendUtxoActions', () => {
     await expect(() =>
       applySendUtxoActions(context as any, {}, { inputsLength: 0 } as any, [
         {
-          type: ActionType.SEND_UTXO,
+          type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'txid:0',
           toAddress: 'address',
         },
@@ -50,7 +50,7 @@ describe('applySendUtxoActions', () => {
     await expect(() =>
       applySendUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SEND_UTXO,
+          type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
           toAddress: 'address',
         },
@@ -72,13 +72,13 @@ describe('applySendUtxoActions', () => {
     await expect(() =>
       applySendUtxoActions(context as any, {}, transaction as any, [
         {
-          type: ActionType.SEND_UTXO,
+          type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
           toAddress: 'address',
           spendable: true,
         },
         {
-          type: ActionType.SEND_UTXO,
+          type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
           toAddress: 'address',
           spendable: true,
@@ -103,13 +103,13 @@ describe('applySendUtxoActions', () => {
 
     const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address',
         spendable: true,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address',
         spendable: true,
@@ -147,13 +147,13 @@ describe('applySendUtxoActions', () => {
 
     const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address1',
         spendable: false,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address2',
         spendable: false,
@@ -197,13 +197,13 @@ describe('applySendUtxoActions', () => {
 
     const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address',
         combinable: true,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address',
         combinable: true,
@@ -244,13 +244,13 @@ describe('applySendUtxoActions', () => {
 
     const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address1',
         combinable: true,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address2',
         combinable: true,
@@ -306,24 +306,24 @@ describe('applySendUtxoActions', () => {
 
     const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address1',
         combinable: true,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address1',
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:2',
         toAddress: 'address1',
         combinable: true,
       },
       {
-        type: ActionType.SEND_UTXO,
+        type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:3',
         toAddress: 'address2',
       },

@@ -25,7 +25,7 @@ import {
   signTransaction,
 } from './stx';
 export * as btcTransaction from './bitcoin';
-export type { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './bitcoin';
+export type { SendBtcAction, SendUtxoAction, SplitUtxoAction } from './bitcoin';
 
 import {
   ExecuteTransferProgressCodes,

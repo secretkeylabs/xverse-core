@@ -6,8 +6,8 @@ import { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './ty
 const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
-export { EnhancedTransaction, TransactionContext, createTransactionContext };
-export type { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction };
+export { ActionType, EnhancedTransaction, TransactionContext, createTransactionContext };
+export type { SendBtcAction, SendUtxoAction, SplitUtxoAction };
 
 /**
  * send max bitcoin
