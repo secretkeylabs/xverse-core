@@ -2,7 +2,6 @@ import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
-import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
@@ -10,7 +9,7 @@ import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constan
 import { Transport } from '../../ledger/types';
 import SeedVault from '../../seedVault';
 import { getBtcNetwork } from '../../transactions/btcNetwork';
-import type { Account, AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
+import type { NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { CompilationOptions, SupportedAddressType } from './types';
@@ -708,112 +707,3 @@ export class TransactionContext {
     }
   }
 }
-
-type CreateAddressContextProps = {
-  esploraApiProvider: EsploraProvider;
-  address: string;
-  publicKey: string;
-  network: NetworkType;
-  accountIndex: number;
-  seedVault: SeedVault;
-  utxoCache: UtxoCache;
-  accountType?: AccountType;
-};
-const createAddressContext = ({
-  esploraApiProvider,
-  address,
-  publicKey,
-  network,
-  accountIndex,
-  seedVault,
-  utxoCache,
-  accountType,
-}: CreateAddressContextProps): AddressContext => {
-  const { type } = getAddressInfo(address);
-
-  if (accountType === 'ledger') {
-    if (type === AddressType.p2wpkh) {
-      return new LedgerP2wpkhAddressContext(
-        address,
-        publicKey,
-        network,
-        accountIndex,
-        seedVault,
-        utxoCache,
-        esploraApiProvider,
-      );
-    }
-    if (type === AddressType.p2tr) {
-      return new LedgerP2trAddressContext(
-        address,
-        publicKey,
-        network,
-        accountIndex,
-        seedVault,
-        utxoCache,
-        esploraApiProvider,
-      );
-    } else {
-      throw new Error(`Ledger support for this type of address not implemented: ${type}`);
-    }
-  }
-
-  if (type === AddressType.p2sh) {
-    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-  } else if (type === AddressType.p2wpkh) {
-    return new P2wpkhAddressContext(
-      address,
-      publicKey,
-      network,
-      accountIndex,
-      seedVault,
-      utxoCache,
-      esploraApiProvider,
-    );
-  } else if (type === AddressType.p2tr) {
-    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-  } else {
-    throw new Error('Unsupported payment address type');
-  }
-};
-
-export type TransactionContextOptions = {
-  esploraApiProvider: EsploraProvider;
-  account: Account;
-  seedVault: SeedVault;
-  utxoCache: UtxoCache;
-  network: NetworkType;
-};
-export const createTransactionContext = (options: TransactionContextOptions) => {
-  const { esploraApiProvider, account, seedVault, utxoCache, network } = options;
-
-  const accountIndex = account.accountType === 'software' ? account.id : account.deviceAccountIndex;
-  if (accountIndex === undefined) {
-    throw new Error('Cannot identify the account index');
-  }
-  const paymentAddress = createAddressContext({
-    esploraApiProvider,
-    address: account.btcAddress,
-    publicKey: account.btcPublicKey,
-    network,
-    accountIndex,
-    seedVault: seedVault,
-    utxoCache: utxoCache,
-    accountType: account.accountType,
-  });
-  const ordinalsAddress =
-    account.btcAddress === account.ordinalsAddress
-      ? paymentAddress
-      : createAddressContext({
-          esploraApiProvider,
-          address: account.ordinalsAddress,
-          publicKey: account.ordinalsPublicKey,
-          network,
-          accountIndex,
-          seedVault: seedVault,
-          utxoCache: utxoCache,
-          accountType: account.accountType,
-        });
-
-  return new TransactionContext(network, paymentAddress, ordinalsAddress);
-};

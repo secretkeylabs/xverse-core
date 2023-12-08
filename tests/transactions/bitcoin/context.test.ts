@@ -9,8 +9,8 @@ import {
   P2trAddressContext,
   P2wpkhAddressContext,
   TransactionContext,
-  createTransactionContext,
 } from '../../../transactions/bitcoin/context';
+import { createTransactionContext } from '../../../transactions/bitcoin/contextFactory';
 import { TestAddressContext, addresses } from './helpers';
 
 vi.mock('../../../api/esplora/esploraAPiProvider');
