@@ -28,7 +28,7 @@ describe('TransactionContext', () => {
       'p2wpkh',
       addresses[0].nestedSegwit,
       addresses[0].nestedSegwitPubKey,
-      0n,
+      0,
       seedVault,
       utxoCache,
     );
@@ -36,7 +36,7 @@ describe('TransactionContext', () => {
       'p2wpkh',
       addresses[0].taproot,
       addresses[0].taprootPubKey,
-      0n,
+      0,
       seedVault,
       utxoCache,
     );
@@ -50,7 +50,7 @@ describe('TransactionContext', () => {
       'p2wpkh',
       addresses[0].nestedSegwit,
       addresses[0].nestedSegwitPubKey,
-      0n,
+      0,
       seedVault,
       utxoCache,
     );
@@ -65,7 +65,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -73,7 +73,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -91,7 +91,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -99,7 +99,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -118,7 +118,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -137,7 +137,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -145,7 +145,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -166,7 +166,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -174,7 +174,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].taproot,
         addresses[0].taprootPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -195,7 +195,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -216,7 +216,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -237,7 +237,7 @@ describe('TransactionContext', () => {
         'p2wpkh',
         addresses[0].nestedSegwit,
         addresses[0].nestedSegwitPubKey,
-        0n,
+        0,
         seedVault,
         utxoCache,
       );
@@ -364,7 +364,9 @@ describe('createTransactionContext', () => {
   const utxoCache = vi.fn() as any;
 
   it('creates transaction context with correct addresses - p2sh + p2tr', () => {
+    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
     const context = createTransactionContext({
+      esploraApiProvider,
       account: {
         id: 0,
         btcAddress: addresses[0].nestedSegwit,
@@ -386,7 +388,9 @@ describe('createTransactionContext', () => {
   });
 
   it('creates transaction context with correct addresses - p2wpkh + p2tr', () => {
+    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
     const context = createTransactionContext({
+      esploraApiProvider,
       account: {
         id: 0,
         btcAddress: addresses[0].nativeSegwit,
@@ -408,7 +412,9 @@ describe('createTransactionContext', () => {
   });
 
   it('creates transaction context with correct addresses - p2wpkh + p2wpkh', () => {
+    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
     const context = createTransactionContext({
+      esploraApiProvider,
       account: {
         id: 0,
         btcAddress: addresses[0].nativeSegwit,
@@ -431,7 +437,9 @@ describe('createTransactionContext', () => {
   });
 
   it('creates transaction context with correct addresses - ledger p2wpkh + p2tr', () => {
+    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
     const context = createTransactionContext({
+      esploraApiProvider,
       account: {
         id: 0,
         deviceAccountIndex: 0,

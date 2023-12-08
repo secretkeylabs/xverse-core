@@ -20,7 +20,7 @@ describe('EnhancedTransaction constructor', () => {
     'p2wpkh',
     addresses[0].nativeSegwit,
     addresses[0].nativeSegwitPubKey,
-    0n,
+    0,
     seedVault,
     utxoCache,
   );
@@ -188,7 +188,7 @@ describe('EnhancedTransaction summary', () => {
     'p2wpkh',
     addresses[0].nativeSegwit,
     addresses[0].nativeSegwitPubKey,
-    0n,
+    0,
     seedVault,
     utxoCache,
   );
@@ -197,7 +197,7 @@ describe('EnhancedTransaction summary', () => {
     'p2tr',
     addresses[0].taproot,
     addresses[0].taprootPubKey,
-    0n,
+    0,
     seedVault,
     utxoCache,
   );

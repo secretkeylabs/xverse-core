@@ -30,7 +30,7 @@ export class TestAddressContext extends AddressContext {
     type: SupportedAddressType,
     address: string,
     publicKey: string,
-    accountIndex: bigint,
+    accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
   ) {
