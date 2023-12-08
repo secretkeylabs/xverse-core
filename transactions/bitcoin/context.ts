@@ -7,6 +7,7 @@ import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
+import { Transport } from '../../ledger/types';
 import SeedVault from '../../seedVault';
 import { getBtcNetwork } from '../../transactions/btcNetwork';
 import type { Account, AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
@@ -14,7 +15,9 @@ import { bip32 } from '../../utils/bip32';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
-export type LedgerTransport = ConstructorParameters<typeof AppClient>[0];
+export type SignOptions = {
+  ledgerTransport?: Transport;
+};
 
 export class ExtendedUtxo {
   private _utxo!: UTXO;
@@ -198,14 +201,15 @@ export abstract class AddressContext {
     return btcChild.privateKey!.toString('hex');
   }
 
-  async prepareInputs(_transaction: btc.Transaction): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
+  async prepareInputs(_transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     // no-op
     // this can be implemented by subclasses if they need to do something before signing
   }
 
   protected abstract getDerivationPath(): string;
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
-  abstract signInputs(transaction: btc.Transaction): Promise<void>;
+  abstract signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void>;
   abstract toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void>;
 }
 
@@ -248,7 +252,7 @@ export class P2shAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -327,7 +331,7 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -369,24 +373,13 @@ export class P2wpkhAddressContext extends AddressContext {
 }
 
 export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
-  private _transport!: LedgerTransport;
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { ledgerTransport } = options;
+    if (!ledgerTransport) {
+      throw new Error('Transport is required for Ledger signing');
+    }
 
-  constructor(
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    transport: LedgerTransport,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    super(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-    this._transport = transport;
-  }
-
-  async prepareInputs(transaction: btc.Transaction): Promise<void> {
-    const app = new AppClient(this._transport);
+    const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
 
     const inputDerivation = [
@@ -407,7 +400,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     }
   }
 
-  async signInputs(transaction: btc.Transaction): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     let hasInputsToSign = false;
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
@@ -421,7 +414,12 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       return;
     }
 
-    const app = new AppClient(this._transport);
+    const { ledgerTransport } = options;
+    if (!ledgerTransport) {
+      throw new Error('Transport is required for Ledger signing');
+    }
+
+    const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
     const coinType = this._network === 'Mainnet' ? 0 : 1;
     const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
@@ -491,7 +489,7 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -535,22 +533,6 @@ export class P2trAddressContext extends AddressContext {
 }
 
 export class LedgerP2trAddressContext extends P2trAddressContext {
-  private _transport!: LedgerTransport;
-
-  constructor(
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    transport: LedgerTransport,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    super(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-    this._transport = transport;
-  }
-
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
     const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
@@ -568,8 +550,13 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     });
   }
 
-  async prepareInputs(transaction: btc.Transaction): Promise<void> {
-    const app = new AppClient(this._transport);
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { ledgerTransport } = options;
+    if (!ledgerTransport) {
+      throw new Error('Transport is required for Ledger signing');
+    }
+
+    const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
 
     const inputDerivation = [
@@ -590,7 +577,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     }
   }
 
-  async signInputs(transaction: btc.Transaction): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     let hasInputsToSign = false;
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
@@ -604,7 +591,12 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       return;
     }
 
-    const app = new AppClient(this._transport);
+    const { ledgerTransport } = options;
+    if (!ledgerTransport) {
+      throw new Error('Transport is required for Ledger signing');
+    }
+
+    const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
     const coinType = this._network === 'Mainnet' ? 0 : 1;
     const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
@@ -702,20 +694,20 @@ export class TransactionContext {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
   }
 
-  async signTransaction(transaction: btc.Transaction): Promise<void> {
-    await this.paymentAddress.prepareInputs(transaction);
-    await this.ordinalsAddress.prepareInputs(transaction);
+  async signTransaction(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    await this.paymentAddress.prepareInputs(transaction, options);
+    await this.ordinalsAddress.prepareInputs(transaction, options);
 
-    await this.paymentAddress.signInputs(transaction);
-    await this.ordinalsAddress.signInputs(transaction);
+    await this.paymentAddress.signInputs(transaction, options);
+    await this.ordinalsAddress.signInputs(transaction, options);
   }
 
-  async signPsbt(psbtBase64: string): Promise<string> {
+  async signPsbt(psbtBase64: string, options: SignOptions): Promise<string> {
     const txn = btc.Transaction.fromPSBT(Buffer.from(psbtBase64, 'base64'));
 
-    await this.signTransaction(txn);
+    await this.signTransaction(txn, options);
 
-    const psbt = txn.toPSBT();
+    const psbt = txn.toPSBT(txn.opts.PSBTVersion);
     const psbtBase64Signed = base64.encode(psbt);
 
     return psbtBase64Signed;
@@ -743,7 +735,6 @@ type CreateAddressContextProps = {
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   accountType?: AccountType;
-  transport?: LedgerTransport;
 };
 const createAddressContext = ({
   esploraApiProvider,
@@ -754,15 +745,10 @@ const createAddressContext = ({
   seedVault,
   utxoCache,
   accountType,
-  transport,
 }: CreateAddressContextProps): AddressContext => {
   const { type } = getAddressInfo(address);
 
   if (accountType === 'ledger') {
-    if (!transport) {
-      throw new Error('Ledger transport required for ledger address');
-    }
-
     if (type === AddressType.p2wpkh) {
       return new LedgerP2wpkhAddressContext(
         address,
@@ -771,7 +757,6 @@ const createAddressContext = ({
         accountIndex,
         seedVault,
         utxoCache,
-        transport,
         esploraApiProvider,
       );
     }
@@ -783,7 +768,6 @@ const createAddressContext = ({
         accountIndex,
         seedVault,
         utxoCache,
-        transport,
         esploraApiProvider,
       );
     } else {
@@ -816,10 +800,9 @@ export type TransactionContextOptions = {
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   network: NetworkType;
-  ledgerTransport?: LedgerTransport;
 };
 export const createTransactionContext = (options: TransactionContextOptions) => {
-  const { esploraApiProvider, account, seedVault, utxoCache, network, ledgerTransport } = options;
+  const { esploraApiProvider, account, seedVault, utxoCache, network } = options;
 
   const accountIndex = account.accountType === 'software' ? account.id : account.deviceAccountIndex;
   if (accountIndex === undefined) {
@@ -834,7 +817,6 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
     seedVault: seedVault,
     utxoCache: utxoCache,
     accountType: account.accountType,
-    transport: ledgerTransport,
   });
   const ordinalsAddress =
     account.btcAddress === account.ordinalsAddress
@@ -848,7 +830,6 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
           seedVault: seedVault,
           utxoCache: utxoCache,
           accountType: account.accountType,
-          transport: ledgerTransport,
         });
 
   return new TransactionContext(network, paymentAddress, ordinalsAddress);

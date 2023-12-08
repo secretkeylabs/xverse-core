@@ -455,7 +455,6 @@ describe('createTransactionContext', () => {
       network: 'Mainnet',
       seedVault,
       utxoCache,
-      ledgerTransport: vi.fn() as any,
     });
 
     expect(context.paymentAddress instanceof LedgerP2wpkhAddressContext).toEqual(true);

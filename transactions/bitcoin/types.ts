@@ -1,4 +1,4 @@
-import { Transport } from 'ledger/types';
+import { Transport } from '../../ledger/types';
 import { Satribute } from '../../types';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';

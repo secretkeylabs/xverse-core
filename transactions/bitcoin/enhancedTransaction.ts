@@ -174,7 +174,7 @@ export class EnhancedTransaction {
     if (dummySign) {
       await this._context.dummySignTransaction(transaction);
     } else {
-      await this._context.signTransaction(transaction);
+      await this._context.signTransaction(transaction, options);
     }
 
     transaction.finalize();
