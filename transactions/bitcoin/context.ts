@@ -6,12 +6,13 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
-import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE, BTC_WRAPPED_SEGWIT_PATH_PURPOSE } from '../../constant';
+import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
 import { Transport } from '../../ledger/types';
 import SeedVault from '../../seedVault';
 import { getBtcNetwork } from '../../transactions/btcNetwork';
 import type { Account, AccountType, NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
+import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
@@ -237,7 +238,8 @@ export class P2shAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
+  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -275,9 +277,7 @@ export class P2shAddressContext extends AddressContext {
   }
 
   protected getDerivationPath(): string {
-    return this._network === 'Mainnet'
-      ? `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}0'/0'/0/${this._accountIndex}`
-      : `${BTC_WRAPPED_SEGWIT_PATH_PURPOSE}1'/0'/0/${this._accountIndex}`;
+    return getBitcoinDerivationPath({ index: this._accountIndex, network: this._network });
   }
 }
 
@@ -316,7 +316,8 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
+  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -351,9 +352,7 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 
   protected getDerivationPath(): string {
-    return this._network === 'Mainnet'
-      ? `${BTC_SEGWIT_PATH_PURPOSE}0'/0'/0/${this._accountIndex}`
-      : `${BTC_SEGWIT_PATH_PURPOSE}1'/0'/0/${this._accountIndex}`;
+    return getSegwitDerivationPath({ index: this._accountIndex, network: this._network });
   }
 }
 
@@ -474,7 +473,8 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
+  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
@@ -511,9 +511,7 @@ export class P2trAddressContext extends AddressContext {
   }
 
   protected getDerivationPath(): string {
-    return this._network === 'Mainnet'
-      ? `${BTC_TAPROOT_PATH_PURPOSE}0'/0'/0/${this._accountIndex}`
-      : `${BTC_TAPROOT_PATH_PURPOSE}1'/0'/0/${this._accountIndex}`;
+    return getTaprootDerivationPath({ index: this._accountIndex, network: this._network });
   }
 }
 

@@ -167,7 +167,7 @@ export function getBitcoinDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -182,7 +182,7 @@ export function getSegwitDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -197,7 +197,7 @@ export function getTaprootDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
