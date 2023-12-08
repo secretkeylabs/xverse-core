@@ -30,6 +30,9 @@ import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
 
+export * from './encryptionUtils';
+export { hashMessage };
+
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
   [ChainID.Testnet]: STX_PATH_WITHOUT_INDEX,
@@ -279,10 +282,6 @@ export async function getStxAddressKeyChain(
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }
-
-export * from './encryptionUtils';
-export { hashMessage };
-export * from './encryptionUtils';
 
 export const validateBtcAddressIsTaproot = (btcAddress: string): boolean => {
   try {
