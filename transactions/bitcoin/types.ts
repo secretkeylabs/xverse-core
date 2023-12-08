@@ -65,7 +65,7 @@ export type TransactionOutput = {
     offset: number;
   }[];
   satributes: {
-    satributes: Satribute[];
+    types: Satribute[];
     amount: number;
     offset: number;
   }[];

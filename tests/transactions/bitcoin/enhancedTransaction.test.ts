@@ -372,7 +372,7 @@ describe('EnhancedTransaction summary', () => {
             {
               amount: 99,
               offset: 1,
-              satributes: ['PIZZA'],
+              types: ['PIZZA'],
             },
           ],
         },
@@ -389,7 +389,7 @@ describe('EnhancedTransaction summary', () => {
             {
               amount: 99,
               offset: 1001,
-              satributes: ['VINTAGE'],
+              types: ['VINTAGE'],
             },
           ],
         },
@@ -416,12 +416,12 @@ describe('EnhancedTransaction summary', () => {
             {
               amount: 100,
               offset: 2200,
-              satributes: ['VINTAGE', 'ALPHA'],
+              types: ['VINTAGE', 'ALPHA'],
             },
             {
               amount: 100,
               offset: 3800,
-              satributes: ['VINTAGE', 'ALPHA', 'BLOCK9'],
+              types: ['VINTAGE', 'ALPHA', 'BLOCK9'],
             },
           ],
         },

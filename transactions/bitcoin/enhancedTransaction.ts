@@ -146,7 +146,7 @@ export class EnhancedTransaction {
               );
 
               return {
-                satributes: s.satributes,
+                types: s.satributes,
                 amount: max - min,
                 offset: min,
               };
