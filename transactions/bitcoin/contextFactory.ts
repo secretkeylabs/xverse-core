@@ -91,7 +91,8 @@ export type TransactionContextOptions = {
 export const createTransactionContext = (options: TransactionContextOptions) => {
   const { esploraApiProvider, account, seedVault, utxoCache, network } = options;
 
-  const accountIndex = account.accountType === 'software' ? account.id : account.deviceAccountIndex;
+  const accountIndex =
+    !account.accountType || account.accountType === 'software' ? account.id : account.deviceAccountIndex;
   if (accountIndex === undefined) {
     throw new Error('Cannot identify the account index');
   }
