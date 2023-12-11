@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { btcTransaction } from 'transactions';
+import { btcTransaction } from '../../../transactions';
 import { applySendBtcActionsAndFee } from '../../../transactions/bitcoin/actionProcessors';
 import {
   extractUsedOutpoints,

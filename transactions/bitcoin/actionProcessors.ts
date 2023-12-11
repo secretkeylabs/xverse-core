@@ -313,7 +313,7 @@ export const applySendBtcActionsAndFee = async (
           if (finalVSizeWithChange) {
             actualFee = BigInt(finalVSizeWithChange * feeRate);
 
-            const change = currentChange - feeWithChange;
+            const change = currentChange - actualFee;
             context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
             outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
 
