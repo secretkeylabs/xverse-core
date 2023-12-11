@@ -134,7 +134,16 @@ export class UtxoCache {
     return cacheToStore;
   };
 
-  getUtxoByOutpoint = async (outpoint: string, address: string): Promise<UtxoOrdinalBundle | undefined> => {
+  getUtxoByOutpoint = async (
+    outpoint: string,
+    address: string,
+    skipCache = false,
+  ): Promise<UtxoOrdinalBundle | undefined> => {
+    const [txid, vout] = outpoint.split(':');
+    if (skipCache) {
+      return this._getUtxo(txid, +vout);
+    }
+
     const cache = await this._getCache(address);
 
     // check if cache is initialised and up to date
@@ -149,7 +158,6 @@ export class UtxoCache {
     }
 
     // if not, get it from the API and add it to the cache
-    const [txid, vout] = outpoint.split(':');
     const { xVersion, ...utxo } = await this._getUtxo(txid, +vout);
 
     if (cache.xVersion !== xVersion) {
@@ -164,9 +172,14 @@ export class UtxoCache {
     return utxo;
   };
 
-  getUtxo = async (txid: string, vout: number, address: string): Promise<UtxoOrdinalBundle | undefined> => {
+  getUtxo = async (
+    txid: string,
+    vout: number,
+    address: string,
+    skipCache = false,
+  ): Promise<UtxoOrdinalBundle | undefined> => {
     const utxoId = `${txid}:${vout}`;
 
-    return this.getUtxoByOutpoint(utxoId, address);
+    return this.getUtxoByOutpoint(utxoId, address, skipCache);
   };
 }

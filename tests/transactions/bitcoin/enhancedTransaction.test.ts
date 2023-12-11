@@ -366,6 +366,7 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId',
               offset: 0,
+              fromWallet: true,
             },
           ],
           satributes: [
@@ -373,6 +374,7 @@ describe('EnhancedTransaction summary', () => {
               amount: 99,
               offset: 1,
               types: ['PIZZA'],
+              fromWallet: true,
             },
           ],
         },
@@ -383,6 +385,7 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId2',
               offset: 0,
+              fromWallet: true,
             },
           ],
           satributes: [
@@ -390,6 +393,7 @@ describe('EnhancedTransaction summary', () => {
               amount: 99,
               offset: 1001,
               types: ['VINTAGE'],
+              fromWallet: true,
             },
           ],
         },
@@ -406,10 +410,12 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId4',
               offset: 0,
+              fromWallet: true,
             },
             {
               id: 'inscriptionId5',
               offset: 2100,
+              fromWallet: true,
             },
           ],
           satributes: [
@@ -417,11 +423,13 @@ describe('EnhancedTransaction summary', () => {
               amount: 100,
               offset: 2200,
               types: ['VINTAGE', 'ALPHA'],
+              fromWallet: true,
             },
             {
               amount: 100,
               offset: 3800,
               types: ['VINTAGE', 'ALPHA', 'BLOCK9'],
+              fromWallet: true,
             },
           ],
         },

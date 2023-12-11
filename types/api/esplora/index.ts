@@ -97,3 +97,14 @@ export type RecommendedFeeResponse = {
   hourFee: number;
   minimumFee: number;
 };
+
+export type Outspend =
+  | {
+      spent: false;
+    }
+  | {
+      spent: true;
+      txid: string;
+      vin: number;
+      status: TxStatus;
+    };

@@ -1,3 +1,4 @@
+import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
 import { Satribute } from '../../types';
 
@@ -57,16 +58,28 @@ export type CompilationOptions = {
   excludeOutpointList?: string[];
 };
 
+export type PSBTCompilationOptions = {
+  ledgerTransport?: Transport;
+  finalize?: boolean;
+  allowedSighash?: btc.SigHash[];
+};
+
 export type TransactionOutput = {
   address: string;
   amount: number;
   inscriptions: {
     id: string;
     offset: number;
+    fromWallet: boolean;
   }[];
   satributes: {
     types: Satribute[];
     amount: number;
     offset: number;
+    fromWallet: boolean;
   }[];
+};
+
+export type TransactionScriptOutput = {
+  script: string[];
 };

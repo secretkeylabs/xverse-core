@@ -313,7 +313,7 @@ describe('ExtendedUtxo', () => {
 
     expect(bundleData).toEqual('bundleData');
     expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledTimes(1);
-    expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledWith('txid:1', 'address');
+    expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledWith('txid:1', 'address', false);
   });
 
   it('should return false if not embellished with inscription or satribute', async () => {

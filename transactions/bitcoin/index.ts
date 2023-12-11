@@ -1,12 +1,13 @@
 import { TransactionContext } from './context';
 import { createTransactionContext } from './contextFactory';
+import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
 import { ActionType, SendBtcAction, SendUtxoAction, SplitUtxoAction } from './types';
 
 const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
-export { ActionType, EnhancedTransaction, TransactionContext, createTransactionContext };
+export { ActionType, EnhancedPsbt, EnhancedTransaction, TransactionContext, createTransactionContext };
 export type { SendBtcAction, SendUtxoAction, SplitUtxoAction };
 
 /**

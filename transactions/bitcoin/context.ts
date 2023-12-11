@@ -17,6 +17,7 @@ import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
 export type SignOptions = {
   ledgerTransport?: Transport;
+  allowedSighash?: btc.SigHash[];
 };
 
 export class ExtendedUtxo {
@@ -32,12 +33,27 @@ export class ExtendedUtxo {
 
   private _esploraApiProvider!: EsploraProvider;
 
-  constructor(utxo: UTXO, address: string, utxoCache: UtxoCache, esploraApiProvider: EsploraProvider) {
+  private _isExternal!: boolean;
+
+  private _bundleData?: UtxoOrdinalBundle;
+
+  get address(): string {
+    return this._address;
+  }
+
+  constructor(
+    utxo: UTXO,
+    address: string,
+    utxoCache: UtxoCache,
+    esploraApiProvider: EsploraProvider,
+    isExternal = false,
+  ) {
     this._utxo = utxo;
     this._address = address;
     this._outpoint = getOutpointFromUtxo(utxo);
     this._utxoCache = utxoCache;
     this._esploraApiProvider = esploraApiProvider;
+    this._isExternal = isExternal;
   }
 
   get outpoint(): string {
@@ -65,9 +81,10 @@ export class ExtendedUtxo {
   }
 
   async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
-    const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address);
-
-    return bundleData;
+    if (!this._bundleData) {
+      this._bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
+    }
+    return this._bundleData;
   }
 
   /** Returns undefined if UTXO has not yet been indexed */
@@ -177,6 +194,39 @@ export abstract class AddressContext {
     return utxos.find((utxo) => utxo.outpoint === outpoint);
   }
 
+  // helper method to get an extended UTXO for another address
+  async getExternalUtxo(outPoint: string): Promise<ExtendedUtxo | undefined> {
+    const [txid, vout] = outPoint.split(':');
+    const [tx, outspends] = await Promise.all([
+      this._esploraApiProvider.getTransaction(txid),
+      this._esploraApiProvider.getTransactionOutspends(txid),
+    ]);
+
+    if (!tx) {
+      return undefined;
+    }
+
+    const outspend = outspends[+vout];
+    if (outspend?.spent) {
+      // this is no longer a UTXO as it is spent
+      return undefined;
+    }
+
+    const output = tx.vout[+vout];
+
+    const address = output.scriptpubkey_address!;
+
+    const utxo: UTXO = {
+      txid,
+      vout: +vout,
+      value: output.value,
+      status: tx.status,
+      address,
+    };
+
+    return new ExtendedUtxo(utxo, address, this._utxoCache, this._esploraApiProvider, true);
+  }
+
   protected async getPrivateKey(seedPhrase: string): Promise<string> {
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     const master = bip32.fromSeed(seed);
@@ -238,14 +288,14 @@ export class P2shAddressContext extends AddressContext {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
-  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
-        transaction.signIdx(hex.decode(privateKey), i);
+        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
       }
     }
   }
@@ -316,14 +366,14 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
-  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        transaction.signIdx(hex.decode(privateKey), i);
+        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
       }
     }
   }
@@ -473,14 +523,14 @@ export class P2trAddressContext extends AddressContext {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
-  async signInputs(transaction: btc.Transaction, _options: SignOptions): Promise<void> {
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        transaction.signIdx(hex.decode(privateKey), i);
+        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
       }
     }
   }
@@ -648,6 +698,20 @@ export class TransactionContext {
     }
 
     return {};
+  }
+
+  async getUtxoFallbackToExternal(
+    outpoint: string,
+  ): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
+    const utxoData = await this.getUtxo(outpoint);
+
+    if (utxoData.extendedUtxo) {
+      return utxoData;
+    }
+
+    const extendedUtxo = await this.paymentAddress.getExternalUtxo(outpoint);
+
+    return { extendedUtxo };
   }
 
   async getInscriptionUtxo(

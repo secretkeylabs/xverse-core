@@ -132,6 +132,7 @@ export class EnhancedTransaction {
               s.inscriptions.map((i) => ({
                 id: i.id,
                 offset: runningOffset + s.offset - currentOffset,
+                fromWallet: true,
               })),
             )
             .filter((i) => i.offset >= 0 && i.offset < amount);
@@ -149,6 +150,7 @@ export class EnhancedTransaction {
                 types: s.satributes,
                 amount: max - min,
                 offset: min,
+                fromWallet: true,
               };
             });
 
