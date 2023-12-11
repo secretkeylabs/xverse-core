@@ -9,7 +9,13 @@ import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constan
 import { Transport } from '../../ledger/types';
 import SeedVault from '../../seedVault';
 import { getBtcNetwork } from '../../transactions/btcNetwork';
-import type { NetworkType, UTXO, UtxoOrdinalBundle } from '../../types';
+import {
+  isApiSatributeKnown,
+  type NetworkType,
+  type RareSatsType,
+  type UTXO,
+  type UtxoOrdinalBundle,
+} from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { CompilationOptions, SupportedAddressType } from './types';
@@ -35,7 +41,7 @@ export class ExtendedUtxo {
 
   private _isExternal!: boolean;
 
-  private _bundleData?: UtxoOrdinalBundle;
+  private _bundleData?: UtxoOrdinalBundle<RareSatsType>;
 
   get address(): string {
     return this._address;
@@ -80,9 +86,18 @@ export class ExtendedUtxo {
     });
   }
 
-  async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
+  async getBundleData(): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> {
     if (!this._bundleData) {
-      this._bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
+      const apiBundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
+      if (apiBundleData) {
+        this._bundleData = {
+          ...apiBundleData,
+          sat_ranges: apiBundleData?.sat_ranges.map((satRange) => ({
+            ...satRange,
+            satributes: satRange.satributes.filter(isApiSatributeKnown),
+          })),
+        };
+      }
     }
     return this._bundleData;
   }

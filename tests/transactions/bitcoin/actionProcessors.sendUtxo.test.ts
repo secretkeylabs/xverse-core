@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { btcTransaction } from 'transactions';
+import { btcTransaction } from '../../../transactions';
 import { applySendUtxoActions } from '../../../transactions/bitcoin/actionProcessors';
 
 describe('applySendUtxoActions', () => {

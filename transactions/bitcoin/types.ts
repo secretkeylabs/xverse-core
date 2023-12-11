@@ -1,6 +1,6 @@
 import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
-import { Satribute } from '../../types';
+import { RareSatsType } from '../../types';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -73,7 +73,7 @@ export type TransactionOutput = {
     fromWallet: boolean;
   }[];
   satributes: {
-    types: Satribute[];
+    types: RareSatsType[];
     amount: number;
     offset: number;
     fromWallet: boolean;

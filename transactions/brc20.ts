@@ -2,7 +2,7 @@ import { base64 } from '@scure/base';
 import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
 import { createInscriptionRequest } from '../api';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
@@ -73,16 +73,17 @@ const createTransferInscriptionContent = (token: string, amount: string) => ({
   amt: amount,
 });
 
-const btcClient = new BitcoinEsploraApiProvider({
-  network: 'Mainnet',
-});
-
 // TODO: deprecate
-export const createBrc20TransferOrder = async (token: string, amount: string, recipientAddress: string) => {
+export const createBrc20TransferOrder = async (
+  token: string,
+  amount: string,
+  recipientAddress: string,
+  esploraAPiProvider: EsploraApiProvider,
+) => {
   const transferInscriptionContent = createTransferInscriptionContent(token, amount);
   const contentB64 = base64.encode(Buffer.from(JSON.stringify(transferInscriptionContent)));
   const contentSize = Buffer.from(JSON.stringify(transferInscriptionContent)).length;
-  const feesResponse = await btcClient.getRecommendedFees();
+  const feesResponse = await esploraAPiProvider.getRecommendedFees();
   const inscriptionRequest = await createInscriptionRequest(
     recipientAddress,
     contentSize,
@@ -402,6 +403,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     changeAddress,
     new BigNumber(commitChainFees),
     network,
+    false,
   );
 
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;

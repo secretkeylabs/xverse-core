@@ -30,7 +30,7 @@ describe('selectUtxosForSend', () => {
   it('should force select pinned UTXOs', () => {
     const selectedUtxoData = selectUtxosForSend({
       changeAddress: dummyChangeAddress,
-      recipients: [{ address: recipientAddress1, amountSats: new BigNumber(50000) }],
+      recipients: [{ address: recipientAddress1, amountSats: new BigNumber(50200) }],
       availableUtxos: utxos,
       feeRate: 10,
       pinnedUtxos: [utxo3k],
@@ -39,7 +39,7 @@ describe('selectUtxosForSend', () => {
 
     expect(selectedUtxoData).toEqual({
       selectedUtxos: [utxo3k, utxo792k],
-      change: 742210,
+      change: 742010,
       fee: 2790,
       feeRate: 10,
     });
