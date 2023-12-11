@@ -1,4 +1,4 @@
-export type StorageAdapter = {
+type StorageAdapter = {
   get(key: string): Promise<string> | string | null;
   set(key: string, value: string): Promise<void> | void;
   remove(key: string): Promise<void> | void;
