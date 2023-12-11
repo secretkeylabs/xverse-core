@@ -1,6 +1,6 @@
 import axios from 'axios';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
-import XordApiProvider from '../api/ordinals/provider';
+import { OrdinalsApi } from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
@@ -56,7 +56,7 @@ export async function fetchBtcOrdinalsData(
   esploraProvider: EsploraApiProvider,
   network: NetworkType,
 ): Promise<BtcOrdinal[]> {
-  const xordClient = new XordApiProvider({
+  const xordClient = new OrdinalsApi({
     network,
   });
 
