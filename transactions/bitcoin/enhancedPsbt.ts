@@ -106,14 +106,14 @@ export class EnhancedPsbt {
       for (const input of inputs) {
         if (runningOffset + input.extendedUtxo.utxo.value > currentOffset) {
           const inputBundleData = await input.extendedUtxo.getBundleData();
-          const isMyInput = myAddresses.has(input.extendedUtxo.address);
+          const fromAddress = input.extendedUtxo.address;
 
           const outputInscriptions = inputBundleData?.sat_ranges
             .flatMap((s) =>
               s.inscriptions.map((i) => ({
                 id: i.id,
                 offset: runningOffset + s.offset - currentOffset,
-                fromWallet: isMyInput,
+                fromAddress,
               })),
             )
             .filter((i) => i.offset >= 0 && i.offset < amount);
@@ -131,7 +131,7 @@ export class EnhancedPsbt {
                 types: s.satributes,
                 amount: max - min,
                 offset: min,
-                fromWallet: isMyInput,
+                fromAddress,
               };
             });
 

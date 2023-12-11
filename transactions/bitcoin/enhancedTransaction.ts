@@ -126,13 +126,14 @@ export class EnhancedTransaction {
       for (const input of inputs) {
         if (runningOffset + input.utxo.value > currentOffset) {
           const inputBundleData = await input.getBundleData();
+          const fromAddress = input.address;
 
           const outputInscriptions = inputBundleData?.sat_ranges
             .flatMap((s) =>
               s.inscriptions.map((i) => ({
                 id: i.id,
                 offset: runningOffset + s.offset - currentOffset,
-                fromWallet: true,
+                fromAddress,
               })),
             )
             .filter((i) => i.offset >= 0 && i.offset < amount);
@@ -150,7 +151,7 @@ export class EnhancedTransaction {
                 types: s.satributes,
                 amount: max - min,
                 offset: min,
-                fromWallet: true,
+                fromAddress,
               };
             });
 

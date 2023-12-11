@@ -70,13 +70,13 @@ export type TransactionOutput = {
   inscriptions: {
     id: string;
     offset: number;
-    fromWallet: boolean;
+    fromAddress: string;
   }[];
   satributes: {
     types: RareSatsType[];
     amount: number;
     offset: number;
-    fromWallet: boolean;
+    fromAddress: string;
   }[];
 };
 
