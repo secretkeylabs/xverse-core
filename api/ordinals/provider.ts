@@ -14,7 +14,7 @@ const API_PREFIX = '/ordinals/v1/';
 // if we fallback to hiro, we'll use it at maximum this many times before trying the other API
 const MAX_FALLBACK_CALLS = 10;
 
-export default class OrdinalsApi implements OrdinalsApiProvider {
+export class OrdinalsApi implements OrdinalsApiProvider {
   private customClient?: AxiosInstance;
 
   private hiroClient!: AxiosInstance;
