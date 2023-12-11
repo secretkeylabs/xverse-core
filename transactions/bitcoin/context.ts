@@ -96,9 +96,31 @@ export class ExtendedUtxo {
         totalFee: 0,
       };
     }
+
+    const txidsToTest = [this.utxo.txid];
+
+    let totalVsize = 0;
+    let totalFee = 0;
+
+    while (txidsToTest.length > 0) {
+      const toTestInThisRound = txidsToTest.splice(0, 10); // we get 10 txns at a time to avoid DDOSing the API
+      const txns = await Promise.all(toTestInThisRound.map(this._esploraApiProvider.getTransaction));
+
+      for (const tx of txns) {
+        if (tx.status.confirmed) {
+          continue;
+        }
+
+        totalVsize += tx.weight / 4;
+        totalFee += tx.fee;
+
+        txidsToTest.push(...tx.vin.map((vin) => vin.txid));
+      }
+    }
+
     return {
-      totalVsize: 0,
-      totalFee: 0,
+      totalVsize,
+      totalFee,
     };
   }
 
