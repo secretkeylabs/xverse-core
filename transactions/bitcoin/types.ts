@@ -56,6 +56,8 @@ export type CompilationOptions = {
   rbfEnabled?: boolean;
   ledgerTransport?: Transport;
   excludeOutpointList?: string[];
+  useEffectiveFeeRate?: boolean;
+  allowUnconfirmedInput?: boolean;
 };
 
 export type PSBTCompilationOptions = {

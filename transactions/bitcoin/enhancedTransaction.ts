@@ -11,6 +11,8 @@ import { extractActionMap } from './utils';
 const defaultOptions: CompilationOptions = {
   rbfEnabled: false,
   excludeOutpointList: [],
+  useEffectiveFeeRate: false,
+  allowUnconfirmedInput: true,
 };
 
 const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions => {

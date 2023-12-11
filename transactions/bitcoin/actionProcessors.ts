@@ -283,14 +283,19 @@ export const applySendBtcActionsAndFee = async (
   const { inputSize } = await getVbytesForIO(context, context.paymentAddress);
   const inputDustValueAtFeeRate = BigInt(inputSize * feeRate);
 
+  let unconfirmedVsize = 0;
+  let unconfirmedFee = 0;
+
   while (!complete) {
     const currentChange = totalInputs - totalOutputs;
 
     // use this to get a conservative estimate of the fees so we don't compile too many transactions below
     const totalEstimatedFee =
       (transaction.inputsLength * ESTIMATED_VBYTES_PER_INPUT +
-        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT) *
-      feeRate;
+        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT +
+        unconfirmedVsize) *
+        feeRate -
+      unconfirmedFee;
 
     if (totalEstimatedFee < currentChange) {
       const vSizeWithChange = await getTransactionVSize(
@@ -300,7 +305,7 @@ export const applySendBtcActionsAndFee = async (
       );
 
       if (vSizeWithChange) {
-        const feeWithChange = BigInt(vSizeWithChange * feeRate);
+        const feeWithChange = BigInt((vSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           // we do one last test to ensure that adding close to the actual change won't increase the fees
@@ -311,9 +316,9 @@ export const applySendBtcActionsAndFee = async (
             currentChange - feeWithChange,
           );
           if (finalVSizeWithChange) {
-            actualFee = BigInt(finalVSizeWithChange * feeRate);
+            actualFee = BigInt((finalVSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
 
-            const change = currentChange - feeWithChange;
+            const change = currentChange - actualFee;
             context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
             outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
 
@@ -338,13 +343,24 @@ export const applySendBtcActionsAndFee = async (
 
     let utxoToUse = unusedPaymentUtxos.pop();
 
-    // ensure UTXO is not dust at selected fee rate
-    while (utxoToUse && inputDustValueAtFeeRate > utxoToUse.utxo.value) {
+    // ensure UTXO is not dust at selected fee rate and that it is skipped if unconfirmed and not allowed
+    while (
+      utxoToUse &&
+      (inputDustValueAtFeeRate > utxoToUse.utxo.value ||
+        (!options.allowUnconfirmedInput && !utxoToUse.utxo.status.confirmed))
+    ) {
       utxoToUse = unusedPaymentUtxos.pop();
     }
 
     if (!utxoToUse) {
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
+    }
+
+    if (options.useEffectiveFeeRate) {
+      const { totalVsize, totalFee } = await utxoToUse.getUnconfirmedUtxoFeeData();
+
+      unconfirmedVsize += totalVsize;
+      unconfirmedFee += totalFee;
     }
 
     totalInputs += BigInt(utxoToUse.utxo.value);

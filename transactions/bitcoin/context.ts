@@ -86,6 +86,22 @@ export class ExtendedUtxo {
     });
   }
 
+  /**
+   * If the underlying UTXO is unconfirmed, this method will return the total fee and vsize of the unconfirmed chain
+   */
+  async getUnconfirmedUtxoFeeData(): Promise<{ totalVsize: number; totalFee: number }> {
+    if (this.utxo.status.confirmed) {
+      return {
+        totalVsize: 0,
+        totalFee: 0,
+      };
+    }
+    return {
+      totalVsize: 0,
+      totalFee: 0,
+    };
+  }
+
   async getBundleData(): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> {
     if (!this._bundleData) {
       const apiBundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
