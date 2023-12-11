@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import XordApiProvider from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
@@ -271,6 +271,26 @@ export const getUtxoOrdinalBundle = async (
     `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
+};
+
+export const getUtxoOrdinalBundleIfFound = async (
+  network: NetworkType,
+  txid: string,
+  vout: number,
+): Promise<UtxoBundleResponse | undefined> => {
+  try {
+    const data = await getUtxoOrdinalBundle(network, txid, vout);
+    return data;
+  } catch (e) {
+    // we don't reject on 404s because if the UTXO is not found,
+    // it is likely this is a UTXO from an unpublished txn.
+    // this is required for gamma.io purchase flow
+    if (!isAxiosError(e) || e.response?.status !== 404) {
+      // rethrow error if response was not 404
+      throw e;
+    }
+    return undefined;
+  }
 };
 
 export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
