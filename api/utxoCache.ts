@@ -1,4 +1,4 @@
-import { AddressBundleResponse, NetworkType, UtxoOrdinalBundle } from '../types';
+import { AddressBundleResponse, NetworkType, StorageAdapter, UtxoOrdinalBundle } from '../types';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
 export type UtxoCacheStruct = {
@@ -10,12 +10,6 @@ type UtxoCacheStorage = {
   xVersion: number;
   syncTime: number;
   utxos: UtxoCacheStruct;
-};
-
-export type StorageAdapter = {
-  get(key: string): Promise<string | null> | string | null;
-  set(key: string, value: string): Promise<void> | void;
-  remove(key: string): Promise<void> | void;
 };
 
 type UtxoCacheConfig = {
