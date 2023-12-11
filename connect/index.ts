@@ -6,11 +6,15 @@ import { GAIA_HUB_URL } from '../constant';
 import { bip32 } from '../utils/bip32';
 import { deriveStxAddressChain } from '../wallet';
 
-type AuthRequest = {
+export type AuthRequest = {
   payload: {
     redirect_uri: string;
     public_keys: string[];
     scopes?: string[];
+    appDetails?: {
+      icon?: string;
+      name?: string;
+    };
   };
 };
 
@@ -58,3 +62,6 @@ export async function createAuthResponse(
     },
   });
 }
+
+export * from './signature';
+export * from './bip322Signature';

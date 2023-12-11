@@ -38,56 +38,55 @@ export interface InscriptionInCollectionsList {
   data: Array<Inscription>;
 }
 
-export type Satribute =
-  | 'UNCOMMON'
-  | 'RARE'
-  | 'EPIC'
-  | 'LEGENDARY'
-  | 'MYTHIC'
-  | 'ALPHA'
-  | 'BLOCK78'
-  | 'FIRST_TRANSACTION'
-  | 'PIZZA'
-  | 'VINTAGE'
-  | 'BLACK_UNCOMMON'
-  | 'BLACK_RARE'
-  | 'BLACK_EPIC'
-  | 'BLACK_LEGENDARY'
-  | 'BLOCK9'
-  | 'JPEG'
-  | 'OMEGA'
-  | 'FIBONACCI'
-  | 'HITMAN'
-  | 'NAKAMOTO'
-  | 'SILK_ROAD'
-  | 'PALINDROME'
-  | '1D_PALINDROME'
-  | '2D_PALINDROME'
-  | '3D_PALINDROME'
-  | 'PALIBLOCK_PALINDROME'
-  | 'PERFECT_PALINCEPTION'
-  | 'SEQUENCE_PALINDROME'
-  | 'NAME_PALINDROME';
+export const RodarmorRareSats = ['MYTHIC', 'LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON'] as const;
+export type RodarmorRareSatsType = (typeof RodarmorRareSats)[number];
 
-export type BundleSatRange = {
-  year_mined: number;
-  block: number;
-  offset: number;
+export const Satributes = [
+  'BLACK_LEGENDARY',
+  'BLACK_EPIC',
+  'BLACK_RARE',
+  'BLACK_UNCOMMON',
+  'FIBONACCI',
+  '1D_PALINDROME',
+  '2D_PALINDROME',
+  '3D_PALINDROME',
+  'SEQUENCE_PALINDROME',
+  'PERFECT_PALINCEPTION',
+  'PALIBLOCK_PALINDROME',
+  'PALINDROME',
+  'NAME_PALINDROME',
+  'ALPHA',
+  'OMEGA',
+  'FIRST_TRANSACTION',
+  'BLOCK9',
+  'BLOCK78',
+  'NAKAMOTO',
+  'VINTAGE',
+  'PIZZA',
+  'JPEG',
+  'HITMAN',
+  'SILK_ROAD',
+] as const;
+export type SatributesType = (typeof Satributes)[number];
+
+// ({} & string) is a workaround to support our types and also allow any string for unsupported types
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type RareSatsTypeApi = RodarmorRareSatsType | SatributesType | ({} & string);
+
+export type RareSatsType = RodarmorRareSatsType | SatributesType;
+
+export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
+
+export type SatRange = {
   range: {
     start: string;
     end: string;
   };
-  satributes: Satribute[];
-  inscriptions: {
-    content_type: string;
-    id: string;
-  }[];
-};
-
-export type BundleInscription = {
-  id: string;
+  year_mined: number;
+  block: number;
   offset: number;
-  content_type: string;
+  satributes: RareSatsTypeApi[];
+  inscriptions: SatRangeInscription[];
 };
 
 export type UtxoOrdinalBundle = {
@@ -95,5 +94,31 @@ export type UtxoOrdinalBundle = {
   vout: number;
   block_height?: number;
   value: number;
-  sat_ranges: BundleSatRange[];
+  sat_ranges: SatRange[];
+};
+
+export type XVersion = {
+  xVersion: number;
+};
+
+export type AddressBundleResponse = {
+  total: number;
+  offset: number;
+  limit: number;
+  results: UtxoOrdinalBundle[];
+} & XVersion;
+
+export type UtxoBundleResponse = UtxoOrdinalBundle & XVersion;
+
+export type BundleSatRange = Omit<SatRange, 'year_mined' | 'satributes'> & {
+  totalSats: number;
+  yearMined: number;
+  satributes: RareSatsType[];
+};
+
+export type Bundle = Omit<UtxoOrdinalBundle, 'sat_ranges'> & {
+  satRanges: BundleSatRange[];
+  inscriptions: SatRangeInscription[];
+  satributes: RareSatsType[][];
+  totalExoticSats: number;
 };

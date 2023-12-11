@@ -1,5 +1,5 @@
-import { NetworkType, UtxoOrdinalBundle } from '../types';
-import { AddressBundleResponse, getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
+import { AddressBundleResponse, NetworkType, UtxoOrdinalBundle } from '../types';
+import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
 export type UtxoCacheStruct = {
   [utxoId: string]: UtxoOrdinalBundle;
