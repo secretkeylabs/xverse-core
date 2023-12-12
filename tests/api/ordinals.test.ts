@@ -1,6 +1,43 @@
-import { mapRareSatsAPIResponseToBundle } from '../../api/ordinals';
+import { AxiosError, AxiosResponse } from 'axios';
+import { getUtxoOrdinalBundleIfFound, mapRareSatsAPIResponseToBundle } from '../../api/ordinals';
 import { Bundle, UtxoOrdinalBundle } from '../../types/api/xverse/ordinals';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+
+const mocked = vi.hoisted(() => ({
+  get: vi.fn(),
+}));
+vi.mock('axios', async () => ({
+  ...(await vi.importActual<any>('axios')),
+  default: {
+    get: mocked.get,
+  },
+}));
+
+describe('getUtxoOrdinalBundleIfFound', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('rejects if API returns 500', () => {
+    mocked.get.mockRejectedValueOnce(
+      new AxiosError('server error', undefined, undefined, undefined, { status: 500 } as AxiosResponse),
+    );
+
+    expect(getUtxoOrdinalBundleIfFound('Testnet', '', 0)).rejects.toEqual(
+      expect.objectContaining({ message: 'server error' }),
+    );
+    expect(mocked.get).toHaveBeenCalledOnce();
+  });
+
+  it('resolves undefined if API returns 404', () => {
+    mocked.get.mockRejectedValueOnce(
+      new AxiosError('not found', undefined, undefined, undefined, { status: 404 } as AxiosResponse),
+    );
+
+    expect(getUtxoOrdinalBundleIfFound('Testnet', '', 0)).resolves.toEqual(undefined);
+    expect(mocked.get).toHaveBeenCalledOnce();
+  });
+});
 
 describe('rareSats', () => {
   describe('mapRareSatsAPIResponseToRareSats', () => {
