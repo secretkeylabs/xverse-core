@@ -90,15 +90,7 @@ export type Block = {
   difficulty: number;
 };
 
-export type RecommendedFeeResponse = {
-  economyFee: number;
-  fastestFee: number;
-  halfHourFee: number;
-  hourFee: number;
-  minimumFee: number;
-};
-
-export type Outspend =
+export type TransactionOutspend =
   | {
       spent: false;
     }
@@ -108,3 +100,11 @@ export type Outspend =
       vin: number;
       status: TxStatus;
     };
+
+export type RecommendedFeeResponse = {
+  economyFee: number;
+  fastestFee: number;
+  halfHourFee: number;
+  hourFee: number;
+  minimumFee: number;
+};
