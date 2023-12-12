@@ -351,6 +351,8 @@ describe('EnhancedTransaction summary', () => {
         },
       ],
       actualFee: 500n,
+      actualFeeRate: 50,
+      effectiveFeeRate: 50,
     });
 
     // ==========================
@@ -361,6 +363,7 @@ describe('EnhancedTransaction summary', () => {
     expect(summary).toEqual({
       fee: 500n,
       feeRate: 50,
+      effectiveFeeRate: 50,
       vsize: 10, // size of an empty txn
       inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs],
       outputs: [
