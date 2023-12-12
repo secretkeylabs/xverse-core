@@ -20,7 +20,7 @@ export class ResponseError extends Error {
 export type ApiResponseErrorParams = {
   status: number;
   data: unknown;
-  headers: Record<string, string>;
+  headers: unknown;
 };
 export class ApiResponseError extends Error implements ApiResponseErrorParams {
   public status;

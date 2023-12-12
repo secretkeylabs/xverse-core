@@ -141,6 +141,7 @@ export async function signLedgerPSBT({
   const masterFingerPrint = await app.getMasterFingerprint();
 
   const { inputTotal, outputTotal } = getIoTotals(txn);
+  let addedPaddingInput = false;
 
   if (inputTotal < outputTotal) {
     // There is a bug in Ledger that if the inputs are greater than the outputs, then it will fail to sign
@@ -153,6 +154,7 @@ export async function signLedgerPSBT({
         amount: outputTotal - inputTotal,
       },
     });
+    addedPaddingInput = true;
   }
 
   if (
@@ -202,6 +204,12 @@ export async function signLedgerPSBT({
         tapKeySig: signature[1].signature,
       });
     }
+  }
+
+  if (addedPaddingInput) {
+    // We inserted a dummy input to get around a Ledger bug, so we need to remove it
+    // @ts-expect-error: Expected error as inputs are private, but this is the only way to remove the input
+    txn.inputs.pop();
   }
 
   if (finalize) {
