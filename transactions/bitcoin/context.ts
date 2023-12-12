@@ -782,7 +782,7 @@ export class TransactionContext {
 
     await this.signTransaction(txn, options);
 
-    const psbt = txn.toPSBT(txn.opts.PSBTVersion);
+    const psbt = txn.toPSBT();
     const psbtBase64Signed = base64.encode(psbt);
 
     return psbtBase64Signed;
