@@ -39,8 +39,6 @@ export class EnhancedPsbt {
   }
 
   async getSummary() {
-    const myAddresses = new Set([this._context.paymentAddress.address, this._context.ordinalsAddress.address]);
-
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
     const inputs: { extendedUtxo: ExtendedUtxo; sigHash?: btc.SigHash }[] = [];
