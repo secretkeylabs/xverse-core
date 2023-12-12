@@ -1,7 +1,7 @@
-import { Transaction } from '@scure/btc-signer';
+import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
 import { AddressContext, ExtendedUtxo, TransactionContext } from './context';
-import { Action, ActionMap, ActionType, TransactionOutput } from './types';
+import { Action, ActionMap, ActionType, EnhancedInput, IOInscription, IOSatribute, TransactionOutput } from './types';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -256,4 +256,35 @@ export const extractOutputInscriptionsAndSatributes = async (
   }
 
   return { inscriptions, satributes };
+};
+
+export const mapInputToEnhancedInput = async (input: ExtendedUtxo, sigHash?: SigHash): Promise<EnhancedInput> => {
+  const bundleData = await input.getBundleData();
+
+  const inscriptions: IOInscription[] =
+    bundleData?.sat_ranges
+      .filter((r) => r.inscriptions.length > 0)
+      .flatMap((r) =>
+        r.inscriptions.map((i) => ({
+          fromAddress: input.address,
+          id: i.id,
+          offset: r.offset,
+        })),
+      ) || [];
+  const satributes: IOSatribute[] =
+    bundleData?.sat_ranges
+      .filter((r) => r.satributes.length > 0)
+      .map((r) => ({
+        fromAddress: input.address,
+        offset: r.offset,
+        types: r.satributes,
+        amount: +r.range.end - +r.range.start,
+      })) || [];
+
+  return {
+    extendedUtxo: input,
+    sigHash: sigHash,
+    inscriptions,
+    satributes,
+  };
 };

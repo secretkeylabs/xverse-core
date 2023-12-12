@@ -5,14 +5,12 @@ import { ExtendedUtxo, TransactionContext } from './context';
 import {
   EnhancedInput,
   EnhancedOutput,
-  IOInscription,
-  IOSatribute,
   PSBTCompilationOptions,
   TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
 } from './types';
-import { extractOutputInscriptionsAndSatributes } from './utils';
+import { extractOutputInscriptionsAndSatributes, mapInputToEnhancedInput } from './utils';
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -154,33 +152,9 @@ export class EnhancedPsbt {
       };
     }
 
-    const enhancedInputs: EnhancedInput[] = [];
-    for (const input of inputs) {
-      const bundleData = await input.extendedUtxo.getBundleData();
-
-      const inscriptions: IOInscription[] =
-        bundleData?.sat_ranges.flatMap((r) =>
-          r.inscriptions.map((i) => ({
-            fromAddress: input.extendedUtxo.address,
-            id: i.id,
-            offset: r.offset,
-          })),
-        ) || [];
-      const satributes: IOSatribute[] =
-        bundleData?.sat_ranges.flatMap((r) => ({
-          fromAddress: input.extendedUtxo.address,
-          offset: r.offset,
-          types: r.satributes,
-          amount: +r.range.end - +r.range.start,
-        })) || [];
-
-      enhancedInputs.push({
-        extendedUtxo: input.extendedUtxo,
-        sigHash: input.sigHash,
-        inscriptions,
-        satributes,
-      });
-    }
+    const enhancedInputs: EnhancedInput[] = await Promise.all(
+      inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
+    );
 
     return {
       inputs: enhancedInputs,
