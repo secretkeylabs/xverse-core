@@ -43,6 +43,7 @@ import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '..
 import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
 import { getNftDetail } from './gamma';
 import {
+  BLACKLISTED_FT_CONTRACTS,
   getNetworkURL,
   getUniquePendingTx,
   mapTransferTransactionData,
@@ -227,7 +228,10 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
     fungibleToken.assetName = key.substring(index + 2);
     fungibleToken.principal = key.substring(0, index);
     fungibleToken.protocol = 'stacks';
-    tokens.push(fungibleToken);
+
+    if (!BLACKLISTED_FT_CONTRACTS.includes(fungibleToken.principal)) {
+      tokens.push(fungibleToken);
+    }
   }
   return tokens;
 }

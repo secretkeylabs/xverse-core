@@ -393,3 +393,5 @@ export function getFetchableUrl(uri: string, protocol: string): string | null {
   }
   return null;
 }
+
+export const BLACKLISTED_FT_CONTRACTS = ['SP2FMX6FPRGMCB84FACZCGY1THFA9TQ8RJ9BBVABR.contract-88669005378'];
