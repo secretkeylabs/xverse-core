@@ -9,6 +9,7 @@ import {
   TransactionOutput,
   TransactionScriptOutput,
 } from './types';
+import { extractOutputInscriptionsAndSatributes } from './utils';
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -91,6 +92,7 @@ export class EnhancedPsbt {
     let outputTotal = 0;
 
     let currentOffset = 0;
+    const inputsExtendedUtxos = inputs.map((i) => i.extendedUtxo);
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
       const outputMetadata = this.parseAddressFromOutput(transaction, outputIndex);
 
@@ -104,63 +106,30 @@ export class EnhancedPsbt {
       const outputRaw = transaction.getOutput(outputIndex);
       const amount = Number(outputRaw.amount);
       outputTotal += amount;
-      const output: TransactionOutput = {
-        address: outputMetadata.address,
-        amount: Number(amount),
-        inscriptions: [],
-        satributes: [],
-      };
-      outputs.push(output);
 
       if (!isSigHashAll) {
+        const output: TransactionOutput = {
+          address: outputMetadata.address,
+          amount: Number(amount),
+          inscriptions: [],
+          satributes: [],
+        };
+        outputs.push(output);
         continue;
       }
 
-      const { inscriptions, satributes } = output;
-
-      let runningOffset = 0;
-      for (const input of inputs) {
-        if (runningOffset + input.extendedUtxo.utxo.value > currentOffset) {
-          const inputBundleData = await input.extendedUtxo.getBundleData();
-          const fromAddress = input.extendedUtxo.address;
-
-          const outputInscriptions = inputBundleData?.sat_ranges
-            .flatMap((s) =>
-              s.inscriptions.map((i) => ({
-                id: i.id,
-                offset: runningOffset + s.offset - currentOffset,
-                fromAddress,
-              })),
-            )
-            .filter((i) => i.offset >= 0 && i.offset < amount);
-
-          const outputSatributes = inputBundleData?.sat_ranges
-            .filter((s) => s.satributes.length > 0)
-            .map((s) => {
-              const min = Math.max(runningOffset + s.offset - currentOffset, 0);
-              const max = Math.min(
-                runningOffset + s.offset - currentOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
-                currentOffset + amount,
-              );
-
-              return {
-                types: s.satributes,
-                amount: max - min,
-                offset: min,
-                fromAddress,
-              };
-            });
-
-          inscriptions.push(...(outputInscriptions || []));
-          satributes.push(...(outputSatributes || []));
-        }
-
-        runningOffset += input.extendedUtxo.utxo.value;
-
-        if (runningOffset >= currentOffset + amount) {
-          break;
-        }
-      }
+      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(
+        inputsExtendedUtxos,
+        currentOffset,
+        amount,
+      );
+      const output: TransactionOutput = {
+        address: outputMetadata.address,
+        amount: Number(amount),
+        inscriptions,
+        satributes,
+      };
+      outputs.push(output);
 
       currentOffset += Number(amount);
     }
