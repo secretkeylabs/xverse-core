@@ -229,9 +229,11 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
     fungibleToken.principal = key.substring(0, index);
     fungibleToken.protocol = 'stacks';
 
-    if (!BLACKLISTED_FT_CONTRACTS.includes(fungibleToken.principal)) {
-      tokens.push(fungibleToken);
+    if (BLACKLISTED_FT_CONTRACTS.includes(fungibleToken.principal)) {
+      fungibleToken.visible = false;
     }
+
+    tokens.push(fungibleToken);
   }
   return tokens;
 }
