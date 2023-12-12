@@ -361,11 +361,6 @@ export class P2shAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2sh.script,
@@ -373,6 +368,7 @@ export class P2shAddressContext extends AddressContext {
           },
           redeemScript: p2sh.redeemScript,
           witnessScript: p2sh.witnessScript,
+          nonWitnessUtxo: undefined,
         });
       }
     }
@@ -438,16 +434,12 @@ export class P2wpkhAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2wpkh.script,
             amount: input.witnessUtxo?.amount ?? 0n,
           },
+          nonWitnessUtxo: undefined,
         });
       }
     }
@@ -596,17 +588,13 @@ export class P2trAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2tr.script,
             amount: input.witnessUtxo?.amount ?? 0n,
           },
           tapInternalKey: p2tr.tapInternalKey,
+          nonWitnessUtxo: undefined,
         });
       }
     }

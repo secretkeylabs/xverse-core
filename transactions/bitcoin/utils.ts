@@ -131,9 +131,7 @@ export const getTransactionVSize = async (
   change = 546n,
 ) => {
   try {
-    // we copy this way as there is a bug in the current version of the signer that changes PSBT versions
-    // TODO: use transaction.clone() when the signer is updated (after 1.1.0)
-    const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
+    const transactionCopy = transaction.clone();
 
     if (changeAddress) {
       context.addOutputAddress(transactionCopy, changeAddress, change);
