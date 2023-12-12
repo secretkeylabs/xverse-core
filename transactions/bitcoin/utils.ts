@@ -1,7 +1,7 @@
 import { Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
-import { AddressContext, TransactionContext } from './context';
-import { Action, ActionMap, ActionType } from './types';
+import { AddressContext, ExtendedUtxo, TransactionContext } from './context';
+import { Action, ActionMap, ActionType, TransactionOutput } from './types';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -203,4 +203,59 @@ export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
   }
 
   return usedOutpoints;
+};
+
+export const extractOutputInscriptionsAndSatributes = async (
+  inputs: ExtendedUtxo[],
+  outputOffset: number,
+  outputValue: number,
+) => {
+  const inscriptions: TransactionOutput['inscriptions'] = [];
+  const satributes: TransactionOutput['satributes'] = [];
+
+  let runningOffset = 0;
+  for (const input of inputs) {
+    if (runningOffset + input.utxo.value > outputOffset) {
+      const inputBundleData = await input.getBundleData();
+      const fromAddress = input.address;
+
+      const outputInscriptions = inputBundleData?.sat_ranges
+        .flatMap((s) =>
+          s.inscriptions.map((i) => ({
+            id: i.id,
+            offset: runningOffset + s.offset - outputOffset,
+            fromAddress,
+          })),
+        )
+        .filter((i) => i.offset >= 0 && i.offset < outputValue);
+
+      const outputSatributes = inputBundleData?.sat_ranges
+        .filter((s) => s.satributes.length > 0)
+        .map((s) => {
+          const min = Math.max(runningOffset + s.offset - outputOffset, 0);
+          const max = Math.min(
+            runningOffset + s.offset - outputOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
+            outputOffset + outputValue,
+          );
+
+          return {
+            types: s.satributes,
+            amount: max - min,
+            offset: min,
+            fromAddress,
+          };
+        });
+
+      inscriptions.push(...(outputInscriptions || []));
+      satributes.push(...(outputSatributes || []));
+    }
+
+    runningOffset += input.utxo.value;
+
+    if (runningOffset >= outputOffset + outputValue) {
+      break;
+    }
+  }
+
+  return { inscriptions, satributes };
 };

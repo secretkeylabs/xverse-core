@@ -307,13 +307,16 @@ describe('ExtendedUtxo', () => {
     const esploraApi = new EsploraProvider({ network: 'Mainnet' });
     const extendedUtxo = new ExtendedUtxo(dummyUtxo, 'address', utxoCache, esploraApi);
 
-    utxoCache.getUtxoByOutpoint.mockResolvedValueOnce('bundleData');
+    const response = {
+      sat_ranges: [{ inscriptions: [], satributes: [] }],
+    };
+    utxoCache.getUtxoByOutpoint.mockResolvedValueOnce(response);
 
     const bundleData = await extendedUtxo.getBundleData();
 
-    expect(bundleData).toEqual('bundleData');
+    expect(bundleData).toEqual(response);
     expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledTimes(1);
-    expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledWith('txid:1', 'address');
+    expect(utxoCache.getUtxoByOutpoint).toHaveBeenCalledWith('txid:1', 'address', false);
   });
 
   it('should return false if not embellished with inscription or satribute', async () => {
@@ -350,7 +353,7 @@ describe('ExtendedUtxo', () => {
     const extendedUtxo = new ExtendedUtxo(dummyUtxo, 'address', utxoCache, esploraApi);
 
     utxoCache.getUtxoByOutpoint.mockResolvedValueOnce({
-      sat_ranges: [{ inscriptions: [], satributes: ['satribute'] }],
+      sat_ranges: [{ inscriptions: [], satributes: ['UNCOMMON'] }],
     });
 
     const isEmbellished = await extendedUtxo.isEmbellished();

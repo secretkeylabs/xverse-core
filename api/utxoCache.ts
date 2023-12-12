@@ -1,8 +1,16 @@
-import { AddressBundleResponse, NetworkType, UtxoOrdinalBundle } from '../types';
+import { isAxiosError } from 'axios';
+import {
+  AddressBundleResponse,
+  NetworkType,
+  RareSatsType,
+  StorageAdapter,
+  UtxoOrdinalBundle,
+  isApiSatributeKnown,
+} from '../types';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
 export type UtxoCacheStruct = {
-  [utxoId: string]: UtxoOrdinalBundle;
+  [utxoId: string]: UtxoOrdinalBundle<RareSatsType>;
 };
 
 type UtxoCacheStorage = {
@@ -10,12 +18,6 @@ type UtxoCacheStorage = {
   xVersion: number;
   syncTime: number;
   utxos: UtxoCacheStruct;
-};
-
-export type StorageAdapter = {
-  get(key: string): Promise<string | null> | string | null;
-  set(key: string, value: string): Promise<void> | void;
-  remove(key: string): Promise<void> | void;
 };
 
 type UtxoCacheConfig = {
@@ -63,7 +65,11 @@ export class UtxoCache {
     await this._cacheStorageController.set(this.getAddressCacheStorageKey(address), JSON.stringify(addressCache));
   };
 
-  private _setCachedItem = async (address: string, outpoint: string, utxo: UtxoOrdinalBundle): Promise<void> => {
+  private _setCachedItem = async (
+    address: string,
+    outpoint: string,
+    utxo: UtxoOrdinalBundle<RareSatsType>,
+  ): Promise<void> => {
     const cache = await this._getCache(address);
     if (!cache) {
       // this should never happen as init would run first
@@ -102,7 +108,31 @@ export class UtxoCache {
     return [allData, xVersion] as const;
   };
 
-  private _getUtxo = async (txid: string, vout: number) => getUtxoOrdinalBundle(this._network, txid, vout);
+  private _mapUtxoSatributesToKnown = (utxo: UtxoOrdinalBundle) => ({
+    ...utxo,
+    sat_ranges: utxo.sat_ranges.map((satRange) => ({
+      ...satRange,
+      satributes: satRange.satributes.filter(isApiSatributeKnown),
+    })),
+  });
+
+  private _getUtxo = async (
+    txid: string,
+    vout: number,
+  ): Promise<[xVersion: number, bundle: UtxoOrdinalBundle<RareSatsType>] | [undefined, undefined]> => {
+    try {
+      const apiBundleData = await getUtxoOrdinalBundle(this._network, txid, vout);
+
+      const { xVersion, ...utxo } = apiBundleData;
+      return [xVersion, this._mapUtxoSatributesToKnown(utxo)];
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 404) {
+        return [undefined, undefined];
+      }
+
+      throw err;
+    }
+  };
 
   private _getAllUtxos = async (btcAddress: string, onlyConfirmed = true) => {
     const [utxos, xVersion] = await this._getAddressUtxos(btcAddress);
@@ -112,7 +142,7 @@ export class UtxoCache {
         return acc;
       }
 
-      acc[`${utxo.txid}:${utxo.vout}`] = utxo;
+      acc[`${utxo.txid}:${utxo.vout}`] = this._mapUtxoSatributesToKnown(utxo);
       return acc;
     }, {} as UtxoCacheStruct);
 
@@ -134,7 +164,17 @@ export class UtxoCache {
     return cacheToStore;
   };
 
-  getUtxoByOutpoint = async (outpoint: string, address: string): Promise<UtxoOrdinalBundle | undefined> => {
+  getUtxoByOutpoint = async (
+    outpoint: string,
+    address: string,
+    skipCache = false,
+  ): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> => {
+    const [txid, vout] = outpoint.split(':');
+    if (skipCache) {
+      const [, utxo] = await this._getUtxo(txid, +vout);
+      return utxo;
+    }
+
     const cache = await this._getCache(address);
 
     // check if cache is initialised and up to date
@@ -149,24 +189,28 @@ export class UtxoCache {
     }
 
     // if not, get it from the API and add it to the cache
-    const [txid, vout] = outpoint.split(':');
-    const { xVersion, ...utxo } = await this._getUtxo(txid, +vout);
+    const [xVersion, bundle] = await this._getUtxo(txid, +vout);
 
     if (cache.xVersion !== xVersion) {
       // if server deployed update to satributes, the xVersion will be bumped, so we need to resync
       await this._initCache(address);
     }
 
-    if (utxo.block_height) {
+    if (bundle?.block_height) {
       // we only want to store confirmed utxos in the cache
-      await this._setCachedItem(address, outpoint, utxo);
+      await this._setCachedItem(address, outpoint, bundle);
     }
-    return utxo;
+    return bundle;
   };
 
-  getUtxo = async (txid: string, vout: number, address: string): Promise<UtxoOrdinalBundle | undefined> => {
+  getUtxo = async (
+    txid: string,
+    vout: number,
+    address: string,
+    skipCache = false,
+  ): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> => {
     const utxoId = `${txid}:${vout}`;
 
-    return this.getUtxoByOutpoint(utxoId, address);
+    return this.getUtxoByOutpoint(utxoId, address, skipCache);
   };
 }

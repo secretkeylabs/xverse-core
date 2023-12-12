@@ -241,6 +241,7 @@ describe('EnhancedTransaction summary', () => {
 
     const sendUtxoInputs = [
       {
+        address: 'myAddress',
         utxo: { value: 100 },
         getBundleData: vi.fn().mockResolvedValueOnce({
           sat_ranges: [
@@ -262,6 +263,7 @@ describe('EnhancedTransaction summary', () => {
 
     const splitInputs = [
       {
+        address: 'myAddress',
         utxo: { value: 2000 },
         getBundleData: vi.fn().mockResolvedValueOnce({
           sat_ranges: [
@@ -298,6 +300,7 @@ describe('EnhancedTransaction summary', () => {
 
     const sendBtcInputs = [
       {
+        address: 'myAddress',
         utxo: { value: 1000 },
         getBundleData: vi.fn().mockResolvedValueOnce({
           sat_ranges: [
@@ -306,12 +309,14 @@ describe('EnhancedTransaction summary', () => {
         }),
       } as any,
       {
+        address: 'myAddress',
         utxo: { value: 1000 },
         getBundleData: vi.fn().mockResolvedValueOnce({
           sat_ranges: [],
         }),
       } as any,
       {
+        address: 'myAddress',
         utxo: { value: 2000 },
         getBundleData: vi.fn().mockResolvedValueOnce({
           sat_ranges: [
@@ -357,7 +362,7 @@ describe('EnhancedTransaction summary', () => {
       fee: 500n,
       feeRate: 50,
       vsize: 10, // size of an empty txn
-      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs],
+      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({ extendedUtxo: i, sigHash: 1 })),
       outputs: [
         {
           address: 'address1',
@@ -366,6 +371,7 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId',
               offset: 0,
+              fromAddress: 'myAddress',
             },
           ],
           satributes: [
@@ -373,6 +379,7 @@ describe('EnhancedTransaction summary', () => {
               amount: 99,
               offset: 1,
               types: ['PIZZA'],
+              fromAddress: 'myAddress',
             },
           ],
         },
@@ -383,6 +390,7 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId2',
               offset: 0,
+              fromAddress: 'myAddress',
             },
           ],
           satributes: [
@@ -390,6 +398,7 @@ describe('EnhancedTransaction summary', () => {
               amount: 99,
               offset: 1001,
               types: ['VINTAGE'],
+              fromAddress: 'myAddress',
             },
           ],
         },
@@ -406,10 +415,12 @@ describe('EnhancedTransaction summary', () => {
             {
               id: 'inscriptionId4',
               offset: 0,
+              fromAddress: 'myAddress',
             },
             {
               id: 'inscriptionId5',
               offset: 2100,
+              fromAddress: 'myAddress',
             },
           ],
           satributes: [
@@ -417,11 +428,13 @@ describe('EnhancedTransaction summary', () => {
               amount: 100,
               offset: 2200,
               types: ['VINTAGE', 'ALPHA'],
+              fromAddress: 'myAddress',
             },
             {
               amount: 100,
               offset: 3800,
               types: ['VINTAGE', 'ALPHA', 'BLOCK9'],
+              fromAddress: 'myAddress',
             },
           ],
         },

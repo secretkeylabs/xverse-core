@@ -1,6 +1,6 @@
 import axios, { isAxiosError } from 'axios';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
-import XordApiProvider from '../api/ordinals/provider';
+import { OrdinalsApi } from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
@@ -15,14 +15,11 @@ import {
   InscriptionRequestResponse,
   NetworkType,
   RareSatsType,
-  RodarmorRareSats,
-  RodarmorRareSatsType,
   SatRangeInscription,
-  Satributes,
-  SatributesType,
   UTXO,
   UtxoBundleResponse,
   UtxoOrdinalBundle,
+  isApiSatributeKnown,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -59,7 +56,7 @@ export async function fetchBtcOrdinalsData(
   esploraProvider: EsploraApiProvider,
   network: NetworkType,
 ): Promise<BtcOrdinal[]> {
-  const xordClient = new XordApiProvider({
+  const xordClient = new OrdinalsApi({
     network,
   });
 
@@ -334,11 +331,7 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
 
     // filter out unsupported satributes
     // filter is not able to infer the type of the array, so we need to cast it
-    const supportedSatributes = satRange.satributes.filter(
-      (satribute) =>
-        RodarmorRareSats.includes(satribute as RodarmorRareSatsType) ||
-        Satributes.includes(satribute as SatributesType),
-    ) as RareSatsType[];
+    const supportedSatributes = satRange.satributes.filter(isApiSatributeKnown);
 
     const rangeWithUnsupportedSatsAndWithoutInscriptions = !satRange.inscriptions.length && !supportedSatributes.length;
     // if range has no inscriptions and only unsupported satributes, we skip it

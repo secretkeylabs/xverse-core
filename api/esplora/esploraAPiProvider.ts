@@ -85,8 +85,7 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
   }
 
   async getTransactionOutspends(txid: string): Promise<esplora.TransactionOutspend[]> {
-    const data = await this.httpGet<esplora.TransactionOutspend[]>(`/tx/${txid}/outspends`);
-    return data;
+    return this.httpGet<esplora.TransactionOutspend[]>(`/tx/${txid}/outspends`);
   }
 
   /**
@@ -111,4 +110,5 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     return data;
   }
 }
+
 export default BitcoinEsploraApiProvider;

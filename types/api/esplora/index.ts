@@ -91,7 +91,9 @@ export type Block = {
 };
 
 export type TransactionOutspend =
-  | { spent: false }
+  | {
+      spent: false;
+    }
   | {
       spent: true;
       txid: string;

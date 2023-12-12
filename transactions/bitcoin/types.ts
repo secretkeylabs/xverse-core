@@ -1,5 +1,7 @@
+import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
-import { Satribute } from '../../types';
+import { RareSatsType } from '../../types';
+import { ExtendedUtxo } from './context';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -57,16 +59,36 @@ export type CompilationOptions = {
   excludeOutpointList?: string[];
 };
 
+export type PSBTCompilationOptions = {
+  ledgerTransport?: Transport;
+  finalize?: boolean;
+  allowedSighash?: btc.SigHash[];
+};
+
 export type TransactionOutput = {
   address: string;
   amount: number;
   inscriptions: {
     id: string;
     offset: number;
+    fromAddress: string;
   }[];
   satributes: {
-    types: Satribute[];
+    types: RareSatsType[];
     amount: number;
     offset: number;
+    fromAddress: string;
   }[];
 };
+
+export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
+
+export type TransactionScriptOutput = {
+  script: string[];
+};
+
+export type EnhancedInput = {
+  extendedUtxo: ExtendedUtxo;
+  sigHash?: btc.SigHash | undefined;
+};
+export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
