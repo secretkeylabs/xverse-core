@@ -193,7 +193,7 @@ export class EnhancedPsbt {
     if (addedPaddingInput) {
       // We inserted a dummy input to get around a Ledger bug, so we need to remove it
       // @ts-expect-error: Expected error as inputs are private, but this is the only way to remove the input
-      txn.inputs.pop();
+      transaction.inputs.pop();
     }
 
     if (options.finalize) {
