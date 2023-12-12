@@ -394,11 +394,11 @@ class RbfTransaction {
       return this.dummySignTransaction(tx);
     }
 
-    if (this.options.accountType === 'software') {
-      return this.signTxSoftware(tx);
+    if (this.options.accountType === 'ledger') {
+      return this.signTxLedger(tx, options);
     }
 
-    return this.signTxLedger(tx, options);
+    return this.signTxSoftware(tx);
   };
 
   private getTxSize = async (tx: btc.Transaction) => {
