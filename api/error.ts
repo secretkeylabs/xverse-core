@@ -13,7 +13,7 @@ export const handleAxiosError = (error: AxiosError) => {
     throw new ApiResponseError({
       status: error.response.status,
       data: error.response.data,
-      headers: error.response.headers,
+      headers: error.response.headers as Record<string, string>,
     });
   }
   throw new Error(error.message);
