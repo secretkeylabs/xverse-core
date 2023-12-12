@@ -1,10 +1,18 @@
-import { Transaction } from '@scure/btc-signer';
+import { SigHash, Transaction } from '@scure/btc-signer';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
 import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions } from './actionProcessors';
 import { TransactionContext } from './context';
-import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
+import {
+  Action,
+  ActionMap,
+  ActionType,
+  CompilationOptions,
+  EnhancedInput,
+  TransactionFeeOutput,
+  TransactionOutput,
+} from './types';
 import { extractActionMap, extractOutputInscriptionsAndSatributes } from './utils';
 
 const defaultOptions: CompilationOptions = {
@@ -142,14 +150,19 @@ export class EnhancedTransaction {
 
     transaction.finalize();
 
+    const enhancedInputs = inputs.map<EnhancedInput>((input) => ({
+      extendedUtxo: input,
+      sigHash: SigHash.ALL,
+    }));
+
     return {
       actualFee,
       actualFeeRate,
       effectiveFeeRate,
       transaction,
-      inputs,
+      inputs: enhancedInputs,
       outputs,
-      feeOutput,
+      feeOutput: feeOutput as TransactionFeeOutput,
     };
   }
 
