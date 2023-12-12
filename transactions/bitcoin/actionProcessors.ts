@@ -286,6 +286,9 @@ export const applySendBtcActionsAndFee = async (
   let unconfirmedVsize = 0;
   let unconfirmedFee = 0;
 
+  let actualFeeRate = feeRate;
+  let effectiveFeeRate = feeRate;
+
   while (!complete) {
     const currentChange = totalInputs - totalOutputs;
 
@@ -317,6 +320,8 @@ export const applySendBtcActionsAndFee = async (
           );
           if (finalVSizeWithChange) {
             actualFee = BigInt((finalVSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
+            actualFeeRate = Number(actualFee) / finalVSizeWithChange;
+            effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (finalVSizeWithChange + unconfirmedVsize);
 
             const change = currentChange - actualFee;
             context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
@@ -335,6 +340,8 @@ export const applySendBtcActionsAndFee = async (
 
         if (feeWithoutChange <= currentChange) {
           actualFee = currentChange;
+          actualFeeRate = Number(actualFee) / vSizeNoChange;
+          effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (vSizeNoChange + unconfirmedVsize);
           complete = true;
           break;
         }
@@ -369,6 +376,8 @@ export const applySendBtcActionsAndFee = async (
   }
 
   return {
+    actualFeeRate,
+    effectiveFeeRate: options.useEffectiveFeeRate ? effectiveFeeRate : undefined,
     actualFee,
     inputs,
     outputs,
