@@ -81,12 +81,14 @@ export type TransactionOutput = {
   }[];
 };
 
+export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
+
 export type TransactionScriptOutput = {
   script: string[];
 };
 
-export type EnhancedPsbtInput = {
+export type EnhancedInput = {
   extendedUtxo: ExtendedUtxo;
   sigHash?: btc.SigHash | undefined;
 };
-export type EnhancedPsbtOutput = TransactionOutput | TransactionScriptOutput;
+export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;

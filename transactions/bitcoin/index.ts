@@ -4,11 +4,12 @@ import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
 import {
   ActionType,
-  EnhancedPsbtInput,
-  EnhancedPsbtOutput,
+  EnhancedInput,
+  EnhancedOutput,
   SendBtcAction,
   SendUtxoAction,
   SplitUtxoAction,
+  TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
 } from './types';
@@ -18,11 +19,12 @@ const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
 export { ActionType, EnhancedPsbt, EnhancedTransaction, TransactionContext, createTransactionContext };
 export type {
-  EnhancedPsbtInput,
-  EnhancedPsbtOutput,
+  EnhancedInput,
+  EnhancedOutput,
   SendBtcAction,
   SendUtxoAction,
   SplitUtxoAction,
+  TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
 };

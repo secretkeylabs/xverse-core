@@ -3,9 +3,10 @@ import * as btc from '@scure/btc-signer';
 
 import { ExtendedUtxo, TransactionContext } from './context';
 import {
-  EnhancedPsbtInput,
-  EnhancedPsbtOutput,
+  EnhancedInput,
+  EnhancedOutput,
   PSBTCompilationOptions,
+  TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
 } from './types';
@@ -79,9 +80,9 @@ export class EnhancedPsbt {
   }
 
   async getSummary(): Promise<{
-    fee: number | undefined;
-    inputs: EnhancedPsbtInput[];
-    outputs: EnhancedPsbtOutput[];
+    inputs: EnhancedInput[];
+    outputs: EnhancedOutput[];
+    feeOutput?: TransactionFeeOutput;
     hasSigHashNone: boolean;
   }> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
@@ -134,10 +135,27 @@ export class EnhancedPsbt {
       currentOffset += Number(amount);
     }
 
+    const fee = isSigHashAll ? inputTotal - outputTotal : undefined;
+    let feeOutput: TransactionFeeOutput | undefined = undefined;
+
+    if (fee) {
+      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(
+        inputsExtendedUtxos,
+        currentOffset,
+        fee,
+      );
+
+      feeOutput = {
+        amount: fee,
+        inscriptions,
+        satributes,
+      };
+    }
+
     return {
-      fee: isSigHashAll ? inputTotal - outputTotal : undefined,
       inputs,
       outputs,
+      feeOutput,
       hasSigHashNone,
     };
   }
