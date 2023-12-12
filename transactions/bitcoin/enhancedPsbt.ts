@@ -11,9 +11,9 @@ import {
 } from './types';
 
 export class EnhancedPsbt {
-  private _context!: TransactionContext;
+  private readonly _context!: TransactionContext;
 
-  private _psbt!: Uint8Array;
+  private readonly _psbt!: Uint8Array;
 
   constructor(context: TransactionContext, psbtBase64: string) {
     this._context = context;
@@ -44,17 +44,13 @@ export class EnhancedPsbt {
     return { address: btc.Address(btcNetwork).encode(outputScript) };
   }
 
-  async getSummary(): Promise<{ fee: number | undefined; inputs: EnhancedPsbtInput[]; outputs: EnhancedPsbtOutput[] }> {
-    const transaction = btc.Transaction.fromPSBT(this._psbt);
-
+  private async _extractInputMetadata(transaction: btc.Transaction) {
     const inputs: { extendedUtxo: ExtendedUtxo; sigHash?: btc.SigHash }[] = [];
-    const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
 
     let isSigHashAll = false;
     let hasSigHashNone = false;
 
     let inputTotal = 0;
-    let outputTotal = 0;
 
     for (let inputIndex = 0; inputIndex < transaction.inputsLength; inputIndex++) {
       const inputRaw = transaction.getInput(inputIndex);
@@ -77,6 +73,22 @@ export class EnhancedPsbt {
       isSigHashAll = isSigHashAll || sigHash === undefined || sigHash === btc.SigHash.ALL;
       hasSigHashNone = hasSigHashNone || (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE;
     }
+
+    return { inputs, isSigHashAll, hasSigHashNone, inputTotal };
+  }
+
+  async getSummary(): Promise<{
+    fee: number | undefined;
+    inputs: EnhancedPsbtInput[];
+    outputs: EnhancedPsbtOutput[];
+    hasSigHashNone: boolean;
+  }> {
+    const transaction = btc.Transaction.fromPSBT(this._psbt);
+
+    const { inputs, inputTotal, isSigHashAll, hasSigHashNone } = await this._extractInputMetadata(transaction);
+    const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
+
+    let outputTotal = 0;
 
     let currentOffset = 0;
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
@@ -157,6 +169,7 @@ export class EnhancedPsbt {
       fee: isSigHashAll ? inputTotal - outputTotal : undefined,
       inputs,
       outputs,
+      hasSigHashNone,
     };
   }
 

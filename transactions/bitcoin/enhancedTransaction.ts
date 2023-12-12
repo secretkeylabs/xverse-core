@@ -18,13 +18,13 @@ const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions
 };
 
 export class EnhancedTransaction {
-  private _context!: TransactionContext;
+  private readonly _context!: TransactionContext;
 
-  private _actions!: ActionMap;
+  private readonly _actions!: ActionMap;
 
   private _feeRate!: number;
 
-  private _overrideChangeAddress?: string;
+  private readonly _overrideChangeAddress?: string;
 
   get overrideChangeAddress(): string | undefined {
     return this._overrideChangeAddress;

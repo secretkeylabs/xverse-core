@@ -100,11 +100,3 @@ export type TransactionOutspend =
       vin: number;
       status: TxStatus;
     };
-
-export type RecommendedFeeResponse = {
-  economyFee: number;
-  fastestFee: number;
-  halfHourFee: number;
-  hourFee: number;
-  minimumFee: number;
-};
