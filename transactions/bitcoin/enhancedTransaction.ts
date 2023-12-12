@@ -5,7 +5,7 @@ import EsploraClient from '../../api/esplora/esploraAPiProvider';
 import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions } from './actionProcessors';
 import { TransactionContext } from './context';
 import { Action, ActionMap, ActionType, CompilationOptions, TransactionOutput } from './types';
-import { extractActionMap } from './utils';
+import { extractActionMap, extractOutputInscriptionsAndSatributes } from './utils';
 
 const defaultOptions: CompilationOptions = {
   rbfEnabled: false,
@@ -19,13 +19,13 @@ const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions
 };
 
 export class EnhancedTransaction {
-  private _context!: TransactionContext;
+  private readonly _context!: TransactionContext;
 
-  private _actions!: ActionMap;
+  private readonly _actions!: ActionMap;
 
   private _feeRate!: number;
 
-  private _overrideChangeAddress?: string;
+  private readonly _overrideChangeAddress?: string;
 
   get overrideChangeAddress(): string | undefined {
     return this._overrideChangeAddress;
@@ -120,54 +120,11 @@ export class EnhancedTransaction {
 
     let currentOffset = 0;
     for (const outputRaw of outputsRaw) {
-      const output: TransactionOutput = { ...outputRaw, inscriptions: [], satributes: [] };
+      const amount = outputRaw.amount;
+      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(inputs, currentOffset, amount);
+
+      const output: TransactionOutput = { ...outputRaw, inscriptions, satributes };
       outputs.push(output);
-
-      const { amount, inscriptions, satributes } = output;
-
-      let runningOffset = 0;
-      for (const input of inputs) {
-        if (runningOffset + input.utxo.value > currentOffset) {
-          const inputBundleData = await input.getBundleData();
-          const fromAddress = input.address;
-
-          const outputInscriptions = inputBundleData?.sat_ranges
-            .flatMap((s) =>
-              s.inscriptions.map((i) => ({
-                id: i.id,
-                offset: runningOffset + s.offset - currentOffset,
-                fromAddress,
-              })),
-            )
-            .filter((i) => i.offset >= 0 && i.offset < amount);
-
-          const outputSatributes = inputBundleData?.sat_ranges
-            .filter((s) => s.satributes.length > 0)
-            .map((s) => {
-              const min = Math.max(runningOffset + s.offset - currentOffset, 0);
-              const max = Math.min(
-                runningOffset + s.offset - currentOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
-                currentOffset + amount,
-              );
-
-              return {
-                types: s.satributes,
-                amount: max - min,
-                offset: min,
-                fromAddress,
-              };
-            });
-
-          inscriptions.push(...(outputInscriptions || []));
-          satributes.push(...(outputSatributes || []));
-        }
-
-        runningOffset += input.utxo.value;
-
-        if (runningOffset >= currentOffset + amount) {
-          break;
-        }
-      }
 
       currentOffset += Number(amount);
     }
