@@ -12,9 +12,6 @@ if [[ -z "$BUMP" ]]; then
   exit 1
 fi
 
-# only need to merge to develop for this repo
-b=develop
-
 echo -e "\n--- Prepare for $BUMP release branch ---"
 
 git fetch --all
@@ -49,22 +46,26 @@ gh api \
 
 cat release.json | jq -r .body > body.md
 echo -e "\n\nDraft release: $(cat release.json | jq -r .html_url)" >> body.md
+echo -e "\nTo trigger npm publish: Merge Commit this PR" >> body.md
 
-echo -e "\n--- Create PR to $b ---"
+# only need to merge to develop for this repo
+BASE=develop
+
+echo -e "\n--- Create PR to $BASE ---"
 
 gh api \
   --method POST \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   /repos/{owner}/{repo}/pulls \
-  -f title="$TITLE to $b" \
+  -f title="$TITLE to $BASE" \
   -f body="Created by GitHub Actions Bot" \
   -f head="$BRANCH" \
-  -f base="$b" > pr-$b.json
+  -f base="$BASE" > pr-$BASE.json
 
-echo -e "\n--- Update PR to $b with description ---"
+echo -e "\n--- Update PR to $BASE with description ---"
 
-PR_ID=$(cat pr-$b.json | jq -r .number)
+PR_ID=$(cat pr-$BASE.json | jq -r .number)
 gh api \
   --method PATCH \
   -H "Accept: application/vnd.github+json" \
@@ -72,7 +73,7 @@ gh api \
   /repos/{owner}/{repo}/pulls/$PR_ID \
   -F 'body=@body.md'
 
-echo -e "\n--- Update PR to $b with label ---"
+echo -e "\n--- Update PR to $BASE with label ---"
 
 RELEASE_ID=$(cat release.json | jq -r .id)
 gh api \
@@ -80,10 +81,10 @@ gh api \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   /repos/{owner}/{repo}/issues/$PR_ID/labels \
-  -f "labels[]=RID_$RELEASE_ID" \
+  -f "labels[]=RID_$RELEASE_ID"
 
 # clean up temp files
-# rm pr-$b.json
+# rm pr-$BASE.json
 
 echo -e "\n--- Done ---"
 # clean up temp files
