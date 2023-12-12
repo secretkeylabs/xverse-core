@@ -2,7 +2,13 @@ import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 
 import { ExtendedUtxo, TransactionContext } from './context';
-import { PSBTCompilationOptions, TransactionOutput, TransactionScriptOutput } from './types';
+import {
+  EnhancedPsbtInput,
+  EnhancedPsbtOutput,
+  PSBTCompilationOptions,
+  TransactionOutput,
+  TransactionScriptOutput,
+} from './types';
 
 export class EnhancedPsbt {
   private _context!: TransactionContext;
@@ -38,7 +44,7 @@ export class EnhancedPsbt {
     return { address: btc.Address(btcNetwork).encode(outputScript) };
   }
 
-  async getSummary() {
+  async getSummary(): Promise<{ fee: number | undefined; inputs: EnhancedPsbtInput[]; outputs: EnhancedPsbtOutput[] }> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
     const inputs: { extendedUtxo: ExtendedUtxo; sigHash?: btc.SigHash }[] = [];
@@ -154,7 +160,7 @@ export class EnhancedPsbt {
     };
   }
 
-  async getSignedPsbtBase64(options: PSBTCompilationOptions = {}) {
+  async getSignedPsbtBase64(options: PSBTCompilationOptions = {}): Promise<string> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
     await this._context.signTransaction(transaction, options);
 

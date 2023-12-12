@@ -1,6 +1,7 @@
 import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
 import { RareSatsType } from '../../types';
+import { ExtendedUtxo } from './context';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -83,3 +84,9 @@ export type TransactionOutput = {
 export type TransactionScriptOutput = {
   script: string[];
 };
+
+export type EnhancedPsbtInput = {
+  extendedUtxo: ExtendedUtxo;
+  sigHash?: btc.SigHash | undefined;
+};
+export type EnhancedPsbtOutput = TransactionOutput | TransactionScriptOutput;
