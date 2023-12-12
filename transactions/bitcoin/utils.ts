@@ -223,6 +223,8 @@ export const extractOutputInscriptionsAndSatributes = async (
             id: i.id,
             offset: runningOffset + s.offset - outputOffset,
             fromAddress,
+            number: i.inscription_number,
+            contentType: i.content_type,
           })),
         )
         .filter((i) => i.offset >= 0 && i.offset < outputValue);
@@ -269,6 +271,8 @@ export const mapInputToEnhancedInput = async (input: ExtendedUtxo, sigHash?: Sig
           fromAddress: input.address,
           id: i.id,
           offset: r.offset,
+          number: i.inscription_number,
+          contentType: i.content_type,
         })),
       ) || [];
   const satributes: IOSatribute[] =

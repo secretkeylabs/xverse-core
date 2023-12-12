@@ -71,6 +71,8 @@ export type IOInscription = {
   id: string;
   offset: number;
   fromAddress: string;
+  number: number;
+  contentType: string;
 };
 
 export type IOSatribute = {
