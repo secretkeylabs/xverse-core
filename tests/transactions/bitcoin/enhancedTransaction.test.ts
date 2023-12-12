@@ -365,7 +365,12 @@ describe('EnhancedTransaction summary', () => {
       feeRate: 50,
       effectiveFeeRate: 50,
       vsize: 10, // size of an empty txn
-      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({ extendedUtxo: i, sigHash: 1 })),
+      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({
+        extendedUtxo: i,
+        sigHash: 1,
+        inscriptions: [],
+        satributes: [],
+      })),
       outputs: [
         {
           address: 'address1',

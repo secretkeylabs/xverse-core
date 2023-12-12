@@ -67,20 +67,24 @@ export type PSBTCompilationOptions = {
   allowedSighash?: btc.SigHash[];
 };
 
+export type IOInscription = {
+  id: string;
+  offset: number;
+  fromAddress: string;
+};
+
+export type IOSatribute = {
+  types: RareSatsType[];
+  amount: number;
+  offset: number;
+  fromAddress: string;
+};
+
 export type TransactionOutput = {
   address: string;
   amount: number;
-  inscriptions: {
-    id: string;
-    offset: number;
-    fromAddress: string;
-  }[];
-  satributes: {
-    types: RareSatsType[];
-    amount: number;
-    offset: number;
-    fromAddress: string;
-  }[];
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
 };
 
 export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
@@ -91,6 +95,8 @@ export type TransactionScriptOutput = {
 
 export type EnhancedInput = {
   extendedUtxo: ExtendedUtxo;
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
 };
 export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;

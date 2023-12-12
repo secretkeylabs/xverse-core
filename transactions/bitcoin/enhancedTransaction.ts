@@ -10,6 +10,8 @@ import {
   ActionType,
   CompilationOptions,
   EnhancedInput,
+  IOInscription,
+  IOSatribute,
   TransactionFeeOutput,
   TransactionOutput,
 } from './types';
@@ -150,10 +152,33 @@ export class EnhancedTransaction {
 
     transaction.finalize();
 
-    const enhancedInputs = inputs.map<EnhancedInput>((input) => ({
-      extendedUtxo: input,
-      sigHash: SigHash.ALL,
-    }));
+    const enhancedInputs: EnhancedInput[] = [];
+    for (const input of inputs) {
+      const bundleData = await input.getBundleData();
+
+      const inscriptions: IOInscription[] =
+        bundleData?.sat_ranges.flatMap((r) =>
+          r.inscriptions.map((i) => ({
+            fromAddress: input.address,
+            id: i.id,
+            offset: r.offset,
+          })),
+        ) || [];
+      const satributes: IOSatribute[] =
+        bundleData?.sat_ranges.flatMap((r) => ({
+          fromAddress: input.address,
+          offset: r.offset,
+          types: r.satributes,
+          amount: +r.range.end - +r.range.start,
+        })) || [];
+
+      enhancedInputs.push({
+        extendedUtxo: input,
+        sigHash: SigHash.ALL,
+        inscriptions,
+        satributes,
+      });
+    }
 
     return {
       actualFee,
