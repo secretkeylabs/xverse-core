@@ -42,7 +42,7 @@ jobs:
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ', ') }}
         run: |
           # find the github release id from labels
-          RELEASE_ID=$(echo PR_LABELS | sed 's/.*RID_\([^,]*\).*/\1/')
+          RELEASE_ID=$(echo $PR_LABELS | sed 's/.*RID_\([^,]*\).*/\1/')
           # publish the github release
           gh api \
             --method PATCH \
@@ -51,6 +51,7 @@ jobs:
             /repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID \
             -f target_commitish="develop" \
             -F draft=false \
+            -F prerelease=false \
             -F make_latest=true > release.json
           # update PR description
           cat release.json | jq -r .body > body.md
