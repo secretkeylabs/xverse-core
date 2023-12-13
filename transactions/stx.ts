@@ -103,7 +103,7 @@ export async function signMultiStxTransactions(
 ): Promise<Array<StacksTransaction>> {
   try {
     const signedTxPromises: Array<Promise<StacksTransaction>> = [];
-    const signingAccountIndex = accountIndex ?? BigInt(0);
+    const signingAccountIndex = accountIndex ?? 0;
     unsignedTxs.forEach((unsignedTx) => {
       signedTxPromises.push(signTransaction(unsignedTx, seedPhrase, signingAccountIndex, network));
     });

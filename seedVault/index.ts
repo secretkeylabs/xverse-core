@@ -1,8 +1,4 @@
-export type StorageAdapter = {
-  get(key: string): Promise<string> | string | null;
-  set(key: string, value: string): Promise<void> | void;
-  remove(key: string): Promise<void> | void;
-};
+import { StorageAdapter } from '../types';
 
 export type CryptoUtilsAdapter = {
   encrypt(data: string, password: string): Promise<string>;

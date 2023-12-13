@@ -1,7 +1,6 @@
 import { base64 } from '@scure/base';
 import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
-
 import { createInscriptionRequest } from '../api';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
