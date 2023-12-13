@@ -125,8 +125,11 @@ export class OrdinalsApi implements OrdinalsApiProvider {
     const allInscriptions: Inscription[] = [];
 
     let offset = 0;
-    const limit = 60;
+    let limit = 60;
+
     let inscriptions: InscriptionsList = await this.getInscriptions(address, offset, limit);
+    limit = inscriptions.limit;
+
     while (inscriptions.results.length > 0) {
       allInscriptions.push(...inscriptions.results);
       offset += limit;
