@@ -234,8 +234,8 @@ export const extractOutputInscriptionsAndSatributes = async (
         .map((s) => {
           const min = Math.max(runningOffset + s.offset - outputOffset, 0);
           const max = Math.min(
-            runningOffset + s.offset - outputOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
-            outputOffset + outputValue,
+            runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
+            outputValue,
           );
 
           return {
@@ -244,7 +244,8 @@ export const extractOutputInscriptionsAndSatributes = async (
             offset: min,
             fromAddress,
           };
-        });
+        })
+        .filter((i) => i.offset >= 0 && i.offset < outputValue && i.amount > 0);
 
       inscriptions.push(...(outputInscriptions || []));
       satributes.push(...(outputSatributes || []));
