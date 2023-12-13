@@ -19,6 +19,7 @@
     "@stacks/transactions": "4.3.5",
     "@stacks/wallet-sdk": "^5.0.2",
     "@zondax/ledger-stacks": "^1.0.4",
+    "async-mutex": "^0.4.0",
     "axios": "1.6.2",
     "base64url": "^3.0.1",
     "bip32": "^4.0.0",
