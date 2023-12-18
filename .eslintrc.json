@@ -17,6 +17,7 @@
       {
         "code": 120
       }
-    ]
+    ],
+    "@typescript-eslint/no-loop-func": "off"
   }
 }

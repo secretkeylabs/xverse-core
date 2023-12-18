@@ -1,3 +1,4 @@
+export * as btcTransaction from './bitcoin';
 export * from './brc20';
 export * from './btc';
 export {

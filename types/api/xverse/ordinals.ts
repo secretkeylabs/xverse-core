@@ -77,7 +77,7 @@ export type RareSatsType = RodarmorRareSatsType | SatributesType;
 
 export type SatRangeInscription = Pick<Inscription, 'id' | 'content_type'> & { inscription_number: number };
 
-export type SatRange = {
+export type SatRange<T extends RareSatsTypeApi | RareSatsType = RareSatsTypeApi> = {
   range: {
     start: string;
     end: string;
@@ -85,16 +85,16 @@ export type SatRange = {
   year_mined: number;
   block: number;
   offset: number;
-  satributes: RareSatsTypeApi[];
+  satributes: T[];
   inscriptions: SatRangeInscription[];
 };
 
-export type UtxoOrdinalBundle = {
+export type UtxoOrdinalBundle<T extends RareSatsTypeApi | RareSatsType = RareSatsTypeApi> = {
   txid: string;
   vout: number;
-  block_height: number;
+  block_height?: number;
   value: number;
-  sat_ranges: SatRange[];
+  sat_ranges: SatRange<T>[];
 };
 
 export type XVersion = {
@@ -121,4 +121,10 @@ export type Bundle = Omit<UtxoOrdinalBundle, 'sat_ranges'> & {
   inscriptions: SatRangeInscription[];
   satributes: RareSatsType[][];
   totalExoticSats: number;
+};
+
+export const isApiSatributeKnown = (satribute: RareSatsTypeApi): satribute is RareSatsType => {
+  return (
+    RodarmorRareSats.includes(satribute as RodarmorRareSatsType) || Satributes.includes(satribute as SatributesType)
+  );
 };

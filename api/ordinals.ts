@@ -1,6 +1,6 @@
-import axios from 'axios';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
-import XordApiProvider from '../api/ordinals/provider';
+import axios, { isAxiosError } from 'axios';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import { OrdinalsApi } from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
@@ -15,14 +15,11 @@ import {
   InscriptionRequestResponse,
   NetworkType,
   RareSatsType,
-  RodarmorRareSats,
-  RodarmorRareSatsType,
   SatRangeInscription,
-  Satributes,
-  SatributesType,
   UTXO,
   UtxoBundleResponse,
   UtxoOrdinalBundle,
+  isApiSatributeKnown,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -54,16 +51,17 @@ const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   return 0;
 };
 
-export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkType): Promise<BtcOrdinal[]> {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const xordClient = new XordApiProvider({
+export async function fetchBtcOrdinalsData(
+  btcAddress: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<BtcOrdinal[]> {
+  const xordClient = new OrdinalsApi({
     network,
   });
 
   const [addressUTXOs, inscriptions] = await Promise.all([
-    btcClient.getUnspentUtxos(btcAddress),
+    esploraProvider.getUnspentUtxos(btcAddress),
     xordClient.getAllInscriptions(btcAddress),
   ]);
   const ordinals: BtcOrdinal[] = [];
@@ -117,11 +115,12 @@ export async function getTextOrdinalContent(network: NetworkType, inscriptionId:
     });
 }
 
-export async function getNonOrdinalUtxo(address: string, network: NetworkType): Promise<Array<UTXO>> {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(address);
+export async function getNonOrdinalUtxo(
+  address: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<Array<UTXO>> {
+  const unspentOutputs = await esploraProvider.getUnspentUtxos(address);
   const nonOrdinalOutputs: Array<UTXO> = [];
 
   for (let i = 0; i < unspentOutputs.length; i++) {
@@ -271,6 +270,26 @@ export const getUtxoOrdinalBundle = async (
   return response.data;
 };
 
+export const getUtxoOrdinalBundleIfFound = async (
+  network: NetworkType,
+  txid: string,
+  vout: number,
+): Promise<UtxoBundleResponse | undefined> => {
+  try {
+    const data = await getUtxoOrdinalBundle(network, txid, vout);
+    return data;
+  } catch (e) {
+    // we don't reject on 404s because if the UTXO is not found,
+    // it is likely this is a UTXO from an unpublished txn.
+    // this is required for gamma.io purchase flow
+    if (!isAxiosError(e) || e.response?.status !== 404) {
+      // rethrow error if response was not 404
+      throw e;
+    }
+    return undefined;
+  }
+};
+
 export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
   const generalBundleInfo = {
     txid: apiBundle.txid,
@@ -312,11 +331,7 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
 
     // filter out unsupported satributes
     // filter is not able to infer the type of the array, so we need to cast it
-    const supportedSatributes = satRange.satributes.filter(
-      (satribute) =>
-        RodarmorRareSats.includes(satribute as RodarmorRareSatsType) ||
-        Satributes.includes(satribute as SatributesType),
-    ) as RareSatsType[];
+    const supportedSatributes = satRange.satributes.filter(isApiSatributeKnown);
 
     const rangeWithUnsupportedSatsAndWithoutInscriptions = !satRange.inscriptions.length && !supportedSatributes.length;
     // if range has no inscriptions and only unsupported satributes, we skip it

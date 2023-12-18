@@ -41,4 +41,5 @@ export type { SupportedCurrency } from './currency';
 export * from './error';
 export * from './mixpanel';
 export * from './network';
+export * from './storage';
 export * from './wallet';

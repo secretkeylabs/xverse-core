@@ -1,5 +1,12 @@
+import { getAddressInfo } from 'bitcoin-address-validation';
+import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
+import { encode } from 'varuint-bitcoin';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import { bip0322Hash } from '../connect/bip322Signature';
+import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { Recipient } from '../transactions/btc';
+import { InputToSign } from '../transactions/psbt';
 import { NetworkType, UTXO } from '../types';
 import {
   getCoinType,
@@ -7,14 +14,8 @@ import {
   getPublicKeyFromXpubAtIndex,
   getTaprootAccountDataFromXpub,
 } from './helper';
+import { createMixedPsbt, createNativeSegwitPsbt, createTaprootPsbt, getTransactionData } from './transaction';
 import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
-import { getTransactionData, createNativeSegwitPsbt, createTaprootPsbt, createMixedPsbt } from './transaction';
-import { Psbt, Transaction } from 'bitcoinjs-lib';
-import { bip0322Hash } from '../connect/bip322Signature';
-import { encode } from 'varuint-bitcoin';
-import { InputToSign } from '../transactions/psbt';
-import { getAddressInfo } from 'bitcoin-address-validation';
-import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 
 /**
  * This function is used to get the native segwit account data from the ledger
@@ -102,12 +103,14 @@ export async function importTaprootAccountFromLedger({
 
 export async function signLedgerNativeSegwitBtcTransaction({
   transport,
+  esploraProvider,
   network,
   addressIndex,
   recipients,
   feeRate,
 }: {
   transport: Transport;
+  esploraProvider: EsploraApiProvider;
   network: NetworkType;
   addressIndex: number;
   recipients: Recipient[];
@@ -130,7 +133,13 @@ export async function signLedgerNativeSegwitBtcTransaction({
     witnessScript,
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(network, senderAddress, recipients, feeRate);
+  const { selectedUTXOs, changeValue } = await getTransactionData(
+    esploraProvider,
+    network,
+    senderAddress,
+    recipients,
+    feeRate,
+  );
 
   const inputDerivation: Bip32Derivation = {
     path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
@@ -169,12 +178,14 @@ export async function signLedgerNativeSegwitBtcTransaction({
  * */
 export async function signLedgerTaprootBtcTransaction({
   transport,
+  esploraProvider,
   network,
   addressIndex,
   recipients,
   btcAddress,
 }: {
   transport: Transport;
+  esploraProvider: EsploraApiProvider;
   network: NetworkType;
   addressIndex: number;
   recipients: Recipient[];
@@ -197,7 +208,7 @@ export async function signLedgerTaprootBtcTransaction({
     taprootScript,
   } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
-  const { selectedUTXOs, changeValue } = await getTransactionData(network, btcAddress, recipients);
+  const { selectedUTXOs, changeValue } = await getTransactionData(esploraProvider, network, btcAddress, recipients);
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: TapBip32Derivation = {
@@ -239,6 +250,7 @@ export async function signLedgerTaprootBtcTransaction({
 
 export async function* signLedgerMixedBtcTransaction({
   transport,
+  esploraProvider,
   network,
   addressIndex,
   recipients,
@@ -246,6 +258,7 @@ export async function* signLedgerMixedBtcTransaction({
   ordinalUtxo,
 }: {
   transport: Transport;
+  esploraProvider: EsploraApiProvider;
   network: NetworkType;
   addressIndex: number;
   recipients: Recipient[];
@@ -270,6 +283,7 @@ export async function* signLedgerMixedBtcTransaction({
   } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, network);
 
   const { selectedUTXOs, changeValue, ordinalUtxoInPaymentAddress } = await getTransactionData(
+    esploraProvider,
     network,
     senderAddress,
     recipients,

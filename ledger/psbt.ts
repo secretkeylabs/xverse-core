@@ -18,6 +18,7 @@ const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
 const embellishNativeSegwitInputs = async (
   transaction: btc.Transaction,
   publicKey: string,
+  esploraProvider: EsploraProvider,
   network: NetworkType,
   addressIndex: number,
   masterFingerPrint: string,
@@ -39,7 +40,6 @@ const embellishNativeSegwitInputs = async (
     const input = transaction.getInput(i);
     if (areByteArraysEqual(input.witnessUtxo?.script, p2wpkh.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
-        const esploraProvider = new EsploraProvider({ network: network });
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
         transaction.updateInput(i, {
           nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
@@ -115,6 +115,7 @@ const getIoTotals = (txn: btc.Transaction) => {
 
 export async function signLedgerPSBT({
   transport,
+  esploraProvider,
   network,
   addressIndex,
   psbtInputBase64,
@@ -123,6 +124,7 @@ export async function signLedgerPSBT({
   nativeSegwitPubKey,
 }: {
   transport: Transport;
+  esploraProvider: EsploraProvider;
   network: NetworkType;
   addressIndex: number;
   psbtInputBase64: string;
@@ -139,6 +141,7 @@ export async function signLedgerPSBT({
   const masterFingerPrint = await app.getMasterFingerprint();
 
   const { inputTotal, outputTotal } = getIoTotals(txn);
+  let addedPaddingInput = false;
 
   if (inputTotal < outputTotal) {
     // There is a bug in Ledger that if the inputs are greater than the outputs, then it will fail to sign
@@ -151,9 +154,19 @@ export async function signLedgerPSBT({
         amount: outputTotal - inputTotal,
       },
     });
+    addedPaddingInput = true;
   }
 
-  if (await embellishNativeSegwitInputs(txn, nativeSegwitPubKey, network, addressIndex, masterFingerPrint)) {
+  if (
+    await embellishNativeSegwitInputs(
+      txn,
+      nativeSegwitPubKey,
+      esploraProvider,
+      network,
+      addressIndex,
+      masterFingerPrint,
+    )
+  ) {
     const psbt = txn.toPSBT(0);
     const psbtBase64 = base64.encode(psbt);
 
@@ -191,6 +204,12 @@ export async function signLedgerPSBT({
         tapKeySig: signature[1].signature,
       });
     }
+  }
+
+  if (addedPaddingInput) {
+    // We inserted a dummy input to get around a Ledger bug, so we need to remove it
+    // @ts-expect-error: Expected error as inputs are private, but this is the only way to remove the input
+    txn.inputs.pop();
   }
 
   if (finalize) {
