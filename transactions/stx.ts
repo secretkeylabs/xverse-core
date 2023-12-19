@@ -250,7 +250,7 @@ export async function generateUnsignedContractCall(
   try {
     const unsigned = await makeUnsignedContractCall(txOptions);
     // we're getting really high estimated fees from the function, so need to cap at a max threshold
-    capStxFeeAtThreshold(unsigned);
+    await capStxFeeAtThreshold(unsigned);
     return unsigned;
   } catch (err) {
     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
