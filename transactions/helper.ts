@@ -223,8 +223,8 @@ export const createDeployContractRequest = async (
   };
 };
 
-export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction) => {
-  const feeMultipliers = await fetchAppInfo('Mainnet'); // TODO network
+export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction, network: StacksNetwork) => {
+  const feeMultipliers = await fetchAppInfo(network.isMainnet() ? 'Mainnet' : 'Testnet');
   const fee = getFee(unsignedTx.auth);
   if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
     unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
