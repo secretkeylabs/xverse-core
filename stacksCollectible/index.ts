@@ -1,60 +1,52 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
-import { BNS_CONTRACT_ID } from '../constant';
-import { NftCollectionData, NftDetailResponse, NftEventsResponse, NonFungibleToken } from 'types';
-import { getNftDetail, getNftsCollectionData } from '../api/gamma';
+import { getNftsCollectionData } from '../api/gamma';
 import { getNftsData } from '../api/stacks';
+import { BNS_CONTRACT_ID } from '../constant';
 import { microstacksToStx } from '../currency';
-import { getCacheValue, setCacheValue } from './stacksCollectionCache';
+import { NftCollectionData, NftEventsResponse, NonFungibleToken, NonFungibleTokenApiResponse } from '../types';
 
 export interface StacksCollectionData {
   collection_id: string | null;
   collection_name: string | null;
-  total_nft: number;
-  thumbnail_nfts: Array<NonFungibleToken>; //stores a max of four nfts
-  all_nfts: Array<NonFungibleToken>; //stores entire list of nft in collection
+  all_nfts: NonFungibleToken[]; //stores entire list of nft in collection
   floor_price?: number;
 }
 export interface StacksCollectionList {
-  offset: number;
-  limit: number;
-  total: number;
   total_nfts: number;
-  results: Array<StacksCollectionData>;
+  results: StacksCollectionData[];
 }
 
 export async function getAllNftContracts(
   address: string,
   network: StacksNetwork,
   limit: number,
-): Promise<NonFungibleToken[]> {
-  const listofContracts: Array<NonFungibleToken> = [];
+): Promise<NonFungibleTokenApiResponse[]> {
+  const listofContracts: NonFungibleTokenApiResponse[] = [];
 
-  //make initial call to get the total inscriptions count and limit
+  // make initial call to get the total inscriptions count and limit
   let offset = 0;
   const response = await getNftsData(address, network, offset, limit);
   const total = response.total;
   offset += limit;
   listofContracts.push(...response.results);
 
-  let listofContractPromises: Array<Promise<NftEventsResponse>> = [];
+  let listofContractPromises: Promise<NftEventsResponse>[] = [];
 
   // Make API calls in parallel to speed up fetching data
   while (offset < total) {
-    // Add new promise to the array
     listofContractPromises.push(getNftsData(address, network, offset, limit));
     offset += limit;
 
-    // When we have 4 promises, or when we are processing the last batch
-    if (listofContractPromises.length === 4 || offset >= total) {
-      // Await the promises we have collected so far
+    if (listofContractPromises.length === 4) {
+      // await promises in batches of 4
       const resolvedPromises = await Promise.all(listofContractPromises);
-      // Push their results into the list of contracts
+
       resolvedPromises.forEach((resolvedPromise) => {
         listofContracts.push(...resolvedPromise.results);
       });
-      // Reset the promises array for the next batch
+
       listofContractPromises = [];
     }
   }
@@ -69,103 +61,97 @@ export async function getAllNftContracts(
   return listofContracts;
 }
 
-async function fetchBatchData(batch: Array<NonFungibleToken>, collectionRecord: Record<string, StacksCollectionData>) {
-  const nftDetailPromises: Array<Promise<NftDetailResponse>> = [];
-  const collectionDataPromises: Array<Promise<NftCollectionData | undefined>> = [];
-  const nftArray: Array<NonFungibleToken> = [];
+async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
+  const collectionDataPromises: Promise<NftCollectionData | undefined>[] = [];
+  const collectionDataPromiseMap: Record<string, Promise<NftCollectionData | undefined>> = {};
+  const nftArray: NonFungibleToken[] = [];
 
-  batch.forEach((nft) => {
+  for (const nft of nfts) {
     const principal: string[] = nft.asset_identifier?.split('::');
     const contractInfo: string[] = principal[0]?.split('.');
     const contractId = principal[0];
 
-    if (contractInfo[1] === 'bns') {
-      // no further data required for BNS, arrange into collection
-      // currently stacks only supports 1 bns name per address
-      const bnsCollection: StacksCollectionData = {
-        collection_id: contractId,
-        collection_name: 'BNS Names',
-        total_nft: 1,
-        thumbnail_nfts: [nft],
-        all_nfts: [nft],
-      };
-      collectionRecord.bns = bnsCollection;
-    } else {
-      nftDetailPromises.push(getNftDetail(nft.value.repr.replace('u', ''), contractInfo[0], contractInfo[1]));
-      collectionDataPromises.push(getNftsCollectionData(contractId));
-      nftArray.push(nft);
-    }
-  });
+    const tokenId = nft.value.repr.replace('u', '');
+    const contractAddress = contractInfo[0];
+    const contractName = contractInfo[1];
 
-  return { nftDetailPromises, collectionDataPromises, nftArray };
+    const nftData = {
+      ...nft,
+      identifier: {
+        tokenId,
+        contractName,
+        contractAddress,
+      },
+    };
+
+    if (!(contractId in collectionDataPromiseMap)) {
+      collectionDataPromiseMap[contractId] = getNftsCollectionData(contractId);
+    }
+
+    collectionDataPromises.push(collectionDataPromiseMap[contractId]);
+    nftArray.push(nftData);
+  }
+
+  const collectionData = await Promise.all(collectionDataPromises);
+
+  return { collectionData, nftArray };
 }
 
-function organizeNFTsIntoCollection(
-  collectionRecord: Record<string, StacksCollectionData>,
-  nftArray: Array<NonFungibleToken>,
-  nftDetailArray: Array<NftDetailResponse>,
+export function organizeNFTsIntoCollection(
+  nftArray: NonFungibleToken[],
   nftCollectionDataArray: Array<NftCollectionData | undefined>,
-): Record<string, StacksCollectionData> {
+) {
+  const organized: Record<string, StacksCollectionData> = {};
+
   for (let i = 0; i < nftArray.length; i++) {
     const nft = nftArray[i];
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
     const contractId = principal[0];
 
-    if (contractInfo[1] === 'bns') continue; //collection already assigned
+    if (contractInfo[1] === 'bns') {
+      // currently stacks only supports 1 bns name per address
+      organized.bns = {
+        collection_id: contractId,
+        collection_name: 'BNS Names',
+        all_nfts: [nft],
+      };
+      continue;
+    }
 
-    const nftDetail = nftDetailArray[i];
     const collectionData = nftCollectionDataArray[i];
 
-    if (nftDetail) nft.data = nftDetail.data;
-
-    //group NFTs into collections
-    if (collectionRecord[contractId]) {
-      const data = collectionRecord[contractId];
-
+    // group NFTs into collections
+    if (organized[contractId]) {
+      const data = organized[contractId];
       data.all_nfts.push(nft);
-      if (data.total_nft < 4) {
-        data?.thumbnail_nfts.push(nft);
-      }
-      data.total_nft += 1;
     } else {
-      collectionRecord[contractId] = {
+      organized[contractId] = {
         collection_id: contractId,
         collection_name: collectionData?.collection?.name ?? contractId,
-        total_nft: 1,
         all_nfts: [nft],
-        thumbnail_nfts: [nft],
         floor_price: collectionData?.collection?.floorItem?.price
           ? microstacksToStx(new BigNumber(collectionData?.collection?.floorItem?.price)).toNumber()
           : 0,
       };
     }
   }
-  return collectionRecord;
+
+  // sort and unique all_nfts
+  Object.values(organized).forEach((collection) => {
+    const map = new Map(collection.all_nfts.map((nft) => [nft.identifier.tokenId, nft]));
+    const sorted = Array.from(map.values()).sort((a, b) => (a.identifier.tokenId < b.identifier.tokenId ? -1 : 1));
+    collection.all_nfts = sorted;
+  });
+
+  return organized;
 }
 
 async function fetchNFTCollectionDetailsRecord(
-  nfts: NonFungibleToken[],
+  nfts: NonFungibleTokenApiResponse[],
 ): Promise<Record<string, StacksCollectionData>> {
-  let collectionRecord: Record<string, StacksCollectionData> = {};
-  const batchSize = 10;
-
-  for (let index = 0; index < nfts.length; index += batchSize) {
-    const batch = nfts.slice(index, index + batchSize);
-    const { nftDetailPromises, collectionDataPromises, nftArray } = await fetchBatchData(batch, collectionRecord);
-
-    const resolvedNftDetailPromises = await Promise.all(nftDetailPromises);
-    const resolvedCollectionDataPromises = await Promise.all(collectionDataPromises);
-
-    collectionRecord = organizeNFTsIntoCollection(
-      collectionRecord,
-      nftArray,
-      resolvedNftDetailPromises,
-      resolvedCollectionDataPromises,
-    );
-  }
-
-  return collectionRecord;
+  const { collectionData, nftArray } = await fetchNftData(nfts);
+  return organizeNFTsIntoCollection(nftArray, collectionData);
 }
 
 function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
@@ -174,51 +160,21 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
     //place bns collection at the bottom of nft list
     if (a.collection_id === BNS_CONTRACT_ID) return 1;
     else if (b.collection_id === BNS_CONTRACT_ID) return -1;
-    return b.total_nft - a.total_nft;
+    return b.all_nfts.length - a.all_nfts.length;
   });
 }
 
-async function checkCacheOrFetchNFTCollection(
-  stxAddress: string,
-  network: StacksNetwork,
-): Promise<StacksCollectionData[]> {
-  const cacheKey = `nft-collection-${stxAddress}`;
-  const cachedValue = getCacheValue(cacheKey);
-
-  if (cachedValue) {
-    // return data from in-memory cache
-    return cachedValue;
-  }
-
+export async function getNftCollections(stxAddress: string, network: StacksNetwork): Promise<StacksCollectionList> {
   const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
 
   const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
 
-  const nftCollectionList = Object.values(collectionRecord);
+  const nftCollectionList = sortNftCollectionList(Object.values(collectionRecord));
 
-  const sortedNftCollectionList = sortNftCollectionList(nftCollectionList);
-  //store in in-memory cache
-  setCacheValue(cacheKey, sortedNftCollectionList);
-
-  return sortedNftCollectionList;
-}
-
-export async function getNftCollections(
-  stxAddress: string,
-  network: StacksNetwork,
-  offset: number,
-  limit: number,
-): Promise<StacksCollectionList> {
-  const nftCollectionList = await checkCacheOrFetchNFTCollection(stxAddress, network);
-  const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.total_nft, 0);
-
-  const requiredSortedCollectionsData = nftCollectionList?.slice(offset, offset + limit);
+  const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
 
   return {
-    offset,
-    limit,
-    total: nftCollectionList.length,
     total_nfts,
-    results: requiredSortedCollectionsData,
+    results: nftCollectionList,
   };
 }

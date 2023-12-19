@@ -30,6 +30,9 @@ import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair } from '../utils/ecpair';
 import { ecPairToHexString } from './helper';
 
+export * from './encryptionUtils';
+export { hashMessage };
+
 export const derivationPaths = {
   [ChainID.Mainnet]: STX_PATH_WITHOUT_INDEX,
   [ChainID.Testnet]: STX_PATH_WITHOUT_INDEX,
@@ -164,7 +167,7 @@ export function getBitcoinDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -179,7 +182,7 @@ export function getSegwitDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -194,7 +197,7 @@ export function getTaprootDerivationPath({
   network,
 }: {
   account?: bigint;
-  index: bigint;
+  index: bigint | number;
   network: NetworkType;
 }) {
   const accountIndex = account ? account.toString() : '0';
@@ -279,9 +282,6 @@ export async function getStxAddressKeyChain(
   const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }
-
-export * from './encryptionUtils';
-export { hashMessage };
 
 export const validateBtcAddressIsTaproot = (btcAddress: string): boolean => {
   try {

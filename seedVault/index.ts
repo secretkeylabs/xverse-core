@@ -1,8 +1,4 @@
-export type StorageAdapter = {
-  get(key: string): Promise<string> | string | null;
-  set(key: string, value: string): Promise<void> | void;
-  remove(key: string): Promise<void> | void;
-};
+import { StorageAdapter } from '../types';
 
 export type CryptoUtilsAdapter = {
   encrypt(data: string, password: string): Promise<string>;
@@ -24,7 +20,7 @@ export enum SeedVaultStorageKeys {
   SEED_VAULT_VERSION = 'seedVaultVersion',
 }
 
-class SeedVault {
+export class SeedVault {
   private readonly _secureStorageAdapter: StorageAdapter;
 
   private readonly _cryptoUtilsAdapter: CryptoUtilsAdapter;

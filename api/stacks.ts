@@ -24,6 +24,7 @@ import {
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
+  NonFungibleTokenOld,
   StxAddressData,
   StxAddressDataResponse,
   StxMempoolResponse,
@@ -283,7 +284,7 @@ export async function getNftsData(
 export async function getNfts(stxAddress: string, network: StacksNetwork, offset: number): Promise<NftsListData> {
   const nfts = await getNftsData(stxAddress, network, offset);
 
-  for (const nft of nfts.results) {
+  for (const nft of nfts.results as NonFungibleTokenOld[]) {
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
 

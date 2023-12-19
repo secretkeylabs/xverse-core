@@ -1,17 +1,25 @@
-import axios from 'axios';
-import BitcoinEsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import axios, { isAxiosError } from 'axios';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
+import { OrdinalsApi } from '../api/ordinals/provider';
 import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
+  AddressBundleResponse,
   Brc20HistoryTransactionData,
   BtcOrdinal,
+  Bundle,
+  BundleSatRange,
   FungibleToken,
   HiroApiBrc20TxHistoryResponse,
   Inscription,
   InscriptionRequestResponse,
   NetworkType,
+  RareSatsType,
+  SatRangeInscription,
   UTXO,
+  UtxoBundleResponse,
   UtxoOrdinalBundle,
+  isApiSatributeKnown,
 } from '../types';
 import { parseBrc20TransactionData } from './helper';
 
@@ -43,32 +51,36 @@ const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   return 0;
 };
 
-export async function fetchBtcOrdinalsData(btcAddress: string, network: NetworkType): Promise<BtcOrdinal[]> {
-  const btcClient = new BitcoinEsploraApiProvider({
+export async function fetchBtcOrdinalsData(
+  btcAddress: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<BtcOrdinal[]> {
+  const xordClient = new OrdinalsApi({
     network,
   });
-  const addressUTXOs = await btcClient.getUnspentUtxos(btcAddress);
+
+  const [addressUTXOs, inscriptions] = await Promise.all([
+    esploraProvider.getUnspentUtxos(btcAddress),
+    xordClient.getAllInscriptions(btcAddress),
+  ]);
   const ordinals: BtcOrdinal[] = [];
 
-  await Promise.all(
-    addressUTXOs
-      .filter((utxo) => utxo.status.confirmed) // we can only detect ordinals from confirmed utxos
-      .map(async (utxo: UTXO) => {
-        const ordinalContentUrl = `${XVERSE_INSCRIBE_URL(network)}/v1/inscriptions/utxo/${utxo.txid}/${utxo.vout}`;
+  const utxoMap = addressUTXOs.reduce((acc, utxo) => {
+    acc[`${utxo.txid}:${utxo.vout}`] = utxo;
+    return acc;
+  }, {} as Record<string, UTXO>);
 
-        const ordinalIds = await axios.get<string[]>(ordinalContentUrl);
-
-        if (ordinalIds.data.length > 0) {
-          ordinalIds.data.forEach((ordinalId) => {
-            ordinals.push({
-              id: ordinalId,
-              confirmationTime: utxo.status.block_time || 0,
-              utxo,
-            });
-          });
-        }
-      }),
-  );
+  inscriptions.forEach((inscription) => {
+    const utxo = utxoMap[inscription.output];
+    if (utxo) {
+      ordinals.push({
+        id: inscription.id,
+        confirmationTime: utxo.status.block_time || 0,
+        utxo,
+      });
+    }
+  });
 
   return ordinals.sort(sortOrdinalsByConfirmationTime);
 }
@@ -103,11 +115,12 @@ export async function getTextOrdinalContent(network: NetworkType, inscriptionId:
     });
 }
 
-export async function getNonOrdinalUtxo(address: string, network: NetworkType): Promise<Array<UTXO>> {
-  const btcClient = new BitcoinEsploraApiProvider({
-    network,
-  });
-  const unspentOutputs = await btcClient.getUnspentUtxos(address);
+export async function getNonOrdinalUtxo(
+  address: string,
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+): Promise<Array<UTXO>> {
+  const unspentOutputs = await esploraProvider.getUnspentUtxos(address);
   const nonOrdinalOutputs: Array<UTXO> = [];
 
   for (let i = 0; i < unspentOutputs.length; i++) {
@@ -212,12 +225,6 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
   inscription.address === account.ordinalsAddress;
 
-export type AddressBundleResponse = {
-  total: number;
-  offset: number;
-  limit: number;
-  results: UtxoOrdinalBundle[];
-};
 export const getAddressUtxoOrdinalBundles = async (
   network: NetworkType,
   address: string,
@@ -243,7 +250,7 @@ export const getAddressUtxoOrdinalBundles = async (
   }
 
   const response = await axios.get<AddressBundleResponse>(
-    `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinal-utxo`,
+    `${XVERSE_API_BASE_URL(network)}/v2/address/${address}/ordinal-utxo`,
     {
       params,
     },
@@ -256,9 +263,121 @@ export const getUtxoOrdinalBundle = async (
   network: NetworkType,
   txid: string,
   vout: number,
-): Promise<UtxoOrdinalBundle> => {
-  const response = await axios.get<UtxoOrdinalBundle>(
-    `${XVERSE_API_BASE_URL(network)}/v1/ordinal-utxo/${txid}:${vout}`,
+): Promise<UtxoBundleResponse> => {
+  const response = await axios.get<UtxoBundleResponse>(
+    `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
   );
   return response.data;
+};
+
+export const getUtxoOrdinalBundleIfFound = async (
+  network: NetworkType,
+  txid: string,
+  vout: number,
+): Promise<UtxoBundleResponse | undefined> => {
+  try {
+    const data = await getUtxoOrdinalBundle(network, txid, vout);
+    return data;
+  } catch (e) {
+    // we don't reject on 404s because if the UTXO is not found,
+    // it is likely this is a UTXO from an unpublished txn.
+    // this is required for gamma.io purchase flow
+    if (!isAxiosError(e) || e.response?.status !== 404) {
+      // rethrow error if response was not 404
+      throw e;
+    }
+    return undefined;
+  }
+};
+
+export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
+  const generalBundleInfo = {
+    txid: apiBundle.txid,
+    vout: apiBundle.vout,
+    block_height: apiBundle.block_height,
+    value: apiBundle.value,
+  };
+
+  const commonUnknownRange: BundleSatRange = {
+    range: {
+      start: '0',
+      end: '0',
+    },
+    yearMined: 0,
+    block: 0,
+    offset: 0,
+    satributes: ['COMMON'],
+    inscriptions: [],
+    totalSats: apiBundle.value,
+  };
+
+  // if bundle has empty sat ranges, it means that it's a common/unknown bundle
+  if (!apiBundle.sat_ranges.length) {
+    return {
+      ...generalBundleInfo,
+      satRanges: [commonUnknownRange],
+      inscriptions: [],
+      satributes: [['COMMON']],
+      totalExoticSats: 0,
+    };
+  }
+
+  let totalExoticSats = 0;
+  let totalCommonUnknownInscribedSats = 0;
+  const satRanges: BundleSatRange[] = [];
+
+  apiBundle.sat_ranges.forEach((satRange) => {
+    const { year_mined: yearMined, ...satRangeProps } = satRange;
+
+    // filter out unsupported satributes
+    // filter is not able to infer the type of the array, so we need to cast it
+    const supportedSatributes = satRange.satributes.filter(isApiSatributeKnown);
+
+    const rangeWithUnsupportedSatsAndWithoutInscriptions = !satRange.inscriptions.length && !supportedSatributes.length;
+    // if range has no inscriptions and only unsupported satributes, we skip it
+    if (rangeWithUnsupportedSatsAndWithoutInscriptions) {
+      return;
+    }
+
+    // if range has inscribed sats of unsupported type or unknown, we map it to a common/unknown sat range
+    const satributes = !supportedSatributes.length ? (['COMMON'] as RareSatsType[]) : supportedSatributes;
+
+    const totalSats = Number(BigInt(satRange.range.end) - BigInt(satRange.range.start));
+
+    if (satributes.includes('COMMON')) {
+      totalCommonUnknownInscribedSats += totalSats;
+    } else {
+      totalExoticSats += totalSats;
+    }
+
+    const range = {
+      ...satRangeProps,
+      totalSats,
+      yearMined,
+      satributes,
+    };
+
+    satRanges.push(range);
+  });
+
+  // if totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value,
+  // it means that the bundle has common/unknown sats and we need to add a common/unknown sat range
+  const totalExoticSatsAndCommonUnknownInscribedSats = totalExoticSats + totalCommonUnknownInscribedSats;
+  if (totalExoticSatsAndCommonUnknownInscribedSats < apiBundle.value) {
+    satRanges.push({
+      ...commonUnknownRange,
+      totalSats: apiBundle.value - totalExoticSatsAndCommonUnknownInscribedSats,
+    });
+  }
+
+  const inscriptions = satRanges.reduce((acc, curr) => [...acc, ...curr.inscriptions], [] as SatRangeInscription[]);
+  const satributes = satRanges.reduce((acc, curr) => [...acc, curr.satributes], [] as RareSatsType[][]);
+
+  return {
+    ...generalBundleInfo,
+    satRanges,
+    inscriptions,
+    satributes,
+    totalExoticSats,
+  };
 };

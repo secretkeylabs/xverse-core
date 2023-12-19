@@ -76,6 +76,7 @@ export function parseOrdinalsBtcTransactions(
     total,
     fees: responseTx.fee,
     size: responseTx.size,
+    weight: responseTx.weight,
     confirmed: responseTx.status.confirmed,
     inputs: responseTx.vin,
     outputs: responseTx.vout,
@@ -138,6 +139,7 @@ export function parseBtcTransactionData(
     total,
     fees: responseTx.fee,
     size: responseTx.size,
+    weight: responseTx.weight,
     confirmed: responseTx.status.confirmed,
     inputs: responseTx.vin,
     outputs: responseTx.vout,
@@ -383,7 +385,7 @@ export const getNetworkURL = (network: StacksNetwork): string => {
 };
 
 export function getFetchableUrl(uri: string, protocol: string): string | null {
-  const publicIpfs = 'https://cf-ipfs.com/ipfs';
+  const publicIpfs = 'https://gamma.mypinata.cloud/ipfs';
   if (protocol === 'http') return uri;
   if (protocol === 'ipfs') {
     const url = uri.split('//');

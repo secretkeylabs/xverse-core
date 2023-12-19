@@ -1,6 +1,7 @@
 import { StacksTransaction } from '@stacks/transactions';
 import axios, { AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
+import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   AppInfo,
@@ -204,8 +205,12 @@ export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
     .catch(handleAxiosError);
 }
 
-export async function getOrdinalsByAddress(network: NetworkType, ordinalsAddress: string) {
-  return fetchBtcOrdinalsData(ordinalsAddress, network);
+export async function getOrdinalsByAddress(
+  esploraProvider: EsploraApiProvider,
+  network: NetworkType,
+  ordinalsAddress: string,
+) {
+  return fetchBtcOrdinalsData(ordinalsAddress, esploraProvider, network);
 }
 
 export async function getOrdinalInfo(network: NetworkType, ordinalId: string): Promise<OrdinalInfo> {

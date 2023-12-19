@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, Method } from 'axios';
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, XORD_URL } from '../../constant';
-import * as ordinalsType from '../../types/api/ordinals';
+import { Inscription, InscriptionsList } from '../../types/api/ordinals';
 import { NetworkType } from '../../types/network';
 import { OrdinalsApiProvider } from './types';
 
@@ -14,9 +14,7 @@ const API_PREFIX = '/ordinals/v1/';
 // if we fallback to hiro, we'll use it at maximum this many times before trying the other API
 const MAX_FALLBACK_CALLS = 10;
 
-export default class OrdinalsApi implements OrdinalsApiProvider {
-  private network: NetworkType;
-
+export class OrdinalsApi implements OrdinalsApiProvider {
   private customClient?: AxiosInstance;
 
   private hiroClient!: AxiosInstance;
@@ -27,7 +25,6 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
 
   constructor(options: OrdinalsApiProviderOptions) {
     const { url, network } = options;
-    this.network = network;
 
     if (url) {
       this.customClient = axios.create({
@@ -111,7 +108,7 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
     }
   }
 
-  async getInscriptions(address: string, offset: number, limit: number): Promise<ordinalsType.InscriptionsList> {
+  async getInscriptions(address: string, offset: number, limit: number): Promise<InscriptionsList> {
     const url = 'inscriptions';
     const params = {
       address,
@@ -119,14 +116,32 @@ export default class OrdinalsApi implements OrdinalsApiProvider {
       limit,
     };
 
-    const data = await this.httpCall<ordinalsType.InscriptionsList>('get', url, { params });
+    const data = await this.httpCall<InscriptionsList>('get', url, { params });
 
     return data;
   }
 
-  async getInscription(inscriptionId: string): Promise<ordinalsType.Inscription> {
+  async getAllInscriptions(address: string): Promise<Inscription[]> {
+    const allInscriptions: Inscription[] = [];
+
+    let offset = 0;
+    let limit = 60;
+
+    let inscriptions: InscriptionsList = await this.getInscriptions(address, offset, limit);
+    limit = inscriptions.limit;
+
+    while (inscriptions.results.length > 0) {
+      allInscriptions.push(...inscriptions.results);
+      offset += limit;
+      inscriptions = await this.getInscriptions(address, offset, limit);
+    }
+
+    return allInscriptions;
+  }
+
+  async getInscription(inscriptionId: string): Promise<Inscription> {
     const url = `inscriptions/${inscriptionId}`;
-    const inscription = await this.httpCall<ordinalsType.Inscription>('get', url);
+    const inscription = await this.httpCall<Inscription>('get', url);
     return inscription;
   }
 }
