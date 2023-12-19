@@ -52,6 +52,7 @@ import {
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import { fetchAppInfo } from '../api';
 
 export interface StacksRecipient {
   address: string;
@@ -337,7 +338,14 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
     const fee = await estimateContractCallFees(unsignedTx, network);
-    setFee(unsignedTx, fee);
+
+    // TODO remove this workaround which caps the fees at high threshold
+    const feeMultipliers = await fetchAppInfo('Mainnet');
+    if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
+      unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
+    } else {
+      unsignedTx.setFee(fee);
+    }
 
     // bump nonce by number of pending transactions
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
