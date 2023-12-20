@@ -42,6 +42,11 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
     };
   }
 
+  async getAddressData(address: string) {
+    const data = await this.httpGet<BtcAddressBalanceResponse>(`/address/${address}`);
+    return data;
+  }
+
   async getUnspentUtxos(address: string): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
     const data = await this.httpGet<esplora.UTXO[]>(`/address/${address}/utxo`);
 
