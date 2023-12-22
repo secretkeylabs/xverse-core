@@ -8,6 +8,7 @@ import {
   deserializeStacksMessage,
   FungibleConditionCode,
   FungiblePostCondition,
+  getFee,
   hexToCV,
   makeStandardFungiblePostCondition,
   makeStandardNonFungiblePostCondition,
@@ -15,9 +16,10 @@ import {
   PostCondition,
   PostConditionType,
   StacksMessageType,
+  StacksTransaction,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
+import { fetchAppInfo, fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
 import { Coin, FeesMultipliers, FungibleToken, PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce, setNonce } from './stx';
@@ -219,4 +221,12 @@ export const createDeployContractRequest = async (
     contractName,
     sponsored,
   };
+};
+
+export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction, network: StacksNetwork) => {
+  const feeMultipliers = await fetchAppInfo(network.isMainnet() ? 'Mainnet' : 'Testnet');
+  const fee = getFee(unsignedTx.auth);
+  if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
+    unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
+  }
 };
