@@ -253,12 +253,18 @@ describe('applySendBtcActionsAndFee', () => {
           outpoint: 'f00d:0',
           utxo: {
             value: 1000,
+            status: {
+              confirmed: true,
+            },
           },
         },
         {
           outpoint: 'f00d:3',
           utxo: {
             value: 10000,
+            status: {
+              confirmed: true,
+            },
           },
         },
       ],
@@ -273,6 +279,9 @@ describe('applySendBtcActionsAndFee', () => {
       outpoint: 'f00d:3',
       utxo: {
         value: 10000,
+        status: {
+          confirmed: true,
+        },
       },
     };
 
@@ -316,12 +325,18 @@ describe('applySendBtcActionsAndFee', () => {
           outpoint: 'f00d:0',
           utxo: {
             value: 1000,
+            status: {
+              confirmed: true,
+            },
           },
         },
         {
           outpoint: 'f00d:3',
           utxo: {
             value: 10000,
+            status: {
+              confirmed: true,
+            },
           },
         },
       ],
@@ -336,12 +351,18 @@ describe('applySendBtcActionsAndFee', () => {
       outpoint: 'f00d:3',
       utxo: {
         value: 990,
+        status: {
+          confirmed: true,
+        },
       },
     };
     const dummyUtxo = {
       outpoint: 'f00d:3',
       utxo: {
         value: 10000,
+        status: {
+          confirmed: true,
+        },
       },
     };
 
@@ -385,12 +406,18 @@ describe('applySendBtcActionsAndFee', () => {
           outpoint: 'f00d:0',
           utxo: {
             value: 1000,
+            status: {
+              confirmed: true,
+            },
           },
         },
         {
           outpoint: 'f00d:3',
           utxo: {
             value: 10000,
+            status: {
+              confirmed: true,
+            },
           },
         },
       ],
@@ -405,12 +432,18 @@ describe('applySendBtcActionsAndFee', () => {
       outpoint: 'f00d:3',
       utxo: {
         value: 990,
+        status: {
+          confirmed: true,
+        },
       },
     };
     const dummyUtxo = {
       outpoint: 'f00d:3',
       utxo: {
         value: 10000,
+        status: {
+          confirmed: true,
+        },
       },
     };
 
@@ -454,6 +487,9 @@ describe('applySendBtcActionsAndFee', () => {
           outpoint: 'f00d:3',
           utxo: {
             value: 10000,
+            status: {
+              confirmed: true,
+            },
           },
         },
       ],
@@ -468,12 +504,18 @@ describe('applySendBtcActionsAndFee', () => {
       outpoint: 'f00d:3',
       utxo: {
         value: 990,
+        status: {
+          confirmed: true,
+        },
       },
     };
     const dummyUtxo = {
       outpoint: 'f00d:3',
       utxo: {
         value: 10000,
+        status: {
+          confirmed: true,
+        },
       },
     };
 

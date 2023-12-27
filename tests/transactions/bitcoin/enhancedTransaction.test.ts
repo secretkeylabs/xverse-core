@@ -243,9 +243,14 @@ describe('EnhancedTransaction summary', () => {
       {
         address: 'myAddress',
         utxo: { value: 100 },
-        getBundleData: vi.fn().mockResolvedValueOnce({
+        getBundleData: vi.fn().mockResolvedValue({
           sat_ranges: [
-            { offset: 0, range: { start: 1000, end: 1001 }, inscriptions: [{ id: 'inscriptionId' }], satributes: [] },
+            {
+              offset: 0,
+              range: { start: 1000, end: 1001 },
+              inscriptions: [{ id: 'inscriptionId', content_type: 'image', inscription_number: 1 }],
+              satributes: [],
+            },
             { offset: 1, range: { start: 1001, end: 1100 }, inscriptions: [], satributes: ['PIZZA'] },
           ],
         }),
@@ -265,13 +270,18 @@ describe('EnhancedTransaction summary', () => {
       {
         address: 'myAddress',
         utxo: { value: 2000 },
-        getBundleData: vi.fn().mockResolvedValueOnce({
+        getBundleData: vi.fn().mockResolvedValue({
           sat_ranges: [
-            { offset: 0, range: { start: 100, end: 101 }, inscriptions: [{ id: 'inscriptionId2' }], satributes: [] },
+            {
+              offset: 0,
+              range: { start: 100, end: 101 },
+              inscriptions: [{ id: 'inscriptionId2', inscription_number: 2, content_type: 'text' }],
+              satributes: [],
+            },
             {
               offset: 1000,
               range: { start: 201, end: 202 },
-              inscriptions: [{ id: 'inscriptionId3' }],
+              inscriptions: [{ id: 'inscriptionId3', inscription_number: 3, content_type: 'text' }],
               satributes: [],
             },
             {
@@ -302,28 +312,33 @@ describe('EnhancedTransaction summary', () => {
       {
         address: 'myAddress',
         utxo: { value: 1000 },
-        getBundleData: vi.fn().mockResolvedValueOnce({
+        getBundleData: vi.fn().mockResolvedValue({
           sat_ranges: [
-            { offset: 0, range: { start: 100, end: 101 }, inscriptions: [{ id: 'inscriptionId4' }], satributes: [] },
+            {
+              offset: 0,
+              range: { start: 100, end: 101 },
+              inscriptions: [{ id: 'inscriptionId4', inscription_number: 4, content_type: 'video' }],
+              satributes: [],
+            },
           ],
         }),
       } as any,
       {
         address: 'myAddress',
         utxo: { value: 1000 },
-        getBundleData: vi.fn().mockResolvedValueOnce({
+        getBundleData: vi.fn().mockResolvedValue({
           sat_ranges: [],
         }),
       } as any,
       {
         address: 'myAddress',
         utxo: { value: 2000 },
-        getBundleData: vi.fn().mockResolvedValueOnce({
+        getBundleData: vi.fn().mockResolvedValue({
           sat_ranges: [
             {
               offset: 100,
               range: { start: 800, end: 801 },
-              inscriptions: [{ id: 'inscriptionId5' }],
+              inscriptions: [{ id: 'inscriptionId5', inscription_number: 5, content_type: 'json' }],
               satributes: [],
             },
             {
@@ -349,8 +364,14 @@ describe('EnhancedTransaction summary', () => {
           address: 'address4',
           amount: 2500,
         },
+        {
+          address: 'myAddress',
+          amount: 1000,
+        },
       ],
       actualFee: 500n,
+      actualFeeRate: 50,
+      effectiveFeeRate: 50,
     });
 
     // ==========================
@@ -361,8 +382,29 @@ describe('EnhancedTransaction summary', () => {
     expect(summary).toEqual({
       fee: 500n,
       feeRate: 50,
+      effectiveFeeRate: 50,
       vsize: 10, // size of an empty txn
-      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({ extendedUtxo: i, sigHash: 1 })),
+      inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({
+        extendedUtxo: i,
+        sigHash: 1,
+        inscriptions: i.getBundleData.mock.results[0].value.sat_ranges.flatMap((s: any) =>
+          s.inscriptions.map((insc: any) => ({
+            contentType: insc.content_type,
+            fromAddress: 'myAddress',
+            id: insc.id,
+            number: insc.inscription_number,
+            offset: s.offset,
+          })),
+        ),
+        satributes: i.getBundleData.mock.results[0].value.sat_ranges
+          .map((sr: any) => ({
+            types: sr.satributes,
+            amount: sr.range.end - sr.range.start,
+            offset: sr.offset,
+            fromAddress: 'myAddress',
+          }))
+          .filter((s: any) => s.types.length > 0),
+      })),
       outputs: [
         {
           address: 'address1',
@@ -372,6 +414,8 @@ describe('EnhancedTransaction summary', () => {
               id: 'inscriptionId',
               offset: 0,
               fromAddress: 'myAddress',
+              number: 1,
+              contentType: 'image',
             },
           ],
           satributes: [
@@ -391,22 +435,32 @@ describe('EnhancedTransaction summary', () => {
               id: 'inscriptionId2',
               offset: 0,
               fromAddress: 'myAddress',
+              number: 2,
+              contentType: 'text',
             },
           ],
-          satributes: [
-            {
-              amount: 99,
-              offset: 1001,
-              types: ['VINTAGE'],
-              fromAddress: 'myAddress',
-            },
-          ],
+          satributes: [],
         },
         {
           address: 'address3',
           amount: 1000,
-          inscriptions: [],
-          satributes: [],
+          inscriptions: [
+            {
+              id: 'inscriptionId3',
+              offset: 0,
+              fromAddress: 'myAddress',
+              number: 3,
+              contentType: 'text',
+            },
+          ],
+          satributes: [
+            {
+              amount: 999,
+              offset: 1,
+              types: ['VINTAGE'],
+              fromAddress: 'myAddress',
+            },
+          ],
         },
         {
           address: 'address4',
@@ -416,11 +470,15 @@ describe('EnhancedTransaction summary', () => {
               id: 'inscriptionId4',
               offset: 0,
               fromAddress: 'myAddress',
+              number: 4,
+              contentType: 'video',
             },
             {
               id: 'inscriptionId5',
               offset: 2100,
               fromAddress: 'myAddress',
+              number: 5,
+              contentType: 'json',
             },
           ],
           satributes: [
@@ -430,19 +488,26 @@ describe('EnhancedTransaction summary', () => {
               types: ['VINTAGE', 'ALPHA'],
               fromAddress: 'myAddress',
             },
-            {
-              amount: 100,
-              offset: 3800,
-              types: ['VINTAGE', 'ALPHA', 'BLOCK9'],
-              fromAddress: 'myAddress',
-            },
           ],
+        },
+        {
+          address: 'myAddress',
+          amount: 1000,
+          inscriptions: [],
+          satributes: [],
         },
       ],
       feeOutput: {
         amount: 500,
         inscriptions: [],
-        satributes: [],
+        satributes: [
+          {
+            amount: 100,
+            offset: 300,
+            types: ['VINTAGE', 'ALPHA', 'BLOCK9'],
+            fromAddress: 'myAddress',
+          },
+        ],
       },
     });
 

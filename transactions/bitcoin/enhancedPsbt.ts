@@ -10,7 +10,7 @@ import {
   TransactionOutput,
   TransactionScriptOutput,
 } from './types';
-import { extractOutputInscriptionsAndSatributes } from './utils';
+import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -152,8 +152,12 @@ export class EnhancedPsbt {
       };
     }
 
+    const enhancedInputs: EnhancedInput[] = await Promise.all(
+      inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
+    );
+
     return {
-      inputs,
+      inputs: enhancedInputs,
       outputs,
       feeOutput,
       hasSigHashNone,
@@ -162,12 +166,40 @@ export class EnhancedPsbt {
 
   async getSignedPsbtBase64(options: PSBTCompilationOptions = {}): Promise<string> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
+    let addedPaddingInput = false;
+
+    if (options.ledgerTransport) {
+      // ledger has a bug where it doesn't sign if the inputs spend more than the outputs
+      // so we add an extra input to cover the diff and then remove it after signing
+      const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+      if (inputValue < outputValue) {
+        // There is a bug in Ledger that if the inputs are greater than the outputs, then it will fail to sign
+        // Their workaround is to add a dummy input that is not related to the Ledger addresses
+        transaction.addInput({
+          txid: '0000000000000000000000000000000000000000000000000000000000000000',
+          index: 0,
+          witnessUtxo: {
+            script: Buffer.alloc(0),
+            amount: outputValue - inputValue,
+          },
+        });
+        addedPaddingInput = true;
+      }
+    }
+
     await this._context.signTransaction(transaction, options);
+
+    if (addedPaddingInput) {
+      // We inserted a dummy input to get around a Ledger bug, so we need to remove it
+      // @ts-expect-error: Expected error as inputs are private, but this is the only way to remove the input
+      transaction.inputs.pop();
+    }
 
     if (options.finalize) {
       transaction.finalize();
     }
 
-    return base64.encode(transaction.toPSBT(transaction.opts.PSBTVersion));
+    return base64.encode(transaction.toPSBT());
   }
 }
