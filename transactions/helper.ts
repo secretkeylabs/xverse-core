@@ -2,7 +2,8 @@ import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   AssetInfo,
-  BufferReader,
+  Authorization,
+  BytesReader,
   createAssetInfo,
   deserializeCV,
   deserializeStacksMessage,
@@ -43,7 +44,7 @@ export function makeNonFungiblePostCondition(options: PostConditionsOptions): Po
   const assetInfo: AssetInfo = createAssetInfo(contractAddress, contractName, assetName);
   return makeStandardNonFungiblePostCondition(
     stxAddress,
-    NonFungibleConditionCode.DoesNotOwn,
+    NonFungibleConditionCode.Sends,
     assetInfo,
     hexToCV(amount.toString()),
   );
@@ -112,7 +113,7 @@ export const extractFromPayload = (payload: any) => {
     ? (postConditions?.map(
         (arg: string) =>
           deserializeStacksMessage(
-            new BufferReader(hexStringToBuffer(arg)),
+            new BytesReader(hexStringToBuffer(arg)),
             StacksMessageType.PostCondition,
           ) as PostCondition,
       ) as PostCondition[])
@@ -194,6 +195,7 @@ export const createDeployContractRequest = async (
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
   walletAddress: string,
+  auth?: Authorization,
 ) => {
   const { codeBody, contractName, postConditionMode } = payload;
   const { postConds } = extractFromPayload(payload);
@@ -213,6 +215,9 @@ export const createDeployContractRequest = async (
   const { fee } = contractDeployTx.auth.spendingCondition;
   if (feeMultipliers) {
     contractDeployTx.setFee(fee * BigInt(feeMultipliers.otherTxMultiplier));
+  }
+  if (auth) {
+    contractDeployTx.auth = auth;
   }
 
   return {
