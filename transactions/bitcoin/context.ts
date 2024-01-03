@@ -80,6 +80,44 @@ export class ExtendedUtxo {
     });
   }
 
+  /**
+   * If the underlying UTXO is unconfirmed, this method will return the total fee and vsize of the unconfirmed chain
+   */
+  async getUnconfirmedUtxoFeeData(): Promise<{ totalVsize: number; totalFee: number }> {
+    if (this.utxo.status.confirmed) {
+      return {
+        totalVsize: 0,
+        totalFee: 0,
+      };
+    }
+
+    const txidsToTest = [this.utxo.txid];
+
+    let totalVsize = 0;
+    let totalFee = 0;
+
+    while (txidsToTest.length > 0) {
+      const toTestInThisRound = txidsToTest.splice(0, 10); // we get 10 txns at a time to avoid DDOSing the API
+      const txns = await Promise.all(toTestInThisRound.map(this._esploraApiProvider.getTransaction));
+
+      for (const tx of txns) {
+        if (tx.status.confirmed) {
+          continue;
+        }
+
+        totalVsize += tx.weight / 4;
+        totalFee += tx.fee;
+
+        txidsToTest.push(...tx.vin.map((vin) => vin.txid));
+      }
+    }
+
+    return {
+      totalVsize,
+      totalFee,
+    };
+  }
+
   async getBundleData(): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> {
     if (!this._bundleData) {
       const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
@@ -311,11 +349,6 @@ export class P2shAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2sh.script,
@@ -323,6 +356,7 @@ export class P2shAddressContext extends AddressContext {
           },
           redeemScript: p2sh.redeemScript,
           witnessScript: p2sh.witnessScript,
+          nonWitnessUtxo: undefined,
         });
       }
     }
@@ -388,16 +422,12 @@ export class P2wpkhAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2wpkh.script,
             amount: input.witnessUtxo?.amount ?? 0n,
           },
+          nonWitnessUtxo: undefined,
         });
       }
     }
@@ -546,17 +576,13 @@ export class P2trAddressContext extends AddressContext {
     for (let i = 0; i < transaction.inputsLength; i++) {
       const input = transaction.getInput(i);
       if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        // JS allows access to private variables though it's not ideal. nonWitnessUtxo is not updatable from the api
-        // this is a bug in scure signer. Will be fixed once the version after 1.1.0 is released
-        // TODO: Update once released
-        // @ts-expect-error: accessing private property.
-        delete transaction.inputs[i].nonWitnessUtxo;
         transaction.updateInput(i, {
           witnessUtxo: {
             script: p2tr.script,
             amount: input.witnessUtxo?.amount ?? 0n,
           },
           tapInternalKey: p2tr.tapInternalKey,
+          nonWitnessUtxo: undefined,
         });
       }
     }
@@ -756,7 +782,7 @@ export class TransactionContext {
 
     await this.signTransaction(txn, options);
 
-    const psbt = txn.toPSBT(txn.opts.PSBTVersion);
+    const psbt = txn.toPSBT();
     const psbtBase64Signed = base64.encode(psbt);
 
     return psbtBase64Signed;

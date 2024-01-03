@@ -1,5 +1,4 @@
 import { SigHash, Transaction } from '@scure/btc-signer';
-import BigNumber from 'bignumber.js';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
@@ -14,11 +13,13 @@ import {
   TransactionFeeOutput,
   TransactionOutput,
 } from './types';
-import { extractActionMap, extractOutputInscriptionsAndSatributes } from './utils';
+import { extractActionMap, extractOutputInscriptionsAndSatributes, mapInputToEnhancedInput } from './utils';
 
 const defaultOptions: CompilationOptions = {
   rbfEnabled: false,
   excludeOutpointList: [],
+  useEffectiveFeeRate: false,
+  allowUnconfirmedInput: true,
 };
 
 const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions => {
@@ -99,6 +100,8 @@ export class EnhancedTransaction {
 
     const {
       actualFee,
+      actualFeeRate,
+      effectiveFeeRate,
       inputs: sendBtcInputs,
       outputs: sendBtcOutputs,
     } = await applySendBtcActionsAndFee(
@@ -147,13 +150,14 @@ export class EnhancedTransaction {
 
     transaction.finalize();
 
-    const enhancedInputs = inputs.map<EnhancedInput>((input) => ({
-      extendedUtxo: input,
-      sigHash: SigHash.ALL,
-    }));
+    const enhancedInputs: EnhancedInput[] = await Promise.all(
+      inputs.map((i) => mapInputToEnhancedInput(i, SigHash.ALL)),
+    );
 
     return {
       actualFee,
+      actualFeeRate,
+      effectiveFeeRate,
       transaction,
       inputs: enhancedInputs,
       outputs,
@@ -162,7 +166,7 @@ export class EnhancedTransaction {
   }
 
   async getFeeSummary(options: CompilationOptions = {}) {
-    const { actualFee, transaction, inputs, outputs, feeOutput } = await this.compile(
+    const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput } = await this.compile(
       getOptionsWithDefaults(options),
       true,
     );
@@ -171,7 +175,8 @@ export class EnhancedTransaction {
 
     const feeSummary = {
       fee: actualFee,
-      feeRate: Math.ceil(new BigNumber(actualFee.toString()).dividedBy(vsize).toNumber()),
+      feeRate: actualFeeRate,
+      effectiveFeeRate,
       vsize,
       inputs,
       outputs,

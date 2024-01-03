@@ -2,12 +2,14 @@ import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   AssetInfo,
-  BufferReader,
+  Authorization,
+  BytesReader,
   createAssetInfo,
   deserializeCV,
   deserializeStacksMessage,
   FungibleConditionCode,
   FungiblePostCondition,
+  getFee,
   hexToCV,
   makeStandardFungiblePostCondition,
   makeStandardNonFungiblePostCondition,
@@ -15,9 +17,10 @@ import {
   PostCondition,
   PostConditionType,
   StacksMessageType,
+  StacksTransaction,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
+import { fetchAppInfo, fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
 import { Coin, FeesMultipliers, FungibleToken, PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce, setNonce } from './stx';
@@ -41,7 +44,7 @@ export function makeNonFungiblePostCondition(options: PostConditionsOptions): Po
   const assetInfo: AssetInfo = createAssetInfo(contractAddress, contractName, assetName);
   return makeStandardNonFungiblePostCondition(
     stxAddress,
-    NonFungibleConditionCode.DoesNotOwn,
+    NonFungibleConditionCode.Sends,
     assetInfo,
     hexToCV(amount.toString()),
   );
@@ -110,7 +113,7 @@ export const extractFromPayload = (payload: any) => {
     ? (postConditions?.map(
         (arg: string) =>
           deserializeStacksMessage(
-            new BufferReader(hexStringToBuffer(arg)),
+            new BytesReader(hexStringToBuffer(arg)),
             StacksMessageType.PostCondition,
           ) as PostCondition,
       ) as PostCondition[])
@@ -192,6 +195,7 @@ export const createDeployContractRequest = async (
   stxPublicKey: string,
   feeMultipliers: FeesMultipliers,
   walletAddress: string,
+  auth?: Authorization,
 ) => {
   const { codeBody, contractName, postConditionMode } = payload;
   const { postConds } = extractFromPayload(payload);
@@ -212,6 +216,9 @@ export const createDeployContractRequest = async (
   if (feeMultipliers) {
     contractDeployTx.setFee(fee * BigInt(feeMultipliers.otherTxMultiplier));
   }
+  if (auth) {
+    contractDeployTx.auth = auth;
+  }
 
   return {
     contractDeployTx,
@@ -219,4 +226,12 @@ export const createDeployContractRequest = async (
     contractName,
     sponsored,
   };
+};
+
+export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction, network: StacksNetwork) => {
+  const feeMultipliers = await fetchAppInfo(network.isMainnet() ? 'Mainnet' : 'Testnet');
+  const fee = getFee(unsignedTx.auth);
+  if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
+    unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
+  }
 };

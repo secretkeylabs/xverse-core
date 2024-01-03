@@ -53,6 +53,8 @@ export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
 
 export const BNS_CONTRACT_ID = 'SP000000000000000000002Q6VF78.bns';
 
+export const STX_DECIMALS = 6;
+
 export const supportedCoins = [
   {
     contract: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.age000-governance-token',

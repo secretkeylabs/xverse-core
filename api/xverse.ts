@@ -174,7 +174,7 @@ export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHos
   const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
-    tx: signedTx.serialize().toString('hex'),
+    tx: signedTx.serialize().toString(),
   };
 
   return axios

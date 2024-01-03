@@ -52,7 +52,7 @@ import {
   UnsignedStacksTransation,
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
-import { getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 
 export interface StacksRecipient {
   address: string;
@@ -145,8 +145,6 @@ export async function generateUnsignedSTXTokenTransfer(
   memo?: string,
   sponsored?: boolean,
   anchorMode?: AnchorMode,
-  postConditions?: PostCondition[],
-  postConditionMode?: PostConditionMode,
 ): Promise<StacksTransaction> {
   const amountBN = BigInt(amount);
   if (!sponsored) sponsored = false;
@@ -158,8 +156,6 @@ export async function generateUnsignedSTXTokenTransfer(
     network: txNetwork,
     sponsored,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
-    postConditionMode,
-    postConditions,
   };
 
   return makeUnsignedSTXTokenTransfer(txOptions);
@@ -185,8 +181,6 @@ export async function generateUnsignedStxTokenTransferTransaction(
   network: StacksNetwork,
   sponsored?: boolean,
   anchorMode?: AnchorMode,
-  postConditions?: PostCondition[],
-  postConditionMode?: PostConditionMode,
   nonce?: bigint,
 ): Promise<StacksTransaction> {
   try {
@@ -198,8 +192,6 @@ export async function generateUnsignedStxTokenTransferTransaction(
       memo,
       sponsored,
       anchorMode,
-      postConditions,
-      postConditionMode,
     );
     const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
     unsignedTx.setFee(regular.fee);
@@ -252,6 +244,8 @@ export async function generateUnsignedContractCall(
   }
   try {
     const unsigned = await makeUnsignedContractCall(txOptions);
+    // we're getting really high estimated fees from the function, so need to cap at a max threshold
+    await capStxFeeAtThreshold(unsigned, network);
     return unsigned;
   } catch (err) {
     const unsigned = await makeUnsignedContractCall({ ...txOptions, fee: BigInt(3000) });
