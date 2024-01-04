@@ -48,20 +48,43 @@ export async function getContractCallPromises(
 }
 
 /**
- * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
+ * stxFeeReducer - given initialFee, and appInfo (stacks fee multiplier and threshold config),
+ * return the newFee
+ * @param initialFee
+ * @param appInfo
+ * @returns newFee
  */
-export const applyFeeMultiplier = (unsignedTx: StacksTransaction, appInfo: AppInfo | null) => {
-  if (appInfo === null || !appInfo?.stxSendTxMultiplier) {
-    return;
+export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; appInfo: AppInfo | null }): bigint => {
+  let newFee = initialFee;
+
+  // apply multiplier
+  if (appInfo?.stxSendTxMultiplier && Number.isInteger(appInfo?.stxSendTxMultiplier)) {
+    newFee = newFee * BigInt(appInfo.stxSendTxMultiplier);
   }
 
-  let newFee = getFee(unsignedTx.auth) * BigInt(appInfo.stxSendTxMultiplier);
-
   // cap the fee at thresholdHighStacksFee
-  if (newFee > BigInt(appInfo.thresholdHighStacksFee)) {
+  if (
+    appInfo?.thresholdHighStacksFee &&
+    Number.isInteger(appInfo?.thresholdHighStacksFee) &&
+    newFee > BigInt(appInfo.thresholdHighStacksFee)
+  ) {
     newFee = BigInt(appInfo.thresholdHighStacksFee);
   }
 
+  return newFee;
+};
+
+/**
+ * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
+ * @param unsignedTx
+ * @param appInfo
+ */
+export const applyFeeMultiplier = (unsignedTx: StacksTransaction, appInfo: AppInfo | null) => {
+  if (!appInfo) {
+    return;
+  }
+
+  const newFee = stxFeeReducer({ initialFee: getFee(unsignedTx.auth), appInfo });
   unsignedTx.setFee(newFee);
 };
 
