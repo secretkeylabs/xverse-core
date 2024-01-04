@@ -12,12 +12,14 @@ import { getBtcNetwork } from '../../transactions/btcNetwork';
 import { type NetworkType, type RareSatsType, type UTXO, type UtxoOrdinalBundle } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
+import { InputToSign } from '../psbt';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual, getOutpointFromUtxo } from './utils';
 
 export type SignOptions = {
   ledgerTransport?: Transport;
-  allowedSighash?: btc.SigHash[];
+  allowedSigHash?: btc.SigHash[];
+  inputsToSign?: InputToSign[];
 };
 
 export class ExtendedUtxo {
@@ -277,6 +279,38 @@ export abstract class AddressContext {
     return btcChild.privateKey!.toString('hex');
   }
 
+  protected getSignIndexes(
+    transaction: btc.Transaction,
+    options: SignOptions,
+    witnessScript?: Uint8Array,
+  ): Record<number, btc.SigHash[] | undefined> {
+    const signIndexes: Record<number, btc.SigHash[] | undefined> = {};
+
+    if (options.inputsToSign) {
+      for (const inputToSign of options.inputsToSign) {
+        if (inputToSign.address === this._address) {
+          inputToSign.signingIndexes.forEach((index) => {
+            if (signIndexes[index]) {
+              throw new Error(`Duplicate signing index ${index} for address ${this._address}`);
+            }
+
+            signIndexes[index] = inputToSign.sigHash ? [inputToSign.sigHash] : undefined;
+          });
+        }
+      }
+    } else {
+      for (let i = 0; i < transaction.inputsLength; i++) {
+        const input = transaction.getInput(i);
+
+        if (areByteArraysEqual(input.witnessUtxo?.script, witnessScript)) {
+          signIndexes[i] = options.allowedSigHash;
+        }
+      }
+    }
+
+    return signIndexes;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async prepareInputs(_transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     // no-op
@@ -328,16 +362,14 @@ export class P2shAddressContext extends AddressContext {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
-        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
-      }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
     }
   }
 
@@ -402,16 +434,14 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
-      }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
     }
   }
 
@@ -456,27 +486,19 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       },
     ] as [Uint8Array, { path: number[]; fingerprint: number }];
 
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        transaction.updateInput(i, {
-          bip32Derivation: [inputDerivation],
-        });
-      }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      transaction.updateInput(+i, {
+        bip32Derivation: [inputDerivation],
+      });
     }
   }
 
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    let hasInputsToSign = false;
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        hasInputsToSign = true;
-        break;
-      }
-    }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
 
-    if (!hasInputsToSign) {
+    if (Object.keys(signIndexes).length === 0) {
       return;
     }
 
@@ -555,16 +577,14 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
 
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        transaction.signIdx(hex.decode(privateKey), i, options.allowedSighash);
-      }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
     }
   }
 
@@ -628,27 +648,19 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       },
     ] as [Uint8Array, { path: number[]; fingerprint: number }];
 
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        transaction.updateInput(i, {
-          bip32Derivation: [inputDerivation],
-        });
-      }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      transaction.updateInput(+i, {
+        bip32Derivation: [inputDerivation],
+      });
     }
   }
 
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    let hasInputsToSign = false;
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        hasInputsToSign = true;
-        break;
-      }
-    }
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
 
-    if (!hasInputsToSign) {
+    if (Object.keys(signIndexes).length === 0) {
       return;
     }
 

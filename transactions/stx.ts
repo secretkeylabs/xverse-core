@@ -31,6 +31,7 @@ import {
   createStandardAuth,
   estimateContractDeploy,
   estimateContractFunctionCall,
+  estimateTransaction,
   estimateTransfer,
   getNonce as fetchNewNonce,
   hexToCV,
@@ -114,6 +115,9 @@ export async function signMultiStxTransactions(
   }
 }
 
+/**
+ * @deprecated use StacksTransaction.setNonce
+ */
 export function setNonce(transaction: StacksTransaction, nonce: bigint) {
   transaction.setNonce(nonce);
 }
@@ -122,11 +126,15 @@ export function getNonce(transaction: StacksTransaction): bigint {
   return transaction.auth.spendingCondition?.nonce ?? BigInt(0);
 }
 
+/**
+ * @deprecated use StacksTransaction.setFee
+ */
 export function setFee(transaction: StacksTransaction, fee: bigint) {
   transaction.setFee(fee);
 }
 
 /**
+ * @deprecated use generateUnsignedStxTokenTransferTransaction
  * Constructs an unsigned token transfer transaction
  */
 export async function generateUnsignedSTXTokenTransfer(
@@ -146,7 +154,6 @@ export async function generateUnsignedSTXTokenTransfer(
     amount: amountBN,
     memo: memo ?? '',
     network: txNetwork,
-    fee: 0,
     sponsored,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
   };
@@ -155,6 +162,7 @@ export async function generateUnsignedSTXTokenTransfer(
 }
 
 /**
+ * @deprecated use estimateTransaction
  * Estimates the fee for given transaction
  * @param transaction StacksTransaction object
  */
@@ -176,9 +184,7 @@ export async function generateUnsignedStxTokenTransferTransaction(
   nonce?: bigint,
 ): Promise<StacksTransaction> {
   try {
-    let unsignedTx: StacksTransaction | null = null;
-    let fee = BigInt(0);
-    unsignedTx = await generateUnsignedSTXTokenTransfer(
+    const unsignedTx = await generateUnsignedSTXTokenTransfer(
       publicKey,
       recipientAddress,
       amount,
@@ -187,13 +193,13 @@ export async function generateUnsignedStxTokenTransferTransaction(
       sponsored,
       anchorMode,
     );
-    fee = await estimateFees(unsignedTx, network);
-    unsignedTx.setFee(fee);
+    const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
+    unsignedTx.setFee(regular.fee);
     const newNonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
     if (nonce) {
-      setNonce(unsignedTx, BigInt(nonce));
+      unsignedTx.setNonce(BigInt(nonce));
     } else {
-      setNonce(unsignedTx, newNonce);
+      unsignedTx.setNonce(newNonce);
     }
     return await Promise.resolve(unsignedTx);
   } catch (err) {
@@ -327,12 +333,12 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
-    const fee = await estimateContractCallFees(unsignedTx, network);
-    unsignedTx.setFee(fee);
+    const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
+    unsignedTx.setFee(regular.fee);
 
     // bump nonce by number of pending transactions
     const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-    setNonce(unsignedTx, nonce);
+    unsignedTx.setNonce(nonce);
     return await Promise.resolve(unsignedTx);
   } catch (err) {
     return Promise.reject(err.toString());
@@ -440,7 +446,7 @@ export async function generateContractDeployTransaction(options: {
       return await Promise.resolve(unsignedTx);
     } else {
       const newNonce = getNewNonce(options.pendingTxs, getNonce(unsignedTx));
-      setNonce(unsignedTx, newNonce);
+      unsignedTx.setNonce(newNonce);
       return await Promise.resolve(unsignedTx);
     }
   } catch (err) {
