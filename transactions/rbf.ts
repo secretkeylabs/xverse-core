@@ -5,7 +5,6 @@ import * as bip39 from 'bip39';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { signLedgerPSBT } from '../ledger/psbt';
 import { Transport } from '../ledger/types';
-import SeedVault from '../seedVault';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { bip32 } from '../utils/bip32';
 import { getBitcoinDerivationPath, getTaprootDerivationPath } from '../wallet';
@@ -107,7 +106,7 @@ export type RBFProps = {
   ordinalsAddress: string;
   btcPublicKey: string;
   ordinalsPublicKey: string;
-  seedVault: SeedVault;
+  getSeedPhrase: () => string | Promise<string>;
   accountId: number;
   network: NetworkType;
   accountType: AccountType;
@@ -277,7 +276,7 @@ class RbfTransaction {
 
   private getBip32Master = async () => {
     // keep this method short so seed phrase is as short lived as possible
-    const seedPhrase = await this.options.seedVault.getSeed();
+    const seedPhrase = await this.options.getSeedPhrase();
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     return bip32.fromSeed(seed);
   };
