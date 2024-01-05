@@ -86,6 +86,26 @@ export class EnhancedPsbt {
     return { address: btc.Address(btcNetwork).encode(outputScript) };
   }
 
+  getInputFromPsbt = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
+    let input;
+    const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
+    if (addressInput && addressInput.extendedUtxo) {
+      input = addressInput.extendedUtxo;
+    } else {
+      const utxo: UTXO = {
+        txid: inputTxid,
+        vout: inputRaw.index!,
+        value: Number(inputRaw.witnessUtxo?.amount) || 0,
+        status: {
+          confirmed: false,
+        },
+        address: '',
+      };
+      input = new ExtendedDummyUtxo(utxo, '');
+    }
+    return input;
+  };
+
   private async _extractInputMetadata(transaction: btc.Transaction): Promise<InputMetadata> {
     const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash }[] = [];
 
@@ -103,32 +123,10 @@ export class EnhancedPsbt {
 
       const inputTxid = hex.encode(inputRaw.txid);
 
-      let input: ExtendedUtxo | ExtendedDummyUtxo | undefined;
+      const input = await this.getInputFromPsbt(inputRaw, inputTxid);
 
-      try {
-        const utxo = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
-        if (utxo.extendedUtxo) {
-          input = utxo.extendedUtxo;
-        }
-      } catch (err) {
-        if (err.status === 404) {
-          const utxo: UTXO = {
-            txid: inputTxid,
-            vout: inputRaw.index!,
-            value: Number(inputRaw.witnessUtxo?.amount) || 0,
-            status: {
-              confirmed: false,
-            },
-            address: '',
-          };
-          input = new ExtendedDummyUtxo(utxo, '');
-        } else {
-          throw err; // Re-throw unexpected errors
-        }
-      }
-
-      if (!input || !input.utxo) {
-        throw new Error(`Could not parse input ${inputIndex}}`);
+      if (!input) {
+        throw new Error(`Could not parse input ${inputIndex}`);
       }
 
       const sigHash = inputRaw.sighashType || this._inputsToSignMap?.[inputIndex]?.[0]?.sigHash;
