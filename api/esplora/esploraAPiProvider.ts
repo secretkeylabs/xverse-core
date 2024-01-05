@@ -10,16 +10,17 @@ import { BitcoinApiProvider } from './types';
 export interface EsploraApiProviderOptions {
   network: NetworkType;
   url?: string;
+  fallbackUrl?: string;
 }
 
 export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApiProvider {
   _network: NetworkType;
 
   constructor(options: EsploraApiProviderOptions) {
-    const { url, network } = options;
+    const { url, network, fallbackUrl } = options;
     const baseURL = url || (network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET);
 
-    super({ baseURL });
+    super({ axiosConfig: { baseURL }, fallbackUrl });
 
     this._network = network;
   }
