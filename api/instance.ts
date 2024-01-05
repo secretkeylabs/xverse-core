@@ -25,16 +25,22 @@ export default class ApiInstance {
             return Promise.reject(error);
           }
 
-          // if the request times out or,
-          // if an address has > 500 UTXOs, mempool.space returns a 400 error
-          if (error?.code === 'ECONNABORTED' || error?.response?.status >= 400) {
-            // retry on the fallbackBitcoinApi
+          // if the request times out, we retry on the fallbackBitcoinApi
+          if (error?.code === 'ECONNABORTED') {
             return this.fallbackBitcoinApi.request({
               ...error.config,
               baseURL: fallbackUrl,
             });
           }
 
+          // if an address has > 500 UTXOs, mempool.space returns a 400 error,
+          // so we retry on the fallbackBitcoinApi
+          if (error?.response?.status >= 400) {
+            return this.fallbackBitcoinApi.request({
+              ...error.config,
+              baseURL: fallbackUrl,
+            });
+          }
           return Promise.reject(error);
         },
       );
