@@ -1,7 +1,8 @@
 import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
-import { AddressContext, ExtendedUtxo, TransactionContext } from './context';
+import { AddressContext, TransactionContext } from './context';
 import { Action, ActionMap, ActionType, EnhancedInput, IOInscription, IOSatribute, TransactionOutput } from './types';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -204,7 +205,7 @@ export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
 };
 
 export const extractOutputInscriptionsAndSatributes = async (
-  inputs: ExtendedUtxo[],
+  inputs: (ExtendedUtxo | ExtendedDummyUtxo)[],
   outputOffset: number,
   outputValue: number,
 ) => {
@@ -261,7 +262,10 @@ export const extractOutputInscriptionsAndSatributes = async (
   return { inscriptions, satributes };
 };
 
-export const mapInputToEnhancedInput = async (input: ExtendedUtxo, sigHash?: SigHash): Promise<EnhancedInput> => {
+export const mapInputToEnhancedInput = async (
+  input: ExtendedUtxo | ExtendedDummyUtxo,
+  sigHash?: SigHash,
+): Promise<EnhancedInput> => {
   const bundleData = await input.getBundleData();
 
   const inscriptions: IOInscription[] =

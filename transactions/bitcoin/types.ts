@@ -1,7 +1,7 @@
 import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
 import { RareSatsType } from '../../types';
-import { ExtendedUtxo } from './context';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -96,9 +96,26 @@ export type TransactionScriptOutput = {
 };
 
 export type EnhancedInput = {
-  extendedUtxo: ExtendedUtxo;
+  extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
 };
 export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
+
+export type PsbtSummary = {
+  inputs: EnhancedInput[];
+  outputs: EnhancedOutput[];
+  feeOutput?: TransactionFeeOutput;
+  hasSigHashNone: boolean;
+};
+
+export type InputMetadata = {
+  inputs: {
+    extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
+    sigHash?: btc.SigHash | undefined;
+  }[];
+  isSigHashAll: boolean;
+  hasSigHashNone: boolean;
+  inputTotal: number;
+};
