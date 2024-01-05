@@ -624,9 +624,8 @@ export class TransactionContext {
 
   async getUtxoFallbackToExternal(
     outpoint: string,
-  ): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {
+  ): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext } | undefined> {
     const utxoData = await this.getUtxo(outpoint);
-
     if (utxoData.extendedUtxo) {
       return utxoData;
     }
@@ -635,7 +634,11 @@ export class TransactionContext {
       const extendedUtxo = await this.paymentAddress.getExternalUtxo(outpoint);
       return { extendedUtxo };
     } catch (err) {
-      return {};
+      if (err.response && err.response.status === 404) {
+        return {};
+      } else {
+        return undefined;
+      }
     }
   }
 

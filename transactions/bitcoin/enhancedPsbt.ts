@@ -93,10 +93,9 @@ export class EnhancedPsbt {
   }
 
   getInputFromPsbt = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
-    let input;
     const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
     if (addressInput && addressInput.extendedUtxo) {
-      input = addressInput.extendedUtxo;
+      return addressInput.extendedUtxo;
     } else {
       const utxo: UTXO = {
         txid: inputTxid,
@@ -107,9 +106,8 @@ export class EnhancedPsbt {
         },
         address: '',
       };
-      input = new ExtendedDummyUtxo(utxo, '');
+      return new ExtendedDummyUtxo(utxo, '');
     }
-    return input;
   };
 
   private async _extractInputMetadata(transaction: btc.Transaction): Promise<InputMetadata> {
