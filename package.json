@@ -46,6 +46,7 @@
     "build": "webpack --mode production",
     "clean": "rimraf dist",
     "build:esm": "npm run clean && tsc -p ./tsconfig.build.json",
+    "build:esm:dev": "npm run clean && tsc --watch -p ./tsconfig.build.json",
     "test": "vitest run --coverage",
     "test-dev": "vitest",
     "lint": "eslint .",
