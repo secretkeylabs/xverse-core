@@ -148,9 +148,6 @@ export class ExtendedDummyUtxo {
     return this._utxo;
   }
 
-  /**
-   * If the underlying UTXO is unconfirmed, this method will return the total fee and vsize of the unconfirmed chain
-   */
   async getUnconfirmedUtxoFeeData(): Promise<{ totalVsize: number; totalFee: number }> {
     return {
       totalVsize: 0,
@@ -162,7 +159,6 @@ export class ExtendedDummyUtxo {
     return undefined;
   }
 
-  /** Returns undefined if UTXO has not yet been indexed */
   async isEmbellished(): Promise<boolean | undefined> {
     return undefined;
   }

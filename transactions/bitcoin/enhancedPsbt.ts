@@ -93,7 +93,7 @@ export class EnhancedPsbt {
     return { address: btc.Address(btcNetwork).encode(outputScript) };
   }
 
-  getInputFromPsbt = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
+  getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
     const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
     if (addressInput && addressInput.extendedUtxo) {
       return addressInput.extendedUtxo;
@@ -128,19 +128,19 @@ export class EnhancedPsbt {
 
       const inputTxid = hex.encode(inputRaw.txid);
 
-      const input = await this.getInputFromPsbt(inputRaw, inputTxid);
+      const inputExtendedUtxo = await this.getExtendedUtxoForInput(inputRaw, inputTxid);
 
-      if (!input) {
+      if (!inputExtendedUtxo) {
         throw new Error(`Could not parse input ${inputIndex}`);
       }
 
       const sigHash = this._inputsToSignMap?.[inputIndex]?.[0]?.sigHash ?? inputRaw.sighashType;
       inputs.push({
-        extendedUtxo: input,
+        extendedUtxo: inputExtendedUtxo,
         sigHash,
       });
 
-      inputTotal += input.utxo.value || 0;
+      inputTotal += inputExtendedUtxo.utxo.value || 0;
 
       // sig hash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
       // don't have a single before we do the bitwise or for all and none

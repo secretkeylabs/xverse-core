@@ -636,9 +636,9 @@ export class TransactionContext {
     } catch (err) {
       if (err.response && err.response.status === 404) {
         return {};
-      } else {
-        return undefined;
       }
+
+      throw err;
     }
   }
 
