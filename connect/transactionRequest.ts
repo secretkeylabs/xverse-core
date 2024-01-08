@@ -19,10 +19,11 @@ import {
   serializePostCondition,
   SingleSigHashMode,
   StacksTransaction,
+  getFee,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { createContractCallPromises, generateUnsignedStxTokenTransferTransaction } from '../transactions';
-import { FeesMultipliers, StxPendingTxData } from '../types';
+import { AppInfo, StxPendingTxData } from '../types';
 import { buf2hex } from '../utils/arrayBuffers';
 import { STX_DECIMALS } from '../constant';
 
@@ -46,12 +47,53 @@ export async function getContractCallPromises(
   };
 }
 
+/**
+ * stxFeeReducer - given initialFee, and appInfo (stacks fee multiplier and threshold config),
+ * return the newFee
+ * @param initialFee
+ * @param appInfo
+ * @returns newFee
+ */
+export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; appInfo: AppInfo | null }): bigint => {
+  let newFee = initialFee;
+
+  // apply multiplier
+  if (appInfo?.stxSendTxMultiplier && Number.isInteger(appInfo?.stxSendTxMultiplier)) {
+    newFee = newFee * BigInt(appInfo.stxSendTxMultiplier);
+  }
+
+  // cap the fee at thresholdHighStacksFee
+  if (
+    appInfo?.thresholdHighStacksFee &&
+    Number.isInteger(appInfo?.thresholdHighStacksFee) &&
+    newFee > BigInt(appInfo.thresholdHighStacksFee)
+  ) {
+    newFee = BigInt(appInfo.thresholdHighStacksFee);
+  }
+
+  return newFee;
+};
+
+/**
+ * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
+ * @param unsignedTx
+ * @param appInfo
+ */
+export const applyFeeMultiplier = (unsignedTx: StacksTransaction, appInfo: AppInfo | null) => {
+  if (!appInfo) {
+    return;
+  }
+
+  const newFee = stxFeeReducer({ initialFee: getFee(unsignedTx.auth), appInfo });
+  unsignedTx.setFee(newFee);
+};
+
 export async function getTokenTransferRequest(
   recipient: string,
   amount: string,
   memo: string,
   stxPublicKey: string,
-  feeMultipliers: FeesMultipliers,
+  feeMultipliers: AppInfo | null,
   network: StacksNetwork,
   stxPendingTransactions?: StxPendingTxData,
   auth?: Authorization,
@@ -64,11 +106,9 @@ export async function getTokenTransferRequest(
     stxPublicKey,
     network,
   );
-  // increasing the fees with multiplication factor
-  const fee: bigint = BigInt(unsignedSendStxTx.auth.spendingCondition.fee.toString()) ?? BigInt(0);
-  if (feeMultipliers?.stxSendTxMultiplier) {
-    unsignedSendStxTx.setFee(fee * BigInt(feeMultipliers.stxSendTxMultiplier));
-  }
+
+  applyFeeMultiplier(unsignedSendStxTx, feeMultipliers);
+
   if (auth) {
     unsignedSendStxTx.auth = auth;
   }
