@@ -1,21 +1,23 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import ApiInstance from '../../api/instance';
+import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import { BTC_BASE_URI_TESTNET } from '../../constant';
 
-describe('ApiInstance', () => {
+describe('BitcoinEsploraApiProvider', () => {
   describe('when fallbackUrl is not provided', () => {
     it('should construct with a bitcoinApi', () => {
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
       });
       expect(api.bitcoinApi).toBeTruthy();
       expect(api.fallbackBitcoinApi).toBeFalsy();
     });
 
     it('should intercept a 4xx response and not retry', async () => {
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
       });
 
       // mock the bitcoinApi to return a 400 error
@@ -39,8 +41,9 @@ describe('ApiInstance', () => {
 
   describe('when fallbackUrl is provided', () => {
     it('should construct with a bitcoinApi and fallbackBitcoinApi', () => {
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
         fallbackUrl: 'https://btc-testnet.xverse.app',
       });
       expect(api.bitcoinApi).toBeTruthy();
@@ -49,8 +52,9 @@ describe('ApiInstance', () => {
 
     it('should intercept a 4xx response and retry on fallbackBitcoinApi', async () => {
       // given a fallbackUrl is provided
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
         fallbackUrl: 'https://btc-testnet.xverse.app',
       });
 
@@ -82,8 +86,9 @@ describe('ApiInstance', () => {
     });
 
     it('should intercept a 5xx response and retry', async () => {
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
         fallbackUrl: 'https://btc-testnet.xverse.app',
       });
 
@@ -109,8 +114,9 @@ describe('ApiInstance', () => {
     });
 
     it('should intercept a timeout and retry', async () => {
-      const api = new ApiInstance({
-        axiosConfig: { baseURL: BTC_BASE_URI_TESTNET },
+      const api = new BitcoinEsploraApiProvider({
+        network: 'Testnet',
+        url: BTC_BASE_URI_TESTNET,
         fallbackUrl: 'https://btc-testnet.xverse.app',
       });
 
