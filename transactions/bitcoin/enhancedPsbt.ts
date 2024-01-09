@@ -1,6 +1,7 @@
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 
+import { InputToSign } from '../psbt';
 import { ExtendedUtxo, TransactionContext } from './context';
 import {
   EnhancedInput,
@@ -17,9 +18,52 @@ export class EnhancedPsbt {
 
   private readonly _psbt!: Uint8Array;
 
-  constructor(context: TransactionContext, psbtBase64: string) {
+  private readonly _inputsToSign?: InputToSign[];
+
+  private readonly _inputsToSignMap?: Record<number, { address: string; sigHash?: number }[]>;
+
+  private readonly _isSigHashAll?: boolean;
+
+  private readonly _hasSigHashNone?: boolean;
+
+  constructor(context: TransactionContext, psbtBase64: string, inputsToSign?: InputToSign[]) {
     this._context = context;
     this._psbt = base64.decode(psbtBase64);
+
+    this._inputsToSign = inputsToSign;
+
+    if (inputsToSign) {
+      this._inputsToSignMap = {};
+      let hasSigHashNone = false;
+      let isSigHashAll = true;
+
+      for (const input of inputsToSign) {
+        for (const inputIndex of input.signingIndexes) {
+          if (!this._inputsToSignMap[inputIndex]) {
+            this._inputsToSignMap[inputIndex] = [];
+          }
+
+          this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
+
+          if (!input.sigHash) {
+            continue;
+          }
+
+          if ((input.sigHash | btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+            isSigHashAll = false;
+            continue;
+          }
+
+          if ((input.sigHash | btc.SigHash.NONE) === btc.SigHash.NONE) {
+            hasSigHashNone = true;
+            isSigHashAll = false;
+          }
+        }
+      }
+
+      this._isSigHashAll = isSigHashAll;
+      this._hasSigHashNone = hasSigHashNone;
+    }
   }
 
   private parseAddressFromOutput(
@@ -49,14 +93,19 @@ export class EnhancedPsbt {
   private async _extractInputMetadata(transaction: btc.Transaction) {
     const inputs: { extendedUtxo: ExtendedUtxo; sigHash?: btc.SigHash }[] = [];
 
-    let isSigHashAll = false;
-    let hasSigHashNone = false;
+    let isSigHashAll = this._isSigHashAll ?? true;
+    let hasSigHashNone = this._hasSigHashNone ?? false;
 
     let inputTotal = 0;
 
     for (let inputIndex = 0; inputIndex < transaction.inputsLength; inputIndex++) {
       const inputRaw = transaction.getInput(inputIndex);
-      const inputTxid = hex.encode(inputRaw.txid!);
+
+      if (!inputRaw.txid) {
+        throw new Error(`Incomplete input detected at index ${inputIndex}}`);
+      }
+
+      const inputTxid = hex.encode(inputRaw.txid);
 
       const input = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
 
@@ -64,7 +113,7 @@ export class EnhancedPsbt {
         throw new Error(`Could not parse input ${inputIndex}}`);
       }
 
-      const sigHash = inputRaw.sighashType;
+      const sigHash = this._inputsToSignMap?.[inputIndex]?.[0]?.sigHash ?? inputRaw.sighashType;
       inputs.push({
         extendedUtxo: input.extendedUtxo,
         sigHash,
@@ -72,8 +121,14 @@ export class EnhancedPsbt {
 
       inputTotal += input.extendedUtxo.utxo.value;
 
-      isSigHashAll = isSigHashAll || sigHash === undefined || sigHash === btc.SigHash.ALL;
-      hasSigHashNone = hasSigHashNone || (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE;
+      // sig hash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
+      // don't have a single before we do the bitwise or for all and none
+      const isSigHashSingle = (sigHash && sigHash | btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
+
+      isSigHashAll =
+        isSigHashAll && !isSigHashSingle && (sigHash === undefined || (sigHash | btc.SigHash.ALL) === btc.SigHash.ALL);
+      hasSigHashNone =
+        hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
     }
 
     return { inputs, isSigHashAll, hasSigHashNone, inputTotal };
@@ -188,7 +243,7 @@ export class EnhancedPsbt {
       }
     }
 
-    await this._context.signTransaction(transaction, options);
+    await this._context.signTransaction(transaction, { ...options, inputsToSign: this._inputsToSign });
 
     if (addedPaddingInput) {
       // We inserted a dummy input to get around a Ledger bug, so we need to remove it
