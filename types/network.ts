@@ -6,4 +6,5 @@ export type SettingsNetwork = {
   type: NetworkType;
   address: string;
   btcApiUrl: string;
+  fallbackBtcApiUrl: string;
 };

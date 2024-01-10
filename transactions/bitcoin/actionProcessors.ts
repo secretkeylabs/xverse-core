@@ -1,5 +1,5 @@
 import { Transaction } from '@scure/btc-signer';
-import { ExtendedUtxo, TransactionContext } from './context';
+import { TransactionContext } from './context';
 import { CompilationOptions, SendBtcAction, SendUtxoAction, SplitUtxoAction, TransactionOutput } from './types';
 import {
   extractUsedOutpoints,
@@ -10,6 +10,7 @@ import {
   getTransactionVSize,
   getVbytesForIO,
 } from './utils';
+import { ExtendedUtxo } from './extendedUtxo';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40

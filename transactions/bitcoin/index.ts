@@ -1,7 +1,8 @@
-import { ExtendedUtxo, TransactionContext } from './context';
+import { TransactionContext } from './context';
 import { createTransactionContext } from './contextFactory';
 import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
+import { ExtendedUtxo } from './extendedUtxo';
 import {
   ActionType,
   EnhancedInput,

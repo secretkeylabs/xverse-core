@@ -2,7 +2,6 @@ import * as btc from '@scure/btc-signer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
 import {
-  ExtendedUtxo,
   LedgerP2trAddressContext,
   LedgerP2wpkhAddressContext,
   P2shAddressContext,
@@ -12,6 +11,7 @@ import {
 } from '../../../transactions/bitcoin/context';
 import { createTransactionContext } from '../../../transactions/bitcoin/contextFactory';
 import { TestAddressContext, addresses } from './helpers';
+import { ExtendedUtxo } from '../../../transactions/bitcoin';
 
 vi.mock('../../../api/esplora/esploraAPiProvider');
 
