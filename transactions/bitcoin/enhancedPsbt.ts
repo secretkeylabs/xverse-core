@@ -49,12 +49,12 @@ export class EnhancedPsbt {
             continue;
           }
 
-          if ((input.sigHash | btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
             isSigHashAll = false;
             continue;
           }
 
-          if ((input.sigHash | btc.SigHash.NONE) === btc.SigHash.NONE) {
+          if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
             isSigHashAll = false;
           }
@@ -123,10 +123,10 @@ export class EnhancedPsbt {
 
       // sig hash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
       // don't have a single before we do the bitwise or for all and none
-      const isSigHashSingle = (sigHash && sigHash | btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
+      const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
 
       isSigHashAll =
-        isSigHashAll && !isSigHashSingle && (sigHash === undefined || (sigHash | btc.SigHash.ALL) === btc.SigHash.ALL);
+        isSigHashAll && !isSigHashSingle && (sigHash === undefined || (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL);
       hasSigHashNone =
         hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
     }
