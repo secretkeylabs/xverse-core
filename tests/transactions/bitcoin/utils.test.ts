@@ -405,7 +405,7 @@ describe('getTransactionTotals', () => {
     expect(outputValue).toEqual(3200n);
   });
 
-  it('throw on input without amount', async () => {
+  it('skip input without amount', async () => {
     const dummyInputs = [
       {
         witnessUtxo: {
@@ -429,12 +429,13 @@ describe('getTransactionTotals', () => {
       getOutput: (i: number) => dummyOutputs[i],
     } as any;
 
-    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
-      'Invalid input found on transaction at index 1',
-    );
+    const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+    expect(inputValue).toEqual(1000n);
+    expect(outputValue).toEqual(500n);
   });
 
-  it('throw on output without amount', async () => {
+  it('skips output without amount', async () => {
     const dummyInputs = [
       {
         witnessUtxo: {
@@ -461,9 +462,10 @@ describe('getTransactionTotals', () => {
       getOutput: (i: number) => dummyOutputs[i],
     } as any;
 
-    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
-      'Invalid output found on transaction at index 1',
-    );
+    const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+    expect(inputValue).toEqual(3000n);
+    expect(outputValue).toEqual(500n);
   });
 });
 
