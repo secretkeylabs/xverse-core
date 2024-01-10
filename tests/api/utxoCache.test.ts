@@ -1,9 +1,11 @@
 import MockDate from 'mockdate';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { StorageAdapter, UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
+import { UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
 
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from '../../api/ordinals';
+
+import { StorageAdapter } from '../../types';
 
 vi.mock('../../api/ordinals');
 
