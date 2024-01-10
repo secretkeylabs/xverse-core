@@ -12,6 +12,7 @@ import {
   EnhancedInput,
   TransactionFeeOutput,
   TransactionOutput,
+  TransactionSummary,
 } from './types';
 import { extractActionMap, extractOutputInscriptionsAndSatributes, mapInputToEnhancedInput } from './utils';
 
@@ -165,7 +166,7 @@ export class EnhancedTransaction {
     };
   }
 
-  async getFeeSummary(options: CompilationOptions = {}) {
+  async getSummary(options: CompilationOptions = {}): Promise<TransactionSummary> {
     const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput } = await this.compile(
       getOptionsWithDefaults(options),
       true,

@@ -223,7 +223,7 @@ describe('EnhancedTransaction summary', () => {
 
     vi.mocked(applySendUtxoActions).mockRejectedValue(new Error('Not enough utxos at desired fee rate'));
 
-    await expect(() => txn.getFeeSummary()).rejects.toThrow('Not enough utxos at desired fee rate');
+    await expect(() => txn.getSummary()).rejects.toThrow('Not enough utxos at desired fee rate');
   });
 
   it('compiles transaction and summary correctly', async () => {
@@ -376,7 +376,7 @@ describe('EnhancedTransaction summary', () => {
 
     // ==========================
     // actual thing we're testing
-    const summary = await txn.getFeeSummary();
+    const summary = await txn.getSummary();
     // ==========================
 
     expect(summary).toEqual({

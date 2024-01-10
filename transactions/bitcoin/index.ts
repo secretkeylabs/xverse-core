@@ -15,6 +15,7 @@ import {
   TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
+  TransactionSummary,
 } from './types';
 
 const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
@@ -32,6 +33,7 @@ export type {
   TransactionFeeOutput,
   TransactionOutput,
   TransactionScriptOutput,
+  TransactionSummary,
 };
 
 /**

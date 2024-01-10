@@ -61,6 +61,16 @@ export type CompilationOptions = {
   allowUnconfirmedInput?: boolean;
 };
 
+export type TransactionSummary = {
+  fee: bigint;
+  feeRate: number;
+  effectiveFeeRate: number | undefined;
+  vsize: number;
+  inputs: EnhancedInput[];
+  outputs: TransactionOutput[];
+  feeOutput: TransactionFeeOutput;
+};
+
 export type PSBTCompilationOptions = {
   ledgerTransport?: Transport;
   finalize?: boolean;
