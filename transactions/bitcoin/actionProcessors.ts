@@ -1,5 +1,6 @@
 import { Transaction } from '@scure/btc-signer';
 import { TransactionContext } from './context';
+import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SendBtcAction, SendUtxoAction, SplitUtxoAction, TransactionOutput } from './types';
 import {
   extractUsedOutpoints,
@@ -10,7 +11,6 @@ import {
   getTransactionVSize,
   getVbytesForIO,
 } from './utils';
-import { ExtendedUtxo } from './extendedUtxo';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
@@ -382,5 +382,6 @@ export const applySendBtcActionsAndFee = async (
     actualFee,
     inputs,
     outputs,
+    dustValue: inputDustValueAtFeeRate,
   };
 };

@@ -69,6 +69,7 @@ export type TransactionSummary = {
   inputs: EnhancedInput[];
   outputs: TransactionOutput[];
   feeOutput: TransactionFeeOutput;
+  dustValue: bigint;
 };
 
 export type PSBTCompilationOptions = {

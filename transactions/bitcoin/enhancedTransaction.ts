@@ -105,6 +105,7 @@ export class EnhancedTransaction {
       effectiveFeeRate,
       inputs: sendBtcInputs,
       outputs: sendBtcOutputs,
+      dustValue,
     } = await applySendBtcActionsAndFee(
       this._context,
       options,
@@ -163,14 +164,13 @@ export class EnhancedTransaction {
       inputs: enhancedInputs,
       outputs,
       feeOutput: feeOutput as TransactionFeeOutput,
+      dustValue,
     };
   }
 
   async getSummary(options: CompilationOptions = {}): Promise<TransactionSummary> {
-    const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput } = await this.compile(
-      getOptionsWithDefaults(options),
-      true,
-    );
+    const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput, dustValue } =
+      await this.compile(getOptionsWithDefaults(options), true);
 
     const vsize = transaction.vsize;
 
@@ -182,6 +182,7 @@ export class EnhancedTransaction {
       inputs,
       outputs,
       feeOutput,
+      dustValue,
     };
 
     return feeSummary;

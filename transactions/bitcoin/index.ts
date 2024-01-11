@@ -41,13 +41,37 @@ export type {
  */
 export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number) => {
   const paymentUtxos = await context.paymentAddress.getUtxos();
-  const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
-    type: ActionType.SEND_UTXO,
-    combinable: true,
-    spendable: true,
-    outpoint: utxo.outpoint,
-    toAddress,
-  }));
+
+  if (paymentUtxos.length === 0) {
+    throw new Error('No utxos found to send max');
+  }
+
+  const testTransaction = new EnhancedTransaction(
+    context,
+    [
+      {
+        type: ActionType.SEND_UTXO,
+        combinable: true,
+        spendable: true,
+        outpoint: paymentUtxos[0].outpoint,
+        toAddress,
+      },
+    ],
+    feeRate,
+  );
+
+  const { dustValue } = await testTransaction.getSummary();
+
+  const actions = paymentUtxos
+    .filter((utxo) => utxo.utxo.value > dustValue)
+    .map<SendUtxoAction>((utxo) => ({
+      type: ActionType.SEND_UTXO,
+      combinable: true,
+      spendable: true,
+      outpoint: utxo.outpoint,
+      toAddress,
+    }));
+
   const transaction = new EnhancedTransaction(context, actions, feeRate);
   return transaction;
 };
