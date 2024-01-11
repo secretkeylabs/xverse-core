@@ -21,6 +21,7 @@ export type SignOptions = {
   ledgerTransport?: Transport;
   allowedSigHash?: btc.SigHash[];
   inputsToSign?: InputToSign[];
+  addNonWitnessUtxo?: boolean;
 };
 
 export abstract class AddressContext {
@@ -242,6 +243,10 @@ export class P2shAddressContext extends AddressContext {
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    if (!options.addNonWitnessUtxo) {
+      return;
+    }
+
     const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
 
     for (const i of Object.keys(signIndexes)) {
@@ -330,6 +335,10 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    if (!options.addNonWitnessUtxo) {
+      return;
+    }
+
     const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
 
     for (const i of Object.keys(signIndexes)) {
@@ -386,7 +395,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    super.prepareInputs(transaction, options);
+    super.prepareInputs(transaction, { ...options, addNonWitnessUtxo: true });
 
     const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
@@ -491,6 +500,10 @@ export class P2trAddressContext extends AddressContext {
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    if (!options.addNonWitnessUtxo) {
+      return;
+    }
+
     const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
 
     for (const i of Object.keys(signIndexes)) {
@@ -566,7 +579,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    super.prepareInputs(transaction, options);
+    super.prepareInputs(transaction, { ...options, addNonWitnessUtxo: true });
 
     const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
