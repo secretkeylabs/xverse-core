@@ -283,7 +283,7 @@ class RbfTransaction {
 
   private signTxSoftware = async (transaction: btc.Transaction, options?: CompileOptions): Promise<btc.Transaction> => {
     if (!options?.getSeedPhrase) {
-      throw new Error('Options are required for non-dummy transactions');
+      throw new Error('getSeedPhrase option is required to sign the transaction');
     }
 
     const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
