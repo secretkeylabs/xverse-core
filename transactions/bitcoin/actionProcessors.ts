@@ -313,12 +313,15 @@ export const applySendBtcActionsAndFee = async (
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           // we do one last test to ensure that adding close to the actual change won't increase the fees
-          const finalVSizeWithChange = await getTransactionVSize(
+          const vSizeWithActualChange = await getTransactionVSize(
             context,
             transaction,
             overrideChangeAddress ?? context.changeAddress,
             currentChange - feeWithChange,
           );
+
+          const finalVSizeWithChange = Math.max(vSizeWithActualChange ?? vSizeWithChange, vSizeWithChange);
+
           if (finalVSizeWithChange) {
             actualFee = BigInt((finalVSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
             actualFeeRate = Number(actualFee) / finalVSizeWithChange;
