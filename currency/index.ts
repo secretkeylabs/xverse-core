@@ -15,6 +15,9 @@ const getStxFiatEquivalent = (stxAmount: BigNumber, stxBtcRate: BigNumber, btcFi
 const getBtcFiatEquivalent = (btcAmount: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   satsToBtc(btcAmount).multipliedBy(btcFiatRate);
 
+const getFiatBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): BigNumber =>
+  new BigNumber(fiatAmount.dividedBy(btcFiatRate).toFixed(8));
+
 const getStxTokenEquivalent = (fiatAmount: BigNumber, stxBtcRate: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   fiatAmount.dividedBy(stxBtcRate).dividedBy(btcFiatRate);
 
@@ -22,13 +25,14 @@ const getBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): BigNum
   fiatAmount.dividedBy(btcFiatRate);
 
 export {
-  fetchBtcFeeRate,
-  satsToBtc,
   btcToSats,
-  microstacksToStx,
-  stxToMicrostacks,
-  getStxFiatEquivalent,
-  getBtcFiatEquivalent,
-  getStxTokenEquivalent,
+  fetchBtcFeeRate,
   getBtcEquivalent,
+  getBtcFiatEquivalent,
+  getFiatBtcEquivalent,
+  getStxFiatEquivalent,
+  getStxTokenEquivalent,
+  microstacksToStx,
+  satsToBtc,
+  stxToMicrostacks,
 };
