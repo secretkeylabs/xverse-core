@@ -13,7 +13,7 @@ type Props = {
   changeAddress: string;
   contentString?: string;
   contentBase64?: string;
-  contentType: string;
+  contentType?: string;
   feeRate: number;
   network: NetworkType;
   serviceFee?: number;

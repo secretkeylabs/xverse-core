@@ -25,7 +25,7 @@ export enum InscriptionErrorCode {
 type EstimateProps = {
   addressUtxos: UTXO[];
   content: string;
-  contentType: string;
+  contentType?: string;
   revealAddress: string;
   feeRate: number;
   finalInscriptionValue?: number;
@@ -55,7 +55,7 @@ type ExecuteProps = {
   addressUtxos: UTXO[];
   contentString?: string;
   contentBase64?: string;
-  contentType: string;
+  contentType?: string;
   revealAddress: string;
   feeRate: number;
   finalInscriptionValue?: number;

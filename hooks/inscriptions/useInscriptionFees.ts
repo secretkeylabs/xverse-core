@@ -16,7 +16,7 @@ type CommitValueBreakdown = {
 type Props = {
   addressUtxos: UTXO[] | undefined;
   content: string;
-  contentType: string;
+  contentType?: string;
   feeRate: number;
   revealAddress: string;
   finalInscriptionValue?: number;
