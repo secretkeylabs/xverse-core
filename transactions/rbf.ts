@@ -112,7 +112,7 @@ export type RBFProps = {
   esploraProvider: EsploraProvider;
 };
 
-type TierFees = {
+export type TierFees = {
   enoughFunds: boolean;
   fee?: number;
   feeRate: number;
@@ -124,7 +124,7 @@ type CompileOptions = {
   getSeedPhrase: () => string | Promise<string>;
 };
 
-type RbfRecommendedFees = {
+export type RbfRecommendedFees = {
   medium?: TierFees;
   high?: TierFees;
   higher?: TierFees;
