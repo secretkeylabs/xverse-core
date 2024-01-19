@@ -1,6 +1,7 @@
 import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
-import { AddressContext, ExtendedUtxo, TransactionContext } from './context';
+import { AddressContext, TransactionContext } from './context';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import { Action, ActionMap, ActionType, EnhancedInput, IOInscription, IOSatribute, TransactionOutput } from './types';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
@@ -103,22 +104,20 @@ export const getTransactionTotals = async (transaction: Transaction) => {
   for (let i = 0; i < inputCount; i++) {
     const input = transaction.getInput(i);
 
-    if (!input.witnessUtxo?.amount) {
-      throw new Error(`Invalid input found on transaction at index ${i}`);
+    // inputs don't necessarily have amounts, they could be dummy inputs for partial PSBT signing
+    if (input.witnessUtxo?.amount) {
+      inputValue += input.witnessUtxo.amount;
     }
-
-    inputValue += input.witnessUtxo.amount;
   }
 
   const outputCount = transaction.outputsLength;
   for (let i = 0; i < outputCount; i++) {
     const output = transaction.getOutput(i);
 
-    if (!output.amount) {
-      throw new Error(`Invalid output found on transaction at index ${i}`);
+    // outputs don't necessarily have amounts, they could be script or dummy outputs
+    if (output.amount) {
+      outputValue += output.amount;
     }
-
-    outputValue += output.amount;
   }
 
   return { inputValue, outputValue };
@@ -204,7 +203,7 @@ export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
 };
 
 export const extractOutputInscriptionsAndSatributes = async (
-  inputs: ExtendedUtxo[],
+  inputs: (ExtendedUtxo | ExtendedDummyUtxo)[],
   outputOffset: number,
   outputValue: number,
 ) => {
@@ -261,7 +260,10 @@ export const extractOutputInscriptionsAndSatributes = async (
   return { inscriptions, satributes };
 };
 
-export const mapInputToEnhancedInput = async (input: ExtendedUtxo, sigHash?: SigHash): Promise<EnhancedInput> => {
+export const mapInputToEnhancedInput = async (
+  input: ExtendedUtxo | ExtendedDummyUtxo,
+  sigHash?: SigHash,
+): Promise<EnhancedInput> => {
   const bundleData = await input.getBundleData();
 
   const inscriptions: IOInscription[] =

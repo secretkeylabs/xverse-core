@@ -12,6 +12,7 @@ import {
   selectUnspentOutputs,
   sumUnspentOutputs,
 } from '../transactions/btc';
+import { getOrdinalsUtxos } from '../transactions/btc.utils';
 import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
 import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './constants';
 import { Bip32Derivation, TapBip32Derivation } from './types';
@@ -34,15 +35,15 @@ export async function getTransactionData(
   ordinalUtxo?: UTXO,
 ) {
   // Get sender address unspent outputs
-  const unspentOutputs: UTXO[] = await esploraProvider.getUnspentUtxos(senderAddress);
+  const [unspentOutputs, addressOrdinalsUtxos] = await Promise.all([
+    esploraProvider.getUnspentUtxos(senderAddress),
+    getOrdinalsUtxos(esploraProvider, network, senderAddress),
+  ]);
 
-  let filteredUnspentOutputs = unspentOutputs;
-
-  if (ordinalUtxo) {
-    filteredUnspentOutputs = filterUtxos(unspentOutputs, [ordinalUtxo]);
-  }
-
-  const ordinalUtxoInPaymentAddress = filteredUnspentOutputs.length < unspentOutputs.length;
+  const ordinalUtxoInPaymentAddress = ordinalUtxo
+    ? unspentOutputs.some((utxo) => utxo.txid === ordinalUtxo.txid && utxo.vout === ordinalUtxo.vout)
+    : false;
+  const filteredUnspentOutputs = filterUtxos(unspentOutputs, addressOrdinalsUtxos);
 
   let feeRate: BtcFeeResponse = defaultFeeRate;
 

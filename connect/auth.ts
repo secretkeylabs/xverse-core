@@ -22,6 +22,7 @@ export async function createAuthResponse(
   seedPhrase: string,
   accountIndex: number,
   authRequest: AuthRequest,
+  additionalData?: Record<string, any>,
 ): Promise<string | undefined> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
@@ -60,5 +61,6 @@ export async function createAuthResponse(
       dataPrivateKey,
       appsKey,
     },
+    additionalData,
   });
 }

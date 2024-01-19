@@ -8,6 +8,9 @@ export {
   BTC_BASE_URI_TESTNET,
   HIRO_MAINNET_DEFAULT,
   HIRO_TESTNET_DEFAULT,
+  initialNetworksList,
+  defaultMainnet,
+  defaultTestnet,
 } from './constant';
 export * from './utils';
 export * from './currency';
