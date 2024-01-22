@@ -149,9 +149,10 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
             balance: responseToken.overallBalance,
             total_sent: '0',
             total_received: '0',
-            principal: responseToken.ticker.toUpperCase(),
+            principal: responseToken.ticker?.toUpperCase(),
             assetName: '',
-            ticker: responseToken.ticker.toUpperCase(),
+            ticker: responseToken.ticker?.toUpperCase(),
+
             decimals: 0,
             image: '',
             visible: true,
