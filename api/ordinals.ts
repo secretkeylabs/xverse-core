@@ -154,6 +154,7 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
             ticker: responseToken.ticker.toUpperCase(),
             decimals: 0,
             image: '',
+            visible: true,
             supported: true,
             tokenFiatRate: null,
             protocol: responseToken.protocol,
