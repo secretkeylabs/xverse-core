@@ -154,9 +154,6 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
             ticker: responseToken.ticker.toUpperCase(),
             decimals: 0,
             image: '',
-            // explicit undefined = unknown initial state,
-            // consumers may then set it to true/false depending on the user's settings
-            visible: undefined,
             supported: true,
             tokenFiatRate: null,
             protocol: responseToken.protocol,
