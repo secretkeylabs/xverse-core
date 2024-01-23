@@ -92,6 +92,34 @@ export async function getCoinsInfo(
     });
 }
 
+/**
+ * get BRC-20 supported tokens with the fiat rate
+ * @param network
+ * @param tickers provided to get the fiat rate along with supported tokens
+ * @param fiatCurrency
+ */
+export async function getBrc20Tokens(
+  network: NetworkType,
+  tickers: string[],
+  fiatCurrency: string,
+): Promise<CoinsResponse | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/brc20/tokens`;
+
+  const params = {
+    currency: fiatCurrency,
+    tickers: tickers,
+  };
+
+  return axios
+    .get<CoinsResponse>(url, { params })
+    .then((response) => {
+      return response.data;
+    })
+    .catch(() => {
+      return null;
+    });
+}
+
 export async function fetchAppInfo(network: NetworkType): Promise<AppInfo | null> {
   const url = `${XVERSE_API_BASE_URL(network)}/v1/info`;
 
