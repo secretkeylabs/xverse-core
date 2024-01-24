@@ -166,7 +166,7 @@ const useRbfTransactionData = ({
 
       const rbfTx = new rbf.RbfTransaction(transaction, {
         ...account,
-        accountType: 'software',
+        accountType: account.accountType || 'software',
         accountId: isLedgerAccount && account.deviceAccountIndex ? account.deviceAccountIndex : account.id,
         network: btcNetwork.type,
         esploraProvider,
@@ -188,7 +188,7 @@ const useRbfTransactionData = ({
     } finally {
       setIsLoading(false);
     }
-  }, [account, transaction, btcNetwork.type, esploraProvider, fetchStxData]);
+  }, [account, transaction, btcNetwork.type]);
 
   useEffect(() => {
     fetchRbfData();
