@@ -17,6 +17,7 @@ export interface SignedUrlResponse {
 export type CoinsResponse = Coin[];
 
 export interface Brc20Token extends BaseToken {
+  ticker: string;
   supported: boolean;
   tokenFiatRate?: string;
 }
