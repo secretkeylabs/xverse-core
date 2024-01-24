@@ -15,7 +15,8 @@ import {
   ContractCall,
   TransactionPostCondition,
   TransactionStatus,
-  TransactionType } from '../shared/transaction';
+  TransactionType,
+} from '../shared/transaction';
 
 export { cvToHex, uintCV };
 export type { StacksTransaction, TokenTransferPayload };
