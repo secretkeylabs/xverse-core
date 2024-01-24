@@ -81,7 +81,7 @@ const useRbfTransactionData = ({
   btcNetwork: SettingsNetwork;
   esploraProvider: EsploraApiProvider;
   stxAvailableBalance: string;
-  appInfo: AppInfo;
+  appInfo: AppInfo | null;
   isLedgerAccount: boolean;
 }): RbfData => {
   const [isLoading, setIsLoading] = useState(true);
