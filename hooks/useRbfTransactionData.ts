@@ -72,16 +72,16 @@ const useRbfTransactionData = ({
   btcNetwork,
   esploraProvider,
   stxAvailableBalance,
-  feeMultipliers,
+  appInfo,
   isLedgerAccount,
 }: {
-  account: Account;
+  account: Account | null;
   transaction?: BtcTransactionData | StxTransactionData;
   stacksNetwork: StacksNetwork;
   btcNetwork: SettingsNetwork;
   esploraProvider: EsploraApiProvider;
   stxAvailableBalance: string;
-  feeMultipliers: AppInfo;
+  appInfo: AppInfo;
   isLedgerAccount: boolean;
 }): RbfData => {
   const [isLoading, setIsLoading] = useState(true);
@@ -108,11 +108,11 @@ const useRbfTransactionData = ({
       const higherFee = fee.multipliedBy(1.25).toNumber();
       const highestFee = fee.multipliedBy(1.5).toNumber();
 
-      if (feeMultipliers?.thresholdHighStacksFee) {
-        if (high.fee > feeMultipliers.thresholdHighStacksFee) {
+      if (appInfo?.thresholdHighStacksFee) {
+        if (high.fee > appInfo.thresholdHighStacksFee) {
           // adding a fee cap
-          highFee = feeMultipliers.thresholdHighStacksFee * 1.5;
-          mediumFee = feeMultipliers.thresholdHighStacksFee;
+          highFee = appInfo.thresholdHighStacksFee * 1.5;
+          mediumFee = appInfo.thresholdHighStacksFee;
         }
       }
 
@@ -150,7 +150,7 @@ const useRbfTransactionData = ({
     } finally {
       setIsLoading(false);
     }
-  }, [transaction, btcNetwork, stacksNetwork, feeMultipliers, stxAvailableBalance]);
+  }, [transaction, btcNetwork, stacksNetwork, appInfo, stxAvailableBalance]);
 
   const fetchRbfData = useCallback(async () => {
     if (!account || !transaction) {
