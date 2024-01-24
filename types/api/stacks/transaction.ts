@@ -10,7 +10,13 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import { StxMempoolTransactionData } from '../../../types';
-import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared/transaction';
+import {
+  BaseToken,
+  ContractCall,
+  TransactionPostCondition,
+  TransactionStatus,
+  TransactionType,
+} from '../shared/transaction';
 
 export { cvToHex, uintCV };
 export type { StacksTransaction, TokenTransferPayload };
@@ -130,16 +136,13 @@ export type Transfer = {
   recipient: string;
 };
 
-export type FungibleToken = {
-  name: string;
+export type FungibleToken = BaseToken & {
   balance: string;
   total_sent: string;
   total_received: string;
   principal: string;
   assetName: string;
-  ticker?: string;
   decimals?: number;
-  image?: string;
   visible?: boolean;
   supported?: boolean;
   tokenFiatRate?: number | null;

@@ -1,10 +1,9 @@
-export interface Coin {
+import { BaseToken } from '../shared/transaction';
+
+export interface Coin extends BaseToken {
   id?: number;
-  name: string;
   contract: string;
   description?: string;
-  ticker?: string;
-  image?: string;
   decimals?: number;
   supported?: boolean;
   tokenFiatRate?: number | null;

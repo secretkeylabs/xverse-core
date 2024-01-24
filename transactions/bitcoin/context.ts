@@ -405,6 +405,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     for (const signature of signatures) {
       transaction.updateInput(signature[0], {
         partialSig: [[signature[1].pubkey, signature[1].signature]],
+        bip32Derivation: undefined,
       });
     }
   }
@@ -567,6 +568,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     for (const signature of signatures) {
       transaction.updateInput(signature[0], {
         tapKeySig: signature[1].signature,
+        bip32Derivation: undefined,
       });
     }
   }
