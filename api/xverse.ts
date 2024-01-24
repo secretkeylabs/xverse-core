@@ -5,6 +5,7 @@ import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   AppInfo,
+  Brc20TokensResponse,
   BtcFeeResponse,
   CoinsResponse,
   CollectionMarketDataResponse,
@@ -102,7 +103,7 @@ export async function getBrc20Tokens(
   network: NetworkType,
   tickers: string[],
   fiatCurrency: string,
-): Promise<CoinsResponse | null> {
+): Promise<Brc20TokensResponse | null> {
   const url = `${XVERSE_API_BASE_URL(network)}/v1/brc20/tokens`;
 
   const params = {
@@ -111,7 +112,7 @@ export async function getBrc20Tokens(
   };
 
   return axios
-    .get<CoinsResponse>(url, { params })
+    .get<Brc20TokensResponse>(url, { params })
     .then((response) => {
       return response.data;
     })

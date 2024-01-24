@@ -15,3 +15,12 @@ export interface SignedUrlResponse {
 }
 
 export type CoinsResponse = Coin[];
+
+export type Brc20Token = {
+  ticker: string;
+  name: string;
+  supported: boolean;
+  tokenFiatRate?: string;
+};
+
+export type Brc20TokensResponse = Brc20Token[];
