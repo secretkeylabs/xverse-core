@@ -4,6 +4,22 @@ import { getBrc20Details } from '../../utils/brc20';
 describe('getBrc20Details', () => {
   [
     {
+      name: 'should return undefined when content is undefined',
+      inputs: {
+        content: undefined,
+        contentType: 'application/json',
+      },
+      expected: undefined,
+    },
+    {
+      name: 'should return undefined when contentType is undefined',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'vers', amt: '420' }),
+        contentType: undefined,
+      },
+      expected: undefined,
+    },
+    {
       name: 'should return undefined when contentType is invalid',
       inputs: {
         content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'vers', amt: '420' }),

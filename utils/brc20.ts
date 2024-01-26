@@ -13,7 +13,11 @@ export type Brc20Definition = {
   value: string;
 };
 
-export const getBrc20Details = (content: string, contentType: string): undefined | Brc20Definition => {
+export const getBrc20Details = (content?: string, contentType?: string): undefined | Brc20Definition => {
+  if (!content || !contentType) {
+    return undefined;
+  }
+
   if (!isValidContentType(contentType)) {
     return undefined;
   }
