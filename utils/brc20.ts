@@ -11,8 +11,17 @@ export type Brc20Definition = {
   op: 'deploy' | 'mint' | 'transfer';
   tick: string;
   value: string;
+  lim?: string;
+  dec?: string;
 };
 
+// brc-20 protocol
+// - p (protocol): brc-20
+// - op (operation): deploy
+// - tick (ticker/token identifier): vers
+// - max (supply): xxxxx
+// - lim (mint limit for each inbscription): xx - optional
+// - dec (decimal): 18 - optional
 export const getBrc20Details = (content?: string, contentType?: string): undefined | Brc20Definition => {
   if (!content || !contentType) {
     return undefined;
@@ -37,7 +46,7 @@ export const getBrc20Details = (content?: string, contentType?: string): undefin
     }
 
     const deployRequiredFields = new Set(['p', 'op', 'tick', 'max']);
-    const deployOptionalFields = new Set(['lim', 'desc']);
+    const deployOptionalFields = new Set(['lim', 'dec']);
 
     const mintRequiredFields = new Set(['p', 'op', 'tick', 'amt']);
 
@@ -49,7 +58,7 @@ export const getBrc20Details = (content?: string, contentType?: string): undefin
       parsedContent.tick.length === 4 &&
       isNumber(parsedContent.max) &&
       (!parsedContent.lim || isNumber(parsedContent.lim)) &&
-      (!parsedContent.desc || typeof parsedContent.desc === 'string');
+      (!parsedContent.dec || isNumber(parsedContent.dec));
 
     const isValidMint =
       parsedContent.op === 'mint' &&
@@ -71,6 +80,8 @@ export const getBrc20Details = (content?: string, contentType?: string): undefin
       op: parsedContent.op,
       tick: parsedContent.tick.toUpperCase(),
       value: parsedContent.max || parsedContent.amt,
+      lim: parsedContent.lim,
+      dec: parsedContent.dec,
     };
   } catch (e) {
     return undefined;
