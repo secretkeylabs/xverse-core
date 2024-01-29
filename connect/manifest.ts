@@ -23,12 +23,19 @@ export async function getAppIconFromWebManifest(url: string): Promise<string> {
     throw new Error('Invalid URL format');
   }
   const UrlParsed = url.split('/');
-  const baseURL = `${UrlParsed[0]}://${UrlParsed[2]}`;
+  const baseURL = `${UrlParsed[0]}${UrlParsed[1]}${UrlParsed[2]}`;
   const manifest = await getManifestFile(baseURL);
 
   if (manifest) {
     // Extract the app icons' URLs
-    const icons = manifest.icons?.filter((icon) => icon.sizes === '48x48');
+    const icons = manifest.icons
+      ?.filter((icon) => icon.sizes === '48x48')
+      .map((iconUrl) => {
+        return {
+          src: iconUrl.src.replace(/^\/+/, ''),
+          sizes: iconUrl.sizes,
+        };
+      });
     if (icons) {
       return `${baseURL}/${icons[0].src}`;
     }
