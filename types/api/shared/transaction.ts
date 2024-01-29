@@ -51,3 +51,9 @@ export interface ContractCall {
   function_signature: string;
   function_args: FunctionArg[];
 }
+
+export interface BaseToken {
+  name: string;
+  ticker?: string;
+  image?: string;
+}
