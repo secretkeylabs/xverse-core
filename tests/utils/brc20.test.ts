@@ -68,6 +68,32 @@ describe('getBrc20Details', () => {
       expected: undefined,
     },
     {
+      name: 'should return brc20 details when content is valid for deploy but without optional props application/json',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'deploy', tick: 'vers', max: '4200' }),
+        contentType: 'application/json',
+      },
+      expected: {
+        op: 'deploy',
+        tick: 'VERS',
+        value: '4200',
+      },
+    },
+    {
+      name: 'should return brc20 details when content is valid for deploy props application/json',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'deploy', tick: 'vers', max: '4200', lim: '100', dec: '8' }),
+        contentType: 'application/json',
+      },
+      expected: {
+        op: 'deploy',
+        tick: 'VERS',
+        value: '4200',
+        lim: '100',
+        dec: '8',
+      },
+    },
+    {
       name: 'should return brc20 details when content is valid application/json',
       inputs: {
         content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'vers', amt: '420' }),
