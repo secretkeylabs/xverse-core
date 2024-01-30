@@ -13,9 +13,9 @@ import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { InputToSign } from '../psbt';
+import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
-import { ExtendedUtxo } from './extendedUtxo';
 
 export type SignOptions = {
   ledgerTransport?: Transport;
@@ -405,7 +405,6 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     for (const signature of signatures) {
       transaction.updateInput(signature[0], {
         partialSig: [[signature[1].pubkey, signature[1].signature]],
-        bip32Derivation: undefined,
       });
     }
   }
