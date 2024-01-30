@@ -11,6 +11,10 @@ import { Psbt, Transaction } from 'bitcoinjs-lib';
 
 const encodeVarString = (b: any) => Buffer.concat([encode(b.byteLength), b]);
 
+const DUMMY_INPUT_HASH = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
+const DUMMY_INPUT_INDEX = 0xffffffff;
+const DUMMY_INPUT_SEQUENCE = 0;
+
 const createSegwitBip322Signature = async ({
   message,
   app,
@@ -24,9 +28,6 @@ const createSegwitBip322Signature = async ({
 }): Promise<string> => {
   const coinType = getCoinType(networkType);
   const masterFingerPrint = await app.getMasterFingerprint();
-  const prevoutHash = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
-  const prevoutIndex = 0xffffffff;
-  const sequence = 0;
   const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), Buffer.from(bip0322Hash(message), 'hex')]);
   const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -44,7 +45,7 @@ const createSegwitBip322Signature = async ({
 
   const txToSpend = new Transaction();
   txToSpend.version = 0;
-  txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
+  txToSpend.addInput(DUMMY_INPUT_HASH, DUMMY_INPUT_INDEX, DUMMY_INPUT_SEQUENCE, scriptSig);
   txToSpend.addOutput(witnessScript, 0);
 
   const psbtToSign = new Psbt();
@@ -91,9 +92,6 @@ const createTaprootBip322Signature = async ({
 }): Promise<string> => {
   const coinType = getCoinType(networkType);
   const masterFingerPrint = await app.getMasterFingerprint();
-  const prevoutHash = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
-  const prevoutIndex = 0xffffffff;
-  const sequence = 0;
   const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), Buffer.from(bip0322Hash(message), 'hex')]);
   const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
   const accountPolicy = new DefaultWalletPolicy(
@@ -105,7 +103,7 @@ const createTaprootBip322Signature = async ({
 
   const txToSpend = new Transaction();
   txToSpend.version = 0;
-  txToSpend.addInput(prevoutHash, prevoutIndex, sequence, scriptSig);
+  txToSpend.addInput(DUMMY_INPUT_HASH, DUMMY_INPUT_INDEX, DUMMY_INPUT_SEQUENCE, scriptSig);
   txToSpend.addOutput(taprootScript, 0);
 
   // Need to update input derivation path so the ledger can recognize the inputs to sign
@@ -173,7 +171,6 @@ export async function signSimpleBip322Message({
   const app = new AppClient(transport);
 
   const { type } = getAddressInfo(address);
-  console.log('🚀 ~ type:', type);
 
   if (type === AddressType.p2tr) {
     return createTaprootBip322Signature({ message, app, addressIndex, networkType });
