@@ -34,45 +34,6 @@ describe('EnhancedTransaction constructor', () => {
     expect(() => new EnhancedTransaction(ctx, [], 1)).throws('No actions provided for transaction context');
   });
 
-  it('should throw on low fee rate', () => {
-    const txn = new EnhancedTransaction(
-      ctx,
-      [
-        {
-          type: ActionType.SEND_BTC,
-          amount: 100000n,
-          combinable: false,
-          toAddress: addresses[0].nativeSegwit,
-        },
-      ],
-      1,
-    );
-    expect(() => (txn.feeRate = 0)).throws('Fee rate must be a natural number');
-    expect(() => (txn.feeRate = -1)).throws('Fee rate must be a natural number');
-    expect(() => (txn.feeRate = 1)).not.toThrow();
-  });
-
-  it('should round decimal fee rate', () => {
-    const txn = new EnhancedTransaction(
-      ctx,
-      [
-        {
-          type: ActionType.SEND_BTC,
-          amount: 100000n,
-          combinable: false,
-          toAddress: addresses[0].nativeSegwit,
-        },
-      ],
-      1,
-    );
-
-    txn.feeRate = 1.1;
-    expect(txn.feeRate).equals(1);
-
-    txn.feeRate = 1.5;
-    expect(txn.feeRate).equals(2);
-  });
-
   describe('should throw if spendable send utxo actions invalid', () => {
     it.each([
       [
@@ -372,6 +333,7 @@ describe('EnhancedTransaction summary', () => {
       actualFee: 500n,
       actualFeeRate: 50,
       effectiveFeeRate: 50,
+      dustValue: 2n,
     });
 
     // ==========================
@@ -509,6 +471,7 @@ describe('EnhancedTransaction summary', () => {
           },
         ],
       },
+      dustValue: 2n,
     });
 
     expect(paymentAddressContext.signInputs).not.toHaveBeenCalled();

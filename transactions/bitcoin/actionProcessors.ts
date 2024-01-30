@@ -1,7 +1,14 @@
 import { Transaction } from '@scure/btc-signer';
 import { TransactionContext } from './context';
 import { ExtendedUtxo } from './extendedUtxo';
-import { CompilationOptions, SendBtcAction, SendUtxoAction, SplitUtxoAction, TransactionOutput } from './types';
+import {
+  CompilationOptions,
+  SendBtcAction,
+  SendUtxoAction,
+  SplitUtxoAction,
+  TransactionOptions,
+  TransactionOutput,
+} from './types';
 import {
   extractUsedOutpoints,
   getOffsetFromLocation,
@@ -22,6 +29,7 @@ export const applySendUtxoActions = async (
   context: TransactionContext,
   options: CompilationOptions,
   transaction: Transaction,
+  transactionOptions: TransactionOptions,
   actions: SendUtxoAction[],
 ) => {
   const usedOutpoints = extractUsedOutpoints(transaction);
@@ -50,7 +58,7 @@ export const applySendUtxoActions = async (
       let outputAmount = 0;
 
       for (const action of actionGroup) {
-        if (options.excludeOutpointList?.includes(action.outpoint)) {
+        if (transactionOptions.excludeOutpointList?.includes(action.outpoint)) {
           throw new Error(`UTXO excluded but used in send UTXO action: ${action.outpoint}`);
         }
 
@@ -95,6 +103,7 @@ export const applySplitUtxoActions = async (
   context: TransactionContext,
   options: CompilationOptions,
   transaction: Transaction,
+  transactionOptions: TransactionOptions,
   actions: SplitUtxoAction[],
 ) => {
   const usedOutpoints = extractUsedOutpoints(transaction);
@@ -144,7 +153,7 @@ export const applySplitUtxoActions = async (
   for (let oi = 0; oi < outpointActionList.length; oi++) {
     const [outpoint, outpointActions] = outpointActionList[oi];
 
-    if (options.excludeOutpointList?.includes(outpoint)) {
+    if (transactionOptions.excludeOutpointList?.includes(outpoint)) {
       throw new Error(`UTXO excluded but used in split UTXO action: ${outpoint}`);
     }
 
@@ -205,6 +214,7 @@ export const applySendBtcActionsAndFee = async (
   context: TransactionContext,
   options: CompilationOptions,
   transaction: Transaction,
+  transactionOptions: TransactionOptions,
   actions: SendBtcAction[],
   feeRate: number,
   /**
@@ -240,7 +250,7 @@ export const applySendBtcActionsAndFee = async (
   // get available UTXOs to spend
   const unusedPaymentUtxos = await getSortedAvailablePaymentUtxos(
     context,
-    new Set([...(options.excludeOutpointList ?? []), ...usedOutpoints]),
+    new Set([...(transactionOptions.excludeOutpointList ?? []), ...usedOutpoints]),
   );
 
   // add inputs and outputs for the required actions
@@ -358,7 +368,7 @@ export const applySendBtcActionsAndFee = async (
     while (
       utxoToUse &&
       (inputDustValueAtFeeRate > utxoToUse.utxo.value ||
-        (!options.allowUnconfirmedInput && !utxoToUse.utxo.status.confirmed))
+        (!transactionOptions.allowUnconfirmedInput && !utxoToUse.utxo.status.confirmed))
     ) {
       utxoToUse = unusedPaymentUtxos.pop();
     }
@@ -367,7 +377,7 @@ export const applySendBtcActionsAndFee = async (
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
     }
 
-    if (options.useEffectiveFeeRate) {
+    if (transactionOptions.useEffectiveFeeRate) {
       const { totalVsize, totalFee } = await utxoToUse.getUnconfirmedUtxoFeeData();
 
       unconfirmedVsize += totalVsize;
@@ -381,7 +391,7 @@ export const applySendBtcActionsAndFee = async (
 
   return {
     actualFeeRate,
-    effectiveFeeRate: options.useEffectiveFeeRate ? effectiveFeeRate : undefined,
+    effectiveFeeRate: transactionOptions.useEffectiveFeeRate ? effectiveFeeRate : undefined,
     actualFee,
     inputs,
     outputs,

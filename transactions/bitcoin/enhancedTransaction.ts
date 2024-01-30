@@ -11,20 +11,24 @@ import {
   CompilationOptions,
   EnhancedInput,
   TransactionFeeOutput,
+  TransactionOptions,
   TransactionOutput,
   TransactionSummary,
 } from './types';
 import { extractActionMap, extractOutputInscriptionsAndSatributes, mapInputToEnhancedInput } from './utils';
 
-const defaultOptions: CompilationOptions = {
+const defaultCompilationOptions: CompilationOptions = {
   rbfEnabled: false,
-  excludeOutpointList: [],
-  useEffectiveFeeRate: false,
-  allowUnconfirmedInput: true,
 };
 
 const getOptionsWithDefaults = (options: CompilationOptions): CompilationOptions => {
-  return { ...defaultOptions, ...options };
+  return { ...defaultCompilationOptions, ...options };
+};
+
+const defaultTransactionOptions: TransactionOptions = {
+  excludeOutpointList: [],
+  useEffectiveFeeRate: false,
+  allowUnconfirmedInput: true,
 };
 
 export class EnhancedTransaction {
@@ -32,9 +36,11 @@ export class EnhancedTransaction {
 
   private readonly _actions!: ActionMap;
 
-  private _feeRate!: number;
+  private readonly _feeRate!: number;
 
   private readonly _overrideChangeAddress?: string;
+
+  private readonly _options!: TransactionOptions;
 
   get overrideChangeAddress(): string | undefined {
     return this._overrideChangeAddress;
@@ -44,16 +50,14 @@ export class EnhancedTransaction {
     return this._feeRate;
   }
 
-  set feeRate(feeRate: number) {
-    if (feeRate < 1) {
-      throw new Error('Fee rate must be a natural number');
-    }
-    this._feeRate = Math.round(feeRate);
+  get options(): TransactionOptions {
+    return { ...this._options, excludeOutpointList: [...(this._options.excludeOutpointList ?? [])] };
   }
 
-  constructor(context: TransactionContext, actions: Action[], feeRate: number) {
+  constructor(context: TransactionContext, actions: Action[], feeRate: number, options?: TransactionOptions) {
     this._context = context;
     this._feeRate = feeRate;
+    this._options = { ...defaultTransactionOptions, ...options };
 
     if (!actions.length) {
       throw new Error('No actions provided for transaction context');
@@ -89,6 +93,7 @@ export class EnhancedTransaction {
       this._context,
       options,
       transaction,
+      this._options,
       this._actions[ActionType.SEND_UTXO],
     );
 
@@ -96,6 +101,7 @@ export class EnhancedTransaction {
       this._context,
       options,
       transaction,
+      this._options,
       this._actions[ActionType.SPLIT_UTXO],
     );
 
@@ -110,6 +116,7 @@ export class EnhancedTransaction {
       this._context,
       options,
       transaction,
+      this._options,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
       this._overrideChangeAddress,

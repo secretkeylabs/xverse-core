@@ -53,12 +53,15 @@ export type ActionMap = {
   [K in Action['type']]: Action[];
 };
 
-export type CompilationOptions = {
-  rbfEnabled?: boolean;
-  ledgerTransport?: Transport;
+export type TransactionOptions = {
   excludeOutpointList?: string[];
   useEffectiveFeeRate?: boolean;
   allowUnconfirmedInput?: boolean;
+};
+
+export type CompilationOptions = {
+  rbfEnabled?: boolean;
+  ledgerTransport?: Transport;
 };
 
 export type TransactionSummary = {
