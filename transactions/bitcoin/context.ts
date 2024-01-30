@@ -21,7 +21,6 @@ export type SignOptions = {
   ledgerTransport?: Transport;
   allowedSigHash?: btc.SigHash[];
   inputsToSign?: InputToSign[];
-  addNonWitnessUtxo?: boolean;
 };
 
 export abstract class AddressContext {
@@ -199,6 +198,26 @@ export abstract class AddressContext {
     // this can be implemented by subclasses if they need to do something before signing
   }
 
+  protected async addNonWitnessUtxosToInputs(
+    transaction: btc.Transaction,
+    options: SignOptions,
+    witnessScript?: Uint8Array,
+  ): Promise<void> {
+    const signIndexes = this.getSignIndexes(transaction, options, witnessScript);
+
+    for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      const utxo = await this.getUtxo(`${input.txid}:${input.index}`);
+
+      if (utxo) {
+        const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
+        transaction.updateInput(+i, {
+          nonWitnessUtxo,
+        });
+      }
+    }
+  }
+
   protected abstract getDerivationPath(): string;
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
   abstract signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void>;
@@ -240,26 +259,6 @@ export class P2shAddressContext extends AddressContext {
       witnessScript: this._p2sh.witnessScript,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
-  }
-
-  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    if (!options.addNonWitnessUtxo) {
-      return;
-    }
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
-
-    for (const i of Object.keys(signIndexes)) {
-      const input = transaction.getInput(+i);
-      const utxo = await this.getUtxo(`${input.txid}:${input.index}`);
-
-      if (utxo) {
-        const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
-        transaction.updateInput(+i, {
-          nonWitnessUtxo,
-        });
-      }
-    }
   }
 
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
@@ -334,26 +333,6 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    if (!options.addNonWitnessUtxo) {
-      return;
-    }
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
-
-    for (const i of Object.keys(signIndexes)) {
-      const input = transaction.getInput(+i);
-      const utxo = await this.getUtxo(`${input.txid}:${input.index}`);
-
-      if (utxo) {
-        const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
-        transaction.updateInput(+i, {
-          nonWitnessUtxo,
-        });
-      }
-    }
-  }
-
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
@@ -395,7 +374,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    super.prepareInputs(transaction, { ...options, addNonWitnessUtxo: true });
+    await this.addNonWitnessUtxosToInputs(transaction, options, this._p2wpkh.script);
 
     const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
@@ -500,26 +479,6 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    if (!options.addNonWitnessUtxo) {
-      return;
-    }
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
-
-    for (const i of Object.keys(signIndexes)) {
-      const input = transaction.getInput(+i);
-      const utxo = await this.getUtxo(`${input.txid}:${input.index}`);
-
-      if (utxo) {
-        const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
-        transaction.updateInput(+i, {
-          nonWitnessUtxo,
-        });
-      }
-    }
-  }
-
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const seedPhrase = await this._seedVault.getSeed();
     const privateKey = await this.getPrivateKey(seedPhrase);
@@ -580,7 +539,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    super.prepareInputs(transaction, { ...options, addNonWitnessUtxo: true });
+    await this.addNonWitnessUtxosToInputs(transaction, options, this._p2tr.script);
 
     const app = new AppClient(ledgerTransport);
     const masterFingerPrint = await app.getMasterFingerprint();
