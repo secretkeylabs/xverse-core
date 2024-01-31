@@ -1,8 +1,16 @@
-import { BtcTransactionData, StacksNetwork, StacksTransaction, StxTransactionData, microstacksToStx } from '../../dist';
 import { deserializeTransaction, estimateTransaction } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
 import { RbfRecommendedFees, getRawTransaction, rbf } from '../../transactions';
-import { AppInfo, RecommendedFeeResponse, SettingsNetwork } from '../../types';
+import {
+  AppInfo,
+  RecommendedFeeResponse,
+  SettingsNetwork,
+  BtcTransactionData,
+  StacksNetwork,
+  StacksTransaction,
+  StxTransactionData,
+} from '../../types';
+import { microstacksToStx } from '../../currency';
 
 export type RbfData = {
   rbfTransaction?: InstanceType<typeof rbf.RbfTransaction>;
