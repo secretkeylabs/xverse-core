@@ -425,7 +425,6 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     for (const signature of signatures) {
       transaction.updateInput(signature[0], {
         partialSig: [[signature[1].pubkey, signature[1].signature]],
-        bip32Derivation: undefined,
       });
     }
   }
@@ -545,18 +544,30 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     const masterFingerPrint = await app.getMasterFingerprint();
 
     const inputDerivation = [
-      hex.decode(this._publicKey),
+      this._p2tr.tapInternalKey,
       {
-        path: btc.bip32Path(this.getDerivationPath()),
-        fingerprint: parseInt(masterFingerPrint, 16),
+        hashes: [],
+        der: {
+          path: btc.bip32Path(this.getDerivationPath()),
+          fingerprint: parseInt(masterFingerPrint, 16),
+        },
       },
-    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+    ] as [
+      Uint8Array,
+      {
+        hashes: Uint8Array[];
+        der: {
+          fingerprint: any;
+          path: any;
+        };
+      },
+    ];
 
     const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
 
     for (const i of Object.keys(signIndexes)) {
       transaction.updateInput(+i, {
-        bip32Derivation: [inputDerivation],
+        tapBip32Derivation: [inputDerivation],
       });
     }
   }
@@ -590,7 +601,6 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     for (const signature of signatures) {
       transaction.updateInput(signature[0], {
         tapKeySig: signature[1].signature,
-        bip32Derivation: undefined,
       });
     }
   }
