@@ -21,6 +21,9 @@ const getFiatBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): Bi
 const getStxTokenEquivalent = (fiatAmount: BigNumber, stxBtcRate: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   fiatAmount.dividedBy(stxBtcRate).dividedBy(btcFiatRate);
 
+/**
+ * @deprecated Use getBtcFiatEquivalent instead
+ */
 const getBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): BigNumber =>
   fiatAmount.dividedBy(btcFiatRate);
 
