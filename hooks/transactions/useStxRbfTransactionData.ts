@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { StxTransactionData, SettingsNetwork, StacksNetwork, AppInfo } from '../../types';
-import { fetchStxRbfData } from '../useRbfTransactionData/helpers';
+import { fetchStxRbfData } from './helpers';
 
 type Props = {
   transaction?: StxTransactionData;

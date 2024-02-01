@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { calculateStxRbfData } from '../../../hooks/useRbfTransactionData/helpers';
+import { calculateStxRbfData } from '../../../hooks/transactions/helpers';
 import { AppInfo } from '../../../types';
 import { describe, expect, it } from 'vitest';
 import { microstacksToStx } from '../../../currency';

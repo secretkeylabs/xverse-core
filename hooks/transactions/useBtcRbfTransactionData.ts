@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { rbf } from '../../transactions';
 import { Account, BtcTransactionData, SettingsNetwork } from '../../types';
 import { BitcoinEsploraApiProvider, mempoolApi } from '../../api';
-import { RbfData, sortFees } from '../useRbfTransactionData/helpers';
+import { RbfData, sortFees } from './helpers';
 
 type Props = {
   account: Account | null;
