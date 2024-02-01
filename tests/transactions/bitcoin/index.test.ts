@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActionType, sendMaxBtc } from '../../../transactions/bitcoin';
+import { ActionType, combineUtxos, sendBtc, sendMaxBtc } from '../../../transactions/bitcoin';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
 import { addresses } from './helpers';
 
@@ -7,7 +7,6 @@ vi.mock('../../../transactions/bitcoin/enhancedTransaction');
 
 describe('sendMaxBtc', () => {
   const paymentAddress = addresses[0].nestedSegwit;
-  const ordinalsAddress = addresses[0].taproot;
 
   const recipientAddress = addresses[0].nativeSegwit;
 
@@ -243,5 +242,119 @@ describe('sendMaxBtc', () => {
       ],
       2,
     );
+  });
+});
+
+describe('combineUtxos', () => {
+  const recipientAddress = addresses[0].nativeSegwit;
+
+  const contextMock = {} as any;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('should generate correct transaction - non spendable', async () => {
+    const dummyOutpoints = ['out1', 'out2'];
+    const transaction = await combineUtxos(contextMock, dummyOutpoints, recipientAddress, 2);
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: true,
+          spendable: false,
+          outpoint: 'out1',
+          toAddress: recipientAddress,
+        },
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: true,
+          spendable: false,
+          outpoint: 'out2',
+          toAddress: recipientAddress,
+        },
+      ],
+      2,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct transaction - spendable', async () => {
+    const dummyOutpoints = ['out1', 'out2'];
+    const transaction = await combineUtxos(contextMock, dummyOutpoints, recipientAddress, 2, true);
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: true,
+          spendable: true,
+          outpoint: 'out1',
+          toAddress: recipientAddress,
+        },
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: true,
+          spendable: true,
+          outpoint: 'out2',
+          toAddress: recipientAddress,
+        },
+      ],
+      2,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+});
+
+describe('sendBtc', () => {
+  const paymentAddress = addresses[0].nestedSegwit;
+  const ordinalsAddress = addresses[0].taproot;
+
+  const contextMock = {} as any;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('should generate correct transaction', async () => {
+    const recipients = [
+      {
+        toAddress: paymentAddress,
+        amount: 10000n,
+      },
+      {
+        toAddress: ordinalsAddress,
+        amount: 20000n,
+      },
+    ];
+    const transaction = await sendBtc(contextMock, recipients, 2);
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_BTC,
+          combinable: false,
+          toAddress: paymentAddress,
+          amount: 10000n,
+        },
+        {
+          type: ActionType.SEND_BTC,
+          combinable: false,
+          toAddress: ordinalsAddress,
+          amount: 20000n,
+        },
+      ],
+      2,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
 });

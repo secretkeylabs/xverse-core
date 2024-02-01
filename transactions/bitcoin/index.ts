@@ -95,12 +95,12 @@ export const combineUtxos = async (
   outpoints: string[],
   toAddress: string,
   feeRate: number,
-  spendable?: boolean,
+  spendable = false,
 ) => {
   const actions = outpoints.map<SendUtxoAction>((outpoint) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,
-    spendable: spendable ?? false,
+    spendable,
     outpoint,
     toAddress,
   }));
