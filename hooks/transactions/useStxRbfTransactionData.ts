@@ -10,13 +10,7 @@ type Props = {
   stxAvailableBalance: string;
 };
 
-export const useStxRbfTransactionData = ({
-  transaction,
-  btcNetwork,
-  stacksNetwork,
-  appInfo,
-  stxAvailableBalance,
-}: Props) => {
+const useStxRbfTransactionData = ({ transaction, btcNetwork, stacksNetwork, appInfo, stxAvailableBalance }: Props) => {
   const fetchRbfData = async () => {
     if (!transaction) {
       return;
@@ -32,3 +26,5 @@ export const useStxRbfTransactionData = ({
     enabled: !!transaction,
   });
 };
+
+export default useStxRbfTransactionData;

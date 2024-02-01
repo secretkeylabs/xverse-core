@@ -12,13 +12,7 @@ type Props = {
   isLedgerAccount: boolean;
 };
 
-export const useBtcRbfTransactionData = ({
-  account,
-  transaction,
-  btcNetwork,
-  esploraProvider,
-  isLedgerAccount,
-}: Props) => {
+const useBtcRbfTransactionData = ({ account, transaction, btcNetwork, esploraProvider, isLedgerAccount }: Props) => {
   const fetchRbfData = async (): Promise<RbfData | undefined> => {
     if (!account || !transaction) {
       return;
@@ -50,3 +44,5 @@ export const useBtcRbfTransactionData = ({
     enabled: !!transaction && !!account,
   });
 };
+
+export default useBtcRbfTransactionData;
