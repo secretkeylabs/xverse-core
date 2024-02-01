@@ -1,10 +1,10 @@
 import BigNumber from 'bignumber.js';
-import { calculateStxData } from './helpers';
-import { StxTransactionData, SettingsNetwork, AppInfo } from '../../types';
+import { calculateStxData } from '../../../hooks/useRbfTransactionData/helpers';
+import { StxTransactionData, SettingsNetwork, AppInfo } from '../../../types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StacksMocknet } from '@stacks/network';
 import axios from 'axios';
-import { microstacksToStx } from '../../currency';
+import { microstacksToStx } from '../../../currency';
 
 vi.mock('axios');
 vi.mock('@stacks/transactions', async () => {

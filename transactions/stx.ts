@@ -458,7 +458,7 @@ export async function generateContractDeployTransaction(options: {
 }
 
 export async function getLatestNonce(stxAddress: string, network: SettingsNetwork): Promise<LatestNonceResponse> {
-  const baseUrl = network?.address;
+  const baseUrl = network.address;
   const apiUrl = `${baseUrl}/extended/v1/address/${stxAddress}/nonces`;
   return axios.get<LatestNonceResponse>(apiUrl).then((response) => {
     return response.data;
@@ -466,7 +466,7 @@ export async function getLatestNonce(stxAddress: string, network: SettingsNetwor
 }
 
 export async function getRawTransaction(txId: string, network: SettingsNetwork): Promise<string> {
-  const baseUrl = network?.address;
+  const baseUrl = network.address;
   const apiUrl = `${baseUrl}/extended/v1/tx/${txId}/raw`;
 
   return axios.get<RawTransactionResponse>(apiUrl).then((response) => {
