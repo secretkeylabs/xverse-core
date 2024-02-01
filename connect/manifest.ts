@@ -5,7 +5,7 @@ export interface WebManifest {
 }
 
 // Fetch the web manifest
-async function getManifestFile(url: string) {
+export async function getManifestFile(url: string) {
   try {
     const response = await axios.get<WebManifest>(`${url}/manifest.json`);
     return response.data;
@@ -22,24 +22,18 @@ export async function getAppIconFromWebManifest(url: string): Promise<string> {
   if (!/^https?:\/\/.*/.test(url)) {
     throw new Error('Invalid URL format');
   }
-  const UrlParsed = url.split('/');
-  const baseURL = `${UrlParsed[0]}${UrlParsed[1]}${UrlParsed[2]}`;
-  const manifest = await getManifestFile(baseURL);
+  const { origin } = new URL(url);
+  const manifest = await getManifestFile(origin);
 
   if (manifest) {
     // Extract the app icons' URLs
-    const icons = manifest.icons
-      ?.filter((icon) => icon.sizes === '48x48')
-      .map((iconUrl) => {
-        return {
-          src: iconUrl.src.replace(/^\/+/, ''),
-          sizes: iconUrl.sizes,
-        };
-      });
-    if (icons) {
-      return `${baseURL}/${icons[0].src}`;
+
+    const firstIconSrc = manifest?.icons?.find((icon) => icon.sizes === '48x48')?.src?.replace(/^\/+/, '');
+
+    if (!firstIconSrc) {
+      return '';
     }
-    return '';
+    return `${origin}/${firstIconSrc}`;
   } else {
     return '';
   }
