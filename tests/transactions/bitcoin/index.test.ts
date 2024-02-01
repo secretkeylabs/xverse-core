@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActionType, combineUtxos, sendBtc, sendMaxBtc } from '../../../transactions/bitcoin';
+import { ActionType, combineUtxos, sendBtc, sendMaxBtc, sendOrdinals } from '../../../transactions/bitcoin';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
 import { addresses } from './helpers';
 
@@ -356,5 +356,117 @@ describe('sendBtc', () => {
       2,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+});
+
+describe('sendOrdinals', () => {
+  const paymentsAddress = addresses[0].nestedSegwit;
+  const ordinalsAddress = addresses[0].taproot;
+
+  const contextMock = {
+    getInscriptionUtxo: vi.fn(),
+  } as any;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it('should throw if not recipients are provided', async () => {
+    await expect(sendOrdinals(contextMock, [], 2)).rejects.toThrow('Must provide at least 1 recipient');
+  });
+
+  it('should generate correct transaction with outpoints', async () => {
+    const recipients = [
+      {
+        toAddress: ordinalsAddress,
+        outpoint: 'out1',
+      },
+    ];
+    const transaction = await sendOrdinals(contextMock, recipients, 2);
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: false,
+          spendable: false,
+          toAddress: ordinalsAddress,
+          outpoint: 'out1',
+        },
+      ],
+      2,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct transaction with inscription ids', async () => {
+    const recipients = [
+      {
+        toAddress: ordinalsAddress,
+        outpoint: 'out1',
+      },
+      {
+        toAddress: paymentsAddress,
+        inscriptionId: 'i1',
+      },
+      {
+        toAddress: ordinalsAddress,
+        inscriptionId: 'i2',
+      },
+    ];
+
+    contextMock.getInscriptionUtxo.mockImplementation(async (inscriptionId: string) => {
+      return {
+        extendedUtxo: { outpoint: `outpoint-${inscriptionId}` },
+      };
+    });
+
+    const transaction = await sendOrdinals(contextMock, recipients, 2);
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: false,
+          spendable: false,
+          toAddress: ordinalsAddress,
+          outpoint: 'out1',
+        },
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: false,
+          spendable: false,
+          toAddress: paymentsAddress,
+          outpoint: 'outpoint-i1',
+        },
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: false,
+          spendable: false,
+          toAddress: ordinalsAddress,
+          outpoint: 'outpoint-i2',
+        },
+      ],
+      2,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should throw if utxo for inscription not found', async () => {
+    const recipients = [
+      {
+        toAddress: paymentsAddress,
+        inscriptionId: 'i1',
+      },
+    ];
+
+    contextMock.getInscriptionUtxo.mockResolvedValueOnce({});
+
+    await expect(() => sendOrdinals(contextMock, recipients, 2)).rejects.toThrow('No utxo found for inscription');
   });
 });
