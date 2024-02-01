@@ -48,6 +48,7 @@ export const sendMaxBtc = async (context: TransactionContext, toAddress: string,
   if (paymentUtxos.length === 0) {
     throw new Error('No utxos found');
   }
+
   if (skipDust) {
     const testTransaction = new EnhancedTransaction(
       context,
