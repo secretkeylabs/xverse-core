@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { rbf } from '../../transactions';
 import { Account, AppInfo, BtcTransactionData, SettingsNetwork, StacksNetwork, StxTransactionData } from '../../types';
-import { RbfData, calculateStxData, isBtcTransaction, sortFees } from './helpers';
+import { RbfData, fetchStxRbfData, isBtcTransaction, sortFees } from './helpers';
 import { BitcoinEsploraApiProvider, mempoolApi } from '../../api';
 
 const useRbfTransactionData = ({
@@ -33,14 +33,8 @@ const useRbfTransactionData = ({
     }
     try {
       setIsLoading(true);
-      const calculatedData = await calculateStxData(
-        transaction,
-        btcNetwork,
-        stacksNetwork,
-        appInfo,
-        stxAvailableBalance,
-      );
-      setRbfData(calculatedData);
+      const response = await fetchStxRbfData(transaction, btcNetwork, stacksNetwork, appInfo, stxAvailableBalance);
+      setRbfData(response);
     } catch (err: any) {
       setErrorCode('SOMETHING_WENT_WRONG');
     } finally {

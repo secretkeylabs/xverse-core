@@ -62,19 +62,16 @@ export const sortFees = (fees: RbfRecommendedFees) =>
     }),
   );
 
-export const calculateStxData = async (
-  transaction: StxTransactionData,
-  btcNetwork: SettingsNetwork,
-  stacksNetwork: StacksNetwork,
+export const calculateStxRbfData = async (
+  fee: BigNumber,
+  feeEstimations: {
+    fee: number;
+    fee_rate: number;
+  }[],
   appInfo: AppInfo | null,
   stxAvailableBalance: string,
 ): Promise<RbfData> => {
-  const { fee } = transaction;
-  const txRaw: string = await getRawTransaction(transaction.txid, btcNetwork);
-  const unsignedTx: StacksTransaction = deserializeTransaction(txRaw);
-
-  const [slow, medium, high] = await estimateTransaction(unsignedTx.payload, undefined, stacksNetwork);
-
+  const [slow, medium, high] = feeEstimations;
   const shouldCapFee = appInfo?.thresholdHighStacksFee && high.fee > appInfo.thresholdHighStacksFee;
 
   const mediumFee = shouldCapFee ? appInfo.thresholdHighStacksFee : medium.fee;
@@ -105,4 +102,19 @@ export const calculateStxData = async (
       minimumFee: microstacksToStx(BigNumber(slow.fee)).toNumber(),
     },
   };
+};
+
+export const fetchStxRbfData = async (
+  transaction: StxTransactionData,
+  btcNetwork: SettingsNetwork,
+  stacksNetwork: StacksNetwork,
+  appInfo: AppInfo | null,
+  stxAvailableBalance: string,
+): Promise<RbfData> => {
+  const { fee } = transaction;
+  const txRaw: string = await getRawTransaction(transaction.txid, btcNetwork);
+  const unsignedTx: StacksTransaction = deserializeTransaction(txRaw);
+  const feeEstimations = await estimateTransaction(unsignedTx.payload, undefined, stacksNetwork);
+
+  return calculateStxRbfData(fee, feeEstimations, appInfo, stxAvailableBalance);
 };

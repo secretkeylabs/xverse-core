@@ -1,57 +1,22 @@
 import BigNumber from 'bignumber.js';
-import { calculateStxData } from '../../../hooks/useRbfTransactionData/helpers';
-import { StxTransactionData, SettingsNetwork, AppInfo } from '../../../types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { StacksMocknet } from '@stacks/network';
-import axios from 'axios';
+import { calculateStxRbfData } from '../../../hooks/useRbfTransactionData/helpers';
+import { AppInfo } from '../../../types';
+import { describe, expect, it } from 'vitest';
 import { microstacksToStx } from '../../../currency';
-
-vi.mock('axios');
-vi.mock('@stacks/transactions', async () => {
-  const actual = await vi.importActual<any>('@stacks/transactions');
-  return {
-    ...actual,
-    estimateTransaction: vi.fn().mockResolvedValue([
-      { fee: 1000, fee_rate: 1000 },
-      { fee: 2000, fee_rate: 2000 },
-      { fee: 3000, fee_rate: 3000 },
-    ]),
-  };
-});
 
 const lowFee = 1000;
 const mediumFee = 2000;
 const highFee = 3000;
+const threshold = 5000;
 
-const mockTransaction: StxTransactionData = {
-  txid: 'mock-txid',
-  amount: BigNumber(100),
-  seenTime: new Date(),
-  incoming: false,
-  txType: 'token_transfer',
-  txStatus: 'success',
-  blockHash: 'mock-blockhash',
-  blockHeight: 1,
-  burnBlockTime: 1,
-  burnBlockTimeIso: new Date(),
-  canonical: true,
-  fee: BigNumber(lowFee),
-  nonce: 1,
-  postConditionMode: 'mock-mode',
-  senderAddress: 'mock-senderaddress',
-  sponsored: false,
-  txIndex: 1,
-  txResults: 'mock-results',
-};
+const feeEstimations = [
+  { fee: lowFee, fee_rate: lowFee },
+  { fee: mediumFee, fee_rate: mediumFee },
+  { fee: highFee, fee_rate: highFee },
+];
 
-const mockBtcNetwork: SettingsNetwork = {
-  type: 'Mainnet',
-  address: 'mock-address',
-  btcApiUrl: 'mock-btcApiUrl',
-  fallbackBtcApiUrl: 'mock-fallbackBtcApiUrl',
-};
-
-const mockStacksNetwork = new StacksMocknet();
+// We start the testing with the low fee set as the transaction fee here
+const currentTxFee = BigNumber(lowFee);
 
 const mockAppInfo: AppInfo = {
   stxSendTxMultiplier: 1,
@@ -59,16 +24,17 @@ const mockAppInfo: AppInfo = {
   otherTxMultiplier: 1,
   thresholdHighSatsFee: 1,
   thresholdHighSatsPerByteRatio: 1,
-  thresholdHighStacksFee: 5000,
+  thresholdHighStacksFee: threshold,
 };
 
-const mockStxAvailableBalance = '5000';
+const mockStxAvailableBalance = '4000';
 
 const mockResult = {
   rbfTransaction: undefined,
   rbfTxSummary: {
     currentFee: microstacksToStx(BigNumber(lowFee)).toNumber(),
     currentFeeRate: microstacksToStx(BigNumber(lowFee)).toNumber(),
+    // The minimum fee should be 1.25 times the current fee
     minimumRbfFee: microstacksToStx(BigNumber(lowFee).multipliedBy(1.25)).toNumber(),
     minimumRbfFeeRate: microstacksToStx(BigNumber(lowFee).multipliedBy(1.25)).toNumber(),
   },
@@ -93,36 +59,19 @@ const mockResult = {
   },
 };
 
-const mockRawTx =
-  // eslint-disable-next-line max-len
-  '0x80800000000400483cd5c1c96119e132aa12b76df34f003c85f9af00000000000000240000000000021cd200006c47412a98c710eaaa276f93d9a77097616afe9ac8f48068bae96f8084c23ad26b4d6e77fce26b20be0faa86493e2fd8567e48283157973399ab5e283965b20e03020000000000051a5953622a9370e859e5a8e290ed38b1a885bf09df00000000000186a000000000000000000000000000000000000000000000000000000000000000000000';
-
-describe('calculateStxData method', async () => {
-  beforeEach(() => {
-    vi.mocked(axios.get).mockResolvedValue({
-      data: {
-        raw_tx: mockRawTx,
-      },
-    });
-  });
-
+describe('calculateStxRbfData method', async () => {
   it('should return the fee estimation fetched from the Stacks function', async () => {
-    const result = await calculateStxData(
-      mockTransaction,
-      mockBtcNetwork,
-      mockStacksNetwork,
-      mockAppInfo,
-      mockStxAvailableBalance,
-    );
+    const result = await calculateStxRbfData(currentTxFee, feeEstimations, mockAppInfo, mockStxAvailableBalance);
 
     expect(result).toBeDefined();
     expect(result).toEqual(mockResult);
+    // Checking if the minimum fee is set to 1.25 times the current fee
+    expect(result.rbfTxSummary?.minimumRbfFee).toEqual(microstacksToStx(currentTxFee.multipliedBy(1.25)).toNumber());
   });
 
   it('should return the fee estimation based on the current fee', async () => {
-    const fee = BigNumber(2000);
-    const tx = { ...mockTransaction, fee };
-    const result = await calculateStxData(tx, mockBtcNetwork, mockStacksNetwork, mockAppInfo, mockStxAvailableBalance);
+    const fee = BigNumber(mediumFee + 500);
+    const result = await calculateStxRbfData(fee, feeEstimations, mockAppInfo, mockStxAvailableBalance);
 
     expect(result).toBeDefined();
     expect(result).toEqual({
@@ -130,11 +79,13 @@ describe('calculateStxData method', async () => {
       rbfRecommendedFees: {
         highest: {
           enoughFunds: true,
+          // Checking if the highest fee is set to 1.5 times the current fee
           fee: microstacksToStx(fee.multipliedBy(1.5)).toNumber(),
           feeRate: microstacksToStx(fee.multipliedBy(1.5)).toNumber(),
         },
         higher: {
           enoughFunds: true,
+          // Checking if the higher fee is set to 1.25 times the current fee
           fee: microstacksToStx(fee.multipliedBy(1.25)).toNumber(),
           feeRate: microstacksToStx(fee.multipliedBy(1.25)).toNumber(),
         },
@@ -142,6 +93,7 @@ describe('calculateStxData method', async () => {
       rbfTxSummary: {
         currentFee: microstacksToStx(fee).toNumber(),
         currentFeeRate: microstacksToStx(fee).toNumber(),
+        // Checking if the minimum fee is set to 1.25 times the current fee
         minimumRbfFee: microstacksToStx(fee.multipliedBy(1.25)).toNumber(),
         minimumRbfFeeRate: microstacksToStx(fee.multipliedBy(1.25)).toNumber(),
       },
@@ -150,27 +102,40 @@ describe('calculateStxData method', async () => {
 
   it('should return falsy value for the enoughFunds when the balance is not enough', async () => {
     const availableBalance = '1';
-    const result = await calculateStxData(
-      mockTransaction,
-      mockBtcNetwork,
-      mockStacksNetwork,
+    const result = await calculateStxRbfData(currentTxFee, feeEstimations, mockAppInfo, availableBalance);
+
+    expect(result).toBeDefined();
+    expect(result.rbfRecommendedFees?.high?.enoughFunds).toEqual(false);
+    expect(result.rbfRecommendedFees?.medium?.enoughFunds).toEqual(false);
+  });
+
+  it('should cap the fees based on the thresholdHighStacksFee from appInfo', async () => {
+    const highFeeAboveThreshold = threshold + 1000; // Set a high fee above the threshold
+    const modifiedFeeEstimations = [
+      { fee: lowFee, fee_rate: lowFee },
+      { fee: mediumFee, fee_rate: mediumFee },
+      { fee: highFeeAboveThreshold, fee_rate: highFeeAboveThreshold },
+    ];
+
+    const result = await calculateStxRbfData(
+      currentTxFee,
+      modifiedFeeEstimations,
       mockAppInfo,
-      availableBalance,
+      mockStxAvailableBalance,
     );
 
     expect(result).toBeDefined();
-    expect(result).toEqual({
-      ...mockResult,
-      rbfRecommendedFees: {
-        high: {
-          ...mockResult.rbfRecommendedFees.high,
-          enoughFunds: false,
-        },
-        medium: {
-          ...mockResult.rbfRecommendedFees.medium,
-          enoughFunds: false,
-        },
-      },
-    });
+    expect(result.rbfRecommendedFees?.medium?.fee).toEqual(
+      microstacksToStx(BigNumber(mockAppInfo.thresholdHighStacksFee)).toNumber(),
+    );
+    expect(result.rbfRecommendedFees?.medium?.feeRate).toEqual(
+      microstacksToStx(BigNumber(mockAppInfo.thresholdHighStacksFee)).toNumber(),
+    );
+    expect(result.rbfRecommendedFees?.high?.fee).toEqual(
+      microstacksToStx(BigNumber(mockAppInfo.thresholdHighStacksFee * 1.5)).toNumber(),
+    );
+    expect(result.rbfRecommendedFees?.high?.feeRate).toEqual(
+      microstacksToStx(BigNumber(mockAppInfo.thresholdHighStacksFee * 1.5)).toNumber(),
+    );
   });
 });
