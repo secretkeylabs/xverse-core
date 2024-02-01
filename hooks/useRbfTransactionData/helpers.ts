@@ -75,31 +75,19 @@ export const calculateStxData = async (
 
   const [slow, medium, high] = await estimateTransaction(unsignedTx.payload, undefined, stacksNetwork);
 
-  let feePresets: RbfRecommendedFees = {};
-  let mediumFee = medium.fee;
-  let highFee = high.fee;
+  const shouldCapFee = appInfo?.thresholdHighStacksFee && high.fee > appInfo.thresholdHighStacksFee;
+
+  const mediumFee = shouldCapFee ? appInfo.thresholdHighStacksFee : medium.fee;
+  const highFee = shouldCapFee ? appInfo.thresholdHighStacksFee * 1.5 : high.fee;
   const higherFee = fee.multipliedBy(1.25).toNumber();
   const highestFee = fee.multipliedBy(1.5).toNumber();
 
-  if (appInfo?.thresholdHighStacksFee) {
-    if (high.fee > appInfo.thresholdHighStacksFee) {
-      // adding a fee cap
-      highFee = appInfo.thresholdHighStacksFee * 1.5;
-      mediumFee = appInfo.thresholdHighStacksFee;
-    }
-  }
+  const defaultMinimumFee = fee.multipliedBy(1.25).toNumber();
+  const minimumFee = !Number.isSafeInteger(defaultMinimumFee) ? Math.ceil(defaultMinimumFee) : defaultMinimumFee;
 
-  let minimumFee = fee.multipliedBy(1.25).toNumber();
-  if (!Number.isSafeInteger(minimumFee)) {
-    // round up the fee to the nearest integer
-    minimumFee = Math.ceil(minimumFee);
-  }
-
-  if (fee.lt(BigNumber(mediumFee))) {
-    feePresets = constructRecommendedFees('medium', mediumFee, 'high', highFee, stxAvailableBalance);
-  } else {
-    feePresets = constructRecommendedFees('higher', higherFee, 'highest', highestFee, stxAvailableBalance);
-  }
+  const feePresets: RbfRecommendedFees = fee.lt(BigNumber(mediumFee))
+    ? constructRecommendedFees('medium', mediumFee, 'high', highFee, stxAvailableBalance)
+    : constructRecommendedFees('higher', higherFee, 'highest', highestFee, stxAvailableBalance);
 
   return {
     rbfTransaction: undefined,
