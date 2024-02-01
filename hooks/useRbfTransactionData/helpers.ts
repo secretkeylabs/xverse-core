@@ -90,7 +90,6 @@ export const calculateStxData = async (
     : constructRecommendedFees('higher', higherFee, 'highest', highestFee, stxAvailableBalance);
 
   return {
-    rbfTransaction: undefined,
     rbfTxSummary: {
       currentFee: microstacksToStx(fee).toNumber(),
       currentFeeRate: microstacksToStx(fee).toNumber(),
