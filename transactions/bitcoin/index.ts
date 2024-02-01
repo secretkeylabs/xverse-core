@@ -181,6 +181,7 @@ export const sendOrdinals = async (
 };
 
 /**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
  * send inscription
  * send multiple inscription to 1 recipient
  * send multiple inscription to multiple recipients
@@ -354,6 +355,9 @@ export const sendOrdinalsWithSplit = async (
   return transaction;
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpoint: string, feeRate: number) => {
   const utxo = await context.getUtxo(outpoint);
 
@@ -375,6 +379,9 @@ export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpo
   return sendOrdinalsWithSplit(context, recipients, feeRate);
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover bitcoin to same address');
@@ -420,6 +427,9 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
   return transaction;
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover ordinals to same address');
