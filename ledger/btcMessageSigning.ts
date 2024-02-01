@@ -1,11 +1,12 @@
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
+import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
+import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { encode } from 'varuint-bitcoin';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
+import { bip0322Hash } from '../connect';
 import { NetworkType } from '../types';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
 import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
-import { Psbt, Transaction } from 'bitcoinjs-lib';
-import { bip0322Hash } from '../connect';
 
 const encodeVarString = (b: Buffer) => Buffer.concat([encode(b.byteLength), b]);
 const DUMMY_INPUT_HASH = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
@@ -52,7 +53,7 @@ const createMessageSignature = async (
   return signature;
 };
 
-export const createSegwitBip322Signature = async ({
+const createSegwitBip322Signature = async ({
   message,
   app,
   addressIndex,
@@ -80,7 +81,8 @@ export const createSegwitBip322Signature = async ({
     bip32Derivation: [inputDerivation],
   });
 };
-export const createTaprootBip322Signature = async ({
+
+const createTaprootBip322Signature = async ({
   message,
   app,
   addressIndex,
@@ -111,3 +113,34 @@ export const createTaprootBip322Signature = async ({
     tapInternalKey: internalPubkey,
   });
 };
+
+/**
+ * This function is used to sign an incoming BIP 322 message with the ledger
+ * @param transport - the transport object with connected ledger device
+ * @param networkType - the network type (Mainnet or Testnet)
+ * @param addressIndex - the index of the account address to sign with
+ * @param message - the incoming message in string format to sign
+ * @returns the signature in string (base64) format
+ * */
+export async function signSimpleBip322Message({
+  transport,
+  networkType,
+  addressIndex,
+  address,
+  message,
+}: {
+  transport: Transport;
+  networkType: NetworkType;
+  addressIndex: number;
+  address: string;
+  message: string;
+}) {
+  const app = new AppClient(transport);
+  const { type } = getAddressInfo(address);
+  if (type === AddressType.p2tr) {
+    return createTaprootBip322Signature({ message, app, addressIndex, networkType });
+  } else if (type === AddressType.p2wpkh) {
+    return createSegwitBip322Signature({ message, app, addressIndex, networkType });
+  }
+  throw new Error('Invalid Address Type');
+}
