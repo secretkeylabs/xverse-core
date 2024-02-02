@@ -319,7 +319,6 @@ export class P2wpkhAddressContext extends AddressContext {
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -328,7 +327,6 @@ export class P2wpkhAddressContext extends AddressContext {
         script: this._p2wpkh.script,
         amount: BigInt(utxo.value),
       },
-      nonWitnessUtxo,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
@@ -463,7 +461,6 @@ export class P2trAddressContext extends AddressContext {
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -473,7 +470,6 @@ export class P2trAddressContext extends AddressContext {
         amount: BigInt(utxo.value),
       },
       tapInternalKey: hex.decode(this._publicKey),
-      nonWitnessUtxo,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
