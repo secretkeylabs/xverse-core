@@ -86,6 +86,13 @@ export async function broadcastSignedTransaction(
   const result = await broadcastTransaction(signedTx, txNetwork, attachment);
   if (result.hasOwnProperty('error')) {
     const errorResult = result as TxBroadcastResultRejected;
+    if (errorResult.reason.toString() === 'TooMuchChaining') {
+      throw new Error(
+        // eslint-disable-next-line max-len
+        `Too many pending transactions, pending transaction limit reached. Please wait until your previous transactions have been confirmed`,
+      );
+    }
+
     throw new Error(errorResult.reason);
   } else {
     const res = result as TxBroadcastResultOk;
