@@ -20,6 +20,7 @@ const createMessageSignature = async (
   message: string,
   witnessScript: Buffer,
   inputArgs: Pick<PsbtInput, 'bip32Derivation'> | Pick<PsbtInput, 'tapBip32Derivation' | 'tapInternalKey'>,
+  isSegwit: boolean,
 ): Promise<string> => {
   const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), Buffer.from(bip0322Hash(message), 'hex')]);
   const txToSpend = new Transaction();
@@ -41,9 +42,15 @@ const createMessageSignature = async (
   psbtToSign.addOutput({ script: Buffer.from('6a', 'hex'), value: 0 });
   const signatures = await app.signPsbt(psbtToSign.toBase64(), accountPolicy, null);
   for (const signature of signatures) {
-    psbtToSign.updateInput(signature[0], {
-      partialSig: [signature[1]],
-    });
+    if (isSegwit) {
+      psbtToSign.updateInput(signature[0], {
+        partialSig: [signature[1]],
+      });
+    } else {
+      psbtToSign.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
+    }
   }
   psbtToSign.finalizeAllInputs();
   const txToSign = psbtToSign.extractTransaction();
@@ -77,9 +84,16 @@ const createSegwitBip322Signature = async ({
     'wpkh(@0/**)',
     `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
   );
-  return createMessageSignature(app, accountPolicy, message, witnessScript, {
-    bip32Derivation: [inputDerivation],
-  });
+  return createMessageSignature(
+    app,
+    accountPolicy,
+    message,
+    witnessScript,
+    {
+      bip32Derivation: [inputDerivation],
+    },
+    true,
+  );
 };
 
 const createTaprootBip322Signature = async ({
@@ -108,10 +122,17 @@ const createTaprootBip322Signature = async ({
     'tr(@0/**)',
     `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
   );
-  return createMessageSignature(app, accountPolicy, message, taprootScript, {
-    tapBip32Derivation: [inputDerivation],
-    tapInternalKey: internalPubkey,
-  });
+  return createMessageSignature(
+    app,
+    accountPolicy,
+    message,
+    taprootScript,
+    {
+      tapBip32Derivation: [inputDerivation],
+      tapInternalKey: internalPubkey,
+    },
+    false,
+  );
 };
 
 /**
