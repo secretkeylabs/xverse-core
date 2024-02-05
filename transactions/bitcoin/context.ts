@@ -207,12 +207,23 @@ export abstract class AddressContext {
 
     for (const i of Object.keys(signIndexes)) {
       const input = transaction.getInput(+i);
-      const utxo = await this.getUtxo(`${input.txid}:${input.index}`);
+      if ((input.nonWitnessUtxo && !input.witnessUtxo) || !input.txid) {
+        continue;
+      }
+
+      const txId = hex.encode(input.txid);
+
+      let utxo = await this.getUtxo(`${txId}:${input.index}`);
+
+      if (!utxo) {
+        utxo = await this.getExternalUtxo(`${txId}:${input.index}`);
+      }
 
       if (utxo) {
         const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
         transaction.updateInput(+i, {
           nonWitnessUtxo,
+          witnessUtxo: undefined,
         });
       }
     }
@@ -388,6 +399,11 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
 
     for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
       transaction.updateInput(+i, {
         bip32Derivation: [inputDerivation],
       });
@@ -513,7 +529,6 @@ export class P2trAddressContext extends AddressContext {
 export class LedgerP2trAddressContext extends P2trAddressContext {
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     const utxo = extendedUtxo.utxo;
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
 
     transaction.addInput({
       txid: utxo.txid,
@@ -522,7 +537,6 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
         script: this._p2tr.script,
         amount: BigInt(utxo.value),
       },
-      nonWitnessUtxo,
       tapInternalKey: this._p2tr.tapInternalKey,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
@@ -562,6 +576,11 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
 
     for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
       transaction.updateInput(+i, {
         tapBip32Derivation: [inputDerivation],
       });
