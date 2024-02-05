@@ -309,3 +309,9 @@ export async function getAppConfig(network: NetworkType) {
   const appConfig = await axios.get(appConfigUrl);
   return appConfig;
 }
+
+export async function getSpamTokensList(network: NetworkType) {
+  const spamTokensUrl = `${XVERSE_API_BASE_URL(network)}/v1/spam-tokens`;
+  const spamTokens = await axios.get(spamTokensUrl);
+  return spamTokens.data;
+}
