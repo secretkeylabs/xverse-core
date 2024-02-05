@@ -207,7 +207,7 @@ export abstract class AddressContext {
 
     for (const i of Object.keys(signIndexes)) {
       const input = transaction.getInput(+i);
-      if ((input.nonWitnessUtxo && !input.witnessUtxo) || !input.txid) {
+      if (!input.txid?.length) {
         continue;
       }
 
@@ -223,7 +223,7 @@ export abstract class AddressContext {
         const nonWitnessUtxo = Buffer.from(await utxo.hex, 'hex');
         transaction.updateInput(+i, {
           nonWitnessUtxo,
-          witnessUtxo: undefined,
+          // witnessUtxo: undefined, // TODO: this should be removed for non-segwit inputs
         });
       }
     }
