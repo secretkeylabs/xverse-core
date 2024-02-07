@@ -5,7 +5,6 @@ import * as bip39 from 'bip39';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { signLedgerPSBT } from '../ledger/psbt';
 import { Transport } from '../ledger/types';
-import SeedVault from '../seedVault';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { bip32 } from '../utils/bip32';
 import { getBitcoinDerivationPath, getTaprootDerivationPath } from '../wallet';
@@ -107,7 +106,6 @@ export type RBFProps = {
   ordinalsAddress: string;
   btcPublicKey: string;
   ordinalsPublicKey: string;
-  seedVault: SeedVault;
   accountId: number;
   network: NetworkType;
   accountType: AccountType;
@@ -123,6 +121,7 @@ type TierFees = {
 type CompileOptions = {
   feeRate: number;
   ledgerTransport?: Transport;
+  getSeedPhrase: () => string | Promise<string>;
 };
 
 type RbfRecommendedFees = {
@@ -275,16 +274,20 @@ class RbfTransaction {
     return this._paymentUtxos;
   };
 
-  private getBip32Master = async () => {
+  private getBip32Master = async (options: CompileOptions) => {
     // keep this method short so seed phrase is as short lived as possible
-    const seedPhrase = await this.options.seedVault.getSeed();
+    const seedPhrase = await options.getSeedPhrase();
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     return bip32.fromSeed(seed);
   };
 
-  private signTxSoftware = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
+  private signTxSoftware = async (transaction: btc.Transaction, options?: CompileOptions): Promise<btc.Transaction> => {
+    if (!options?.getSeedPhrase) {
+      throw new Error('getSeedPhrase option is required to sign the transaction');
+    }
+
     const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
-    const master = await this.getBip32Master();
+    const master = await this.getBip32Master(options);
 
     const btcDerivationPath = getBitcoinDerivationPath({
       index: BigInt(this.options.accountId),
@@ -398,7 +401,7 @@ class RbfTransaction {
       return this.signTxLedger(tx, options);
     }
 
-    return this.signTxSoftware(tx);
+    return this.signTxSoftware(tx, options);
   };
 
   private getTxSize = async (tx: btc.Transaction) => {

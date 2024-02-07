@@ -5,6 +5,7 @@ import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
   AppInfo,
+  Brc20TokensResponse,
   BtcFeeResponse,
   CoinsResponse,
   CollectionMarketDataResponse,
@@ -86,6 +87,34 @@ export async function getCoinsInfo(
 
   return axios
     .post<CoinsResponse>(url, requestBody)
+    .then((response) => {
+      return response.data;
+    })
+    .catch(() => {
+      return null;
+    });
+}
+
+/**
+ * get BRC-20 supported tokens with the fiat rate
+ * @param network
+ * @param tickers provided to get the fiat rate along with supported tokens
+ * @param fiatCurrency
+ */
+export async function getBrc20Tokens(
+  network: NetworkType,
+  tickers: string[],
+  fiatCurrency: string,
+): Promise<Brc20TokensResponse | null> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/brc20/tokens`;
+
+  const params = {
+    currency: fiatCurrency,
+    tickers: tickers,
+  };
+
+  return axios
+    .get<Brc20TokensResponse>(url, { params })
     .then((response) => {
       return response.data;
     })
@@ -176,7 +205,7 @@ export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHos
   const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
-    tx: signedTx.serialize().toString('hex'),
+    tx: signedTx.serialize().toString(),
   };
 
   return axios
@@ -287,4 +316,10 @@ export async function getFeaturedDapps(): Promise<FeaturedDapp[]> {
   const url = `${XVERSE_API_BASE_URL}/v1/featured/dapp`;
   const response = await axios.get(url);
   return response.data.featuredDapp;
+}
+
+export async function getSpamTokensList(network: NetworkType) {
+  const spamTokensUrl = `${XVERSE_API_BASE_URL(network)}/v1/spam-tokens`;
+  const spamTokens = await axios.get(spamTokensUrl);
+  return spamTokens.data;
 }

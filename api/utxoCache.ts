@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
 import {
   AddressBundleResponse,
@@ -8,6 +9,8 @@ import {
   isApiSatributeKnown,
 } from '../types';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
+
+const initMutex = new Mutex();
 
 export type UtxoCacheStruct = {
   [utxoId: string]: UtxoOrdinalBundle<RareSatsType>;
@@ -34,15 +37,24 @@ export class UtxoCache {
 
   private readonly VERSION = 1;
 
+  private readonly _addressMutexes: { [address: string]: Mutex } = {};
+
   constructor(config: UtxoCacheConfig) {
     this._cacheStorageController = config.cacheStorageController;
     this._network = config.network;
   }
 
-  private getAddressCacheStorageKey = (address: string) => `utxoCache-${address}`;
+  private _getAddressMutex = (address: string) => {
+    if (!this._addressMutexes[address]) {
+      this._addressMutexes[address] = new Mutex();
+    }
+    return this._addressMutexes[address];
+  };
+
+  private _getAddressCacheStorageKey = (address: string) => `utxoCache-${address}`;
 
   private _getCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
-    const cacheStr = await this._cacheStorageController.get(this.getAddressCacheStorageKey(address));
+    const cacheStr = await this._cacheStorageController.get(this._getAddressCacheStorageKey(address));
     if (cacheStr) {
       try {
         let cache = JSON.parse(cacheStr) as UtxoCacheStorage;
@@ -62,7 +74,7 @@ export class UtxoCache {
   };
 
   private _setCache = async (address: string, addressCache: UtxoCacheStorage): Promise<void> => {
-    await this._cacheStorageController.set(this.getAddressCacheStorageKey(address), JSON.stringify(addressCache));
+    await this._cacheStorageController.set(this._getAddressCacheStorageKey(address), JSON.stringify(addressCache));
   };
 
   private _setCachedItem = async (
@@ -150,18 +162,38 @@ export class UtxoCache {
   };
 
   private _initCache = async (address: string): Promise<UtxoCacheStorage> => {
-    const [utxos, xVersion] = await this._getAllUtxos(address);
+    const addressMutex = this._getAddressMutex(address);
 
-    const cacheToStore: UtxoCacheStorage = {
-      version: this.VERSION,
-      syncTime: Date.now(),
-      utxos,
-      xVersion,
-    };
+    while (addressMutex.isLocked()) {
+      // another thread is already initialising the cache, wait for it to finish and return
+      await addressMutex.waitForUnlock();
+      const cache = await this._getCache(address);
+      if (cache) {
+        // cache was initialised while we were waiting, return it
+        return cache;
+      }
+      // initialising the cache failed or the other thread was doing something else. We need to try again, but
+      // another thread might have moved on to building the cache already, so we need to check the state of the
+      // mutex again, hence, check the mutex lock state in a loop until we can acquire it
+    }
 
-    await this._setCache(address, cacheToStore);
+    const release = await addressMutex.acquire();
+    try {
+      const [utxos, xVersion] = await this._getAllUtxos(address);
 
-    return cacheToStore;
+      const cacheToStore: UtxoCacheStorage = {
+        version: this.VERSION,
+        syncTime: Date.now(),
+        utxos,
+        xVersion,
+      };
+
+      await this._setCache(address, cacheToStore);
+
+      return cacheToStore;
+    } finally {
+      release();
+    }
   };
 
   getUtxoByOutpoint = async (

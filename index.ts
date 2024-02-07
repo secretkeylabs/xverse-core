@@ -8,7 +8,11 @@ export {
   BTC_BASE_URI_TESTNET,
   HIRO_MAINNET_DEFAULT,
   HIRO_TESTNET_DEFAULT,
+  initialNetworksList,
+  defaultMainnet,
+  defaultTestnet,
 } from './constant';
+export * from './utils';
 export * from './currency';
 export * from './encryption';
 export * from './gaia';
@@ -19,5 +23,4 @@ export * from './stacking';
 export * from './stacksCollectible';
 export * from './transactions';
 export * from './types';
-export { CoreError } from './utils/coreError';
 export * from './wallet';

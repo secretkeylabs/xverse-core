@@ -1,7 +1,7 @@
 import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
 import { RareSatsType } from '../../types';
-import { ExtendedUtxo } from './context';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
@@ -57,6 +57,8 @@ export type CompilationOptions = {
   rbfEnabled?: boolean;
   ledgerTransport?: Transport;
   excludeOutpointList?: string[];
+  useEffectiveFeeRate?: boolean;
+  allowUnconfirmedInput?: boolean;
 };
 
 export type PSBTCompilationOptions = {
@@ -65,20 +67,26 @@ export type PSBTCompilationOptions = {
   allowedSighash?: btc.SigHash[];
 };
 
+export type IOInscription = {
+  id: string;
+  offset: number;
+  fromAddress: string;
+  number: number;
+  contentType: string;
+};
+
+export type IOSatribute = {
+  types: RareSatsType[];
+  amount: number;
+  offset: number;
+  fromAddress: string;
+};
+
 export type TransactionOutput = {
   address: string;
   amount: number;
-  inscriptions: {
-    id: string;
-    offset: number;
-    fromAddress: string;
-  }[];
-  satributes: {
-    types: RareSatsType[];
-    amount: number;
-    offset: number;
-    fromAddress: string;
-  }[];
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
 };
 
 export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
@@ -88,7 +96,26 @@ export type TransactionScriptOutput = {
 };
 
 export type EnhancedInput = {
-  extendedUtxo: ExtendedUtxo;
+  extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
 };
 export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
+
+export type PsbtSummary = {
+  inputs: EnhancedInput[];
+  outputs: EnhancedOutput[];
+  feeOutput?: TransactionFeeOutput;
+  hasSigHashNone: boolean;
+};
+
+export type InputMetadata = {
+  inputs: {
+    extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
+    sigHash?: btc.SigHash | undefined;
+  }[];
+  isSigHashAll: boolean;
+  hasSigHashNone: boolean;
+  inputTotal: number;
+};

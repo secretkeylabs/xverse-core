@@ -1,27 +1,72 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
 import { RecommendedFeeResponse } from '../../types';
 import { BtcAddressBalanceResponse, BtcTransactionBroadcastResponse } from '../../types/api/blockcypher/wallet';
 import * as esplora from '../../types/api/esplora';
 import { NetworkType } from '../../types/network';
-import ApiInstance from '../instance';
 import { BitcoinApiProvider } from './types';
 
 export interface EsploraApiProviderOptions {
   network: NetworkType;
   url?: string;
+  fallbackUrl?: string;
 }
 
-export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApiProvider {
+export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
+  bitcoinApi: AxiosInstance;
+
+  fallbackBitcoinApi?: AxiosInstance;
+
   _network: NetworkType;
 
   constructor(options: EsploraApiProviderOptions) {
-    const { url, network } = options;
+    const { url, network, fallbackUrl } = options;
     const baseURL = url || (network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET);
-
-    super({ baseURL });
+    const axiosConfig: AxiosRequestConfig = { baseURL };
 
     this._network = network;
+    this.bitcoinApi = axios.create(axiosConfig);
+
+    if (fallbackUrl) {
+      this.fallbackBitcoinApi = axios.create({ ...axiosConfig, baseURL: fallbackUrl });
+      this.bitcoinApi.interceptors.response.use(
+        // if the request succeeds, we do nothing.
+        (response) => response,
+        (error) => {
+          if (!this.fallbackBitcoinApi) {
+            return Promise.reject(error);
+          }
+
+          // if the request times out, we retry on the fallbackBitcoinApi
+          if (error?.code === 'ECONNABORTED') {
+            return this.fallbackBitcoinApi.request({
+              ...error.config,
+              baseURL: fallbackUrl,
+            });
+          }
+
+          // if an address has > 500 UTXOs, mempool.space returns a 400 error,
+          // so we retry on the fallbackBitcoinApi
+          if (error?.response?.status >= 400) {
+            return this.fallbackBitcoinApi.request({
+              ...error.config,
+              baseURL: fallbackUrl,
+            });
+          }
+          return Promise.reject(error);
+        },
+      );
+    }
+  }
+
+  async httpGet<T = any>(url: string, params: any = {}): Promise<T> {
+    const response = await this.bitcoinApi.get<T>(url, { params });
+    return response.data;
+  }
+
+  async httpPost<T = any>(url: string, data: any): Promise<T> {
+    const response = await this.bitcoinApi.post(url, data);
+    return response.data;
   }
 
   async getBalance(address: string) {
@@ -40,6 +85,11 @@ export class BitcoinEsploraApiProvider extends ApiInstance implements BitcoinApi
       unconfirmedTx: mempoolStats.tx_count,
       unconfirmedBalance,
     };
+  }
+
+  async getAddressData(address: string) {
+    const data = await this.httpGet<BtcAddressBalanceResponse>(`/address/${address}`);
+    return data;
   }
 
   async getUnspentUtxos(address: string): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {

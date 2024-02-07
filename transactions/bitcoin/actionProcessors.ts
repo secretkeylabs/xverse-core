@@ -1,5 +1,5 @@
 import { Transaction } from '@scure/btc-signer';
-import { ExtendedUtxo, TransactionContext } from './context';
+import { TransactionContext } from './context';
 import { CompilationOptions, SendBtcAction, SendUtxoAction, SplitUtxoAction, TransactionOutput } from './types';
 import {
   extractUsedOutpoints,
@@ -10,6 +10,7 @@ import {
   getTransactionVSize,
   getVbytesForIO,
 } from './utils';
+import { ExtendedUtxo } from './extendedUtxo';
 
 // these are conservative estimates
 const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
@@ -283,14 +284,22 @@ export const applySendBtcActionsAndFee = async (
   const { inputSize } = await getVbytesForIO(context, context.paymentAddress);
   const inputDustValueAtFeeRate = BigInt(inputSize * feeRate);
 
+  let unconfirmedVsize = 0;
+  let unconfirmedFee = 0;
+
+  let actualFeeRate = feeRate;
+  let effectiveFeeRate = feeRate;
+
   while (!complete) {
     const currentChange = totalInputs - totalOutputs;
 
     // use this to get a conservative estimate of the fees so we don't compile too many transactions below
     const totalEstimatedFee =
       (transaction.inputsLength * ESTIMATED_VBYTES_PER_INPUT +
-        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT) *
-      feeRate;
+        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT +
+        unconfirmedVsize) *
+        feeRate -
+      unconfirmedFee;
 
     if (totalEstimatedFee < currentChange) {
       const vSizeWithChange = await getTransactionVSize(
@@ -300,7 +309,7 @@ export const applySendBtcActionsAndFee = async (
       );
 
       if (vSizeWithChange) {
-        const feeWithChange = BigInt(vSizeWithChange * feeRate);
+        const feeWithChange = BigInt((vSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           // we do one last test to ensure that adding close to the actual change won't increase the fees
@@ -311,7 +320,9 @@ export const applySendBtcActionsAndFee = async (
             currentChange - feeWithChange,
           );
           if (finalVSizeWithChange) {
-            actualFee = BigInt(finalVSizeWithChange * feeRate);
+            actualFee = BigInt((finalVSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
+            actualFeeRate = Number(actualFee) / finalVSizeWithChange;
+            effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (finalVSizeWithChange + unconfirmedVsize);
 
             const change = currentChange - actualFee;
             context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
@@ -330,6 +341,8 @@ export const applySendBtcActionsAndFee = async (
 
         if (feeWithoutChange <= currentChange) {
           actualFee = currentChange;
+          actualFeeRate = Number(actualFee) / vSizeNoChange;
+          effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (vSizeNoChange + unconfirmedVsize);
           complete = true;
           break;
         }
@@ -338,13 +351,24 @@ export const applySendBtcActionsAndFee = async (
 
     let utxoToUse = unusedPaymentUtxos.pop();
 
-    // ensure UTXO is not dust at selected fee rate
-    while (utxoToUse && inputDustValueAtFeeRate > utxoToUse.utxo.value) {
+    // ensure UTXO is not dust at selected fee rate and that it is skipped if unconfirmed and not allowed
+    while (
+      utxoToUse &&
+      (inputDustValueAtFeeRate > utxoToUse.utxo.value ||
+        (!options.allowUnconfirmedInput && !utxoToUse.utxo.status.confirmed))
+    ) {
       utxoToUse = unusedPaymentUtxos.pop();
     }
 
     if (!utxoToUse) {
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
+    }
+
+    if (options.useEffectiveFeeRate) {
+      const { totalVsize, totalFee } = await utxoToUse.getUnconfirmedUtxoFeeData();
+
+      unconfirmedVsize += totalVsize;
+      unconfirmedFee += totalFee;
     }
 
     totalInputs += BigInt(utxoToUse.utxo.value);
@@ -353,6 +377,8 @@ export const applySendBtcActionsAndFee = async (
   }
 
   return {
+    actualFeeRate,
+    effectiveFeeRate: options.useEffectiveFeeRate ? effectiveFeeRate : undefined,
     actualFee,
     inputs,
     outputs,

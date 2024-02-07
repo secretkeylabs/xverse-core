@@ -1,6 +1,5 @@
 import { hashMessage } from '@stacks/encryption';
 import {
-  bytesToHex,
   ClarityValue,
   createStacksPrivateKey,
   getPublicKey,
@@ -8,6 +7,7 @@ import {
   signMessageHashRsv,
   signStructuredData,
 } from '@stacks/transactions';
+import { buf2hex } from '../utils/arrayBuffers';
 
 export interface SignatureData {
   signature: string;
@@ -20,7 +20,7 @@ export function signMessage(message: string, privateKey: string): SignatureData 
   return {
     signature: signMessageHashRsv({
       privateKey: sk,
-      messageHash: bytesToHex(hash),
+      messageHash: buf2hex(hash),
     }).data,
     publicKey: publicKeyToString(getPublicKey(sk)),
   };

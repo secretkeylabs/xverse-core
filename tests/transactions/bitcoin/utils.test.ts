@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Action, ActionType } from '../../../transactions/bitcoin/types';
 import {
   areByteArraysEqual,
   extractActionMap,
+  extractOutputInscriptionsAndSatributes,
   extractUsedOutpoints,
   getOffsetFromLocation,
   getOutpoint,
@@ -404,7 +405,7 @@ describe('getTransactionTotals', () => {
     expect(outputValue).toEqual(3200n);
   });
 
-  it('throw on input without amount', async () => {
+  it('skip input without amount', async () => {
     const dummyInputs = [
       {
         witnessUtxo: {
@@ -428,12 +429,13 @@ describe('getTransactionTotals', () => {
       getOutput: (i: number) => dummyOutputs[i],
     } as any;
 
-    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
-      'Invalid input found on transaction at index 1',
-    );
+    const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+    expect(inputValue).toEqual(1000n);
+    expect(outputValue).toEqual(500n);
   });
 
-  it('throw on output without amount', async () => {
+  it('skips output without amount', async () => {
     const dummyInputs = [
       {
         witnessUtxo: {
@@ -460,9 +462,10 @@ describe('getTransactionTotals', () => {
       getOutput: (i: number) => dummyOutputs[i],
     } as any;
 
-    await expect(() => getTransactionTotals(transaction)).rejects.toThrow(
-      'Invalid output found on transaction at index 1',
-    );
+    const { inputValue, outputValue } = await getTransactionTotals(transaction);
+
+    expect(inputValue).toEqual(3000n);
+    expect(outputValue).toEqual(500n);
   });
 });
 
@@ -549,5 +552,203 @@ describe('extractUsedOutpoints', () => {
     } as any;
 
     expect(() => extractUsedOutpoints(transaction as any)).throws('Invalid input found on transaction at index 1');
+  });
+});
+
+describe('extractOutputInscriptionsAndSatributes', () => {
+  it('Successfully extracts inscriptions and satributes', async () => {
+    const dummyExtendedUtxo = {
+      address: 'payments',
+      utxo: {
+        value: 10000,
+      },
+      getBundleData: vi.fn(),
+    } as any;
+
+    dummyExtendedUtxo.getBundleData.mockResolvedValue({
+      sat_ranges: [
+        {
+          offset: 0,
+          range: {
+            start: '0',
+            end: '1',
+          },
+          inscriptions: [
+            {
+              id: 'i0',
+              inscription_number: 1,
+              content_type: '1',
+            },
+          ],
+          satributes: ['VINTAGE'],
+        },
+        {
+          offset: 1,
+          range: {
+            start: '1',
+            end: '1000',
+          },
+          inscriptions: [],
+          satributes: ['VINTAGE'],
+        },
+        {
+          offset: 1000,
+          range: {
+            start: '2000',
+            end: '3000',
+          },
+          inscriptions: [],
+          satributes: ['BLOCK_9'],
+        },
+        {
+          offset: 2000,
+          range: {
+            start: '5000',
+            end: '5001',
+          },
+          inscriptions: [
+            {
+              id: 'i1',
+              inscription_number: 2,
+              content_type: '2',
+            },
+          ],
+          satributes: ['BLOCK_9', 'VINTAGE'],
+        },
+        {
+          offset: 2001,
+          range: {
+            start: '5001',
+            end: '6000',
+          },
+          inscriptions: [],
+          satributes: ['BLOCK_9', 'VINTAGE'],
+        },
+        {
+          offset: 3000,
+          range: {
+            start: '8000',
+            end: '12000',
+          },
+          inscriptions: [],
+          satributes: ['BLOCK_9', 'PIZZA', 'VINTAGE'],
+        },
+        {
+          offset: 7000,
+          range: {
+            start: '80000',
+            end: '830000',
+          },
+          inscriptions: [],
+          satributes: ['BLOCK_9', 'PIZZA', 'PALINDROME'],
+        },
+      ],
+    });
+
+    let result = await extractOutputInscriptionsAndSatributes([dummyExtendedUtxo], 0, 546);
+
+    expect(result.inscriptions).toEqual([
+      {
+        id: 'i0',
+        offset: 0,
+        fromAddress: 'payments',
+        number: 1,
+        contentType: '1',
+      },
+    ]);
+    expect(result.satributes).toEqual([
+      {
+        types: ['VINTAGE'],
+        amount: 1,
+        offset: 0,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['VINTAGE'],
+        amount: 545,
+        offset: 1,
+        fromAddress: 'payments',
+      },
+    ]);
+
+    result = await extractOutputInscriptionsAndSatributes([dummyExtendedUtxo], 300, 700);
+
+    expect(result.inscriptions).toEqual([]);
+    expect(result.satributes).toEqual([
+      {
+        types: ['VINTAGE'],
+        amount: 700,
+        offset: 0,
+        fromAddress: 'payments',
+      },
+    ]);
+
+    result = await extractOutputInscriptionsAndSatributes([dummyExtendedUtxo], 300, 1000);
+
+    expect(result.inscriptions).toEqual([]);
+    expect(result.satributes).toEqual([
+      {
+        types: ['VINTAGE'],
+        amount: 700,
+        offset: 0,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9'],
+        amount: 300,
+        offset: 700,
+        fromAddress: 'payments',
+      },
+    ]);
+
+    result = await extractOutputInscriptionsAndSatributes([dummyExtendedUtxo], 500, 8000);
+
+    expect(result.inscriptions).toEqual([
+      {
+        id: 'i1',
+        offset: 1500,
+        fromAddress: 'payments',
+        number: 2,
+        contentType: '2',
+      },
+    ]);
+    expect(result.satributes).toEqual([
+      {
+        types: ['VINTAGE'],
+        amount: 500,
+        offset: 0,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9'],
+        amount: 1000,
+        offset: 500,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9', 'VINTAGE'],
+        amount: 1,
+        offset: 1500,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9', 'VINTAGE'],
+        amount: 999,
+        offset: 1501,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9', 'PIZZA', 'VINTAGE'],
+        amount: 4000,
+        offset: 2500,
+        fromAddress: 'payments',
+      },
+      {
+        types: ['BLOCK_9', 'PIZZA', 'PALINDROME'],
+        amount: 1500,
+        offset: 6500,
+        fromAddress: 'payments',
+      },
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import { NetworkType } from './types';
+import { NetworkType, SettingsNetwork } from './types';
 
 export const API_TIMEOUT_MILLI = 30000;
 
@@ -24,13 +24,33 @@ export const STX_PATH_WITHOUT_INDEX = `m/44'/5757'/0'/0/`;
 
 export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 
+/**
+ * Network constants
+ */
+// BTC
 export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
-
 export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
-
 export const BLOCKCYPHER_BASE_URI_MAINNET = 'https://api.blockcypher.com/v1/btc/main';
-
 export const BLOCKCYPHER_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/test3';
+export const XVERSE_BTC_BASE_URI_MAINNET = 'https://btc-1.xverse.app';
+export const XVERSE_BTC_BASE_URI_TESTNET = 'https://btc-testnet.xverse.app';
+// STX
+export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
+export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+
+export const defaultMainnet: SettingsNetwork = {
+  type: 'Mainnet',
+  address: HIRO_MAINNET_DEFAULT,
+  btcApiUrl: BTC_BASE_URI_MAINNET,
+  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_MAINNET,
+};
+export const defaultTestnet: SettingsNetwork = {
+  type: 'Testnet',
+  address: HIRO_TESTNET_DEFAULT,
+  btcApiUrl: BTC_BASE_URI_TESTNET,
+  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_TESTNET,
+};
+export const initialNetworksList: SettingsNetwork[] = [{ ...defaultMainnet }, { ...defaultTestnet }];
 
 export const NFT_BASE_URI = 'https://stacks.gamma.io/api/v1/collections';
 
@@ -47,11 +67,9 @@ export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.hiro.so';
 
-export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
-
-export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
-
 export const BNS_CONTRACT_ID = 'SP000000000000000000002Q6VF78.bns';
+
+export const STX_DECIMALS = 6;
 
 export const supportedCoins = [
   {

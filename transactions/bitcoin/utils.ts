@@ -1,7 +1,8 @@
-import { Transaction } from '@scure/btc-signer';
+import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../types';
-import { AddressContext, ExtendedUtxo, TransactionContext } from './context';
-import { Action, ActionMap, ActionType, TransactionOutput } from './types';
+import { AddressContext, TransactionContext } from './context';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
+import { Action, ActionMap, ActionType, EnhancedInput, IOInscription, IOSatribute, TransactionOutput } from './types';
 
 export const areByteArraysEqual = (a?: Uint8Array, b?: Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -103,22 +104,20 @@ export const getTransactionTotals = async (transaction: Transaction) => {
   for (let i = 0; i < inputCount; i++) {
     const input = transaction.getInput(i);
 
-    if (!input.witnessUtxo?.amount) {
-      throw new Error(`Invalid input found on transaction at index ${i}`);
+    // inputs don't necessarily have amounts, they could be dummy inputs for partial PSBT signing
+    if (input.witnessUtxo?.amount) {
+      inputValue += input.witnessUtxo.amount;
     }
-
-    inputValue += input.witnessUtxo.amount;
   }
 
   const outputCount = transaction.outputsLength;
   for (let i = 0; i < outputCount; i++) {
     const output = transaction.getOutput(i);
 
-    if (!output.amount) {
-      throw new Error(`Invalid output found on transaction at index ${i}`);
+    // outputs don't necessarily have amounts, they could be script or dummy outputs
+    if (output.amount) {
+      outputValue += output.amount;
     }
-
-    outputValue += output.amount;
   }
 
   return { inputValue, outputValue };
@@ -131,9 +130,7 @@ export const getTransactionVSize = async (
   change = 546n,
 ) => {
   try {
-    // we copy this way as there is a bug in the current version of the signer that changes PSBT versions
-    // TODO: use transaction.clone() when the signer is updated (after 1.1.0)
-    const transactionCopy = Transaction.fromPSBT(transaction.toPSBT(), transaction.opts);
+    const transactionCopy = transaction.clone();
 
     if (changeAddress) {
       context.addOutputAddress(transactionCopy, changeAddress, change);
@@ -206,7 +203,7 @@ export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
 };
 
 export const extractOutputInscriptionsAndSatributes = async (
-  inputs: ExtendedUtxo[],
+  inputs: (ExtendedUtxo | ExtendedDummyUtxo)[],
   outputOffset: number,
   outputValue: number,
 ) => {
@@ -225,6 +222,8 @@ export const extractOutputInscriptionsAndSatributes = async (
             id: i.id,
             offset: runningOffset + s.offset - outputOffset,
             fromAddress,
+            number: i.inscription_number,
+            contentType: i.content_type,
           })),
         )
         .filter((i) => i.offset >= 0 && i.offset < outputValue);
@@ -234,8 +233,8 @@ export const extractOutputInscriptionsAndSatributes = async (
         .map((s) => {
           const min = Math.max(runningOffset + s.offset - outputOffset, 0);
           const max = Math.min(
-            runningOffset + s.offset - outputOffset + Number(BigInt(s.range.end) - BigInt(s.range.start)),
-            outputOffset + outputValue,
+            runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
+            outputValue,
           );
 
           return {
@@ -244,7 +243,8 @@ export const extractOutputInscriptionsAndSatributes = async (
             offset: min,
             fromAddress,
           };
-        });
+        })
+        .filter((i) => i.offset >= 0 && i.offset < outputValue && i.amount > 0);
 
       inscriptions.push(...(outputInscriptions || []));
       satributes.push(...(outputSatributes || []));
@@ -258,4 +258,40 @@ export const extractOutputInscriptionsAndSatributes = async (
   }
 
   return { inscriptions, satributes };
+};
+
+export const mapInputToEnhancedInput = async (
+  input: ExtendedUtxo | ExtendedDummyUtxo,
+  sigHash?: SigHash,
+): Promise<EnhancedInput> => {
+  const bundleData = await input.getBundleData();
+
+  const inscriptions: IOInscription[] =
+    bundleData?.sat_ranges
+      .filter((r) => r.inscriptions.length > 0)
+      .flatMap((r) =>
+        r.inscriptions.map((i) => ({
+          fromAddress: input.address,
+          id: i.id,
+          offset: r.offset,
+          number: i.inscription_number,
+          contentType: i.content_type,
+        })),
+      ) || [];
+  const satributes: IOSatribute[] =
+    bundleData?.sat_ranges
+      .filter((r) => r.satributes.length > 0)
+      .map((r) => ({
+        fromAddress: input.address,
+        offset: r.offset,
+        types: r.satributes,
+        amount: +r.range.end - +r.range.start,
+      })) || [];
+
+  return {
+    extendedUtxo: input,
+    sigHash: sigHash,
+    inscriptions,
+    satributes,
+  };
 };
