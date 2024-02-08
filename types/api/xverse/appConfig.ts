@@ -1,9 +1,17 @@
-export interface FeaturedDapp {
+export interface FeaturedDappOld {
   name: string;
   url: string;
   image: string;
   description: string;
-  isFeatured: boolean;
+  order: number;
+  banner?: string;
+}
+
+export interface FeaturedDapp {
+  name: string;
+  url: string;
+  icon: string;
+  description: string;
   order: number;
   banner?: string;
 }

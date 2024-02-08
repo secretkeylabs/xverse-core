@@ -23,6 +23,7 @@ import {
   TokenFiatRateResponse,
   FeaturedDapp,
   AppConfig,
+  FeaturedDappOld,
 } from '../types';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -312,9 +313,9 @@ export async function getAppConfig(network: NetworkType): Promise<AppConfig> {
   return response.data.appConfig;
 }
 
-export async function getFeaturedDapps(): Promise<FeaturedDapp[]> {
+export async function getFeaturedDapps(sectionsEnabled = false): Promise<(FeaturedDapp | FeaturedDappOld)[]> {
   const url = `${XVERSE_API_BASE_URL}/v1/featured/dapp`;
-  const response = await axios.get(url);
+  const response = await axios.get(url, { params: { sectionsEnabled } });
   return response.data.featuredDapp;
 }
 
