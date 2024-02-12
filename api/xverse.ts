@@ -313,8 +313,11 @@ export async function getAppConfig(network: NetworkType): Promise<AppConfig> {
   return response.data.appConfig;
 }
 
-export async function getFeaturedDapps(sectionsEnabled = false): Promise<(FeaturedDapp | FeaturedDappOld)[]> {
-  const url = `${XVERSE_API_BASE_URL}/v1/featured/dapp`;
+export async function getFeaturedDapps(
+  network: NetworkType,
+  sectionsEnabled = false,
+): Promise<(FeaturedDapp | FeaturedDappOld)[]> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v1/featured/dapp`;
   const response = await axios.get(url, { params: { sectionsEnabled } });
   return response.data.featuredDapp;
 }
