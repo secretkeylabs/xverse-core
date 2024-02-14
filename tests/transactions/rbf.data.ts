@@ -259,9 +259,6 @@ export const constructOptions = (esploraProvider?: EsploraApiProvider): RBFProps
   btcPublicKey: '032215d812282c0792c8535c3702cca994f5e3da9cd8502c3e190d422f0066fdff',
   ordinalsAddress: 'bc1pr09enf3yc43cz8qh7xwaasuv3xzlgfttdr3wn0q2dy9frkhrpdtsk05jqq',
   ordinalsPublicKey: '5b21869d6643175e0530aeec51d265290d036384990ee60bf089b23ff6b9a367',
-  seedVault: {
-    getSeed: () => 'seed',
-  } as any,
   accountId: 0,
   esploraProvider: esploraProvider || ({} as any),
   network: 'Mainnet',

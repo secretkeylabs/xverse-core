@@ -19,6 +19,7 @@
     "@stacks/storage": "^6.9.0",
     "@stacks/transactions": "6.9.0",
     "@stacks/wallet-sdk": "^6.9.0",
+    "@tanstack/react-query": "^4.29.3",
     "@zondax/ledger-stacks": "^1.0.4",
     "async-mutex": "^0.4.0",
     "axios": "1.6.2",
