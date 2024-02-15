@@ -1,13 +1,4 @@
-export interface FeaturedDappOld {
-  name: string;
-  url: string;
-  image: string;
-  description: string;
-  order: number;
-  banner?: string;
-}
-
-export interface FeaturedDapp {
+export type FeaturedDapp = {
   name: string;
   url: string;
   icon: string;
@@ -16,6 +7,12 @@ export interface FeaturedDapp {
   banner?: string;
 }
 
-export interface AppConfig {
+export type DappSectionData = {
+    section: string;
+    view: string;
+    apps: FeaturedDapp[];
+}
+
+export type AppConfig = {
   btcApiURL: string;
 }

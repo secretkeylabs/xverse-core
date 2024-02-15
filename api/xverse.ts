@@ -21,9 +21,7 @@ import {
   StackingPoolInfo,
   SupportedCurrency,
   TokenFiatRateResponse,
-  FeaturedDapp,
-  AppConfig,
-  FeaturedDappOld,
+  DappSectionData,
 } from '../types';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -307,18 +305,17 @@ export async function getInscription(
   return response.data;
 }
 
-export async function getAppConfig(network: NetworkType): Promise<AppConfig> {
+export async function getAppConfig(network: NetworkType) {
   const appConfigUrl = `${XVERSE_API_BASE_URL(network)}/v1/app-config`;
-  const response = await axios.get(appConfigUrl);
-  return response.data.appConfig;
+  const appConfig = await axios.get(appConfigUrl);
+  return appConfig;
 }
 
 export async function getFeaturedDapps(
   network: NetworkType,
-  sectionsEnabled = false,
-): Promise<(FeaturedDapp | FeaturedDappOld)[]> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/featured/dapp`;
-  const response = await axios.get(url, { params: { sectionsEnabled } });
+): Promise<DappSectionData[]> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v2/featured/dapp`;
+  const response = await axios.get(url);
   return response.data.featuredDapp;
 }
 
