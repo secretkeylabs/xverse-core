@@ -53,12 +53,26 @@ export type ActionMap = {
   [K in Action['type']]: Action[];
 };
 
-export type CompilationOptions = {
-  rbfEnabled?: boolean;
-  ledgerTransport?: Transport;
+export type TransactionOptions = {
   excludeOutpointList?: string[];
   useEffectiveFeeRate?: boolean;
   allowUnconfirmedInput?: boolean;
+};
+
+export type CompilationOptions = {
+  rbfEnabled?: boolean;
+  ledgerTransport?: Transport;
+};
+
+export type TransactionSummary = {
+  fee: bigint;
+  feeRate: number;
+  effectiveFeeRate: number | undefined;
+  vsize: number;
+  inputs: EnhancedInput[];
+  outputs: TransactionOutput[];
+  feeOutput: TransactionFeeOutput;
+  dustValue: bigint;
 };
 
 export type PSBTCompilationOptions = {

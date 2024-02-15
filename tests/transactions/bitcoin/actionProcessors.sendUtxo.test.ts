@@ -6,7 +6,7 @@ import { applySendUtxoActions } from '../../../transactions/bitcoin/actionProces
 describe('applySendUtxoActions', () => {
   it('throws if excluded utxo is used for send', async () => {
     await expect(() =>
-      applySendUtxoActions({} as any, { excludeOutpointList: ['txid:0'] }, { inputsLength: 0 } as any, [
+      applySendUtxoActions({} as any, {}, { inputsLength: 0 } as any, { excludeOutpointList: ['txid:0'] }, [
         {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'txid:0',
@@ -23,7 +23,7 @@ describe('applySendUtxoActions', () => {
     context.getUtxo.mockResolvedValueOnce({});
 
     await expect(() =>
-      applySendUtxoActions(context as any, {}, { inputsLength: 0 } as any, [
+      applySendUtxoActions(context as any, {}, { inputsLength: 0 } as any, {}, [
         {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'txid:0',
@@ -48,7 +48,7 @@ describe('applySendUtxoActions', () => {
     });
 
     await expect(() =>
-      applySendUtxoActions(context as any, {}, transaction as any, [
+      applySendUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
@@ -70,7 +70,7 @@ describe('applySendUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySendUtxoActions(context as any, {}, transaction as any, [
+      applySendUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
@@ -101,7 +101,7 @@ describe('applySendUtxoActions', () => {
 
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
@@ -145,7 +145,7 @@ describe('applySendUtxoActions', () => {
 
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
@@ -195,7 +195,7 @@ describe('applySendUtxoActions', () => {
 
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
@@ -242,7 +242,7 @@ describe('applySendUtxoActions', () => {
 
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
@@ -304,7 +304,7 @@ describe('applySendUtxoActions', () => {
 
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',

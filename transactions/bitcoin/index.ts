@@ -13,8 +13,10 @@ import {
   SendUtxoAction,
   SplitUtxoAction,
   TransactionFeeOutput,
+  TransactionOptions,
   TransactionOutput,
   TransactionScriptOutput,
+  TransactionSummary,
 } from './types';
 
 const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
@@ -30,15 +32,49 @@ export type {
   SendUtxoAction,
   SplitUtxoAction,
   TransactionFeeOutput,
+  TransactionOptions,
   TransactionOutput,
   TransactionScriptOutput,
+  TransactionSummary,
 };
 
 /**
  * send max bitcoin
  */
-export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number) => {
-  const paymentUtxos = await context.paymentAddress.getUtxos();
+export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number, skipDust = true) => {
+  let paymentUtxos = await context.paymentAddress.getUtxos();
+  let dustFiltered = false;
+
+  if (paymentUtxos.length === 0) {
+    throw new Error('No utxos found');
+  }
+
+  if (skipDust) {
+    const testTransaction = new EnhancedTransaction(
+      context,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          combinable: true,
+          spendable: true,
+          outpoint: paymentUtxos[0].outpoint,
+          toAddress,
+        },
+      ],
+      feeRate,
+    );
+
+    const { dustValue } = await testTransaction.getSummary();
+
+    const filteredPaymentUtxos = paymentUtxos.filter((utxo) => utxo.utxo.value > dustValue);
+    dustFiltered = filteredPaymentUtxos.length !== paymentUtxos.length;
+    paymentUtxos = filteredPaymentUtxos;
+
+    if (paymentUtxos.length === 0) {
+      throw new Error('All UTXOs are dust');
+    }
+  }
+
   const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,
@@ -46,8 +82,9 @@ export const sendMaxBtc = async (context: TransactionContext, toAddress: string,
     outpoint: utxo.outpoint,
     toAddress,
   }));
+
   const transaction = new EnhancedTransaction(context, actions, feeRate);
-  return transaction;
+  return { transaction, dustFiltered };
 };
 
 /**
@@ -58,12 +95,12 @@ export const combineUtxos = async (
   outpoints: string[],
   toAddress: string,
   feeRate: number,
-  spendable?: boolean,
+  spendable = false,
 ) => {
   const actions = outpoints.map<SendUtxoAction>((outpoint) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,
-    spendable: spendable ?? false,
+    spendable,
     outpoint,
     toAddress,
   }));
@@ -144,6 +181,7 @@ export const sendOrdinals = async (
 };
 
 /**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
  * send inscription
  * send multiple inscription to 1 recipient
  * send multiple inscription to multiple recipients
@@ -317,6 +355,9 @@ export const sendOrdinalsWithSplit = async (
   return transaction;
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpoint: string, feeRate: number) => {
   const utxo = await context.getUtxo(outpoint);
 
@@ -338,6 +379,9 @@ export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpo
   return sendOrdinalsWithSplit(context, recipients, feeRate);
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover bitcoin to same address');
@@ -383,6 +427,9 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
   return transaction;
 };
 
+/**
+ * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ **/
 export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover ordinals to same address');
