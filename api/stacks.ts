@@ -217,7 +217,7 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/balances`;
 
   const response = await axios.get<TokensResponse>(apiUrl, {
-    timeout: 30000,
+    timeout: API_TIMEOUT_MILLI,
   });
 
   const tokens: FungibleToken[] = [];
@@ -244,7 +244,7 @@ export async function getAccountAssets(stxAddress: string, network: StacksNetwor
 
   return axios
     .get<TokensResponse>(apiUrl, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     })
     .then((response) => {
       const assets: NonFungibleToken[] = [];
@@ -311,7 +311,7 @@ export async function getContractInterface(
     const apiUrl = `${getNetworkURL(network)}/v2/contracts/interface/${contractAddress}/${contractName}`;
 
     const response = await axios.get<ContractInterfaceResponse>(apiUrl, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     });
 
     return response.data;
@@ -324,7 +324,7 @@ export async function getBnsName(stxAddress: string, network: StacksNetwork) {
   try {
     const apiUrl = `${getNetworkURL(network)}/v1/addresses/stacks/${stxAddress}`;
     const response = await axios.get<AddressToBnsResponse>(apiUrl, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     });
     return response?.data?.names[0];
   } catch (err) {
@@ -413,7 +413,7 @@ export async function getStacksInfo(network: string) {
   try {
     const url = `${network}/v2/info`;
     const response = await axios.get<CoreInfo>(url, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     });
     return response?.data;
   } catch (err) {
@@ -466,7 +466,7 @@ export async function fetchDelegationState(stxAddress: string, network: StacksNe
 export async function fetchCoinMetaData(contract: string, network: StacksNetwork) {
   try {
     const response = await axios.get<CoinMetaData>(`${getNetworkURL(network)}/metadata/ft/${contract}`, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     });
     return response?.data;
   } catch (err) {

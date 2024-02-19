@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GAMMA_COLLECTION_API, NFT_BASE_URI } from '../constant';
+import { API_TIMEOUT_MILLI, GAMMA_COLLECTION_API, NFT_BASE_URI } from '../constant';
 import { NftCollectionData, NftDetailResponse } from '../types';
 
 export async function getNftDetail(
@@ -11,7 +11,7 @@ export async function getNftDetail(
 
   return axios
     .get<NftDetailResponse>(apiUrl, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     })
     .then((response) => {
       return response.data;
@@ -26,7 +26,7 @@ export async function getNftsCollectionData(collectionId: string): Promise<NftCo
     const apiUrl = `${GAMMA_COLLECTION_API}/${collectionId}?include=floorItem`;
 
     const response = await axios.get<NftCollectionData>(apiUrl, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     });
 
     return response.data;
