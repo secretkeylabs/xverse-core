@@ -5,14 +5,14 @@ export type FeaturedDapp = {
   description: string;
   order: number;
   banner?: string;
-}
+};
 
 export type DappSectionData = {
-    section: string;
-    view: string;
-    apps: FeaturedDapp[];
-}
+  section: string;
+  view: string;
+  apps: FeaturedDapp[];
+};
 
 export type AppConfig = {
   btcApiURL: string;
-}
+};

@@ -311,9 +311,7 @@ export async function getAppConfig(network: NetworkType) {
   return appConfig;
 }
 
-export async function getFeaturedDapps(
-  network: NetworkType,
-): Promise<DappSectionData[]> {
+export async function getFeaturedDapps(network: NetworkType): Promise<DappSectionData[]> {
   const url = `${XVERSE_API_BASE_URL(network)}/v2/featured/dapp`;
   const response = await axios.get(url);
   return response.data.featuredDapp;
