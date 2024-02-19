@@ -45,14 +45,17 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { PostConditionsOptions, StxMempoolTransactionData } from '../types';
+import { PostConditionsOptions, SettingsNetwork, StxMempoolTransactionData } from '../types';
 import {
+  LatestNonceResponse,
+  RawTransactionResponse,
   UnsignedContractCallTransaction,
   UnsignedContractDeployOptions,
   UnsignedStacksTransation,
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import axios from 'axios';
 
 export interface StacksRecipient {
   address: string;
@@ -459,6 +462,23 @@ export async function generateContractDeployTransaction(options: {
   } catch (err) {
     return Promise.reject(err.toString());
   }
+}
+
+export async function getLatestNonce(stxAddress: string, network: SettingsNetwork): Promise<LatestNonceResponse> {
+  const baseUrl = network.address;
+  const apiUrl = `${baseUrl}/extended/v1/address/${stxAddress}/nonces`;
+  return axios.get<LatestNonceResponse>(apiUrl).then((response) => {
+    return response.data;
+  });
+}
+
+export async function getRawTransaction(txId: string, network: SettingsNetwork): Promise<string> {
+  const baseUrl = network.address;
+  const apiUrl = `${baseUrl}/extended/v1/tx/${txId}/raw`;
+
+  return axios.get<RawTransactionResponse>(apiUrl).then((response) => {
+    return response.data.raw_tx;
+  });
 }
 
 export { addressToString };

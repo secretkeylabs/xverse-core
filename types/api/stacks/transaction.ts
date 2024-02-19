@@ -229,3 +229,14 @@ export interface UnsignedContractDeployOptions {
   sponsored?: boolean;
   publicKey: string;
 }
+
+export interface LatestNonceResponse {
+  last_mempool_tx_nonce: number;
+  last_executed_tx_nonce: number;
+  possible_next_nonce: number;
+  detected_missing_nonces: Array<number>;
+}
+
+export interface RawTransactionResponse {
+  raw_tx: string;
+}

@@ -12,7 +12,7 @@ describe('applySplitUtxoActions', () => {
     });
 
     await expect(() =>
-      applySplitUtxoActions({} as any, {}, transaction as any, [
+      applySplitUtxoActions({} as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
@@ -28,7 +28,7 @@ describe('applySplitUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySplitUtxoActions({} as any, { excludeOutpointList: ['f00d:0'] }, transaction as any, [
+      applySplitUtxoActions({} as any, {}, transaction as any, { excludeOutpointList: ['f00d:0'] }, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
@@ -46,7 +46,7 @@ describe('applySplitUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySplitUtxoActions(context as any, {}, transaction as any, [
+      applySplitUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:0',
@@ -65,7 +65,7 @@ describe('applySplitUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySplitUtxoActions(context as any, {}, transaction as any, [
+      applySplitUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:-1',
@@ -84,7 +84,7 @@ describe('applySplitUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySplitUtxoActions(context as any, {}, transaction as any, [
+      applySplitUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:100',
@@ -107,7 +107,7 @@ describe('applySplitUtxoActions', () => {
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
-      applySplitUtxoActions(context as any, {}, transaction as any, [
+      applySplitUtxoActions(context as any, {}, transaction as any, {}, [
         {
           type: btcTransaction.ActionType.SPLIT_UTXO,
           location: 'f00d:0:600',
@@ -130,7 +130,7 @@ describe('applySplitUtxoActions', () => {
     });
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
@@ -186,7 +186,7 @@ describe('applySplitUtxoActions', () => {
     });
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
@@ -265,7 +265,7 @@ describe('applySplitUtxoActions', () => {
     });
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',
@@ -340,7 +340,7 @@ describe('applySplitUtxoActions', () => {
     });
     const transaction = { inputsLength: 0 };
 
-    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, [
+    const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, {}, [
       {
         type: btcTransaction.ActionType.SPLIT_UTXO,
         location: 'f00d:0:600',

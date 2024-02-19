@@ -47,6 +47,7 @@ describe('applySendBtcActionsAndFee', () => {
         context as any,
         {},
         transaction as any,
+        {},
         [
           {
             type: btcTransaction.ActionType.SEND_BTC,
@@ -87,9 +88,9 @@ describe('applySendBtcActionsAndFee', () => {
     vi.mocked(getTransactionVSize).mockResolvedValueOnce(260);
     vi.mocked(getTransactionVSize).mockResolvedValueOnce(190);
 
-    await expect(() => applySendBtcActionsAndFee(context as any, {}, transaction as any, [], 10)).rejects.toThrowError(
-      'No more UTXOs to use. Insufficient funds for this transaction',
-    );
+    await expect(() =>
+      applySendBtcActionsAndFee(context as any, {}, transaction as any, {}, [], 10),
+    ).rejects.toThrowError('No more UTXOs to use. Insufficient funds for this transaction');
   });
 
   it("doesn't alter the transaction if no actions and enough for fees", async () => {
@@ -122,6 +123,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       10,
     );
@@ -169,6 +171,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       5,
     );
@@ -220,6 +223,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       5,
       'overrideChangeAddress',
@@ -295,6 +299,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       10,
     );
@@ -376,6 +381,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       10,
     );
@@ -457,6 +463,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [],
       10,
     );
@@ -529,6 +536,7 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
+      {},
       [
         {
           type: btcTransaction.ActionType.SEND_BTC,
