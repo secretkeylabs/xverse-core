@@ -21,6 +21,7 @@ import {
   StackingPoolInfo,
   SupportedCurrency,
   TokenFiatRateResponse,
+  DappSectionData,
 } from '../types';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -308,6 +309,12 @@ export async function getAppConfig(network: NetworkType) {
   const appConfigUrl = `${XVERSE_API_BASE_URL(network)}/v1/app-config`;
   const appConfig = await axios.get(appConfigUrl);
   return appConfig;
+}
+
+export async function getFeaturedDapps(network: NetworkType): Promise<DappSectionData[]> {
+  const url = `${XVERSE_API_BASE_URL(network)}/v2/featured/dapp`;
+  const response = await axios.get(url);
+  return response.data.featuredDapp;
 }
 
 export async function getSpamTokensList(network: NetworkType) {
