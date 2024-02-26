@@ -1,8 +1,10 @@
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 
+import { UTXO } from '../../types';
 import { InputToSign } from '../psbt';
 import { TransactionContext } from './context';
+import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
   InputMetadata,
@@ -13,8 +15,6 @@ import {
   TransactionScriptOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
-import { UTXO } from '../../types';
-import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -38,7 +38,7 @@ export class EnhancedPsbt {
     if (inputsToSign) {
       this._inputsToSignMap = {};
       let hasSigHashNone = false;
-      let isSigHashAll = true;
+      let isSigHashAll = false;
 
       for (const input of inputsToSign) {
         for (const inputIndex of input.signingIndexes) {
@@ -52,14 +52,13 @@ export class EnhancedPsbt {
             continue;
           }
 
-          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
-            isSigHashAll = false;
+          if (input.sigHash === btc.SigHash.DEFAULT || (input.sigHash & btc.SigHash.ALL) === btc.SigHash.ALL) {
+            isSigHashAll = true;
             continue;
           }
 
           if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
-            isSigHashAll = false;
           }
         }
       }
@@ -114,7 +113,7 @@ export class EnhancedPsbt {
   private async _extractInputMetadata(transaction: btc.Transaction): Promise<InputMetadata> {
     const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash }[] = [];
 
-    let isSigHashAll = this._isSigHashAll ?? true;
+    let isSigHashAll = this._isSigHashAll ?? false;
     let hasSigHashNone = this._hasSigHashNone ?? false;
 
     let inputTotal = 0;
@@ -142,12 +141,17 @@ export class EnhancedPsbt {
 
       inputTotal += inputExtendedUtxo.utxo.value || 0;
 
-      // sig hash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
+      // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
       // don't have a single before we do the bitwise or for all and none
       const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
 
       isSigHashAll =
-        isSigHashAll && !isSigHashSingle && (sigHash === undefined || (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL);
+        isSigHashAll ||
+        (!isSigHashSingle &&
+          (sigHash === undefined ||
+            sigHash === btc.SigHash.DEFAULT ||
+            (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
+
       hasSigHashNone =
         hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
     }
