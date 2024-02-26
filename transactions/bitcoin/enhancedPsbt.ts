@@ -48,7 +48,7 @@ export class EnhancedPsbt {
 
           this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
 
-          if (!input.sigHash) {
+          if (!input.sigHash || (input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
             continue;
           }
 
