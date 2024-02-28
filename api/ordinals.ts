@@ -1,7 +1,13 @@
 import axios, { isAxiosError } from 'axios';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { OrdinalsApi } from '../api/ordinals/provider';
-import { INSCRIPTION_REQUESTS_SERVICE_URL, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
+import {
+  API_TIMEOUT_MILLI,
+  INSCRIPTION_REQUESTS_SERVICE_URL,
+  ORDINALS_URL,
+  XVERSE_API_BASE_URL,
+  XVERSE_INSCRIBE_URL,
+} from '../constant';
 import {
   Account,
   AddressBundleResponse,
@@ -106,7 +112,7 @@ export async function getTextOrdinalContent(network: NetworkType, inscriptionId:
   const url = ORDINALS_URL(network, inscriptionId);
   return axios
     .get<string>(url, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
       transformResponse: [(data) => parseOrdinalTextContentData(data)],
     })
     .then((response) => response!.data)
@@ -137,7 +143,7 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
   const url = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/token/balances/${address}`;
   return axios
     .get(url, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     })
     .then((response) => {
       if (response.data) {
@@ -180,7 +186,7 @@ export async function getBrc20History(
   const url = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/token/${token}/history/${address}`;
   return axios
     .get(url, {
-      timeout: 30000,
+      timeout: API_TIMEOUT_MILLI,
     })
     .then((response) => {
       const data: HiroApiBrc20TxHistoryResponse = response.data;
