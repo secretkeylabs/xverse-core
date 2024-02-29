@@ -16,6 +16,7 @@
     "@stacks/connect": "^7.4.1",
     "@stacks/encryption": "6.9.0",
     "@stacks/network": "6.8.1",
+    "@stacks/stacking": "^6.12.0",
     "@stacks/storage": "^6.9.0",
     "@stacks/transactions": "6.9.0",
     "@stacks/wallet-sdk": "^6.9.0",
