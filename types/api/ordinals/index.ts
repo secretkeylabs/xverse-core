@@ -18,7 +18,7 @@ export interface Inscription {
   sat_rarity: string;
   sat_coinbase_height: number;
   mime_type: string;
-  content_type: string;
+  content_type?: string;
   content_length: number;
   timestamp: number;
   tx_id: string;

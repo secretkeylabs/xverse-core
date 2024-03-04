@@ -3,7 +3,7 @@ export type InscriptionCostEstimateRequest = {
   feeRate: number;
   inscriptionValue: number;
   contentLength: number;
-  contentType: string;
+  contentType?: string;
   repetitions?: number;
 };
 
@@ -19,7 +19,7 @@ type InscriptionCreateOrderBaseRequest = {
   feeRate: number;
   revealAddress: string;
   inscriptionValue?: number;
-  contentType: string;
+  contentType?: string;
   repetitions?: number;
   appServiceFee?: number;
   appServiceFeeAddress?: string;
