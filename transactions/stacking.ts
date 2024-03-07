@@ -17,6 +17,7 @@ import BN from 'bn.js';
 import { StacksNetwork, StacksTransaction, StxMempoolTransactionData } from '../types';
 import { getNewNonce } from './helper';
 import { estimateContractCallFees, generateUnsignedContractCall, getNonce, setFee, setNonce } from './stx';
+import { poxAddressToTuple } from '@stacks/stacking';
 
 function getAddressHashMode(btcAddress: string) {
   if (btcAddress.startsWith('bc1') || btcAddress.startsWith('tb1')) {
@@ -68,6 +69,9 @@ interface TupleCV<T extends TupleData = TupleData> {
   data: T;
 }
 
+/**
+ * @deprecated use poxAddressToTuple from @stacks/transactions
+ */
 export function addressToVersionHashbyteTupleCV(btcAddress: string): TupleCV<TupleData<BufferCV>> {
   const { hashMode, data } = decodeBtcAddress(btcAddress);
   const hashModeBuffer = bufferCV(new BN(hashMode, 10).toBuffer());
@@ -91,8 +95,8 @@ export async function generateUnsignedDelegateTransaction(
   poolPoxAddress: string,
 ): Promise<StacksTransaction> {
   let unsignedTx;
-  const poolRewardAddressTuple = addressToVersionHashbyteTupleCV(poolPoxAddress);
-  const userRewardAddressTuple = addressToVersionHashbyteTupleCV(rewardAddress);
+  const poolRewardAddressTuple = poxAddressToTuple(poolPoxAddress);
+  const userRewardAddressTuple = poxAddressToTuple(rewardAddress);
 
   try {
     unsignedTx = await generateUnsignedContractCall({
