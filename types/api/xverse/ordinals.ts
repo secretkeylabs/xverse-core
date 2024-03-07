@@ -54,7 +54,7 @@ export const Satributes = [
   'PERFECT_PALINCEPTION',
   'PALIBLOCK_PALINDROME',
   'PALINDROME',
-  'NAME_PALINDROME',
+  // 'NAME_PALINDROME', // removed because name palindromes are very common
   'ALPHA',
   'OMEGA',
   'FIRST_TRANSACTION',
