@@ -302,20 +302,6 @@ export const applySendBtcActionsAndFee = async (
     }
   }
 
-  // then add inputs until outputs are covered
-  while (totalOutputs > totalInputs) {
-    const utxoToUse = unusedPaymentUtxos.pop();
-
-    if (!utxoToUse) {
-      throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
-    }
-
-    await context.paymentAddress.addInput(transaction, utxoToUse, options);
-    inputs.push(utxoToUse);
-
-    totalInputs += BigInt(utxoToUse.utxo.value);
-  }
-
   // ensure inputs cover the fee at desired fee rate
   let complete = false;
   let actualFee = 0n;
