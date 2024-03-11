@@ -4,6 +4,9 @@ export const API_TIMEOUT_MILLI = 30000;
 
 export const ENTROPY_BYTES = 16;
 
+// while taproot addresses have a dust value of 330, we use 546 as it is more compatible with all modern addresses
+export const DEFAULT_DUST_VALUE = 546n;
+
 export const BTC_PATH = `m/49'/0'/0'/0/0`;
 
 export const BTC_WRAPPED_SEGWIT_PATH_PURPOSE = `m/49'/`;

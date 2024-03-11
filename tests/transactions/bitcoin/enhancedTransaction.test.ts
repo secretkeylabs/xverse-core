@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  applyScriptActions,
   applySendBtcActionsAndFee,
   applySendUtxoActions,
   applySplitUtxoActions,
 } from '../../../transactions/bitcoin/actionProcessors';
 import { TransactionContext } from '../../../transactions/bitcoin/context';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
-import { Action, ActionType } from '../../../transactions/bitcoin/types';
+import { ActionType } from '../../../transactions/bitcoin/types';
 import { TestAddressContext, addresses } from './helpers';
 
 vi.mock('../../../transactions/bitcoin/actionProcessors');
@@ -34,110 +35,12 @@ describe('EnhancedTransaction constructor', () => {
     expect(() => new EnhancedTransaction(ctx, [], 1)).throws('No actions provided for transaction context');
   });
 
-  describe('should throw if spendable send utxo actions invalid', () => {
-    it.each([
-      [
-        'with send actions',
-        [
-          {
-            type: ActionType.SEND_BTC,
-            amount: 100000n,
-            combinable: false,
-            toAddress: addresses[0].nativeSegwit,
-          },
-          {
-            type: ActionType.SEND_UTXO,
-            toAddress: addresses[0].nativeSegwit,
-            outpoint: 'txid:0',
-            spendable: true,
-          },
-        ],
-        'Send Utxo actions must be the only actions if they are spendable',
-      ],
-      [
-        'with split actions',
-        [
-          {
-            type: ActionType.SPLIT_UTXO,
-            location: 'utxo:0:100',
-            combinable: false,
-            toAddress: addresses[0].nativeSegwit,
-          },
-          {
-            type: ActionType.SEND_UTXO,
-            toAddress: addresses[0].nativeSegwit,
-            outpoint: 'txid:0',
-            spendable: true,
-          },
-        ],
-        'Send Utxo actions must be the only actions if they are spendable',
-      ],
-      [
-        'with non spendable send actions',
-        [
-          {
-            type: ActionType.SEND_UTXO,
-            outpoint: 'txid:1',
-            toAddress: addresses[0].nativeSegwit,
-          },
-          {
-            type: ActionType.SEND_UTXO,
-            toAddress: addresses[0].nativeSegwit,
-            outpoint: 'txid:0',
-            spendable: true,
-          },
-        ],
-        'Send Utxo actions must either all be spendable or only non-spendable',
-      ],
-      [
-        'with spendable send actions to different addresses',
-        [
-          {
-            type: ActionType.SEND_UTXO,
-            outpoint: 'txid:1',
-            toAddress: addresses[0].nativeSegwit,
-            spendable: true,
-          },
-          {
-            type: ActionType.SEND_UTXO,
-            toAddress: addresses[1].nativeSegwit,
-            outpoint: 'txid:0',
-            spendable: true,
-          },
-        ],
-        'Send Utxo actions must all be to the same address if spendable',
-      ],
-    ] as [string, Action[], string][])('%s', (_name, actions, msg) => {
-      expect(() => new EnhancedTransaction(ctx, actions, 1)).throws(msg);
-    });
+  it('should not throw if actions', () => {
+    expect(() => new EnhancedTransaction(ctx, [{ type: ActionType.SCRIPT, script: [] }], 1)).not.throws();
   });
 
-  it('should accept spendable send utxo actions if all to same address', () => {
-    const txn = new EnhancedTransaction(
-      ctx,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          outpoint: 'txid:0',
-          toAddress: addresses[1].nativeSegwit,
-          spendable: true,
-        },
-        {
-          type: ActionType.SEND_UTXO,
-          toAddress: addresses[1].nativeSegwit,
-          outpoint: 'txid:1',
-          spendable: true,
-        },
-        {
-          type: ActionType.SEND_UTXO,
-          toAddress: addresses[1].nativeSegwit,
-          outpoint: 'txid:2',
-          spendable: true,
-        },
-      ],
-      1,
-    );
-    expect(txn.overrideChangeAddress).equals(addresses[1].nativeSegwit);
+  it('should not throw if forced utxos', () => {
+    expect(() => new EnhancedTransaction(ctx, [], 1, { forceIncludeOutpointList: ['out1'] })).not.throws();
   });
 });
 
@@ -182,7 +85,7 @@ describe('EnhancedTransaction summary', () => {
       1,
     );
 
-    vi.mocked(applySendUtxoActions).mockRejectedValue(new Error('Not enough utxos at desired fee rate'));
+    vi.mocked(applyScriptActions).mockRejectedValue(new Error('Not enough utxos at desired fee rate'));
 
     await expect(() => txn.getSummary()).rejects.toThrow('Not enough utxos at desired fee rate');
   });
@@ -190,6 +93,7 @@ describe('EnhancedTransaction summary', () => {
   it('compiles transaction and summary correctly', async () => {
     const txn = new EnhancedTransaction(
       ctx,
+      // Dummy action, not being used in test
       [
         {
           type: ActionType.SEND_UTXO,
@@ -199,6 +103,15 @@ describe('EnhancedTransaction summary', () => {
       ],
       1,
     );
+
+    vi.mocked(applyScriptActions).mockResolvedValueOnce({
+      outputs: [
+        {
+          script: ['OP_RETURN', '6d02'],
+          amount: 0,
+        },
+      ],
+    });
 
     const sendUtxoInputs = [
       {
@@ -368,6 +281,10 @@ describe('EnhancedTransaction summary', () => {
           .filter((s: any) => s.types.length > 0),
       })),
       outputs: [
+        {
+          script: ['OP_RETURN', '6d02'],
+          amount: 0,
+        },
         {
           address: 'address1',
           amount: 100,

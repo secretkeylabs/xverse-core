@@ -1,4 +1,5 @@
 import axios, { isAxiosError } from 'axios';
+import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { OrdinalsApi } from '../api/ordinals/provider';
 import {
@@ -24,9 +25,10 @@ import {
   SatRangeInscription,
   UTXO,
   UtxoBundleResponse,
-  UtxoOrdinalBundle,
+  UtxoOrdinalBundleApi,
   isApiSatributeKnown,
 } from '../types';
+import { JSONBigOnDemand } from '../utils/bignumber';
 import { parseBrc20TransactionData } from './helper';
 
 export function parseOrdinalTextContentData(content: string): string {
@@ -158,13 +160,12 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
             principal: responseToken.ticker?.toUpperCase(),
             assetName: '',
             ticker: responseToken.ticker?.toUpperCase(),
-
             decimals: 0,
             image: '',
             visible: true,
             supported: true,
             tokenFiatRate: null,
-            protocol: responseToken.protocol,
+            protocol: 'brc-20',
           };
           tokensList.push(token);
         });
@@ -243,7 +244,7 @@ export const getAddressUtxoOrdinalBundles = async (
     /** Filter out UTXOs that only have one or more inscriptions (and no rare sats) */
     hideInscriptionOnly?: boolean;
   },
-) => {
+): Promise<AddressBundleResponse> => {
   const params: Record<string, unknown> = {
     offset,
     limit,
@@ -260,6 +261,7 @@ export const getAddressUtxoOrdinalBundles = async (
     `${XVERSE_API_BASE_URL(network)}/v2/address/${address}/ordinal-utxo`,
     {
       params,
+      transformResponse: (data) => JSONBigOnDemand.parse(data),
     },
   );
 
@@ -273,6 +275,9 @@ export const getUtxoOrdinalBundle = async (
 ): Promise<UtxoBundleResponse> => {
   const response = await axios.get<UtxoBundleResponse>(
     `${XVERSE_API_BASE_URL(network)}/v2/ordinal-utxo/${txid}:${vout}`,
+    {
+      transformResponse: (data) => JSONBigOnDemand.parse(data),
+    },
   );
   return response.data;
 };
@@ -297,12 +302,13 @@ export const getUtxoOrdinalBundleIfFound = async (
   }
 };
 
-export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bundle => {
+export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundleApi): Bundle => {
   const generalBundleInfo = {
     txid: apiBundle.txid,
     vout: apiBundle.vout,
     block_height: apiBundle.block_height,
     value: apiBundle.value,
+    runes: apiBundle.runes,
   };
 
   const commonUnknownRange: BundleSatRange = {
@@ -326,6 +332,9 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
       inscriptions: [],
       satributes: [['COMMON']],
       totalExoticSats: 0,
+      runes: Object.fromEntries(
+        Object.entries(apiBundle.runes ?? {}).map(([rune, amount]) => [rune, BigNumber(amount)]),
+      ),
     };
   }
 
@@ -386,5 +395,6 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundle): Bu
     inscriptions,
     satributes,
     totalExoticSats,
+    runes: Object.fromEntries(Object.entries(apiBundle.runes ?? {}).map(([rune, amount]) => [rune, BigNumber(amount)])),
   };
 };

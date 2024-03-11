@@ -5,7 +5,9 @@ import { UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
 
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from '../../api/ordinals';
 
+import BigNumber from 'bignumber.js';
 import { StorageAdapter } from '../../types';
+import { JSONBig } from '../../utils/bignumber';
 
 vi.mock('../../api/ordinals');
 
@@ -22,6 +24,10 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {
+          MYRUNE: BigNumber(456),
+          MYBIGRUNE: BigNumber('12345678901234567890234'),
+        },
       },
       'txid2:1': {
         txid: 'txid2',
@@ -29,6 +35,10 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {
+          MYRUNE: BigNumber(123),
+          MYBIGRUNE2: BigNumber('12345678901234567890'),
+        },
       },
     };
     mockStorageAdapter = {
@@ -46,7 +56,9 @@ describe('UtxoCache', () => {
     MockDate.set(0);
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify({ version: 1, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+      .mockResolvedValueOnce(
+        JSONBig.stringify({ version: UtxoCache.VERSION, syncTime: 0, utxos: mockCache, xVersion: 1 }),
+      );
 
     const utxo = await utxoCache.getUtxoByOutpoint('txid1:0', 'address1');
     expect(utxo).toEqual(mockCache['txid1:0']);
@@ -56,7 +68,7 @@ describe('UtxoCache', () => {
     MockDate.set(0);
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValue(JSON.stringify({ utxos: {}, syncTime: 0, version: 1, xVersion: 1 }));
+      .mockResolvedValue(JSONBig.stringify({ utxos: {}, syncTime: 0, version: UtxoCache.VERSION, xVersion: 1 }));
 
     const mockUtxo = {
       txid: 'txid1',
@@ -64,6 +76,7 @@ describe('UtxoCache', () => {
       block_height: 123,
       value: 456,
       sat_ranges: [],
+      runes: {},
     };
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 1, ...mockUtxo });
 
@@ -78,7 +91,7 @@ describe('UtxoCache', () => {
           'txid1:0': mockUtxo,
         },
         syncTime: 0,
-        version: 1,
+        version: UtxoCache.VERSION,
         xVersion: 1,
       }),
     );
@@ -94,6 +107,9 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {
+          MYBIGRUNE: BigNumber('12345678901234567890234'),
+        },
       },
       {
         txid: 'txid2',
@@ -101,6 +117,9 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {
+          MYBIGRUNE: BigNumber('1234567890123456789023452445'),
+        },
       },
     ];
     vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
@@ -130,8 +149,8 @@ describe('UtxoCache', () => {
 
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-address1',
-      JSON.stringify({
-        version: 1,
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
         syncTime: 0,
         utxos: {
           'txid1:0': mockUtxos[0],
@@ -146,7 +165,9 @@ describe('UtxoCache', () => {
     MockDate.set(5);
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify({ version: 1, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+      .mockResolvedValueOnce(
+        JSON.stringify({ version: UtxoCache.VERSION, syncTime: 0, utxos: mockCache, xVersion: 1 }),
+      );
 
     const mockUtxos = [
       {
@@ -155,6 +176,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid2',
@@ -162,6 +184,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid3',
@@ -169,6 +192,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
     ];
 
@@ -178,6 +202,7 @@ describe('UtxoCache', () => {
       block_height: 123,
       value: 456,
       sat_ranges: [],
+      runes: {},
     };
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 2, ...mockUtxo });
 
@@ -197,8 +222,8 @@ describe('UtxoCache', () => {
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-address1',
-      JSON.stringify({
-        version: 1,
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
         syncTime: 5,
         utxos: {
           'txid1:0': mockUtxos[0],
@@ -214,7 +239,9 @@ describe('UtxoCache', () => {
     MockDate.set(5);
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify({ version: 0, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+      .mockResolvedValueOnce(
+        JSON.stringify({ version: UtxoCache.VERSION - 1, syncTime: 0, utxos: mockCache, xVersion: 1 }),
+      );
 
     const mockUtxos = [
       {
@@ -223,6 +250,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid2',
@@ -230,6 +258,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid3',
@@ -237,6 +266,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
     ];
 
@@ -255,8 +285,8 @@ describe('UtxoCache', () => {
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-address1',
-      JSON.stringify({
-        version: 1,
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
         syncTime: 5,
         utxos: {
           'txid1:0': mockUtxos[0],
@@ -274,7 +304,9 @@ describe('UtxoCache', () => {
 
     mockStorageAdapter.get = vi
       .fn()
-      .mockResolvedValueOnce(JSON.stringify({ version: 0, syncTime: 0, utxos: mockCache, xVersion: 1 }));
+      .mockResolvedValueOnce(
+        JSON.stringify({ version: UtxoCache.VERSION, syncTime: 0, utxos: mockCache, xVersion: 1 }),
+      );
 
     const mockUtxos = [
       {
@@ -283,6 +315,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid2',
@@ -290,6 +323,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
       {
         txid: 'txid3',
@@ -297,6 +331,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
+        runes: {},
       },
     ];
 
@@ -315,8 +350,8 @@ describe('UtxoCache', () => {
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-address1',
-      JSON.stringify({
-        version: 1,
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
         syncTime: msInYear,
         utxos: {
           'txid1:0': mockUtxos[0],

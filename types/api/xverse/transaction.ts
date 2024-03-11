@@ -1,11 +1,5 @@
 import BigNumber from 'bignumber.js';
-import {
-  TokenType,
-  TransactionType,
-  TransactionStatus,
-  ContractCall,
-  TransactionPostCondition,
-} from '../shared/transaction';
+import { TokenType, TransactionType, TransactionStatus, ContractCall, TransactionPostCondition } from '../shared';
 
 export type TransactionData = {
   txid: string;

@@ -9,14 +9,8 @@ import {
   cvToHex,
   uintCV,
 } from '@stacks/transactions';
-import { StxMempoolTransactionData } from '../../../types';
-import {
-  BaseToken,
-  ContractCall,
-  TransactionPostCondition,
-  TransactionStatus,
-  TransactionType,
-} from '../shared/transaction';
+import { StxMempoolTransactionData } from '../xverse';
+import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared';
 
 export { cvToHex, uintCV };
 export type { StacksTransaction, TokenTransferPayload };
@@ -136,19 +130,6 @@ export type Transfer = {
   recipient: string;
 };
 
-export type FungibleToken = BaseToken & {
-  balance: string;
-  total_sent: string;
-  total_received: string;
-  principal: string;
-  assetName: string;
-  decimals?: number;
-  visible?: boolean;
-  supported?: boolean;
-  tokenFiatRate?: number | null;
-  protocol?: string;
-};
-
 export type StxBalance = {
   balance: string;
   total_sent: string;
@@ -203,14 +184,12 @@ export interface Args {
   name: string;
   type: string;
 }
-export interface Output {
-  type: Output;
-}
+
 export interface ContractFunction {
   name: string;
   access: string;
   args: Args[];
-  output: Output;
+  output: any;
 }
 
 export interface ContractInterfaceResponse {

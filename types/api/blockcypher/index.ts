@@ -1,6 +1,5 @@
-import * as esplora from '../esplora';
-import { UTXO } from '../esplora';
-import { TransactionData } from '../xverse/transaction';
+import { UTXO, Vin, Vout } from '../esplora';
+import { TransactionData } from '../xverse';
 
 export type BtcUtxoDataResponse = {
   tx_hash: string;
@@ -65,8 +64,8 @@ export interface BtcTransactionData extends TransactionData {
   size: number;
   weight: number;
   confirmed: boolean;
-  inputs: esplora.Vin[];
-  outputs: esplora.Vout[];
+  inputs: Vin[];
+  outputs: Vout[];
   isOrdinal: boolean;
 }
 

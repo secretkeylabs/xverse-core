@@ -1,7 +1,8 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import BigNumber from 'bignumber.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getUtxoOrdinalBundleIfFound, mapRareSatsAPIResponseToBundle } from '../../api/ordinals';
-import { Bundle, UtxoOrdinalBundle } from '../../types/api/xverse/ordinals';
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { Bundle, UtxoOrdinalBundleApi } from '../../types/api/xverse/ordinals';
 
 const mocked = vi.hoisted(() => ({
   get: vi.fn(),
@@ -41,7 +42,7 @@ describe('getUtxoOrdinalBundleIfFound', () => {
 
 describe('rareSats', () => {
   describe('mapRareSatsAPIResponseToRareSats', () => {
-    const testCases: Array<{ name: string; input: UtxoOrdinalBundle; expected: Bundle }> = [
+    const testCases: Array<{ name: string; input: UtxoOrdinalBundleApi; expected: Bundle }> = [
       {
         name: 'mixed (sats, inscriptions)',
         input: {
@@ -49,6 +50,9 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 100,
           vout: 0,
+          runes: {
+            MYRUNEBALANCE: BigNumber(123),
+          },
           sat_ranges: [
             {
               year_mined: 2009,
@@ -85,6 +89,9 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 100,
           vout: 0,
+          runes: {
+            MYRUNEBALANCE: BigNumber(123),
+          },
           inscriptions: [
             {
               content_type: 'image/png',
@@ -147,6 +154,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           sat_ranges: [
             {
               year_mined: 2009,
@@ -177,6 +185,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           inscriptions: [],
           satributes: [['UNCOMMON', 'PIZZA', 'PALINDROME'], ['1D_PALINDROME'], ['COMMON']],
           satRanges: [
@@ -227,6 +236,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           sat_ranges: [
             {
               year_mined: 2009,
@@ -274,6 +284,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           inscriptions: [
             {
               content_type: 'image/png',
@@ -357,6 +368,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           sat_ranges: [
             {
               year_mined: 2009,
@@ -432,6 +444,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           inscriptions: [
             {
               content_type: 'image/png',
@@ -517,6 +530,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           sat_ranges: [],
         },
         expected: {
@@ -524,6 +538,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
+          runes: {},
           inscriptions: [],
           satributes: [['COMMON']],
           satRanges: [
@@ -550,6 +565,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 2,
           vout: 0,
+          runes: {},
           sat_ranges: [
             {
               year_mined: 2009,
@@ -592,6 +608,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 2,
           vout: 0,
+          runes: {},
           inscriptions: [
             {
               content_type: 'image/png',
@@ -644,6 +661,88 @@ describe('rareSats', () => {
             },
           ],
           totalExoticSats: 0,
+        },
+      },
+      {
+        name: 'undefined runes',
+        input: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 10,
+          vout: 0,
+          runes: undefined,
+          sat_ranges: [
+            {
+              year_mined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['UNCOMMON', 'PIZZA', 'PALINDROME'],
+              inscriptions: [],
+            },
+            {
+              year_mined: 2009,
+              block: 11,
+              offset: 1,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['1D_PALINDROME'],
+              inscriptions: [],
+            },
+          ],
+        },
+        expected: {
+          block_height: 803128,
+          txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
+          value: 10,
+          vout: 0,
+          runes: {},
+          inscriptions: [],
+          satributes: [['UNCOMMON', 'PIZZA', 'PALINDROME'], ['1D_PALINDROME'], ['COMMON']],
+          satRanges: [
+            {
+              yearMined: 2009,
+              block: 10,
+              offset: 0,
+              range: {
+                start: '34234320000000',
+                end: '34234320000001',
+              },
+              satributes: ['UNCOMMON', 'PIZZA', 'PALINDROME'],
+              inscriptions: [],
+              totalSats: 1,
+            },
+            {
+              yearMined: 2009,
+              block: 11,
+              offset: 1,
+              range: {
+                start: '34234320000003',
+                end: '34234320000004',
+              },
+              satributes: ['1D_PALINDROME'],
+              inscriptions: [],
+              totalSats: 1,
+            },
+            {
+              range: {
+                start: '0',
+                end: '0',
+              },
+              yearMined: 0,
+              block: 0,
+              offset: 0,
+              satributes: ['COMMON'],
+              inscriptions: [],
+              totalSats: 8,
+            },
+          ],
+          totalExoticSats: 2,
         },
       },
     ];

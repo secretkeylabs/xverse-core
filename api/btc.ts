@@ -1,11 +1,10 @@
-import { BtcTransactionData } from '../types/api/blockcypher/wallet';
-import * as esplora from '../types/api/esplora';
+import { BtcTransactionData, EsploraTransaction } from '../types';
 import EsploraApiProvider from './esplora/esploraAPiProvider';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
 
 export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, esploraProvider: EsploraApiProvider) {
   const transactions: BtcTransactionData[] = [];
-  const txResponse: esplora.Transaction[] = await esploraProvider.getAddressTransactions(ordinalsAddress);
+  const txResponse: EsploraTransaction[] = await esploraProvider.getAddressTransactions(ordinalsAddress);
   txResponse.forEach((tx) => {
     transactions.push(parseOrdinalsBtcTransactions(tx, ordinalsAddress));
   });
@@ -18,7 +17,7 @@ export async function fetchBtcPaymentTransactions(
   esploraProvider: EsploraApiProvider,
 ) {
   const transactions: BtcTransactionData[] = [];
-  const txResponse: esplora.Transaction[] = await esploraProvider.getAddressTransactions(btcAddress);
+  const txResponse: EsploraTransaction[] = await esploraProvider.getAddressTransactions(btcAddress);
   txResponse.forEach((tx) => {
     transactions.push(parseBtcTransactionData(tx, btcAddress, ordinalsAddress));
   });
@@ -47,7 +46,7 @@ export async function fetchBtcTransaction(
   esploraProvider: EsploraApiProvider,
   isOrdinal?: boolean,
 ) {
-  const txResponse: esplora.Transaction = await esploraProvider.getTransaction(id);
+  const txResponse: EsploraTransaction = await esploraProvider.getTransaction(id);
   const transaction: BtcTransactionData = isOrdinal
     ? parseOrdinalsBtcTransactions(txResponse, ordinalsAddress)
     : parseBtcTransactionData(txResponse, btcAddress, ordinalsAddress);

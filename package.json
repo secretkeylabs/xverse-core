@@ -37,6 +37,7 @@
     "c32check": "^2.0.0",
     "ecdsa-sig-formatter": "^1.0.11",
     "ecpair": "^2.1.0",
+    "json-bigint": "^1.0.0",
     "jsontokens": "^4.0.1",
     "ledger-bitcoin": "^0.2.1",
     "process": "^0.11.10",
@@ -58,8 +59,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint",
-      "prettier --write"
+      "prettier --write",
+      "eslint"
     ],
     "*.json": [
       "prettier --write"
@@ -72,6 +73,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/json-bigint": "^1.0.4",
     "@types/react": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^5.58.0",
     "@typescript-eslint/parser": "^5.58.0",
@@ -98,6 +100,7 @@
   },
   "peerDependencies": {
     "bignumber.js": "^9.0.0",
-    "react": ">18.0.0"
+    "react": ">18.0.0",
+    "react-dom": ">18.0.0"
   }
 }

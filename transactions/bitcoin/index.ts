@@ -41,7 +41,13 @@ export type {
 /**
  * send max bitcoin
  */
-export const sendMaxBtc = async (context: TransactionContext, toAddress: string, feeRate: number, skipDust = true) => {
+export const sendMaxBtc = async (
+  context: TransactionContext,
+  toAddress: string,
+  feeRate: number,
+  skipDust = true,
+  options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'overrideChangeAddress'>,
+) => {
   let paymentUtxos = await context.paymentAddress.getUtxos();
   let dustFiltered = false;
 
@@ -50,19 +56,10 @@ export const sendMaxBtc = async (context: TransactionContext, toAddress: string,
   }
 
   if (skipDust) {
-    const testTransaction = new EnhancedTransaction(
-      context,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: paymentUtxos[0].outpoint,
-          toAddress,
-        },
-      ],
-      feeRate,
-    );
+    const testTransaction = new EnhancedTransaction(context, [], feeRate, {
+      ...options,
+      forceIncludeOutpointList: [paymentUtxos[0].outpoint],
+    });
 
     const { dustValue } = await testTransaction.getSummary();
 
@@ -75,15 +72,13 @@ export const sendMaxBtc = async (context: TransactionContext, toAddress: string,
     }
   }
 
-  const actions = paymentUtxos.map<SendUtxoAction>((utxo) => ({
-    type: ActionType.SEND_UTXO,
-    combinable: true,
-    spendable: true,
-    outpoint: utxo.outpoint,
-    toAddress,
-  }));
+  const outpoints = paymentUtxos.map((utxo) => utxo.outpoint);
 
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, [], feeRate, {
+    ...options,
+    forceIncludeOutpointList: outpoints,
+    overrideChangeAddress: toAddress,
+  });
   return { transaction, dustFiltered };
 };
 
@@ -95,16 +90,15 @@ export const combineUtxos = async (
   outpoints: string[],
   toAddress: string,
   feeRate: number,
-  spendable = false,
+  options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'overrideChangeAddress'>,
 ) => {
   const actions = outpoints.map<SendUtxoAction>((outpoint) => ({
     type: ActionType.SEND_UTXO,
     combinable: true,
-    spendable,
     outpoint,
     toAddress,
   }));
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate, options);
   return transaction;
 };
 
@@ -116,6 +110,7 @@ export const sendBtc = async (
   context: TransactionContext,
   recipients: { toAddress: string; amount: bigint }[],
   feeRate: number,
+  options?: TransactionOptions,
 ) => {
   const actions = recipients.map<SendBtcAction>(({ toAddress, amount }) => ({
     type: ActionType.SEND_BTC,
@@ -123,7 +118,7 @@ export const sendBtc = async (
     amount,
     combinable: false,
   }));
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate, options);
   return transaction;
 };
 
@@ -144,6 +139,7 @@ export const sendOrdinals = async (
       }
   )[],
   feeRate: number,
+  options?: TransactionOptions,
 ) => {
   if (recipients.length === 0) {
     throw new Error('Must provide at least 1 recipient');
@@ -176,7 +172,7 @@ export const sendOrdinals = async (
     spendable: false,
   }));
 
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate, options);
   return transaction;
 };
 
@@ -207,6 +203,7 @@ export const sendOrdinalsWithSplit = async (
       }
   )[],
   feeRate: number,
+  options?: TransactionOptions,
 ) => {
   if (recipients.length === 0) {
     throw new Error('Must provide at least 1 recipient');
@@ -279,8 +276,6 @@ export const sendOrdinalsWithSplit = async (
         type: ActionType.SEND_UTXO,
         toAddress: recipientCollection[0].toAddress,
         outpoint,
-        combinable: false,
-        spendable: false,
       });
       continue;
     }
@@ -351,14 +346,19 @@ export const sendOrdinalsWithSplit = async (
     }
   }
 
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const transaction = new EnhancedTransaction(context, actions, feeRate, options);
   return transaction;
 };
 
 /**
  * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
  **/
-export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpoint: string, feeRate: number) => {
+export const extractOrdinalsFromUtxo = async (
+  context: TransactionContext,
+  outpoint: string,
+  feeRate: number,
+  options?: TransactionOptions,
+) => {
   const utxo = await context.getUtxo(outpoint);
 
   if (!utxo?.extendedUtxo) {
@@ -376,13 +376,18 @@ export const extractOrdinalsFromUtxo = async (context: TransactionContext, outpo
     location: utxo.extendedUtxo?.outpoint + ':' + s.offset,
   }));
 
-  return sendOrdinalsWithSplit(context, recipients, feeRate);
+  return sendOrdinalsWithSplit(context, recipients, feeRate, options);
 };
 
 /**
  * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
  **/
-export const recoverBitcoin = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverBitcoin = async (
+  context: TransactionContext,
+  feeRate: number,
+  outpoint?: string,
+  options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'overrideChangeAddress'>,
+) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover bitcoin to same address');
   }
@@ -394,19 +399,10 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
       throw new Error('No utxo in ordinals address found to recover');
     }
 
-    const transaction = new EnhancedTransaction(
-      context,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          toAddress: context.paymentAddress.address,
-          outpoint,
-          combinable: true,
-          spendable: true,
-        },
-      ],
-      feeRate,
-    );
+    const transaction = new EnhancedTransaction(context, [], feeRate, {
+      ...options,
+      forceIncludeOutpointList: [outpoint],
+    });
     return transaction;
   }
 
@@ -416,21 +412,23 @@ export const recoverBitcoin = async (context: TransactionContext, feeRate: numbe
     throw new Error('No non-ordinal utxos found to recover');
   }
 
-  const actions = nonOrdinalUtxos.map<SendUtxoAction>((utxo) => ({
-    type: ActionType.SEND_UTXO,
-    toAddress: context.paymentAddress.address,
-    outpoint: utxo.outpoint,
-    combinable: true,
-    spendable: true,
-  }));
-  const transaction = new EnhancedTransaction(context, actions, feeRate);
+  const outpoints = nonOrdinalUtxos.map((utxo) => utxo.outpoint);
+  const transaction = new EnhancedTransaction(context, [], feeRate, {
+    ...options,
+    forceIncludeOutpointList: outpoints,
+  });
   return transaction;
 };
 
 /**
  * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
  **/
-export const recoverOrdinal = async (context: TransactionContext, feeRate: number, outpoint?: string) => {
+export const recoverOrdinal = async (
+  context: TransactionContext,
+  feeRate: number,
+  outpoint?: string,
+  options?: TransactionOptions,
+) => {
   if (context.paymentAddress.address === context.ordinalsAddress.address) {
     throw new Error('Cannot recover ordinals to same address');
   }
@@ -449,11 +447,10 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
           type: ActionType.SEND_UTXO,
           toAddress: context.ordinalsAddress.address,
           outpoint,
-          combinable: false,
-          spendable: false,
         },
       ],
       feeRate,
+      options,
     );
     return transaction;
   }
@@ -489,6 +486,6 @@ export const recoverOrdinal = async (context: TransactionContext, feeRate: numbe
     }),
   );
 
-  const transaction = new EnhancedTransaction(context, actions.flat(), feeRate);
+  const transaction = new EnhancedTransaction(context, actions.flat(), feeRate, options);
   return transaction;
 };

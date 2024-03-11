@@ -1,13 +1,17 @@
+import { hex } from '@scure/base';
+import * as btc from '@scure/btc-signer';
 import { Transaction } from '@scure/btc-signer';
 import { TransactionContext } from './context';
 import { ExtendedUtxo } from './extendedUtxo';
 import {
   CompilationOptions,
+  ScriptAction,
   SendBtcAction,
   SendUtxoAction,
   SplitUtxoAction,
   TransactionOptions,
   TransactionOutput,
+  TransactionScriptOutput,
 } from './types';
 import {
   extractUsedOutpoints,
@@ -24,6 +28,24 @@ const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
 const ESTIMATED_VBYTES_PER_INPUT = 70; // actually from 75 upward
 
 const DUST_VALUE = 546;
+
+export const applyScriptActions = async (transaction: Transaction, actions: ScriptAction[]) => {
+  const outputs: TransactionScriptOutput[] = [];
+
+  for (const action of actions) {
+    const { script } = action;
+    const amount = 0n;
+
+    transaction.addOutput({ script: btc.Script.encode(script), amount });
+
+    outputs.push({
+      script: script.map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
+      amount: Number(amount),
+    });
+  }
+
+  return { outputs };
+};
 
 export const applySendUtxoActions = async (
   context: TransactionContext,
@@ -76,13 +98,7 @@ export const applySendUtxoActions = async (
         inputs.push(extendedUtxo);
         usedOutpoints.add(action.outpoint);
 
-        if (!action.spendable) {
-          // we have a validator to ensure that if an action is spendable, then all must be spendable
-          // and are to the same address (for UTXO consolidation or max send)
-          // so, any funds would go to the address as change at the end, so no need for an output
-          // so, we only add an output for non-spendable actions
-          outputAmount += extendedUtxo.utxo.value;
-        }
+        outputAmount += extendedUtxo.utxo.value;
       }
 
       // if output value is 0, then all actions are spendable, so we can skip this
@@ -253,37 +269,51 @@ export const applySendBtcActionsAndFee = async (
     new Set([...(transactionOptions.excludeOutpointList ?? []), ...usedOutpoints]),
   );
 
+  // add inputs for all pinned utxos
+  for (const pinnedOutpoint of transactionOptions.forceIncludeOutpointList ?? []) {
+    if (usedOutpoints.has(pinnedOutpoint)) {
+      continue;
+    }
+
+    const utxo = await context.getUtxo(pinnedOutpoint);
+
+    if (!utxo.addressContext || !utxo.extendedUtxo) {
+      throw new Error(`Pinned UTXO not found: ${pinnedOutpoint}`);
+    }
+
+    await utxo.addressContext.addInput(transaction, utxo.extendedUtxo, options);
+    usedOutpoints.add(pinnedOutpoint);
+    inputs.push(utxo.extendedUtxo);
+  }
+
   // add inputs and outputs for the required actions
   let { inputValue: totalInputs, outputValue: totalOutputs } = await getTransactionTotals(transaction);
 
+  // first add outputs for the required actions
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
-    totalOutputs += combinableAmount;
-
-    for (const amount of individualAmounts) {
-      totalOutputs += amount;
-    }
-
-    while (totalOutputs > totalInputs) {
-      const utxoToUse = unusedPaymentUtxos.pop();
-
-      if (!utxoToUse) {
-        throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
-      }
-
-      await context.paymentAddress.addInput(transaction, utxoToUse, options);
-      inputs.push(utxoToUse);
-
-      totalInputs += BigInt(utxoToUse.utxo.value);
-    }
-
     for (const amount of [combinableAmount, ...individualAmounts]) {
       if (amount === 0n) {
         continue;
       }
 
+      totalOutputs += amount;
       context.addOutputAddress(transaction, toAddress, amount);
       outputs.push({ amount: Number(amount), address: toAddress });
     }
+  }
+
+  // then add inputs until outputs are covered
+  while (totalOutputs > totalInputs) {
+    const utxoToUse = unusedPaymentUtxos.pop();
+
+    if (!utxoToUse) {
+      throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
+    }
+
+    await context.paymentAddress.addInput(transaction, utxoToUse, options);
+    inputs.push(utxoToUse);
+
+    totalInputs += BigInt(utxoToUse.utxo.value);
   }
 
   // ensure inputs cover the fee at desired fee rate

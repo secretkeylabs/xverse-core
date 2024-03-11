@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { describe, expect, it, vi } from 'vitest';
 import { Action, ActionType } from '../../../transactions/bitcoin/types';
 import {
@@ -150,11 +151,23 @@ describe('extractActionMap', () => {
         location: '1234:0:2000',
         spendable: true,
       },
+      {
+        type: ActionType.SCRIPT,
+        script: ['RETURN'],
+        amount: 0n,
+      },
     ];
 
     const actionMap = extractActionMap(actions);
 
     expect(actionMap).toEqual({
+      [ActionType.SCRIPT]: [
+        {
+          type: ActionType.SCRIPT,
+          script: ['RETURN'],
+          amount: 0n,
+        },
+      ],
       [ActionType.SEND_UTXO]: [
         {
           type: ActionType.SEND_UTXO,
@@ -263,36 +276,67 @@ describe('getSortedAvailablePaymentUtxos', () => {
       outpoint: '1234:6',
       utxo: { value: 500, status: { confirmed: true } },
       isEmbellished: () => true,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
     embellished1500: {
       outpoint: '1234:4',
       utxo: { value: 1500, status: { confirmed: true } },
       isEmbellished: () => true,
+      getBundleData: () => ({
+        runes: {},
+      }),
+    },
+    withRunes: {
+      outpoint: '1234:41',
+      utxo: { value: 1000, status: { confirmed: true } },
+      isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {
+          myrune: BigNumber(123),
+        },
+      }),
     },
     unconfirmed500: {
       outpoint: '1234:5',
       utxo: { value: 500, status: { confirmed: false } },
       isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
     unconfirmed2500: {
       outpoint: '1234:3',
       utxo: { value: 2500, status: { confirmed: false } },
       isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
     confirmed1000: {
       outpoint: '1234:0',
       utxo: { value: 1000, status: { confirmed: true } },
       isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
     confirmed2000: {
       outpoint: '1234:1',
       utxo: { value: 2000, status: { confirmed: true } },
       isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
     confirmed3000: {
       outpoint: '1234:2',
       utxo: { value: 3000, status: { confirmed: true } },
       isEmbellished: () => false,
+      getBundleData: () => ({
+        runes: {},
+      }),
     },
   };
 
@@ -303,6 +347,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxoMap.confirmed3000,
       utxoMap.unconfirmed2500,
       utxoMap.embellished500,
+      utxoMap.withRunes,
       utxoMap.unconfirmed500,
       utxoMap.confirmed2000,
     ];
@@ -318,6 +363,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
     // order should be: embellished, unconfirmed, confirmed
     // and internally by value
     expect(utxos).toEqual([
+      utxoMap.withRunes,
       utxoMap.embellished500,
       utxoMap.embellished1500,
       utxoMap.unconfirmed500,
@@ -334,6 +380,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxoMap.embellished1500,
       utxoMap.confirmed3000,
       utxoMap.unconfirmed2500,
+      utxoMap.withRunes,
       utxoMap.embellished500,
       utxoMap.unconfirmed500,
       utxoMap.confirmed2000,
@@ -353,6 +400,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
     // order should be: embellished, unconfirmed, confirmed
     // and internally by value
     expect(utxos).toEqual([
+      utxoMap.withRunes,
       utxoMap.embellished1500,
       utxoMap.unconfirmed500,
       utxoMap.unconfirmed2500,

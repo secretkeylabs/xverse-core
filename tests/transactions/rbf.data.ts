@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../../api/esplora/esploraAPiProvider';
-import { RBFProps } from '../../transactions/rbf';
-import { BtcTransactionData, Transaction, UTXO } from '../../types';
+import { RBFProps } from '../../transactions';
+import { BtcTransactionData, EsploraTransaction, UTXO } from '../../types';
 
 /* eslint-disable max-len */
 export const rbfTransaction: BtcTransactionData = {
@@ -132,7 +132,7 @@ export const rbfTransaction: BtcTransactionData = {
   recipientAddress: 'bc1pzpnpmsdxczgwmua8aqtf329u27cc52nckndc0zu6l0mrp3jtt7xq7fl98j',
 };
 
-export const rbfEsploraTransaction: Transaction = {
+export const rbfEsploraTransaction: EsploraTransaction = {
   txid: 'eb3ddbc9fb830b4470da0d723958a5819d8239f8bd9e4675d913f93631f3e025',
   version: 2,
   fee: 33288,

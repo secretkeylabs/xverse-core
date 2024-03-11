@@ -64,8 +64,12 @@ describe('applySendUtxoActions', () => {
   it('throws if utxo sent twice', async () => {
     const context = {
       getUtxo: vi.fn(),
+      addOutputAddress: vi.fn(),
     };
-    context.getUtxo.mockResolvedValue({ addressContext: { addInput: vi.fn() }, extendedUtxo: {} });
+    context.getUtxo.mockResolvedValue({
+      addressContext: { addInput: vi.fn() },
+      extendedUtxo: { utxo: { value: 1000 } },
+    });
 
     const transaction = { inputsLength: 0 };
 
@@ -75,13 +79,11 @@ describe('applySendUtxoActions', () => {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
           toAddress: 'address',
-          spendable: true,
         },
         {
           type: btcTransaction.ActionType.SEND_UTXO,
           outpoint: 'f00d:0',
           toAddress: 'address',
-          spendable: true,
         },
       ]),
     ).rejects.toThrow('UTXO already used: f00d:0');
@@ -89,42 +91,7 @@ describe('applySendUtxoActions', () => {
     expect(context.getUtxo).toHaveBeenCalledWith('f00d:0');
   });
 
-  it('succeeds on valid send with no outputs if spendable', async () => {
-    const addressContext = { addInput: vi.fn() };
-    const context = {
-      getUtxo: vi.fn(),
-    };
-    const utxo1 = {};
-    context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo1 });
-    const utxo2 = {};
-    context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo2 });
-
-    const transaction = { inputsLength: 0 };
-
-    const { inputs, outputs } = await applySendUtxoActions(context as any, {}, transaction as any, {}, [
-      {
-        type: btcTransaction.ActionType.SEND_UTXO,
-        outpoint: 'f00d:0',
-        toAddress: 'address',
-        spendable: true,
-      },
-      {
-        type: btcTransaction.ActionType.SEND_UTXO,
-        outpoint: 'f00d:1',
-        toAddress: 'address',
-        spendable: true,
-      },
-    ]);
-
-    expect(addressContext.addInput).toHaveBeenCalledWith(transaction, utxo1, {});
-    expect(addressContext.addInput).toHaveBeenCalledWith(transaction, utxo2, {});
-    expect(inputs).toHaveLength(2);
-    expect(inputs[0]).toBe(utxo1);
-    expect(inputs[1]).toBe(utxo2);
-    expect(outputs).toHaveLength(0);
-  });
-
-  it('succeeds on valid send with 2 outputs if not spendable', async () => {
+  it('succeeds on valid send with 2 outputs', async () => {
     const addressContext = { addInput: vi.fn() };
     const context = {
       getUtxo: vi.fn(),
@@ -150,13 +117,11 @@ describe('applySendUtxoActions', () => {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:0',
         toAddress: 'address1',
-        spendable: false,
       },
       {
         type: btcTransaction.ActionType.SEND_UTXO,
         outpoint: 'f00d:1',
         toAddress: 'address2',
-        spendable: false,
       },
     ]);
 

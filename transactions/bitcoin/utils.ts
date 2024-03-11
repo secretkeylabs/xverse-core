@@ -35,6 +35,7 @@ export const extractActionMap = (actions: Action[]): ActionMap => {
     [ActionType.SEND_UTXO]: [],
     [ActionType.SPLIT_UTXO]: [],
     [ActionType.SEND_BTC]: [],
+    [ActionType.SCRIPT]: [],
   } as ActionMap;
   for (const action of actions) {
     const actionType = action.type;
@@ -66,25 +67,38 @@ export const getSortedAvailablePaymentUtxos = async (context: TransactionContext
   const unusedPaymentUtxosWithState = await Promise.all(
     unusedPaymentUtxosRaw.map(async (extendedUtxo) => {
       const isEmbellished = await extendedUtxo.isEmbellished();
-      return { extendedUtxo, isEmbellished };
+      const bundleData = await extendedUtxo.getBundleData();
+      const hasRunes = bundleData?.runes && Object.values(bundleData.runes).some((r) => r.gt(0));
+
+      return { extendedUtxo, isEmbellished, hasRunes };
     }),
   );
 
   // sort smallest to biggest as we'll be popping off the end
-  // also, unconfirmed and inscribed UTXOs are de-prioritized
+  // also, unconfirmed, Rune balance, and inscribed UTXOs are de-prioritized
   unusedPaymentUtxosWithState.sort((a, b) => {
+    // Rune UTXOs go right at the end
+    if (a.hasRunes && !b.hasRunes && b.hasRunes !== undefined) {
+      return -1;
+    }
+    if (b.hasRunes && !a.hasRunes && a.hasRunes !== undefined) {
+      return 1;
+    }
+    // followed by inscribed UTXOs
     if (a.isEmbellished && !b.isEmbellished && b.isEmbellished !== undefined) {
       return -1;
     }
     if (b.isEmbellished && !a.isEmbellished && a.isEmbellished !== undefined) {
       return 1;
     }
+    // followed by unconfirmed UTXOs
     if (a.extendedUtxo.utxo.status.confirmed && !b.extendedUtxo.utxo.status.confirmed) {
       return 1;
     }
     if (b.extendedUtxo.utxo.status.confirmed && !a.extendedUtxo.utxo.status.confirmed) {
       return -1;
     }
+    // followed by smallest UTXOs
     const diff = a.extendedUtxo.utxo.value - b.extendedUtxo.utxo.value;
     if (diff !== 0) {
       return diff;

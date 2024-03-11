@@ -62,7 +62,7 @@ export type Vin = {
   sequence: number;
 };
 
-export type Transaction = {
+export type EsploraTransaction = {
   txid: string;
   version: number;
   locktime: number;

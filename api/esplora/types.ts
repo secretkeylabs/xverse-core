@@ -1,6 +1,6 @@
 import { BtcAddressData, BtcTransactionBroadcastResponse } from '../../types';
-import { BtcAddressBalanceResponse } from '../../types/api/blockcypher/wallet';
-import { BtcAddressMempool, Transaction, UTXO } from '../../types/api/esplora';
+import { BtcAddressBalanceResponse } from '../../types';
+import { BtcAddressMempool, EsploraTransaction, UTXO } from '../../types';
 export interface BitcoinApiProvider {
   /**
    * Get the balance of an account given its addresses.
@@ -26,7 +26,7 @@ export interface BitcoinApiProvider {
    * @param {string} address
    * @returns {Promise<UTXO[]>}
    */
-  getAddressTransactions(address: string): Promise<Transaction[]>;
+  getAddressTransactions(address: string): Promise<EsploraTransaction[]>;
 
   /**
    * Get The unspent utxos of a given Address

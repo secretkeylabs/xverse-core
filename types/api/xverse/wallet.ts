@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { TransactionStatus, TransactionType, ContractCall, TransactionPostCondition } from '../shared/transaction';
+import { TransactionStatus, TransactionType, ContractCall, TransactionPostCondition } from '../shared';
 import { BIP32Interface } from 'bip32';
 import { TransactionData, StxMempoolTransactionData } from './transaction';
 

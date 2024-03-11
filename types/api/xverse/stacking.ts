@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { CoreInfo } from '../stacks/assets';
+import { CoreInfo, DelegationInfo } from '../stacks';
 
 export interface Pool {
   address: string;
@@ -44,13 +44,6 @@ export interface StackerInfo {
   pool_pox_address: string;
   user_pox_address: string;
   poolContractName?: string;
-}
-
-export interface DelegationInfo {
-  delegated: boolean;
-  amount?: string;
-  delegatedTo?: string;
-  untilBurnHeight?: number;
 }
 
 export interface CurrentPoolReward {

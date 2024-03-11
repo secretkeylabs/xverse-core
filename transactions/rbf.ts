@@ -177,7 +177,7 @@ class RbfTransaction {
     const schnorrPublicKeyBuff = publicKeyBuffTr.length === 33 ? publicKeyBuffTr.slice(1) : publicKeyBuffTr;
     const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, network);
 
-    const tx = new btc.Transaction({ PSBTVersion: 0 });
+    const tx = new btc.Transaction({ PSBTVersion: 0, allowUnknownOutputs: true });
 
     let inputsTotal = 0;
     let outputsTotal = 0;
@@ -217,19 +217,21 @@ class RbfTransaction {
     const outputs = transaction.outputs.map((output) => ({
       value: output.value,
       address: output.scriptpubkey_address,
+      script: output.scriptpubkey,
     }));
 
     // we'll keep the same outputs as the original transaction
     // and we assume that any change that would have been returned was going to the payments address if the last
     // output is not the payments address, we'll add it as a normal output, assuming that there was no change
     while (outputs.length > 1 || (outputs[0] && outputs[0].address !== options.btcAddress)) {
-      const [prevOutput] = outputs.splice(0, 1);
+      const prevOutput = outputs.shift();
 
-      if (!prevOutput.address) {
-        throw new Error('Output address not found');
+      if (!prevOutput) {
+        // this should never happen
+        throw new Error('Something went wrong when processing the outputs of the original transaction');
       }
 
-      tx.addOutputAddress(prevOutput.address, BigInt(prevOutput.value), network);
+      tx.addOutput({ script: prevOutput.script, amount: BigInt(prevOutput.value) });
       outputsTotal += prevOutput.value;
     }
 

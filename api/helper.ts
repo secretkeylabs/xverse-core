@@ -4,17 +4,19 @@ import {
   Brc20HistoryTransactionData,
   Brc20TxHistoryItem,
   BtcTransactionData,
+  EsploraTransaction,
   StxMempoolTransactionData,
   StxMempoolTransactionDataResponse,
   StxTransactionData,
   StxTransactionDataResponse,
   TransferTransaction,
+  Vin,
+  Vout,
 } from '../types';
 
 import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../constant';
-import * as esplora from '../types/api/esplora';
 
-export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): number {
+export function sumOutputsForAddress(outputs: Vout[], address: string): number {
   let total = 0;
   outputs.forEach((output) => {
     if (output.scriptpubkey_address) {
@@ -26,7 +28,7 @@ export function sumOutputsForAddress(outputs: esplora.Vout[], address: string): 
   return total;
 }
 
-export function sumInputsForAddress(inputs: esplora.Vin[], address: string): number {
+export function sumInputsForAddress(inputs: Vin[], address: string): number {
   let total = 0;
   inputs.forEach((input) => {
     if (input.prevout.scriptpubkey_address === address) {
@@ -37,7 +39,7 @@ export function sumInputsForAddress(inputs: esplora.Vin[], address: string): num
 }
 
 export function parseOrdinalsBtcTransactions(
-  responseTx: esplora.Transaction,
+  responseTx: EsploraTransaction,
   ordinalsAddress: string,
 ): BtcTransactionData {
   const inputAddresses: string[] = [];
@@ -92,7 +94,7 @@ export function parseOrdinalsBtcTransactions(
 }
 
 export function parseBtcTransactionData(
-  responseTx: esplora.Transaction,
+  responseTx: EsploraTransaction,
   btcAddress: string,
   ordinalsAddress: string,
 ): BtcTransactionData {

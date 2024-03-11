@@ -35,12 +35,12 @@ import {
   StxTransactionListData,
   StxTransactionResponse,
   TokensResponse,
-  Transaction,
+  EsploraTransaction,
   TransactionData,
   TransferTransactionsData,
 } from '../types';
-import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types/api/stacks/assets';
-import { ContractInterfaceResponse } from '../types/api/stacks/transaction';
+import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types';
+import { ContractInterfaceResponse } from '../types';
 import { getNftDetail } from './gamma';
 import {
   getNetworkURL,
@@ -402,7 +402,7 @@ export async function fetchStxPendingTxData(stxAddress: string, network: StacksN
   };
 }
 
-export async function getTransaction(txid: string, network: StacksNetwork): Promise<Transaction> {
+export async function getTransaction(txid: string, network: StacksNetwork): Promise<EsploraTransaction> {
   const response = await fetch(`${getNetworkURL(network)}/extended/v1/tx/${txid}`, {
     method: 'GET',
   });

@@ -1,8 +1,13 @@
-import { SigHash, Transaction } from '@scure/btc-signer';
+import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
 
-import { applySendBtcActionsAndFee, applySendUtxoActions, applySplitUtxoActions } from './actionProcessors';
+import {
+  applyScriptActions,
+  applySendBtcActionsAndFee,
+  applySendUtxoActions,
+  applySplitUtxoActions,
+} from './actionProcessors';
 import { TransactionContext } from './context';
 import {
   Action,
@@ -43,7 +48,7 @@ export class EnhancedTransaction {
   private readonly _options!: TransactionOptions;
 
   get overrideChangeAddress(): string | undefined {
-    return this._overrideChangeAddress;
+    return this._options.overrideChangeAddress;
   }
 
   get feeRate(): number {
@@ -59,35 +64,28 @@ export class EnhancedTransaction {
     this._feeRate = feeRate;
     this._options = { ...defaultTransactionOptions, ...options };
 
-    if (!actions.length) {
+    if (!actions.length && !this._options.forceIncludeOutpointList?.length) {
       throw new Error('No actions provided for transaction context');
     }
 
     this._actions = extractActionMap(actions);
-
-    const spendableSendUtxos = this._actions[ActionType.SEND_UTXO].filter((action) => action.spendable);
-    const allSpendableSendUtxosToSameAddress = spendableSendUtxos.every(
-      (action) => action.toAddress === spendableSendUtxos[0].toAddress,
-    );
-
-    if (spendableSendUtxos.length > 0) {
-      // Spendable send utxo actions are designed for recovery purposes, and must be the only actions in the transaction
-      // Otherwise things get complicated, and we don't want to support that
-      if (this._actions[ActionType.SEND_UTXO].length !== spendableSendUtxos.length) {
-        throw new Error('Send Utxo actions must either all be spendable or only non-spendable');
-      } else if (this._actions[ActionType.SPLIT_UTXO].length > 0 || this._actions[ActionType.SEND_BTC].length > 0) {
-        throw new Error('Send Utxo actions must be the only actions if they are spendable');
-      } else if (!allSpendableSendUtxosToSameAddress) {
-        throw new Error('Send Utxo actions must all be to the same address if spendable');
-      }
-
-      this._overrideChangeAddress = spendableSendUtxos[0].toAddress;
-    }
   }
 
   private async compile(options: CompilationOptions, dummySign: boolean) {
     // order actions by type. Send Utxos first, then Ordinal extraction, then payment
-    const transaction = new Transaction({ PSBTVersion: 0 });
+    const txnOpts: TxOpts = { PSBTVersion: 0 };
+
+    if (this._options.allowUnknownInputs) {
+      txnOpts.allowUnknownInputs = true;
+    }
+
+    if (this._options.allowUnknownOutputs) {
+      txnOpts.allowUnknownOutputs = true;
+    }
+
+    const transaction = new Transaction(txnOpts);
+
+    const { outputs: scriptOutputs } = await applyScriptActions(transaction, this._actions[ActionType.SCRIPT]);
 
     const { inputs: sendInputs, outputs: sendOutputs } = await applySendUtxoActions(
       this._context,
@@ -133,7 +131,7 @@ export class EnhancedTransaction {
         amount: Number(actualFee),
       },
     ];
-    const outputs: TransactionOutput[] = [];
+    const nonScriptOutputs: TransactionOutput[] = [];
 
     let currentOffset = 0;
     for (const outputRaw of outputsRaw) {
@@ -141,14 +139,14 @@ export class EnhancedTransaction {
       const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(inputs, currentOffset, amount);
 
       const output: TransactionOutput = { ...outputRaw, inscriptions, satributes };
-      outputs.push(output);
+      nonScriptOutputs.push(output);
 
       currentOffset += Number(amount);
     }
 
     // we know there is at least the dummy fee output which we added above
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const { address, ...feeOutput } = outputs.pop()!;
+    const { address, ...feeOutput } = nonScriptOutputs.pop()!;
 
     // now that the transaction is built, we can sign it
     if (dummySign) {
@@ -169,7 +167,7 @@ export class EnhancedTransaction {
       effectiveFeeRate,
       transaction,
       inputs: enhancedInputs,
-      outputs,
+      outputs: [...scriptOutputs, ...nonScriptOutputs],
       feeOutput: feeOutput as TransactionFeeOutput,
       dustValue,
     };

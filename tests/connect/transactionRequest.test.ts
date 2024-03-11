@@ -1,14 +1,14 @@
-import { BigNumber } from 'bignumber.js';
-import { TransactionTypes, ContractCallPayload, STXTransferPayload, ContractDeployPayload } from '@stacks/connect';
+import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
-import { txPayloadToRequest } from 'connect';
-import { microstacksToStx } from 'currency';
+import { BigNumber } from 'bignumber.js';
+import { describe, expect, it } from 'vitest';
+import { txPayloadToRequest } from '../../connect';
+import { microstacksToStx } from '../../currency';
 import {
   createContractCallPromises,
   generateContractDeployTransaction,
   generateUnsignedStxTokenTransferTransaction,
-} from 'transactions';
-import { describe, expect, it } from 'vitest';
+} from '../../transactions';
 
 describe('txPayloadToRequest', () => {
   it('should convert TokenTransfer payload to TransactionPayload', async () => {

@@ -1,7 +1,8 @@
-import { RareSatsType, UTXO, UtxoOrdinalBundle } from '../../types';
-import { getOutpointFromUtxo } from './utils';
-import EsploraProvider from '../../api/esplora/esploraAPiProvider';
+import BigNumber from 'bignumber.js';
 import { UtxoCache } from '../../api';
+import EsploraProvider from '../../api/esplora/esploraAPiProvider';
+import { UTXO, UtxoOrdinalBundle } from '../../types';
+import { getOutpointFromUtxo } from './utils';
 
 export class ExtendedUtxo {
   private _utxo!: UTXO;
@@ -18,7 +19,7 @@ export class ExtendedUtxo {
 
   private _isExternal!: boolean;
 
-  private _bundleData?: UtxoOrdinalBundle<RareSatsType>;
+  private _bundleData?: UtxoOrdinalBundle;
 
   get address(): string {
     return this._address;
@@ -101,7 +102,7 @@ export class ExtendedUtxo {
     };
   }
 
-  async getBundleData(): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> {
+  async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
     if (!this._bundleData) {
       const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
       if (bundleData) {
@@ -120,6 +121,28 @@ export class ExtendedUtxo {
     );
 
     return hasInscriptionsOrExoticSats;
+  }
+
+  /** Returns undefined if UTXO has not yet been indexed */
+  async hasRunes(): Promise<boolean | undefined> {
+    const bundleData = await this.getBundleData();
+
+    const hasRunes = bundleData?.runes && Object.values(bundleData.runes).some((rune) => rune.gt(0));
+
+    return hasRunes;
+  }
+
+  async getRuneBalance(runeName: string): Promise<BigNumber | undefined> {
+    const bundleData = await this.getBundleData();
+
+    if (!bundleData) {
+      // utxo hasn't been indexed yet
+      return undefined;
+    }
+
+    const runeBalance = BigNumber(bundleData.runes?.[runeName.toUpperCase()] ?? 0);
+
+    return runeBalance;
   }
 }
 
@@ -155,7 +178,7 @@ export class ExtendedDummyUtxo {
     };
   }
 
-  async getBundleData(): Promise<UtxoOrdinalBundle<RareSatsType> | undefined> {
+  async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
     return undefined;
   }
 

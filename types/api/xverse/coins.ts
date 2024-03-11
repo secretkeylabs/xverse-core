@@ -1,4 +1,4 @@
-import { BaseToken } from '../shared/transaction';
+import { BaseToken } from '../shared';
 
 export interface Coin extends BaseToken {
   id?: number;

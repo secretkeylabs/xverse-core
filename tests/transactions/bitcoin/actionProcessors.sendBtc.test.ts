@@ -35,6 +35,7 @@ describe('applySendBtcActionsAndFee', () => {
     };
     const context = {
       paymentAddress: addressContext,
+      addOutputAddress: vi.fn(),
     };
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));

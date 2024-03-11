@@ -49,26 +49,10 @@ describe('sendMaxBtc', () => {
 
     expect(dustFiltered).toEqual(false);
     expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out1',
-          toAddress: recipientAddress,
-        },
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out2',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, {
+      forceIncludeOutpointList: ['out1', 'out2'],
+      overrideChangeAddress: recipientAddress,
+    });
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
 
@@ -103,32 +87,11 @@ describe('sendMaxBtc', () => {
 
     expect(dustFiltered).toEqual(true);
     expect(EnhancedTransaction).toHaveBeenCalledTimes(2);
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out1',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out2',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, { forceIncludeOutpointList: ['out1'] });
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, {
+      forceIncludeOutpointList: ['out2'],
+      overrideChangeAddress: recipientAddress,
+    });
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[1]);
   });
 
@@ -163,39 +126,11 @@ describe('sendMaxBtc', () => {
 
     expect(dustFiltered).toEqual(false);
     expect(EnhancedTransaction).toHaveBeenCalledTimes(2);
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out1',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out1',
-          toAddress: recipientAddress,
-        },
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out2',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, { forceIncludeOutpointList: ['out1'] });
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, {
+      forceIncludeOutpointList: ['out1', 'out2'],
+      overrideChangeAddress: recipientAddress,
+    });
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[1]);
   });
 
@@ -229,19 +164,7 @@ describe('sendMaxBtc', () => {
     await expect(() => sendMaxBtc(contextMock, recipientAddress, 2, true)).rejects.toThrow('All UTXOs are dust');
 
     expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
-    expect(EnhancedTransaction).toHaveBeenCalledWith(
-      contextMock,
-      [
-        {
-          type: ActionType.SEND_UTXO,
-          combinable: true,
-          spendable: true,
-          outpoint: 'out1',
-          toAddress: recipientAddress,
-        },
-      ],
-      2,
-    );
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, { forceIncludeOutpointList: ['out1'] });
   });
 });
 
@@ -266,26 +189,25 @@ describe('combineUtxos', () => {
         {
           type: ActionType.SEND_UTXO,
           combinable: true,
-          spendable: false,
           outpoint: 'out1',
           toAddress: recipientAddress,
         },
         {
           type: ActionType.SEND_UTXO,
           combinable: true,
-          spendable: false,
           outpoint: 'out2',
           toAddress: recipientAddress,
         },
       ],
       2,
+      undefined,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
 
   it('should generate correct transaction - spendable', async () => {
     const dummyOutpoints = ['out1', 'out2'];
-    const transaction = await combineUtxos(contextMock, dummyOutpoints, recipientAddress, 2, true);
+    const transaction = await combineUtxos(contextMock, dummyOutpoints, recipientAddress, 2);
 
     expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
     expect(EnhancedTransaction).toHaveBeenCalledWith(
@@ -294,19 +216,18 @@ describe('combineUtxos', () => {
         {
           type: ActionType.SEND_UTXO,
           combinable: true,
-          spendable: true,
           outpoint: 'out1',
           toAddress: recipientAddress,
         },
         {
           type: ActionType.SEND_UTXO,
           combinable: true,
-          spendable: true,
           outpoint: 'out2',
           toAddress: recipientAddress,
         },
       ],
       2,
+      undefined,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
@@ -354,6 +275,7 @@ describe('sendBtc', () => {
         },
       ],
       2,
+      undefined,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
@@ -398,6 +320,7 @@ describe('sendOrdinals', () => {
         },
       ],
       2,
+      undefined,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
@@ -453,6 +376,7 @@ describe('sendOrdinals', () => {
         },
       ],
       2,
+      undefined,
     );
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });

@@ -3,12 +3,15 @@ import { Transport } from '../../ledger/types';
 import { RareSatsType } from '../../types';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
+type ScriptOpArray = Parameters<typeof btc.Script.encode>[0];
+
 export type SupportedAddressType = 'p2tr' | 'p2sh' | 'p2wpkh';
 
 export enum ActionType {
   SEND_BTC = 'sendBtc',
   SEND_UTXO = 'sendUtxo',
   SPLIT_UTXO = 'splitUtxo',
+  SCRIPT = 'script',
 }
 
 export type SendBtcAction = {
@@ -23,7 +26,6 @@ export type SendUtxoAction = {
   toAddress: string;
   outpoint: string;
   combinable?: boolean;
-  spendable?: boolean;
 };
 
 export type SplitUtxoAction =
@@ -39,12 +41,18 @@ export type SplitUtxoAction =
       spendable: true;
     };
 
-export type Action = SendBtcAction | SendUtxoAction | SplitUtxoAction;
+export type ScriptAction = {
+  type: ActionType.SCRIPT;
+  script: ScriptOpArray;
+};
+
+export type Action = SendBtcAction | SendUtxoAction | SplitUtxoAction | ScriptAction;
 
 type ActionTypeToActionMap = {
   [ActionType.SEND_BTC]: SendBtcAction;
   [ActionType.SEND_UTXO]: SendUtxoAction;
   [ActionType.SPLIT_UTXO]: SplitUtxoAction;
+  [ActionType.SCRIPT]: ScriptAction;
 };
 
 export type ActionMap = {
@@ -54,9 +62,17 @@ export type ActionMap = {
 };
 
 export type TransactionOptions = {
+  /** This is a list of UTXOs to use in the transaction. They will be added
+   * as inputs at the end for spending and fees, so add this list with care. */
+  forceIncludeOutpointList?: string[];
   excludeOutpointList?: string[];
   useEffectiveFeeRate?: boolean;
   allowUnconfirmedInput?: boolean;
+  allowUnknownInputs?: boolean;
+  allowUnknownOutputs?: boolean;
+  /** All change from the transaction will go to this address. This is used
+   * for things like send max. */
+  overrideChangeAddress?: string;
 };
 
 export type CompilationOptions = {
@@ -70,7 +86,7 @@ export type TransactionSummary = {
   effectiveFeeRate: number | undefined;
   vsize: number;
   inputs: EnhancedInput[];
-  outputs: TransactionOutput[];
+  outputs: (TransactionOutput | TransactionScriptOutput)[];
   feeOutput: TransactionFeeOutput;
   dustValue: bigint;
 };
@@ -107,6 +123,7 @@ export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
 
 export type TransactionScriptOutput = {
   script: string[];
+  amount: number;
 };
 
 export type EnhancedInput = {

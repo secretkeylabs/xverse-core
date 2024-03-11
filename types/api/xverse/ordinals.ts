@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { Inscription } from '../ordinals';
 
 export interface OrdinalInfo {
@@ -89,13 +90,20 @@ export type SatRange<T extends RareSatsTypeApi | RareSatsType = RareSatsTypeApi>
   inscriptions: SatRangeInscription[];
 };
 
-export type UtxoOrdinalBundle<T extends RareSatsTypeApi | RareSatsType = RareSatsTypeApi> = {
+type UtxoOrdinalBundleBase<T extends RareSatsTypeApi | RareSatsType, B extends BigNumber | number> = {
   txid: string;
   vout: number;
   block_height?: number;
   value: number;
   sat_ranges: SatRange<T>[];
+  runes: {
+    [runeName: string]: B;
+  };
 };
+
+export type UtxoOrdinalBundle<R extends BigNumber | number = BigNumber> = UtxoOrdinalBundleBase<RareSatsType, R>;
+
+export type UtxoOrdinalBundleApi = UtxoOrdinalBundleBase<RareSatsTypeApi, BigNumber | number>;
 
 export type XVersion = {
   xVersion: number;
@@ -105,10 +113,10 @@ export type AddressBundleResponse = {
   total: number;
   offset: number;
   limit: number;
-  results: UtxoOrdinalBundle[];
+  results: UtxoOrdinalBundleApi[];
 } & XVersion;
 
-export type UtxoBundleResponse = UtxoOrdinalBundle & XVersion;
+export type UtxoBundleResponse = UtxoOrdinalBundleApi & XVersion;
 
 export type BundleSatRange = Omit<SatRange, 'year_mined' | 'satributes'> & {
   totalSats: number;

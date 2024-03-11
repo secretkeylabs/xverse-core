@@ -1,9 +1,16 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
-import { RecommendedFeeResponse } from '../../types';
-import { BtcAddressBalanceResponse, BtcTransactionBroadcastResponse } from '../../types/api/blockcypher/wallet';
-import * as esplora from '../../types/api/esplora';
-import { NetworkType } from '../../types/network';
+import {
+  BtcAddressMempool,
+  RecommendedFeeResponse,
+  TransactionOutspend,
+  UTXO,
+  Address,
+  BtcAddressBalanceResponse,
+  BtcTransactionBroadcastResponse,
+  EsploraTransaction,
+} from '../../types';
+import { NetworkType } from '../../types';
 import { BitcoinApiProvider } from './types';
 
 export interface EsploraApiProviderOptions {
@@ -92,8 +99,8 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
     return data;
   }
 
-  async getUnspentUtxos(address: string): Promise<(esplora.UTXO & { address: string; blockHeight?: number })[]> {
-    const data = await this.httpGet<esplora.UTXO[]>(`/address/${address}/utxo`);
+  async getUnspentUtxos(address: string): Promise<(UTXO & { address: string; blockHeight?: number })[]> {
+    const data = await this.httpGet<UTXO[]>(`/address/${address}/utxo`);
 
     const utxoSets = data.map((utxo) => ({
       ...utxo,
@@ -105,24 +112,24 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
   }
 
   async _getAddressTransactionCount(address: string) {
-    const data = await this.httpGet<esplora.Address>(`/address/${address}`);
+    const data = await this.httpGet<Address>(`/address/${address}`);
     return data.chain_stats.tx_count + data.mempool_stats.tx_count;
   }
 
-  async getAddressTransactions(address: string): Promise<esplora.Transaction[]> {
-    return this.httpGet<esplora.Transaction[]>(`/address/${address}/txs`);
+  async getAddressTransactions(address: string): Promise<EsploraTransaction[]> {
+    return this.httpGet<EsploraTransaction[]>(`/address/${address}/txs`);
   }
 
-  async getTransaction(txid: string): Promise<esplora.Transaction> {
-    return this.httpGet<esplora.Transaction>(`/tx/${txid}`);
+  async getTransaction(txid: string): Promise<EsploraTransaction> {
+    return this.httpGet<EsploraTransaction>(`/tx/${txid}`);
   }
 
   async getTransactionHex(txid: string): Promise<string> {
     return this.httpGet<string>(`/tx/${txid}/hex`);
   }
 
-  async getAddressMempoolTransactions(address: string): Promise<esplora.BtcAddressMempool[]> {
-    return this.httpGet<esplora.BtcAddressMempool[]>(`/address/${address}/txs/mempool`);
+  async getAddressMempoolTransactions(address: string): Promise<BtcAddressMempool[]> {
+    return this.httpGet<BtcAddressMempool[]>(`/address/${address}/txs/mempool`);
   }
 
   async sendRawTransaction(rawTransaction: string): Promise<BtcTransactionBroadcastResponse> {
@@ -134,8 +141,8 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
     };
   }
 
-  async getTransactionOutspends(txid: string): Promise<esplora.TransactionOutspend[]> {
-    return this.httpGet<esplora.TransactionOutspend[]>(`/tx/${txid}/outspends`);
+  async getTransactionOutspends(txid: string): Promise<TransactionOutspend[]> {
+    return this.httpGet<TransactionOutspend[]>(`/tx/${txid}/outspends`);
   }
 
   /**

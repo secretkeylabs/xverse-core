@@ -171,15 +171,16 @@ export class EnhancedPsbt {
     const inputsExtendedUtxos = inputs.map((i) => i.extendedUtxo);
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
       const outputMetadata = this.parseAddressFromOutput(transaction, outputIndex);
+      const outputRaw = transaction.getOutput(outputIndex);
 
       if (outputMetadata.script !== undefined) {
         outputs.push({
           script: outputMetadata.script,
+          amount: outputRaw.amount ? Number(outputRaw.amount) : 0,
         });
         continue;
       }
 
-      const outputRaw = transaction.getOutput(outputIndex);
       const amount = Number(outputRaw.amount);
       outputTotal += amount;
 
