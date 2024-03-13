@@ -65,8 +65,8 @@ export const sendRunes = async (
   for (const { utxo } of runeUtxos) {
     const utxoBundle = await utxo.getBundleData();
 
-    for (const rune in utxoBundle?.runes) {
-      totalBalances[rune] = BigNumber(totalBalances[rune] ?? 0).plus(utxoBundle?.runes[rune] ?? 0);
+    for (const [rune, runeDetails] of utxoBundle?.runes ?? []) {
+      totalBalances[rune] = BigNumber(totalBalances[rune] ?? 0).plus(runeDetails.amount);
     }
 
     selectedOutpoints.push(utxo.outpoint);

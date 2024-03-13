@@ -96,9 +96,7 @@ type UtxoOrdinalBundleBase<T extends RareSatsTypeApi | RareSatsType, B extends B
   block_height?: number;
   value: number;
   sat_ranges: SatRange<T>[];
-  runes: {
-    [runeName: string]: B;
-  };
+  runes: [runeName: string, details: { amount: B; symbol: string; divisibility: number }][];
 };
 
 export type UtxoOrdinalBundle<R extends BigNumber | number = BigNumber> = UtxoOrdinalBundleBase<RareSatsType, R>;
