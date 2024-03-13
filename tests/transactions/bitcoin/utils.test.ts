@@ -154,7 +154,6 @@ describe('extractActionMap', () => {
       {
         type: ActionType.SCRIPT,
         script: ['RETURN'],
-        amount: 0n,
       },
     ];
 
@@ -165,7 +164,6 @@ describe('extractActionMap', () => {
         {
           type: ActionType.SCRIPT,
           script: ['RETURN'],
-          amount: 0n,
         },
       ],
       [ActionType.SEND_UTXO]: [

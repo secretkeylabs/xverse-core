@@ -2,7 +2,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getUtxoOrdinalBundleIfFound, mapRareSatsAPIResponseToBundle } from '../../api/ordinals';
-import { Bundle, UtxoOrdinalBundleApi } from '../../types/api/xverse/ordinals';
+import { Bundle, UtxoOrdinalBundleApi, UtxoRuneEntry } from '../../types/api/xverse/ordinals';
 
 const mocked = vi.hoisted(() => ({
   get: vi.fn(),
@@ -50,9 +50,9 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 100,
           vout: 0,
-          runes: {
-            MYRUNEBALANCE: BigNumber(123),
-          },
+          runes: [
+            ['MYRUNEBALANCE', { amount: BigNumber(123), divisibility: 0, symbol: 'M' }] as UtxoRuneEntry<BigNumber>,
+          ],
           sat_ranges: [
             {
               year_mined: 2009,
@@ -89,9 +89,9 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 100,
           vout: 0,
-          runes: {
-            MYRUNEBALANCE: BigNumber(123),
-          },
+          runes: [
+            ['MYRUNEBALANCE', { amount: BigNumber(123), divisibility: 0, symbol: 'M' }] as UtxoRuneEntry<BigNumber>,
+          ],
           inscriptions: [
             {
               content_type: 'image/png',
@@ -154,7 +154,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           sat_ranges: [
             {
               year_mined: 2009,
@@ -185,7 +185,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [],
           satributes: [['UNCOMMON', 'PIZZA', 'PALINDROME'], ['1D_PALINDROME'], ['COMMON']],
           satRanges: [
@@ -236,7 +236,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           sat_ranges: [
             {
               year_mined: 2009,
@@ -284,7 +284,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [
             {
               content_type: 'image/png',
@@ -368,7 +368,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           sat_ranges: [
             {
               year_mined: 2009,
@@ -444,7 +444,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [
             {
               content_type: 'image/png',
@@ -530,7 +530,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           sat_ranges: [],
         },
         expected: {
@@ -538,7 +538,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [],
           satributes: [['COMMON']],
           satRanges: [
@@ -565,7 +565,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 2,
           vout: 0,
-          runes: {},
+          runes: [],
           sat_ranges: [
             {
               year_mined: 2009,
@@ -608,7 +608,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 2,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [
             {
               content_type: 'image/png',
@@ -701,7 +701,7 @@ describe('rareSats', () => {
           txid: 'b8f8aee03af313ef1fbba7316aadf7390c91dc5dd34928a15f708ea4ed642852',
           value: 10,
           vout: 0,
-          runes: {},
+          runes: [],
           inscriptions: [],
           satributes: [['UNCOMMON', 'PIZZA', 'PALINDROME'], ['1D_PALINDROME'], ['COMMON']],
           satRanges: [

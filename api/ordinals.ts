@@ -332,9 +332,10 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundleApi):
       inscriptions: [],
       satributes: [['COMMON']],
       totalExoticSats: 0,
-      runes: Object.fromEntries(
-        Object.entries(apiBundle.runes ?? {}).map(([rune, amount]) => [rune, BigNumber(amount)]),
-      ),
+      runes: (apiBundle.runes ?? []).map(([runeName, details]) => [
+        runeName,
+        { ...details, amount: BigNumber(details.amount) },
+      ]),
     };
   }
 
@@ -395,6 +396,9 @@ export const mapRareSatsAPIResponseToBundle = (apiBundle: UtxoOrdinalBundleApi):
     inscriptions,
     satributes,
     totalExoticSats,
-    runes: Object.fromEntries(Object.entries(apiBundle.runes ?? {}).map(([rune, amount]) => [rune, BigNumber(amount)])),
+    runes: (apiBundle.runes ?? []).map(([runeName, details]) => [
+      runeName,
+      { ...details, amount: BigNumber(details.amount) },
+    ]),
   };
 };

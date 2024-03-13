@@ -68,7 +68,8 @@ export const getSortedAvailablePaymentUtxos = async (context: TransactionContext
     unusedPaymentUtxosRaw.map(async (extendedUtxo) => {
       const isEmbellished = await extendedUtxo.isEmbellished();
       const bundleData = await extendedUtxo.getBundleData();
-      const hasRunes = bundleData?.runes && Object.values(bundleData.runes).some((r) => r.gt(0));
+      const bundleRunes = bundleData?.runes ?? [];
+      const hasRunes = bundleRunes.some(([_name, { amount }]) => amount.gt(0));
 
       return { extendedUtxo, isEmbellished, hasRunes };
     }),
