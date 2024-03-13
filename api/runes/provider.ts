@@ -50,12 +50,20 @@ export class RunesApi implements RunesApiInterface {
 
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
     const runeBalances = await this.getRuneBalance(address);
-    const runeNames = Object.entries(runeBalances).map((runeBalance) => runeBalance[0]);
+    const runeNames = Object.keys(runeBalances);
+
     if (!runeNames.length) return [];
+
     const runeInfos = await this.getRuneInfos(runeNames);
+
     return runeNames
       .map((runeName) =>
-        runeTokenToFungibleToken(runeName, runeBalances[runeName], runeInfos[runeName].entry.divisibility.toNumber()),
+        runeTokenToFungibleToken(
+          runeName,
+          runeBalances[runeName],
+          // The API returns rune names without dots in them, so we need to remove them from the rune names
+          runeInfos[runeName.replace(/[.•]/g, '')].entry.divisibility.toNumber(),
+        ),
       )
       .sort((a, b) => {
         if (a.assetName < b.assetName) {
