@@ -66,8 +66,8 @@ export class UtxoCache {
 
         // convert all rune amounts to BigNumber for runes
         for (const utxoOutpoint in cache.utxos) {
-          for (const runeName in cache.utxos[utxoOutpoint].runes) {
-            cache.utxos[utxoOutpoint].runes[runeName] = BigNumber(cache.utxos[utxoOutpoint].runes[runeName]);
+          for (const [, details] of cache.utxos[utxoOutpoint].runes ?? []) {
+            details.amount = BigNumber(details.amount);
           }
         }
 
@@ -103,7 +103,10 @@ export class UtxoCache {
       ...satRange,
       satributes: satRange.satributes.filter(isApiSatributeKnown),
     })),
-    runes: Object.fromEntries(Object.entries(utxo.runes ?? {}).map(([rune, amount]) => [rune, BigNumber(amount)])),
+    runes: (utxo.runes ?? []).map(([runeName, details]) => [
+      runeName,
+      { ...details, amount: BigNumber(details.amount) },
+    ]),
   });
 
   private _getAddressUtxos = async (

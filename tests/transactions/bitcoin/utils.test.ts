@@ -154,7 +154,6 @@ describe('extractActionMap', () => {
       {
         type: ActionType.SCRIPT,
         script: ['RETURN'],
-        amount: 0n,
       },
     ];
 
@@ -165,7 +164,6 @@ describe('extractActionMap', () => {
         {
           type: ActionType.SCRIPT,
           script: ['RETURN'],
-          amount: 0n,
         },
       ],
       [ActionType.SEND_UTXO]: [
@@ -277,7 +275,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 500, status: { confirmed: true } },
       isEmbellished: () => true,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     embellished1500: {
@@ -285,7 +283,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 1500, status: { confirmed: true } },
       isEmbellished: () => true,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     withRunes: {
@@ -293,9 +291,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 1000, status: { confirmed: true } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {
-          myrune: BigNumber(123),
-        },
+        runes: [['MYRUNE', { amount: BigNumber(123), divisibility: 0, symbol: 'M' }]],
       }),
     },
     unconfirmed500: {
@@ -303,7 +299,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 500, status: { confirmed: false } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     unconfirmed2500: {
@@ -311,7 +307,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 2500, status: { confirmed: false } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     confirmed1000: {
@@ -319,7 +315,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 1000, status: { confirmed: true } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     confirmed2000: {
@@ -327,7 +323,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 2000, status: { confirmed: true } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
     confirmed3000: {
@@ -335,7 +331,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxo: { value: 3000, status: { confirmed: true } },
       isEmbellished: () => false,
       getBundleData: () => ({
-        runes: {},
+        runes: [],
       }),
     },
   };

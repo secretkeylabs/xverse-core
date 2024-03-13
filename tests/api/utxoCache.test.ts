@@ -6,7 +6,7 @@ import { UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from '../../api/ordinals';
 
 import BigNumber from 'bignumber.js';
-import { StorageAdapter } from '../../types';
+import { StorageAdapter, UtxoRuneEntry } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
 
 vi.mock('../../api/ordinals');
@@ -24,10 +24,13 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {
-          MYRUNE: BigNumber(456),
-          MYBIGRUNE: BigNumber('12345678901234567890234'),
-        },
+        runes: [
+          ['MYRUNE', { amount: BigNumber(456), divisibility: 0, symbol: 'M' }] as UtxoRuneEntry<BigNumber>,
+          [
+            'MYBIGRUNE',
+            { amount: BigNumber('12345678901234567890234'), divisibility: 0, symbol: 'N' },
+          ] as UtxoRuneEntry<BigNumber>,
+        ],
       },
       'txid2:1': {
         txid: 'txid2',
@@ -35,10 +38,13 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {
-          MYRUNE: BigNumber(123),
-          MYBIGRUNE2: BigNumber('12345678901234567890'),
-        },
+        runes: [
+          ['MYRUNE', { amount: BigNumber(123), divisibility: 0, symbol: 'M' }] as UtxoRuneEntry<BigNumber>,
+          [
+            'MYBIGRUNE2',
+            { amount: BigNumber('12345678901234567890'), divisibility: 0, symbol: 'O' },
+          ] as UtxoRuneEntry<BigNumber>,
+        ],
       },
     };
     mockStorageAdapter = {
@@ -76,7 +82,7 @@ describe('UtxoCache', () => {
       block_height: 123,
       value: 456,
       sat_ranges: [],
-      runes: {},
+      runes: [],
     };
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 1, ...mockUtxo });
 
@@ -107,9 +113,12 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {
-          MYBIGRUNE: BigNumber('12345678901234567890234'),
-        },
+        runes: [
+          [
+            'MYBIGRUNE',
+            { amount: BigNumber('12345678901234567890234'), divisibility: 0, symbol: 'M' },
+          ] as UtxoRuneEntry<BigNumber>,
+        ],
       },
       {
         txid: 'txid2',
@@ -117,9 +126,12 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {
-          MYBIGRUNE: BigNumber('1234567890123456789023452445'),
-        },
+        runes: [
+          [
+            'MYBIGRUNE' as const,
+            { amount: BigNumber('1234567890123456789023452445'), divisibility: 0, symbol: 'M' },
+          ] as UtxoRuneEntry<BigNumber>,
+        ],
       },
     ];
     vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
@@ -176,7 +188,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid2',
@@ -184,7 +196,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid3',
@@ -192,7 +204,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
     ];
 
@@ -202,7 +214,7 @@ describe('UtxoCache', () => {
       block_height: 123,
       value: 456,
       sat_ranges: [],
-      runes: {},
+      runes: [],
     };
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ xVersion: 2, ...mockUtxo });
 
@@ -250,7 +262,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid2',
@@ -258,7 +270,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid3',
@@ -266,7 +278,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
     ];
 
@@ -315,7 +327,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid2',
@@ -323,7 +335,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
       {
         txid: 'txid3',
@@ -331,7 +343,7 @@ describe('UtxoCache', () => {
         block_height: 123,
         value: 456,
         sat_ranges: [],
-        runes: {},
+        runes: [],
       },
     ];
 

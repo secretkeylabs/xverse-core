@@ -38,9 +38,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(500)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 500,
-          },
+          runes: [['MYBIGRUNE', { amount: 500, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -50,9 +48,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(600)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 600,
-          },
+          runes: [['MYBIGRUNE', { amount: 600, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -62,7 +58,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(undefined),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {},
+          runes: [],
         }),
       },
     ];
@@ -82,9 +78,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(500)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 500,
-          },
+          runes: [['MYBIGRUNE', { amount: 500, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -94,9 +88,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(600)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 600,
-          },
+          runes: [['MYBIGRUNE', { amount: 600, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -106,7 +98,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(undefined),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {},
+          runes: [],
         }),
       },
     ];
@@ -156,9 +148,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(500)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 500,
-          },
+          runes: [['MYBIGRUNE', { amount: 500, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -168,9 +158,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(600)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 600,
-          },
+          runes: [['MYBIGRUNE', { amount: 600, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -180,7 +168,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(undefined),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {},
+          runes: [],
         }),
       },
     ];
@@ -230,9 +218,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(500)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 500,
-          },
+          runes: [['MYBIGRUNE', { amount: 500, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -242,9 +228,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(600)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 600,
-          },
+          runes: [['MYBIGRUNE', { amount: 600, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -254,7 +238,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(undefined),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {},
+          runes: [],
         }),
       },
     ];
@@ -305,10 +289,10 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(500)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 500,
-            MYBIGRUNE2: 100,
-          },
+          runes: [
+            ['MYBIGRUNE', { amount: 500, divisibility: 0, symbol: 'M' }],
+            ['MYBIGRUNE2', { amount: 100, divisibility: 0, symbol: 'M' }],
+          ],
         }),
       },
       {
@@ -318,9 +302,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(BigNumber(600)),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {
-            MYBIGRUNE: 600,
-          },
+          runes: [['MYBIGRUNE', { amount: 600, divisibility: 0, symbol: 'M' }]],
         }),
       },
       {
@@ -330,7 +312,7 @@ describe('sendRunes', () => {
         },
         getRuneBalance: vi.fn().mockResolvedValueOnce(undefined),
         getBundleData: vi.fn().mockResolvedValueOnce({
-          runes: {},
+          runes: [],
         }),
       },
     ];

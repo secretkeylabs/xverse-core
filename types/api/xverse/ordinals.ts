@@ -90,15 +90,18 @@ export type SatRange<T extends RareSatsTypeApi | RareSatsType = RareSatsTypeApi>
   inscriptions: SatRangeInscription[];
 };
 
+export type UtxoRuneEntry<B extends BigNumber | number> = [
+  runeName: string,
+  details: { amount: B; symbol: string; divisibility: number },
+];
+
 type UtxoOrdinalBundleBase<T extends RareSatsTypeApi | RareSatsType, B extends BigNumber | number> = {
   txid: string;
   vout: number;
   block_height?: number;
   value: number;
   sat_ranges: SatRange<T>[];
-  runes: {
-    [runeName: string]: B;
-  };
+  runes?: UtxoRuneEntry<B>[];
 };
 
 export type UtxoOrdinalBundle<R extends BigNumber | number = BigNumber> = UtxoOrdinalBundleBase<RareSatsType, R>;

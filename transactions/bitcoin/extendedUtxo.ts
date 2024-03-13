@@ -127,7 +127,7 @@ export class ExtendedUtxo {
   async hasRunes(): Promise<boolean | undefined> {
     const bundleData = await this.getBundleData();
 
-    const hasRunes = bundleData?.runes && Object.values(bundleData.runes).some((rune) => rune.gt(0));
+    const hasRunes = bundleData?.runes && bundleData.runes.some((rune) => rune[1].amount.gt(0));
 
     return hasRunes;
   }
@@ -140,7 +140,8 @@ export class ExtendedUtxo {
       return undefined;
     }
 
-    const runeBalance = BigNumber(bundleData.runes?.[runeName.toUpperCase()] ?? 0);
+    const runeEntry = bundleData.runes?.find((rune) => rune[0] === runeName.toUpperCase());
+    const runeBalance = BigNumber(runeEntry?.[1].amount ?? 0);
 
     return runeBalance;
   }
