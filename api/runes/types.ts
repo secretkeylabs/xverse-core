@@ -1,4 +1,4 @@
-import { FungibleToken, Rune, RuneNum } from '../../types';
+import { FungibleToken, Rune } from '../../types';
 import { BigNumber } from '../../utils/bignumber';
 
 export interface RunesApiInterface {
@@ -31,30 +31,9 @@ export interface RunesApiInterface {
   getRuneFungibleTokens(address: string): Promise<FungibleToken[]>;
 
   /**
-   * Get The rune num from its name
-   * @param {string} runeName
-   * @returns {Promise<RuneNum>}
-   */
-  getRuneNumFromName(runeName: string): Promise<RuneNum>;
-
-  /**
-   * Get The rune name from its num
-   * @param {RuneNum} runeNum
-   * @returns {Promise<string>}
-   */
-  getRuneNameFromNum(runeNum: RuneNum): Promise<string>;
-
-  /**
    * Get The rune varint from its num
    * @param {BigNumber} runeNum
    * @returns {Promise<BigNumber[]>}
    */
   getRuneVarintFromNum(runeNum: BigNumber): Promise<number[]>;
-
-  /**
-   * Get the rune num from its varint
-   * @param {number[]} varint
-   * @returns {Promise<BigNumber>}
-   */
-  getRuneNumFromVarint(varint: number[]): Promise<BigNumber>;
 }

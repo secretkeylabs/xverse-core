@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
-import { FungibleToken, NetworkType, Rune, RuneNum, runeTokenToFungibleToken } from '../../types';
+import { FungibleToken, NetworkType, Rune, runeTokenToFungibleToken } from '../../types';
 import { BigNumber, JSONBig } from '../../utils/bignumber';
 import { RunesApiInterface } from './types';
 
@@ -76,25 +76,8 @@ export class RunesApi implements RunesApiInterface {
       });
   }
 
-  async getRuneNumFromName(runeName: string): Promise<RuneNum> {
-    const response = await this.client.get<RuneNum>(`/v1/runes/tools/name-to-num/${runeName}`);
-    return response.data;
-  }
-
-  async getRuneNameFromNum(runeNum: RuneNum): Promise<string> {
-    const response = await this.client.get<string>(
-      `/v1/runes/tools/name-to-num/${runeNum.nameInt}?spacer=${runeNum.spacer}`,
-    );
-    return response.data;
-  }
-
   async getRuneVarintFromNum(num: BigNumber): Promise<number[]> {
-    const response = await this.client.get<number[]>(`/v1/runes/tools/num-to-varint/${num.toString()}`);
-    return response.data;
-  }
-
-  async getRuneNumFromVarint(varint: number[]): Promise<BigNumber> {
-    const response = await this.client.get<BigNumber>(`/v1/runes/tools/varint-to-num/${varint.join(',')}`);
+    const response = await this.client.get<number[]>(`/v1/runes/tools/num-to-varint/${num.toString(10)}`);
     return response.data;
   }
 }

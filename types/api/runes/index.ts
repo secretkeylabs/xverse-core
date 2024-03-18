@@ -21,11 +21,6 @@ export interface Rune {
   parent: string | null;
 }
 
-export interface RuneNum {
-  nameInt: number;
-  spacer: number;
-}
-
 export const runeTokenToFungibleToken = (name: string, balance: BigNumber, decimals: number): FungibleToken => ({
   name,
   decimals,
