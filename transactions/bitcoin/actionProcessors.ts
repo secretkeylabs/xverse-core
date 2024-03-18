@@ -233,12 +233,13 @@ export const applySendBtcActionsAndFee = async (
   transactionOptions: TransactionOptions,
   actions: SendBtcAction[],
   feeRate: number,
+) => {
   /**
    * This overrides the change address from the default payments address. It is used with the transfer action to
    * send all funds to the destination address (with spendable and combinable set to true)
    * */
-  overrideChangeAddress?: string,
-) => {
+  const overrideChangeAddress = transactionOptions.overrideChangeAddress;
+
   const usedOutpoints = extractUsedOutpoints(transaction);
 
   const inputs: ExtendedUtxo[] = [];

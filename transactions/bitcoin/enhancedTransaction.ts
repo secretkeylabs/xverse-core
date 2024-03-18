@@ -43,13 +43,7 @@ export class EnhancedTransaction {
 
   private readonly _feeRate!: number;
 
-  private readonly _overrideChangeAddress?: string;
-
   private readonly _options!: TransactionOptions;
-
-  get overrideChangeAddress(): string | undefined {
-    return this._options.overrideChangeAddress;
-  }
 
   get feeRate(): number {
     return this._feeRate;
@@ -117,7 +111,6 @@ export class EnhancedTransaction {
       this._options,
       this._actions[ActionType.SEND_BTC],
       this._feeRate,
-      this._overrideChangeAddress,
     );
 
     const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];

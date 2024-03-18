@@ -1,3 +1,4 @@
+import * as btc from '@scure/btc-signer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyScriptActions,
@@ -93,15 +94,40 @@ describe('EnhancedTransaction summary', () => {
   it('compiles transaction and summary correctly', async () => {
     const txn = new EnhancedTransaction(
       ctx,
-      // Dummy action, not being used in test
+      // These actions are only used for the action parser and passing to subsequent action processors
+      // they don't correlate to the output of the action processors
       [
+        {
+          type: ActionType.SCRIPT,
+          script: ['RETURN', 5],
+        },
         {
           type: ActionType.SEND_UTXO,
           outpoint: 'txid:0',
           toAddress: addresses[0].nativeSegwit,
         },
+        {
+          type: ActionType.SPLIT_UTXO,
+          location: 'txid:1:100',
+          toAddress: addresses[0].nativeSegwit,
+        },
+        {
+          type: ActionType.SEND_BTC,
+          toAddress: addresses[0].nativeSegwit,
+          amount: 1000n,
+          combinable: true,
+        },
       ],
       1,
+      {
+        forceIncludeOutpointList: ['txid:0'],
+        overrideChangeAddress: 'overrideChangeAddress',
+        useEffectiveFeeRate: true,
+        allowUnconfirmedInput: true,
+        allowUnknownInputs: true,
+        allowUnknownOutputs: true,
+        excludeOutpointList: ['txid:1'],
+      },
     );
 
     vi.mocked(applyScriptActions).mockResolvedValueOnce({
@@ -390,6 +416,78 @@ describe('EnhancedTransaction summary', () => {
       },
       dustValue: 2n,
     });
+
+    expect(applyScriptActions).toHaveBeenCalledWith(expect.any(btc.Transaction), [
+      {
+        type: ActionType.SCRIPT,
+        script: ['RETURN', 5],
+      },
+    ]);
+    expect(applySendUtxoActions).toHaveBeenCalledWith(
+      ctx,
+      { rbfEnabled: false },
+      expect.any(btc.Transaction),
+      {
+        forceIncludeOutpointList: ['txid:0'],
+        overrideChangeAddress: 'overrideChangeAddress',
+        useEffectiveFeeRate: true,
+        allowUnconfirmedInput: true,
+        allowUnknownInputs: true,
+        allowUnknownOutputs: true,
+        excludeOutpointList: ['txid:1'],
+      },
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          outpoint: 'txid:0',
+          toAddress: addresses[0].nativeSegwit,
+        },
+      ],
+    );
+    expect(applySplitUtxoActions).toHaveBeenCalledWith(
+      ctx,
+      { rbfEnabled: false },
+      expect.any(btc.Transaction),
+      {
+        forceIncludeOutpointList: ['txid:0'],
+        overrideChangeAddress: 'overrideChangeAddress',
+        useEffectiveFeeRate: true,
+        allowUnconfirmedInput: true,
+        allowUnknownInputs: true,
+        allowUnknownOutputs: true,
+        excludeOutpointList: ['txid:1'],
+      },
+      [
+        {
+          type: ActionType.SPLIT_UTXO,
+          location: 'txid:1:100',
+          toAddress: addresses[0].nativeSegwit,
+        },
+      ],
+    );
+    expect(applySendBtcActionsAndFee).toHaveBeenCalledWith(
+      ctx,
+      { rbfEnabled: false },
+      expect.any(btc.Transaction),
+      {
+        forceIncludeOutpointList: ['txid:0'],
+        overrideChangeAddress: 'overrideChangeAddress',
+        useEffectiveFeeRate: true,
+        allowUnconfirmedInput: true,
+        allowUnknownInputs: true,
+        allowUnknownOutputs: true,
+        excludeOutpointList: ['txid:1'],
+      },
+      [
+        {
+          type: ActionType.SEND_BTC,
+          toAddress: addresses[0].nativeSegwit,
+          amount: 1000n,
+          combinable: true,
+        },
+      ],
+      1,
+    );
 
     expect(paymentAddressContext.signInputs).not.toHaveBeenCalled();
     expect(ordinalsAddressContext.signInputs).not.toHaveBeenCalled();

@@ -156,10 +156,11 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
-      {},
+      {
+        overrideChangeAddress: 'overrideChangeAddress',
+      },
       [],
       5,
-      'overrideChangeAddress',
     );
 
     expect(actualFee).toEqual(850n);
