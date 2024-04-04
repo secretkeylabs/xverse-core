@@ -190,7 +190,7 @@ export const applySplitUtxoActions = async (
 
         // if a split action is spendable but is not the last output, then we need to return the value to the
         // payment to the originating address
-        const toAddress = action.spendable ? extendedUtxo.utxo.address : action.toAddress;
+        const toAddress = action.spendable ? extendedUtxo.utxo.address : (action.ActionType == ActionType.SPLIT_UTXO ? "" : action.toAddress);
         context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
         outputs.push({ amount: outputEndOffset - offset, address: toAddress });
       }
