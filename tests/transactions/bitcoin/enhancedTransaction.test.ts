@@ -1,5 +1,7 @@
 import * as btc from '@scure/btc-signer';
+import BigNumber from 'bignumber.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getRunesClient } from '../../../api/runes/provider';
 import {
   applyScriptActions,
   applySendBtcActionsAndFee,
@@ -13,6 +15,7 @@ import { TestAddressContext, addresses } from './helpers';
 
 vi.mock('../../../transactions/bitcoin/actionProcessors');
 vi.mock('../../../transactions/bitcoin/context');
+vi.mock('../../../api/runes/provider');
 
 describe('EnhancedTransaction constructor', () => {
   const seedVault = vi.fn() as any;
@@ -133,7 +136,9 @@ describe('EnhancedTransaction summary', () => {
     vi.mocked(applyScriptActions).mockResolvedValueOnce({
       outputs: [
         {
+          type: 'script',
           script: ['OP_RETURN', '6d02'],
+          scriptHex: '6d02',
           amount: 0,
         },
       ],
@@ -160,6 +165,7 @@ describe('EnhancedTransaction summary', () => {
       inputs: sendUtxoInputs,
       outputs: [
         {
+          type: 'address',
           address: 'address1',
           amount: 100,
         },
@@ -198,10 +204,12 @@ describe('EnhancedTransaction summary', () => {
       inputs: splitInputs,
       outputs: [
         {
+          type: 'address',
           address: 'address2',
           amount: 1000,
         },
         {
+          type: 'address',
           address: 'address3',
           amount: 1000,
         },
@@ -261,10 +269,12 @@ describe('EnhancedTransaction summary', () => {
       inputs: sendBtcInputs,
       outputs: [
         {
+          type: 'address',
           address: 'address4',
           amount: 2500,
         },
         {
+          type: 'address',
           address: 'myAddress',
           amount: 1000,
         },
@@ -274,6 +284,20 @@ describe('EnhancedTransaction summary', () => {
       effectiveFeeRate: 50,
       dustValue: 2n,
     });
+
+    vi.mocked(getRunesClient).mockReturnValue({
+      getDecodedRuneScript: vi.fn().mockResolvedValueOnce({
+        Runestone: {
+          edicts: [
+            {
+              id: 'runeId',
+              amount: BigNumber(100),
+              output: BigNumber(99),
+            },
+          ],
+        },
+      }),
+    } as any);
 
     // ==========================
     // actual thing we're testing
@@ -285,6 +309,17 @@ describe('EnhancedTransaction summary', () => {
       feeRate: 50,
       effectiveFeeRate: 50,
       vsize: 10, // size of an empty txn
+      runeOp: {
+        Runestone: {
+          edicts: [
+            {
+              id: 'runeId',
+              amount: BigNumber(100),
+              output: BigNumber(99),
+            },
+          ],
+        },
+      },
       inputs: [...sendUtxoInputs, ...splitInputs, ...sendBtcInputs].map((i) => ({
         extendedUtxo: i,
         sigHash: 1,
@@ -308,10 +343,13 @@ describe('EnhancedTransaction summary', () => {
       })),
       outputs: [
         {
+          type: 'script',
           script: ['OP_RETURN', '6d02'],
+          scriptHex: '6d02',
           amount: 0,
         },
         {
+          type: 'address',
           address: 'address1',
           amount: 100,
           inscriptions: [
@@ -333,6 +371,7 @@ describe('EnhancedTransaction summary', () => {
           ],
         },
         {
+          type: 'address',
           address: 'address2',
           amount: 1000,
           inscriptions: [
@@ -347,6 +386,7 @@ describe('EnhancedTransaction summary', () => {
           satributes: [],
         },
         {
+          type: 'address',
           address: 'address3',
           amount: 1000,
           inscriptions: [
@@ -368,6 +408,7 @@ describe('EnhancedTransaction summary', () => {
           ],
         },
         {
+          type: 'address',
           address: 'address4',
           amount: 2500,
           inscriptions: [
@@ -396,6 +437,7 @@ describe('EnhancedTransaction summary', () => {
           ],
         },
         {
+          type: 'address',
           address: 'myAddress',
           amount: 1000,
           inscriptions: [],
@@ -403,6 +445,7 @@ describe('EnhancedTransaction summary', () => {
         },
       ],
       feeOutput: {
+        type: 'fee',
         amount: 500,
         inscriptions: [],
         satributes: [

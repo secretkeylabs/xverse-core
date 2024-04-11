@@ -1,6 +1,7 @@
 import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
 
 import EsploraClient from '../../api/esplora/esploraAPiProvider';
+import { getRunesClient } from '../../api/runes/provider';
 
 import {
   applyScriptActions,
@@ -114,16 +115,20 @@ export class EnhancedTransaction {
     );
 
     const inputs = [...sendInputs, ...splitInputs, ...sendBtcInputs];
+
+    // build friendly outputs
     const outputsRaw: Omit<TransactionOutput, 'inscriptions' | 'satributes'>[] = [
       ...sendOutputs,
       ...splitOutputs,
       ...sendBtcOutputs,
       // we add a dummy output to track the fee
       {
+        type: 'address',
         address: '',
         amount: Number(actualFee),
       },
     ];
+
     const nonScriptOutputs: TransactionOutput[] = [];
 
     let currentOffset = 0;
@@ -136,6 +141,10 @@ export class EnhancedTransaction {
 
       currentOffset += Number(amount);
     }
+
+    // extract rune script data via API if valid runes script exists
+    const runesClient = getRunesClient(this._context.network);
+    const runeOp = scriptOutputs.length > 0 ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
 
     // we know there is at least the dummy fee output which we added above
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -161,13 +170,14 @@ export class EnhancedTransaction {
       transaction,
       inputs: enhancedInputs,
       outputs: [...scriptOutputs, ...nonScriptOutputs],
-      feeOutput: feeOutput as TransactionFeeOutput,
+      feeOutput: { ...feeOutput, type: 'fee' } as TransactionFeeOutput,
+      runeOp,
       dustValue,
     };
   }
 
   async getSummary(options: CompilationOptions = {}): Promise<TransactionSummary> {
-    const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput, dustValue } =
+    const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput, runeOp, dustValue } =
       await this.compile(getOptionsWithDefaults(options), true);
 
     const vsize = transaction.vsize;
@@ -180,6 +190,7 @@ export class EnhancedTransaction {
       inputs,
       outputs,
       feeOutput,
+      runeOp,
       dustValue,
     };
 

@@ -1,6 +1,7 @@
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 
+import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
 import { InputToSign } from '../psbt';
 import { TransactionContext } from './context';
@@ -71,7 +72,7 @@ export class EnhancedPsbt {
   private parseAddressFromOutput(
     transaction: btc.Transaction,
     outputIndex: number,
-  ): { address: string; script?: undefined } | { address?: undefined; script: string[] } {
+  ): { address: string; script?: undefined } | { address?: undefined; script: string[]; scriptHex: string } {
     const output = transaction.getOutput(outputIndex);
 
     if (!output?.script) {
@@ -86,6 +87,7 @@ export class EnhancedPsbt {
       //for script outputs
       return {
         script: btc.Script.decode(outputScript.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
+        scriptHex: hex.encode(outputScript.script),
       };
     }
 
@@ -167,6 +169,9 @@ export class EnhancedPsbt {
 
     let outputTotal = 0;
 
+    const runesClient = getRunesClient(this._context.network);
+    const runeOp = await runesClient.getDecodedRuneScript(transaction.hex);
+
     let currentOffset = 0;
     const inputsExtendedUtxos = inputs.map((i) => i.extendedUtxo);
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
@@ -175,9 +180,12 @@ export class EnhancedPsbt {
 
       if (outputMetadata.script !== undefined) {
         outputs.push({
+          type: 'script',
           script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           amount: outputRaw.amount ? Number(outputRaw.amount) : 0,
         });
+
         continue;
       }
 
@@ -186,6 +194,7 @@ export class EnhancedPsbt {
 
       if (!isSigHashAll) {
         const output: TransactionOutput = {
+          type: 'address',
           address: outputMetadata.address,
           amount: Number(amount),
           inscriptions: [],
@@ -201,6 +210,7 @@ export class EnhancedPsbt {
         amount,
       );
       const output: TransactionOutput = {
+        type: 'address',
         address: outputMetadata.address,
         amount: Number(amount),
         inscriptions,
@@ -222,6 +232,7 @@ export class EnhancedPsbt {
       );
 
       feeOutput = {
+        type: 'fee',
         amount: fee,
         inscriptions,
         satributes,
@@ -237,6 +248,7 @@ export class EnhancedPsbt {
       outputs,
       feeOutput,
       hasSigHashNone,
+      runeOp,
     };
   }
 

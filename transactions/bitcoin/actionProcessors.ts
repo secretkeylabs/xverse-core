@@ -36,10 +36,15 @@ export const applyScriptActions = async (transaction: Transaction, actions: Scri
     const { script } = action;
     const amount = 0n;
 
-    transaction.addOutput({ script: btc.Script.encode(script), amount });
+    const decodedScript = script instanceof Uint8Array ? btc.Script.decode(script) : script;
+    const encodedScript = script instanceof Uint8Array ? script : btc.Script.encode(script);
+
+    transaction.addOutput({ script: encodedScript, amount });
 
     outputs.push({
-      script: script.map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
+      type: 'script',
+      script: decodedScript.map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
+      scriptHex: hex.encode(encodedScript),
       amount: Number(amount),
     });
   }
@@ -104,7 +109,7 @@ export const applySendUtxoActions = async (
       // if output value is 0, then all actions are spendable, so we can skip this
       if (outputAmount > 0) {
         context.addOutputAddress(transaction, toAddress, BigInt(outputAmount));
-        outputs.push({ amount: outputAmount, address: toAddress });
+        outputs.push({ type: 'address', amount: outputAmount, address: toAddress });
       }
     }
   }
@@ -200,7 +205,7 @@ export const applySplitUtxoActions = async (
           );
         }
         context.addOutputAddress(transaction, extendedUtxo.utxo.address, BigInt(offset));
-        outputs.push({ amount: offset, address: extendedUtxo.utxo.address });
+        outputs.push({ type: 'address', amount: offset, address: extendedUtxo.utxo.address });
       }
 
       const nextAction = outpointActions[i + 1];
@@ -218,7 +223,7 @@ export const applySplitUtxoActions = async (
         // payment to the originating address
         const toAddress = action.spendable ? extendedUtxo.utxo.address : action.toAddress;
         context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
-        outputs.push({ amount: outputEndOffset - offset, address: toAddress });
+        outputs.push({ type: 'address', amount: outputEndOffset - offset, address: toAddress });
       }
     }
   }
@@ -299,7 +304,7 @@ export const applySendBtcActionsAndFee = async (
 
       totalOutputs += amount;
       context.addOutputAddress(transaction, toAddress, amount);
-      outputs.push({ amount: Number(amount), address: toAddress });
+      outputs.push({ type: 'address', amount: Number(amount), address: toAddress });
     }
   }
 
@@ -356,7 +361,11 @@ export const applySendBtcActionsAndFee = async (
 
             const change = currentChange - actualFee;
             context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
-            outputs.push({ amount: Number(change), address: overrideChangeAddress ?? context.changeAddress });
+            outputs.push({
+              type: 'address',
+              amount: Number(change),
+              address: overrideChangeAddress ?? context.changeAddress,
+            });
 
             complete = true;
             break;

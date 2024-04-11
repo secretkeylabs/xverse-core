@@ -145,6 +145,22 @@ export class ExtendedUtxo {
 
     return runeBalance;
   }
+
+  async getRuneBalances(): Promise<{ [runeName: string]: BigNumber } | undefined> {
+    const bundleData = await this.getBundleData();
+
+    if (!bundleData) {
+      // utxo hasn't been indexed yet
+      return undefined;
+    }
+
+    const runeEntry = bundleData.runes?.reduce((acc, rune) => {
+      acc[rune[0]] = rune[1].amount;
+      return acc;
+    }, {} as { [runeName: string]: BigNumber });
+
+    return runeEntry;
+  }
 }
 
 export class ExtendedDummyUtxo {
@@ -184,6 +200,18 @@ export class ExtendedDummyUtxo {
   }
 
   async isEmbellished(): Promise<boolean | undefined> {
+    return undefined;
+  }
+
+  async hasRunes(): Promise<boolean | undefined> {
+    return undefined;
+  }
+
+  async getRuneBalance(_: string): Promise<BigNumber | undefined> {
+    return undefined;
+  }
+
+  async getRuneBalances(): Promise<{ [runeName: string]: BigNumber } | undefined> {
     return undefined;
   }
 }

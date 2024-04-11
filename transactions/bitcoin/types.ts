@@ -1,6 +1,6 @@
 import * as btc from '@scure/btc-signer';
 import { Transport } from '../../ledger/types';
-import { RareSatsType } from '../../types';
+import { Artifact, RareSatsType } from '../../types';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
 type ScriptOpArray = Parameters<typeof btc.Script.encode>[0];
@@ -43,7 +43,7 @@ export type SplitUtxoAction =
 
 export type ScriptAction = {
   type: ActionType.SCRIPT;
-  script: ScriptOpArray;
+  script: ScriptOpArray | Uint8Array;
 };
 
 export type Action = SendBtcAction | SendUtxoAction | SplitUtxoAction | ScriptAction;
@@ -86,9 +86,10 @@ export type TransactionSummary = {
   effectiveFeeRate: number | undefined;
   vsize: number;
   inputs: EnhancedInput[];
-  outputs: (TransactionOutput | TransactionScriptOutput)[];
+  outputs: EnhancedOutput[];
   feeOutput: TransactionFeeOutput;
   dustValue: bigint;
+  runeOp?: Artifact;
 };
 
 export type PSBTCompilationOptions = {
@@ -113,16 +114,19 @@ export type IOSatribute = {
 };
 
 export type TransactionOutput = {
+  type: 'address';
   address: string;
   amount: number;
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
 };
 
-export type TransactionFeeOutput = Omit<TransactionOutput, 'address'>;
+export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type'> & { type: 'fee' };
 
 export type TransactionScriptOutput = {
+  type: 'script';
   script: string[];
+  scriptHex: string;
   amount: number;
 };
 
@@ -139,6 +143,7 @@ export type PsbtSummary = {
   outputs: EnhancedOutput[];
   feeOutput?: TransactionFeeOutput;
   hasSigHashNone: boolean;
+  runeOp?: Artifact;
 };
 
 export type InputMetadata = {
