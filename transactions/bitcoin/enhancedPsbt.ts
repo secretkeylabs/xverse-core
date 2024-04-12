@@ -167,11 +167,8 @@ export class EnhancedPsbt {
     const { inputs, inputTotal, isSigHashAll, hasSigHashNone } = await this._extractInputMetadata(transaction);
     const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
 
+    let hasScriptOutput = false;
     let outputTotal = 0;
-
-    const runesClient = getRunesClient(this._context.network);
-    const runeOp = await runesClient.getDecodedRuneScript(transaction.hex);
-
     let currentOffset = 0;
     const inputsExtendedUtxos = inputs.map((i) => i.extendedUtxo);
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
@@ -185,6 +182,7 @@ export class EnhancedPsbt {
           scriptHex: outputMetadata.scriptHex,
           amount: outputRaw.amount ? Number(outputRaw.amount) : 0,
         });
+        hasScriptOutput = true;
 
         continue;
       }
@@ -242,6 +240,9 @@ export class EnhancedPsbt {
     const enhancedInputs: EnhancedInput[] = await Promise.all(
       inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
     );
+
+    const runesClient = getRunesClient(this._context.network);
+    const runeOp = hasScriptOutput ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
 
     return {
       inputs: enhancedInputs,
