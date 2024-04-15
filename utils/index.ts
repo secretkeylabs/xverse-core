@@ -6,4 +6,5 @@ export * from './bip32';
 export * from './brc20';
 export * from './coreError';
 export * from './ecpair';
+export * from './runes';
 export { bip39, bs58 };
