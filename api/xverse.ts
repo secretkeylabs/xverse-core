@@ -22,6 +22,9 @@ import {
   SupportedCurrency,
   TokenFiatRateResponse,
   DappSectionData,
+  AppFeaturesContext,
+  AppFeaturesResponse,
+  AppFeaturesBody,
 } from '../types';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
@@ -321,4 +324,13 @@ export async function getSpamTokensList(network: NetworkType) {
   const spamTokensUrl = `${XVERSE_API_BASE_URL(network)}/v1/spam-tokens`;
   const spamTokens = await axios.get(spamTokensUrl);
   return spamTokens.data;
+}
+
+export async function getAppFeatures(network: NetworkType, context: Partial<AppFeaturesContext>) {
+  const response = await axios.post<AppFeaturesResponse, AxiosResponse<AppFeaturesResponse, any>, AppFeaturesBody>(
+    `${XVERSE_API_BASE_URL(network)}/v1/app-features`,
+    { context: { ...context, network } },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+  return response.data;
 }

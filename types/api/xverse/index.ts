@@ -1,4 +1,5 @@
 export * from './appConfig';
+export * from './appFeatures';
 export * from './coins';
 export * from './ordinals';
 export * from './sponsor';
