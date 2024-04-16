@@ -1,15 +1,19 @@
 import { StacksTransaction } from '@stacks/transactions';
-import axios, { AxiosResponse, AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
+  AppFeaturesBody,
+  AppFeaturesContext,
+  AppFeaturesResponse,
   AppInfo,
   Brc20TokensResponse,
   BtcFeeResponse,
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  DappSectionData,
   Inscription,
   InscriptionInCollectionsList,
   NetworkType,
@@ -21,57 +25,43 @@ import {
   StackingPoolInfo,
   SupportedCurrency,
   TokenFiatRateResponse,
-  DappSectionData,
-  AppFeaturesContext,
-  AppFeaturesResponse,
-  AppFeaturesBody,
 } from '../types';
+import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
-import { getXClientVersion } from '../utils/xClientVersion';
-import { JSONBig } from '../utils/bignumber';
 
 class XverseApi {
-  private clientBigNumber: AxiosInstance;
+  private client: AxiosInstance;
 
   constructor(network: NetworkType) {
-    this.clientBigNumber = axios.create({
+    this.client = axios.create({
       baseURL: XVERSE_API_BASE_URL(network),
       headers: {
         'Content-Type': 'application/json',
         'X-Client-Version': getXClientVersion() || undefined,
       },
-      transformResponse: (res, _headers, status) => {
-        if (status !== 200) {
-          return res;
-        }
-        return JSONBig.parse(res);
-      },
-      transformRequest: (req) => {
-        return JSONBig.stringify(req);
-      },
     });
   }
 
   async fetchBtcFeeRate(): Promise<BtcFeeResponse> {
-    const response = await this.clientBigNumber.get('/v1/fees/btc');
+    const response = await this.client.get('/v1/fees/btc');
     return response.data;
   }
 
   async fetchStxToBtcRate(): Promise<BigNumber> {
-    const response = await this.clientBigNumber.get('/v1/prices/stx/btc', { timeout: API_TIMEOUT_MILLI });
+    const response = await this.client.get('/v1/prices/stx/btc', { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.stxBtcRate.toString());
   }
 
   async fetchBtcToCurrencyRate({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> {
-    const response = await this.clientBigNumber.get(`/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI });
+    const response = await this.client.get(`/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.btcFiatRate.toString());
   }
 
   async fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
     const url = `/v1/prices/${ft}/${fiatCurrency}`;
 
-    return this.clientBigNumber
+    return this.client
       .get<TokenFiatRateResponse>(url, { timeout: API_TIMEOUT_MILLI })
       .then((response) => {
         return new BigNumber(response.data.tokenFiatRate);
@@ -82,7 +72,7 @@ class XverseApi {
   }
 
   async getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse> {
-    const response = await this.clientBigNumber.post<CoinsResponse>('/v1/coins', {
+    const response = await this.client.post<CoinsResponse>('/v1/coins', {
       currency: fiatCurrency,
       coins: JSON.stringify(contractids),
     });
@@ -95,7 +85,7 @@ class XverseApi {
    * @param fiatCurrency
    */
   async getBrc20Tokens(tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> {
-    const response = await this.clientBigNumber.get<Brc20TokensResponse>('/v1/brc20/tokens', {
+    const response = await this.client.get<Brc20TokensResponse>('/v1/brc20/tokens', {
       params: {
         currency: fiatCurrency,
         tickers: tickers,
@@ -105,46 +95,46 @@ class XverseApi {
   }
 
   async fetchAppInfo(): Promise<AppInfo> {
-    const response = await this.clientBigNumber.get<AppInfo>('/v1/info');
+    const response = await this.client.get<AppInfo>('/v1/info');
     return response.data;
   }
 
   async fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
-    const response = await this.clientBigNumber.get<StackingPoolInfo>(`/v1/pool/info?pool_version=3`);
+    const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=3`);
     return response.data;
   }
 
   async fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
-    const response = await this.clientBigNumber.get<StackerInfo>(`/v1/pool/${stxAddress}/status`);
+    const response = await this.client.get<StackerInfo>(`/v1/pool/${stxAddress}/status`);
     return response.data;
   }
 
   async getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse> {
-    const response = await this.clientBigNumber.post<SignedUrlResponse>('/v1/sign-url', {
+    const response = await this.client.post<SignedUrlResponse>('/v1/sign-url', {
       url: unsignedUrl,
     });
     return response.data;
   }
 
   async getBinanceSignature(srcData: string): Promise<SignedUrlResponse> {
-    const response = await this.clientBigNumber.post<SignedUrlResponse>('/v1/binance/sign', {
+    const response = await this.client.post<SignedUrlResponse>('/v1/binance/sign', {
       url: srcData,
     });
     return response.data;
   }
 
   async getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
-    const response = await this.clientBigNumber.get(`/v1/ordinals/${ordinalId}`);
+    const response = await this.client.get(`/v1/ordinals/${ordinalId}`);
     return response.data;
   }
 
   async getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
-    const response = await this.clientBigNumber.get(`/v1/eth/${tokenContract}/${tokenId}`);
+    const response = await this.client.get(`/v1/eth/${tokenContract}/${tokenId}`);
     return response.data;
   }
 
   async getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
-    const response = await this.clientBigNumber.get(`/v1/address/${address}/ordinals/collections`, {
+    const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
       params: {
         limit,
         offset,
@@ -154,7 +144,7 @@ class XverseApi {
   }
 
   async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
-    const response = await this.clientBigNumber.get(`/v1/ordinals/collections/${collectionId}`);
+    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
     return response.data;
   }
 
@@ -164,7 +154,7 @@ class XverseApi {
     offset?: number,
     limit?: number,
   ): Promise<InscriptionInCollectionsList> {
-    const response = await this.clientBigNumber.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
+    const response = await this.client.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
       params: {
         limit,
         offset,
@@ -174,27 +164,27 @@ class XverseApi {
   }
 
   async getInscription(address: string, inscriptionId: string): Promise<Inscription> {
-    const response = await this.clientBigNumber.get(`/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`);
+    const response = await this.client.get(`/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`);
     return response.data;
   }
 
   async getAppConfig() {
-    const response = await this.clientBigNumber.get(`/v1/app-config`);
+    const response = await this.client.get(`/v1/app-config`);
     return response;
   }
 
   async getFeaturedDapps(): Promise<DappSectionData[]> {
-    const response = await this.clientBigNumber.get(`/v2/featured/dapp`);
+    const response = await this.client.get(`/v2/featured/dapp`);
     return response.data.featuredDapp;
   }
 
   async getSpamTokensList() {
-    const response = await this.clientBigNumber.get(`/v1/spam-tokens`);
+    const response = await this.client.get(`/v1/spam-tokens`);
     return response.data;
   }
 
   async getAppFeatures(context: Partial<AppFeaturesContext>) {
-    const response = await this.clientBigNumber.post<
+    const response = await this.client.post<
       AppFeaturesResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
       AxiosResponse<AppFeaturesResponse, any>,
