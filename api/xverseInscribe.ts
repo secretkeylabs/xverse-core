@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, CancelToken } from 'axios';
-
+import { getXClientVersion } from '../utils/xClientVersion';
 import {
   Brc20CostEstimateRequest,
   Brc20CostEstimateResponse,
@@ -17,23 +17,28 @@ import {
   InscriptionExecuteOrderResponse,
   NetworkType,
 } from '../types';
-
 import { XVERSE_INSCRIBE_URL } from '../constant';
 
-const apiClients: Record<NetworkType, AxiosInstance> = {
-  Mainnet: axios.create({
-    baseURL: XVERSE_INSCRIBE_URL('Mainnet'),
-  }),
-  Testnet: axios.create({
-    baseURL: XVERSE_INSCRIBE_URL('Testnet'),
-  }),
+// TODO create a provider class
+const apiClients: Partial<Record<NetworkType, AxiosInstance>> = {};
+
+const getXverseInscribeClient = (network: NetworkType): AxiosInstance => {
+  if (!apiClients[network]) {
+    apiClients[network] = axios.create({
+      baseURL: XVERSE_INSCRIBE_URL(network),
+      headers: {
+        'X-Client-Version': getXClientVersion() || undefined,
+      },
+    });
+  }
+  return apiClients[network] as AxiosInstance;
 };
 
 const getInscriptionFeeEstimate = async (
   network: NetworkType,
   requestBody: InscriptionCostEstimateRequest,
 ): Promise<InscriptionCostEstimateResponse> => {
-  const response = await apiClients[network].post<InscriptionCostEstimateResponse>(
+  const response = await getXverseInscribeClient(network).post<InscriptionCostEstimateResponse>(
     '/v2/inscriptions/cost-estimate',
     requestBody,
   );
@@ -44,7 +49,7 @@ const createInscriptionOrder = async (
   network: NetworkType,
   requestBody: InscriptionCreateOrderRequest,
 ): Promise<InscriptionCreateOrderResponse> => {
-  const response = await apiClients[network].post<InscriptionCreateOrderResponse>(
+  const response = await getXverseInscribeClient(network).post<InscriptionCreateOrderResponse>(
     '/v2/inscriptions/place-order',
     requestBody,
   );
@@ -54,7 +59,7 @@ const executeInscriptionOrder = async (
   network: NetworkType,
   requestBody: InscriptionExecuteOrderRequest,
 ): Promise<InscriptionExecuteOrderResponse> => {
-  const response = await apiClients[network].post<InscriptionExecuteOrderResponse>(
+  const response = await getXverseInscribeClient(network).post<InscriptionExecuteOrderResponse>(
     '/v2/inscriptions/execute-order',
     requestBody,
   );
@@ -78,9 +83,13 @@ const getBrc20TransferFees = async (
     feeRate,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody, {
-    cancelToken,
-  });
+  const response = await getXverseInscribeClient(network).post<Brc20CostEstimateResponse>(
+    '/v1/brc20/cost-estimate',
+    requestBody,
+    {
+      cancelToken,
+    },
+  );
   return response.data;
 };
 
@@ -101,7 +110,10 @@ const createBrc20TransferOrder = async (
     network,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CreateOrderResponse>('/v1/brc20/place-order', requestBody);
+  const response = await getXverseInscribeClient(network).post<Brc20CreateOrderResponse>(
+    '/v1/brc20/place-order',
+    requestBody,
+  );
   return response.data;
 };
 
@@ -122,9 +134,13 @@ const getBrc20MintFees = async (
     feeRate,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody, {
-    cancelToken: cancelToken,
-  });
+  const response = await getXverseInscribeClient(network).post<Brc20CostEstimateResponse>(
+    '/v1/brc20/cost-estimate',
+    requestBody,
+    {
+      cancelToken: cancelToken,
+    },
+  );
   return response.data;
 };
 
@@ -145,7 +161,10 @@ const createBrc20MintOrder = async (
     network,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CreateOrderResponse>('/v1/brc20/place-order', requestBody);
+  const response = await getXverseInscribeClient(network).post<Brc20CreateOrderResponse>(
+    '/v1/brc20/place-order',
+    requestBody,
+  );
   return response.data;
 };
 
@@ -167,7 +186,10 @@ const getBrc20DeployFees = async (
     feeRate,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CostEstimateResponse>('/v1/brc20/cost-estimate', requestBody);
+  const response = await getXverseInscribeClient(network).post<Brc20CostEstimateResponse>(
+    '/v1/brc20/cost-estimate',
+    requestBody,
+  );
   return response.data;
 };
 
@@ -190,7 +212,10 @@ const createBrc20DeployOrder = async (
     network,
     inscriptionValue,
   };
-  const response = await apiClients[network].post<Brc20CreateOrderResponse>('/v1/brc20/place-order', requestBody);
+  const response = await getXverseInscribeClient(network).post<Brc20CreateOrderResponse>(
+    '/v1/brc20/place-order',
+    requestBody,
+  );
   return response.data;
 };
 
@@ -205,7 +230,10 @@ const executeBrc20Order = async (
     commitTransactionHex,
     skipFinalize,
   };
-  const response = await apiClients[network].post<Brc20ExecuteOrderResponse>('/v1/brc20/execute-order', requestBody);
+  const response = await getXverseInscribeClient(network).post<Brc20ExecuteOrderResponse>(
+    '/v1/brc20/execute-order',
+    requestBody,
+  );
   return response.data;
 };
 
@@ -218,7 +246,7 @@ const finalizeBrc20TransferOrder = async (
     commitAddress,
     transferTransactionHex,
   };
-  const response = await apiClients[network].post<Brc20FinalizeTransferOrderResponse>(
+  const response = await getXverseInscribeClient(network).post<Brc20FinalizeTransferOrderResponse>(
     '/v1/brc20/finalize-order',
     requestBody,
   );

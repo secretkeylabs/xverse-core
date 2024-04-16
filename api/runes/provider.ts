@@ -10,6 +10,7 @@ import {
   runeTokenToFungibleToken,
 } from '../../types';
 import { BigNumber, JSONBig } from '../../utils/bignumber';
+import { getXClientVersion } from '../../utils/xClientVersion';
 
 // these are static cache instances that will live for the lifetime of the application
 // Rune info is immutable, so we can cache it indefinitely
@@ -59,14 +60,17 @@ class RunesApi {
   constructor(network: NetworkType) {
     this.clientBigNumber = axios.create({
       baseURL: `${XVERSE_API_BASE_URL(network)}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Version': getXClientVersion() || undefined,
+      },
       transformResponse: (res, _headers, status) => {
         if (status !== 200) {
           return res;
         }
         return JSONBig.parse(res);
       },
-      transformRequest: (req, headers) => {
-        headers['Content-Type'] = 'application/json';
+      transformRequest: (req) => {
         return JSONBig.stringify(req);
       },
     });
@@ -86,7 +90,7 @@ class RunesApi {
 
   /**
    * Get the rune details given its rune name or ID
-   * @param {string} runeNameOrId
+   * @param {string} runeId
    * @return {Promise<Rune>}
    */
   async getRuneInfo(runeId: bigint): Promise<Rune | undefined>;
@@ -196,12 +200,11 @@ class RunesApi {
   }
 }
 
-const testnetClient = new RunesApi('Testnet');
-const mainnetClient = new RunesApi('Mainnet');
+const apiClients: Partial<Record<NetworkType, RunesApi>> = {};
 
 export const getRunesClient = (network: NetworkType): RunesApi => {
-  if (network === 'Testnet') {
-    return testnetClient;
+  if (!apiClients[network]) {
+    apiClients[network] = new RunesApi(network);
   }
-  return mainnetClient;
+  return apiClients[network] as RunesApi;
 };
