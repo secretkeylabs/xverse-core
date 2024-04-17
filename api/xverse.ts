@@ -34,6 +34,8 @@ import { fetchBtcOrdinalsData } from './ordinals';
 class XverseApi {
   private client: AxiosInstance;
 
+  private network: NetworkType;
+
   constructor(network: NetworkType) {
     this.client = axios.create({
       baseURL: XVERSE_API_BASE_URL(network),
@@ -42,6 +44,8 @@ class XverseApi {
         'X-Client-Version': getXClientVersion() || undefined,
       },
     });
+
+    this.network = network;
   }
 
   async fetchBtcFeeRate(): Promise<BtcFeeResponse> {
@@ -195,7 +199,7 @@ class XverseApi {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
       AxiosResponse<AppFeaturesResponse, any>,
       AppFeaturesBody
-    >('/v1/app-features', { context: { ...context } });
+    >('/v1/app-features', { context: { ...context, network: this.network } });
     return response.data;
   }
 }
