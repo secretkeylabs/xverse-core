@@ -17,6 +17,7 @@ import {
   Inscription,
   InscriptionInCollectionsList,
   NetworkType,
+  NotificationBanner,
   OrdinalInfo,
   SignedUrlResponse,
   SponsorInfoResponse,
@@ -176,6 +177,11 @@ class XverseApi {
   async getFeaturedDapps(): Promise<DappSectionData[]> {
     const response = await this.client.get(`/v2/featured/dapp`);
     return response.data.featuredDapp;
+  }
+
+  async getNotificationBanners(): Promise<NotificationBanner[]> {
+    const response = await this.client.get(`/v2/notification-banners`);
+    return response.data.notificationBanners;
   }
 
   async getSpamTokensList() {
