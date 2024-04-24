@@ -20,6 +20,7 @@ import {
   NotificationBanner,
   OrdinalInfo,
   SignedUrlResponse,
+  SimplePriceResponse,
   SponsorInfoResponse,
   SponsorTransactionResponse,
   StackerInfo,
@@ -94,6 +95,21 @@ class XverseApi {
       params: {
         currency: fiatCurrency,
         tickers: tickers,
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * get rune fiat rate data
+   * @param runeNames provided to get the fiat rates of supported tokens from coingecko
+   * @param fiatCurrency
+   */
+  async getRuneFiatRates(runeNames: string[], fiatCurrency: string): Promise<SimplePriceResponse> {
+    const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
+      params: {
+        currency: fiatCurrency,
+        runeNames: runeNames,
       },
     });
     return response.data;

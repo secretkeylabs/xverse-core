@@ -23,3 +23,9 @@ export interface Brc20Token extends BaseToken {
 }
 
 export type Brc20TokensResponse = Brc20Token[];
+
+export type SimplePriceResponse = {
+  [tokenId: string]: {
+    [fiatCurrency: string]: number;
+  };
+};
