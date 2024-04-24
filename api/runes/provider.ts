@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosAdapter, AxiosInstance, AxiosResponse } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
 import {
   Artifact,
@@ -58,7 +58,7 @@ class RunesApi {
 
   private network: NetworkType;
 
-  constructor(network: NetworkType) {
+  constructor(network: NetworkType, customAdapter?: AxiosAdapter) {
     this.clientBigNumber = axios.create({
       baseURL: `${XVERSE_API_BASE_URL(network)}`,
       headers: {
@@ -74,6 +74,7 @@ class RunesApi {
       transformRequest: (req) => {
         return JSONBig.stringify(req);
       },
+      adapter: customAdapter,
     });
 
     this.network = network;
@@ -182,9 +183,9 @@ class RunesApi {
 
 const apiClients: Partial<Record<NetworkType, RunesApi>> = {};
 
-export const getRunesClient = (network: NetworkType): RunesApi => {
+export const getRunesClient = (network: NetworkType, adapter?: AxiosAdapter): RunesApi => {
   if (!apiClients[network]) {
-    apiClients[network] = new RunesApi(network);
+    apiClients[network] = new RunesApi(network, adapter);
   }
   return apiClients[network] as RunesApi;
 };
