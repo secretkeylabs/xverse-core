@@ -105,7 +105,7 @@ class XverseApi {
   }
 
   async fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
-    const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=3`);
+    const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=5`);
     return response.data;
   }
 
