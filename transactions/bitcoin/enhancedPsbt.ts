@@ -30,6 +30,8 @@ export class EnhancedPsbt {
 
   private readonly _hasSigHashNone?: boolean;
 
+  private readonly _hasSigHashSingle?: boolean;
+
   constructor(context: TransactionContext, psbtBase64: string, inputsToSign?: InputToSign[]) {
     this._context = context;
     this._psbt = base64.decode(psbtBase64);
@@ -39,6 +41,7 @@ export class EnhancedPsbt {
     if (inputsToSign) {
       this._inputsToSignMap = {};
       let hasSigHashNone = false;
+      let hasSigHashSingle = false;
       let isSigHashAll = false;
 
       for (const input of inputsToSign) {
@@ -61,11 +64,16 @@ export class EnhancedPsbt {
           if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
           }
+
+          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+            hasSigHashSingle = true;
+          }
         }
       }
 
       this._isSigHashAll = isSigHashAll;
       this._hasSigHashNone = hasSigHashNone;
+      this._hasSigHashSingle = hasSigHashSingle;
     }
   }
 
@@ -117,6 +125,7 @@ export class EnhancedPsbt {
 
     let isSigHashAll = this._isSigHashAll ?? false;
     let hasSigHashNone = this._hasSigHashNone ?? false;
+    let hasSigHashSingle = this._hasSigHashSingle ?? false;
 
     let inputTotal = 0;
 
@@ -156,15 +165,18 @@ export class EnhancedPsbt {
 
       hasSigHashNone =
         hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
+      hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
     }
 
-    return { inputs, isSigHashAll, hasSigHashNone, inputTotal };
+    return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
   }
 
   async getSummary(): Promise<PsbtSummary> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
-    const { inputs, inputTotal, isSigHashAll, hasSigHashNone } = await this._extractInputMetadata(transaction);
+    const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
+      transaction,
+    );
     const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
 
     let hasScriptOutput = false;
@@ -249,6 +261,8 @@ export class EnhancedPsbt {
       outputs,
       feeOutput,
       hasSigHashNone,
+      hasSigHashSingle,
+      isFinal: isSigHashAll,
       runeOp,
     };
   }

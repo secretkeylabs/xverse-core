@@ -143,6 +143,8 @@ export type PsbtSummary = {
   outputs: EnhancedOutput[];
   feeOutput?: TransactionFeeOutput;
   hasSigHashNone: boolean;
+  hasSigHashSingle: boolean;
+  isFinal: boolean;
   runeOp?: Artifact;
 };
 
@@ -153,5 +155,6 @@ export type InputMetadata = {
   }[];
   isSigHashAll: boolean;
   hasSigHashNone: boolean;
+  hasSigHashSingle: boolean;
   inputTotal: number;
 };

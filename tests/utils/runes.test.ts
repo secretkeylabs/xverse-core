@@ -250,7 +250,7 @@ describe('parseSummaryForRunes', () => {
     });
   });
 
-  it('parses burns when no op_return script', async () => {
+  it('sends funds to first non-op_return output when no rune script present', async () => {
     const summary: PsbtSummary = {
       inputs: [
         {
@@ -267,6 +267,12 @@ describe('parseSummaryForRunes', () => {
       ],
       outputs: [
         {
+          type: 'script',
+          script: ['RETURN', 'BOB'],
+          scriptHex: '6a4c4d52554e450',
+          amount: 0,
+        },
+        {
           type: 'address',
           address: 'recipient1',
           amount: 100,
@@ -280,16 +286,19 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      transfers: [],
-      receipts: [],
-      burns: [
+      transfers: [
         {
           amount: 100n,
           divisibility: 0,
           runeName: 'DUMMYRUNE',
-          sourceAddresses: ['ordinalsAddress'],
+          sourceAddress: 'ordinalsAddress',
+          destinationAddresses: ['recipient1'],
+          symbol: 'A',
+          hasSufficientBalance: true,
         },
       ],
+      receipts: [],
+      burns: [],
     });
   });
 

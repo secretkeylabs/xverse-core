@@ -97,11 +97,6 @@ const parseSummaryWithoutRuneScript = async (
   const inputsHadRunes = runeInputs.length > 0;
 
   const burns = runeInputs.reduce((acc, input) => {
-    if (!input.isUserAddress) {
-      // only track burns for user addresses
-      return acc;
-    }
-
     const inputAddress = input.input.extendedUtxo.address;
     const inputBalances = input.balances;
 
@@ -148,8 +143,6 @@ const parseSummaryWithRuneScript = async (
 ): Promise<RuneSummary> => {
   const runeOp = summary.runeOp;
 
-  if (!runeOp?.Runestone) throw new Error('RuneOp is undefined');
-
   const runeClient = getRunesClient(network);
   const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
   const runeInputs = await extractRuneInputs(context, summary);
@@ -178,7 +171,7 @@ const parseSummaryWithRuneScript = async (
 
   // parse mint and add to unallocated balance if valid
   let mint: Mint | undefined = undefined;
-  if (runeOp.Runestone.mint) {
+  if (runeOp?.Runestone?.mint) {
     const runeInfo = await runeClient.getRuneInfo(runeOp.Runestone.mint);
 
     if (runeInfo && runeInfo.entry.terms.cap) {
@@ -254,11 +247,11 @@ const parseSummaryWithRuneScript = async (
     Record<string, { amount: bigint; sourceAddresses: string[]; destinationAddress: string }>
   >;
 
-  for (const edict of runeOp.Runestone.edicts) {
+  for (const edict of runeOp?.Runestone?.edicts ?? []) {
     let runeName = '';
 
     if (edict.id === '0:0') {
-      runeName = getSpacedName(runeOp.Runestone.etching?.rune || '', runeOp.Runestone.etching?.spacers || 0n);
+      runeName = getSpacedName(runeOp?.Runestone?.etching?.rune || '', runeOp?.Runestone?.etching?.spacers || 0n);
     } else {
       const runeInfo = await runeClient.getRuneInfo(edict.id);
       if (runeInfo?.entry.spaced_rune) {
@@ -380,12 +373,12 @@ const parseSummaryWithRuneScript = async (
     }
   }
 
-  // allocate change
+  // allocate unallocated
   let changeOutputIndex: number | undefined = undefined;
 
   if (
-    runeOp.Runestone.pointer === undefined ||
-    runeOp.Runestone.pointer === null ||
+    runeOp?.Runestone?.pointer === undefined ||
+    runeOp?.Runestone?.pointer === null ||
     runeOp.Runestone.pointer.gte(summary.outputs.length)
   ) {
     let index = 0;
@@ -402,6 +395,7 @@ const parseSummaryWithRuneScript = async (
 
   const changeOutput = changeOutputIndex !== undefined ? summary.outputs[Number(changeOutputIndex)] : undefined;
   if (changeOutputIndex !== undefined && changeOutput?.type === 'address') {
+    // if there is a default change output, allocate unallocated balance to change output
     for (const runeName in unallocatedBalance) {
       const amount = unallocatedBalance[runeName].amount;
       const sourceAddresses = [...unallocatedBalance[runeName].sourceAddresses];
@@ -425,6 +419,7 @@ const parseSummaryWithRuneScript = async (
       }
     }
   } else {
+    // if selected change output is an op_return, runes get burnt
     for (const runeName in unallocatedBalance) {
       const amount = unallocatedBalance[runeName].amount;
       const sourceAddresses = [...unallocatedBalance[runeName].sourceAddresses];
@@ -550,7 +545,7 @@ export const parseSummaryForRunes = async (
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
 ): Promise<RuneSummary> => {
-  if (summary.runeOp === undefined || (summary.runeOp.Cenotaph?.flaws ?? 0) > 0) {
+  if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
     return parseSummaryWithoutRuneScript(context, summary, network);
   }
 
