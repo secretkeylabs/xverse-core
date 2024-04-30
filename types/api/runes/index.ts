@@ -100,7 +100,7 @@ export type APIGetRunesActivityForAddressResponse = {
   limit: number;
 };
 
-export type RuneBalancesResponse = {
+export type RuneBalance = {
   runeName: string;
   amount: BigNumber;
   divisibility: number;
@@ -108,7 +108,10 @@ export type RuneBalancesResponse = {
   inscriptionId: string | null;
 };
 
-export const runeTokenToFungibleToken = (runeBalance: RuneBalancesResponse): FungibleToken => ({
+export type RunesBalance = RuneBalance[];
+
+
+export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
   name: runeBalance.runeName,
   decimals: runeBalance.divisibility,
   principal: runeBalance.runeName,

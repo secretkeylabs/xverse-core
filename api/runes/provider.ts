@@ -7,7 +7,7 @@ import {
   FungibleToken,
   NetworkType,
   Rune,
-  RuneBalancesResponse,
+  RunesBalance,
   runeTokenToFungibleToken,
 } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
@@ -83,12 +83,10 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
-   * @return {Promise<Record<string, RuneBalancesResponse>>}
+   * @return {Promise<RunesBalance>}
    */
-  async getRuneBalance(address: string): Promise<Record<string, RuneBalancesResponse>> {
-    const response = await this.clientBigNumber.get<Record<string, RuneBalancesResponse>>(
-      `/v2/address/${address}/rune-balance`,
-    );
+  async getRuneBalance(address: string): Promise<RunesBalance> {
+    const response = await this.clientBigNumber.get<RunesBalance>(`/v2/address/${address}/rune-balance`);
     return response.data;
   }
 
@@ -133,10 +131,11 @@ class RunesApi {
    */
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
     const runeBalances = await this.getRuneBalance(address);
-    const runeNames = Object.keys(runeBalances);
-    if (!runeNames.length) return [];
-    return runeNames
-      .map((runeName) => runeTokenToFungibleToken(runeBalances[runeName]))
+
+    if (!runeBalances.length) return [];
+
+    return runeBalances
+      .map((runeBalance) => runeTokenToFungibleToken(runeBalance))
       .sort((a, b) => {
         if (a.assetName < b.assetName) {
           return -1;
