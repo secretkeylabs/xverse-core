@@ -1,6 +1,6 @@
 {
   "name": "@secretkeylabs/xverse-core",
-  "version": "13.6.0",
+  "version": "13.6.1",
   "description": "",
   "engines": {
     "node": "^18.18.2"
