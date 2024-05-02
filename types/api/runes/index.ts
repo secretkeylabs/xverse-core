@@ -83,6 +83,23 @@ export type EncodeResponse = {
   codecVersion: string;
 };
 
+export type GetRunesActivityForAddressEvent = {
+  txid: string;
+  amount: string;
+  blockHeight: number;
+  blockTimestamp: string;
+  burned: boolean;
+};
+
+export type APIGetRunesActivityForAddressResponse = {
+  items: GetRunesActivityForAddressEvent[];
+  divisibility: number;
+  runeName: string;
+  total: number;
+  offset: number;
+  limit: number;
+};
+
 export const runeTokenToFungibleToken = (name: string, balance: BigNumber, decimals: number): FungibleToken => ({
   name,
   decimals,
