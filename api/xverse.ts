@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
+  APIGetRunesActivityForAddressResponse,
   AppFeaturesBody,
   AppFeaturesContext,
   AppFeaturesResponse,
@@ -112,6 +113,23 @@ class XverseApi {
         runeNames: runeNames,
       },
     });
+    return response.data;
+  }
+
+  /**
+   * get rune tx history for a given address and rune
+   * @param address ordinal address
+   * @param rune e.g.LFG•ROCKET•RUNE
+   */
+  async getRuneTxHistory(
+    address: string,
+    runeId: string,
+    offset: number,
+    limit: number,
+  ): Promise<APIGetRunesActivityForAddressResponse> {
+    const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
+      `/v1/address/${address}/rune/${runeId}?offset=${offset}&limit=${limit}`,
+    );
     return response.data;
   }
 
