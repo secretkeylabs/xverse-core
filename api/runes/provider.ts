@@ -82,7 +82,7 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
-   * @return {Promise<Record<string, BigNumber>>}
+   * @return {Promise<Record<string, RuneBalancesResponse>>}
    */
   async getRuneBalance(address: string): Promise<Record<string, RuneBalancesResponse>> {
     const response = await this.clientBigNumber.get<Record<string, RuneBalancesResponse>>(
