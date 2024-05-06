@@ -70,5 +70,7 @@ export type FungibleToken = BaseToken & {
   visible?: boolean;
   supported?: boolean;
   tokenFiatRate?: number | null;
+  runeSymbol?: string | null;
+  runeInscriptionId?: string | null;
   protocol?: FungibleTokenProtocol;
 };
