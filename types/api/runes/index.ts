@@ -100,15 +100,25 @@ export type APIGetRunesActivityForAddressResponse = {
   limit: number;
 };
 
-export const runeTokenToFungibleToken = (name: string, balance: BigNumber, decimals: number): FungibleToken => ({
-  name,
-  decimals,
-  principal: name,
-  balance: balance.toString(),
+export type RuneBalancesResponse = {
+  runeName: string;
+  amount: BigNumber;
+  divisibility: number;
+  symbol: string;
+  inscriptionId: string | null;
+};
+
+export const runeTokenToFungibleToken = (runeBalance: RuneBalancesResponse): FungibleToken => ({
+  name: runeBalance.runeName,
+  decimals: runeBalance.divisibility,
+  principal: runeBalance.runeName,
+  balance: runeBalance.amount.toString(),
   total_sent: '',
   total_received: '',
-  assetName: name,
+  assetName: runeBalance.runeName,
   visible: true,
   ticker: '',
+  runeSymbol: runeBalance.symbol,
+  runeInscriptionId: runeBalance.inscriptionId,
   protocol: 'runes',
 });

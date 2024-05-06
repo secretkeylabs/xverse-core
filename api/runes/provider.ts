@@ -7,9 +7,10 @@ import {
   FungibleToken,
   NetworkType,
   Rune,
+  RuneBalancesResponse,
   runeTokenToFungibleToken,
 } from '../../types';
-import { BigNumber, JSONBig } from '../../utils/bignumber';
+import { JSONBig } from '../../utils/bignumber';
 import { getXClientVersion } from '../../utils/xClientVersion';
 
 // these are static cache instances that will live for the lifetime of the application
@@ -81,10 +82,12 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
-   * @return {Promise<Record<string, BigNumber>>}
+   * @return {Promise<Record<string, RuneBalancesResponse>>}
    */
-  async getRuneBalance(address: string): Promise<Record<string, BigNumber>> {
-    const response = await this.clientBigNumber.get<Record<string, BigNumber>>(`/v1/address/${address}/rune-balance`);
+  async getRuneBalance(address: string): Promise<Record<string, RuneBalancesResponse>> {
+    const response = await this.clientBigNumber.get<Record<string, RuneBalancesResponse>>(
+      `/v2/address/${address}/rune-balance`,
+    );
     return response.data;
   }
 
@@ -123,22 +126,6 @@ class RunesApi {
   }
 
   /**
-   * Get many rune details given a list of rune names
-   * @param {string[]} runeNames
-   * @return {Promise<Rune[]>}
-   */
-  async getRuneInfos(runeNames: string[]): Promise<Record<string, Rune>> {
-    if (runeNames.length === 0) {
-      return {};
-    }
-
-    const response = await this.clientBigNumber.get<Record<string, Rune>>(`/v1/runes`, {
-      params: { runeNames: runeNames.join(',') },
-    });
-    return response.data;
-  }
-
-  /**
    * Get rune details in fungible token format
    * @param {string} address
    * @return {Promise<FungibleToken[]>}
@@ -146,16 +133,9 @@ class RunesApi {
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
     const runeBalances = await this.getRuneBalance(address);
     const runeNames = Object.keys(runeBalances);
-
     if (!runeNames.length) return [];
-
-    const runeInfos = await this.getRuneInfos(runeNames);
-
     return runeNames
-      .filter((runeName) => runeName in runeInfos)
-      .map((runeName) =>
-        runeTokenToFungibleToken(runeName, runeBalances[runeName], runeInfos[runeName].entry.divisibility.toNumber()),
-      )
+      .map((runeName) => runeTokenToFungibleToken(runeBalances[runeName]))
       .sort((a, b) => {
         if (a.assetName < b.assetName) {
           return -1;
