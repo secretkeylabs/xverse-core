@@ -14,3 +14,11 @@ export interface Account {
   accountName?: string;
   deviceAccountIndex?: number;
 }
+
+export type NotificationBanner = {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+  description: string;
+};

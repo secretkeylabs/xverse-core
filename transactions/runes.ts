@@ -1,15 +1,10 @@
+import { hex } from '@scure/base';
 import { BigNumber } from 'bignumber.js';
-import { RunesApi } from '../api';
+import { getRunesClient } from '../api';
 import { DEFAULT_DUST_VALUE } from '../constant';
 import { processPromisesBatch } from '../utils/promises';
 import { ActionType, EnhancedTransaction, ExtendedUtxo, TransactionContext, TransactionOptions } from './bitcoin';
 import { Action } from './bitcoin/types';
-
-const runeOp = 'RUNE_TEST';
-const runeTags = {
-  body: 0,
-  defaultOutput: 12, // used to specify which output to send any unallocated balance (change) to
-};
 
 const getUtxosWithRuneBalance = async (extendedUtxos: ExtendedUtxo[], runeName: string) => {
   const runeUtxosRaw = await processPromisesBatch(extendedUtxos, 20, async (utxo) => {
@@ -39,11 +34,15 @@ export const sendRunes = async (
   feeRate: number,
   options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'allowUnknownOutputs'>,
 ) => {
+  if (amount <= 0) {
+    throw new Error('Amount must be positive');
+  }
+
   // we use bigint for the amount type to make it explicit that this function requires the individual coin units
   // rather than the decimal amount
   const amountBigNumber = BigNumber(amount.toString());
 
-  const runesApi = new RunesApi(context.network);
+  const runesApi = getRunesClient(context.network);
 
   const ordinalsUtxos = await context.ordinalsAddress.getUtxos();
 
@@ -89,36 +88,20 @@ export const sendRunes = async (
 
   // create txn with required rune utxos as input
   const runeMetadata = await runesApi.getRuneInfo(runeName);
-  const runeId = runeMetadata.id;
-  const splitChar = runeId.includes('/') ? '/' : ':'; // old xord uses / as separator, new uses :
-  const [height, index] = runeId.split(splitChar).map((x) => BigInt(x));
-  const runeIdBigInt = (height << 16n) + index;
 
-  const [runeIdVarint, amountVarInt] = await Promise.all([
-    runesApi.getRuneVarintFromNum(BigNumber(runeIdBigInt.toString())),
-    runesApi.getRuneVarintFromNum(amountBigNumber),
-  ]);
-  const ops = [];
-
-  if (hasChange) {
-    ops.push(
-      runeTags.defaultOutput,
-      2, // output index
-    );
+  if (!runeMetadata) {
+    throw new Error('Rune not found');
   }
 
-  // body must be last in the script
-  ops.push(
-    runeTags.body,
-    ...runeIdVarint, // rune id
-    ...amountVarInt, // amount to send
-    1, // index of output getting amount
-  );
+  const transferScript = await runesApi.getEncodedScriptHex({
+    edicts: [{ id: runeMetadata.id, amount: amountBigNumber, output: BigNumber(1) }],
+    pointer: hasChange ? 2 : undefined,
+  });
 
   const actions: Action[] = [
     {
       type: ActionType.SCRIPT,
-      script: ['RETURN', new TextEncoder().encode(runeOp), new Uint8Array(ops)],
+      script: hex.decode(transferScript),
     },
     {
       type: ActionType.SEND_BTC,
@@ -151,7 +134,12 @@ export const recoverRunes = async (
   feeRate: number,
   options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'allowUnknownOutputs'>,
 ) => {
-  const paymentUtxos = await context.paymentAddress.getUtxos();
+  const runesApi = getRunesClient(context.network);
+
+  const [paymentUtxos, runeScriptHex] = await Promise.all([
+    context.paymentAddress.getUtxos(),
+    runesApi.getEncodedScriptHex({ edicts: [], pointer: 1 }),
+  ]);
 
   const runeUtxos: ExtendedUtxo[] = [];
 
@@ -172,7 +160,7 @@ export const recoverRunes = async (
     [
       {
         type: ActionType.SCRIPT,
-        script: ['RETURN', new TextEncoder().encode(runeOp), new Uint8Array([runeTags.defaultOutput, 1])],
+        script: hex.decode(runeScriptHex),
       },
       {
         type: ActionType.SEND_BTC,

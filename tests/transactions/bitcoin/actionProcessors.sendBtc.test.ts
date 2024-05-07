@@ -128,7 +128,7 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(actualFee).toEqual(850n);
     expect(inputs).toEqual([]);
-    expect(outputs).toEqual([{ amount: 1150, address: 'paymentAddress' }]);
+    expect(outputs).toEqual([{ amount: 1150, address: 'paymentAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -156,15 +156,16 @@ describe('applySendBtcActionsAndFee', () => {
       context as any,
       {},
       transaction as any,
-      {},
+      {
+        overrideChangeAddress: 'overrideChangeAddress',
+      },
       [],
       5,
-      'overrideChangeAddress',
     );
 
     expect(actualFee).toEqual(850n);
     expect(inputs).toEqual([]);
-    expect(outputs).toEqual([{ amount: 1150, address: 'overrideChangeAddress' }]);
+    expect(outputs).toEqual([{ amount: 1150, address: 'overrideChangeAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -209,7 +210,7 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(actualFee).toEqual(2100n);
     expect(inputs).toEqual([dummyUtxo]);
-    expect(outputs).toEqual([{ amount: 9900, address: 'paymentAddress' }]);
+    expect(outputs).toEqual([{ amount: 9900, address: 'paymentAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -261,7 +262,7 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(actualFee).toEqual(2100n);
     expect(inputs).toEqual([dummyUtxo]);
-    expect(outputs).toEqual([{ amount: 9900, address: 'paymentAddress' }]);
+    expect(outputs).toEqual([{ amount: 9900, address: 'paymentAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -313,7 +314,7 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(actualFee).toEqual(2100n);
     expect(inputs).toEqual([dummyDustUtxo]);
-    expect(outputs).toEqual([{ amount: 890, address: 'paymentAddress' }]);
+    expect(outputs).toEqual([{ amount: 890, address: 'paymentAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -365,7 +366,7 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(actualFee).toEqual(2100n);
     expect(inputs).toEqual([dummyUtxo]);
-    expect(outputs).toEqual([{ amount: 900, address: 'paymentAddress' }]);
+    expect(outputs).toEqual([{ amount: 900, address: 'paymentAddress', type: 'address' }]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
@@ -491,14 +492,15 @@ describe('applySendBtcActionsAndFee', () => {
     expect(actualFee).toEqual(2100n);
     expect(inputs).toEqual([dummyDustUtxo, dummyUtxo]);
     expect(outputs).toEqual([
-      { amount: 3000, address: 'address' },
-      { amount: 1000, address: 'address' },
-      { amount: 900, address: 'address3' },
-      { amount: 2500, address: 'address2' },
+      { amount: 3000, address: 'address', type: 'address' },
+      { amount: 1000, address: 'address', type: 'address' },
+      { amount: 900, address: 'address3', type: 'address' },
+      { amount: 2500, address: 'address2', type: 'address' },
       // change
       {
         address: 'paymentAddress',
         amount: 3490,
+        type: 'address',
       },
     ]);
 

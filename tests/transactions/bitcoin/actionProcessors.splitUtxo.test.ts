@@ -153,18 +153,22 @@ describe('applySplitUtxoActions', () => {
     expect(outputs[0]).toEqual({
       amount: 600,
       address: 'walletAddress',
+      type: 'address',
     });
     expect(outputs[1]).toEqual({
       amount: 1400,
       address: 'address1',
+      type: 'address',
     });
     expect(outputs[2]).toEqual({
       amount: 3000,
       address: 'address2',
+      type: 'address',
     });
     expect(outputs[3]).toEqual({
       amount: 5000,
       address: 'address3',
+      type: 'address',
     });
   });
 
@@ -220,30 +224,37 @@ describe('applySplitUtxoActions', () => {
     expect(outputs[0]).toEqual({
       amount: 600,
       address: 'walletAddress1',
+      type: 'address',
     });
     expect(outputs[1]).toEqual({
       amount: 1400,
       address: 'address1',
+      type: 'address',
     });
     expect(outputs[2]).toEqual({
       amount: 3000,
       address: 'address2',
+      type: 'address',
     });
     expect(outputs[3]).toEqual({
       amount: 5000,
       address: 'address3',
+      type: 'address',
     });
     expect(outputs[4]).toEqual({
       amount: 1000,
       address: 'walletAddress2',
+      type: 'address',
     });
     expect(outputs[5]).toEqual({
       amount: 5000,
       address: 'address4',
+      type: 'address',
     });
     expect(outputs[6]).toEqual({
       amount: 4000,
       address: 'address5',
+      type: 'address',
     });
   });
 
@@ -299,26 +310,32 @@ describe('applySplitUtxoActions', () => {
     expect(outputs[0]).toEqual({
       amount: 600,
       address: 'walletAddress1',
+      type: 'address',
     });
     expect(outputs[1]).toEqual({
       amount: 1400,
       address: 'address1',
+      type: 'address',
     });
     expect(outputs[2]).toEqual({
       amount: 3000,
       address: 'address2',
+      type: 'address',
     });
     expect(outputs[3]).toEqual({
       amount: 5000,
       address: 'walletAddress1',
+      type: 'address',
     });
     expect(outputs[4]).toEqual({
       amount: 1000,
       address: 'walletAddress2',
+      type: 'address',
     });
     expect(outputs[5]).toEqual({
       amount: 5000,
       address: 'address4',
+      type: 'address',
     });
   });
 
@@ -374,26 +391,32 @@ describe('applySplitUtxoActions', () => {
     expect(outputs[0]).toEqual({
       amount: 1000,
       address: 'walletAddress1',
+      type: 'address',
     });
     expect(outputs[1]).toEqual({
       amount: 5000,
       address: 'address4',
+      type: 'address',
     });
     expect(outputs[2]).toEqual({
       amount: 4000,
       address: 'address5',
+      type: 'address',
     });
     expect(outputs[3]).toEqual({
       amount: 600,
       address: 'walletAddress2',
+      type: 'address',
     });
     expect(outputs[4]).toEqual({
       amount: 1400,
       address: 'address1',
+      type: 'address',
     });
     expect(outputs[5]).toEqual({
       amount: 3000,
       address: 'address2',
+      type: 'address',
     });
   });
 });

@@ -306,7 +306,7 @@ export const sendOrdinalsWithSplit = async (
           currentOffset.min = 0;
         }
       } else {
-        currentOffset.min = currentOffset.max - DUST_VALUE;
+        currentOffset.min = Math.min(currentOffset.max - DUST_VALUE, currentOffset.offset);
 
         if (currentOffset.min > previousOffset.max) {
           previousOffset.max = currentOffset.min;

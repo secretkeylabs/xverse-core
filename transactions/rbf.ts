@@ -273,7 +273,7 @@ class RbfTransaction {
       });
     }
 
-    return this._paymentUtxos;
+    return [...this._paymentUtxos];
   };
 
   private getBip32Master = async (options: CompileOptions) => {

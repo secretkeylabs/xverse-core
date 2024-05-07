@@ -1,6 +1,7 @@
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 
+import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
 import { InputToSign } from '../psbt';
 import { TransactionContext } from './context';
@@ -29,6 +30,8 @@ export class EnhancedPsbt {
 
   private readonly _hasSigHashNone?: boolean;
 
+  private readonly _hasSigHashSingle?: boolean;
+
   constructor(context: TransactionContext, psbtBase64: string, inputsToSign?: InputToSign[]) {
     this._context = context;
     this._psbt = base64.decode(psbtBase64);
@@ -38,6 +41,7 @@ export class EnhancedPsbt {
     if (inputsToSign) {
       this._inputsToSignMap = {};
       let hasSigHashNone = false;
+      let hasSigHashSingle = false;
       let isSigHashAll = false;
 
       for (const input of inputsToSign) {
@@ -60,18 +64,23 @@ export class EnhancedPsbt {
           if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
           }
+
+          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+            hasSigHashSingle = true;
+          }
         }
       }
 
       this._isSigHashAll = isSigHashAll;
       this._hasSigHashNone = hasSigHashNone;
+      this._hasSigHashSingle = hasSigHashSingle;
     }
   }
 
   private parseAddressFromOutput(
     transaction: btc.Transaction,
     outputIndex: number,
-  ): { address: string; script?: undefined } | { address?: undefined; script: string[] } {
+  ): { address: string; script?: undefined } | { address?: undefined; script: string[]; scriptHex: string } {
     const output = transaction.getOutput(outputIndex);
 
     if (!output?.script) {
@@ -86,6 +95,7 @@ export class EnhancedPsbt {
       //for script outputs
       return {
         script: btc.Script.decode(outputScript.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
+        scriptHex: hex.encode(outputScript.script),
       };
     }
 
@@ -115,6 +125,7 @@ export class EnhancedPsbt {
 
     let isSigHashAll = this._isSigHashAll ?? false;
     let hasSigHashNone = this._hasSigHashNone ?? false;
+    let hasSigHashSingle = this._hasSigHashSingle ?? false;
 
     let inputTotal = 0;
 
@@ -154,19 +165,22 @@ export class EnhancedPsbt {
 
       hasSigHashNone =
         hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
+      hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
     }
 
-    return { inputs, isSigHashAll, hasSigHashNone, inputTotal };
+    return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
   }
 
   async getSummary(): Promise<PsbtSummary> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
-    const { inputs, inputTotal, isSigHashAll, hasSigHashNone } = await this._extractInputMetadata(transaction);
+    const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
+      transaction,
+    );
     const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
 
+    let hasScriptOutput = false;
     let outputTotal = 0;
-
     let currentOffset = 0;
     const inputsExtendedUtxos = inputs.map((i) => i.extendedUtxo);
     for (let outputIndex = 0; outputIndex < transaction.outputsLength; outputIndex++) {
@@ -175,9 +189,13 @@ export class EnhancedPsbt {
 
       if (outputMetadata.script !== undefined) {
         outputs.push({
+          type: 'script',
           script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           amount: outputRaw.amount ? Number(outputRaw.amount) : 0,
         });
+        hasScriptOutput = true;
+
         continue;
       }
 
@@ -186,6 +204,7 @@ export class EnhancedPsbt {
 
       if (!isSigHashAll) {
         const output: TransactionOutput = {
+          type: 'address',
           address: outputMetadata.address,
           amount: Number(amount),
           inscriptions: [],
@@ -201,6 +220,7 @@ export class EnhancedPsbt {
         amount,
       );
       const output: TransactionOutput = {
+        type: 'address',
         address: outputMetadata.address,
         amount: Number(amount),
         inscriptions,
@@ -222,6 +242,7 @@ export class EnhancedPsbt {
       );
 
       feeOutput = {
+        type: 'fee',
         amount: fee,
         inscriptions,
         satributes,
@@ -232,11 +253,17 @@ export class EnhancedPsbt {
       inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
     );
 
+    const runesClient = getRunesClient(this._context.network);
+    const runeOp = hasScriptOutput ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
+
     return {
       inputs: enhancedInputs,
       outputs,
       feeOutput,
       hasSigHashNone,
+      hasSigHashSingle,
+      isFinal: isSigHashAll,
+      runeOp,
     };
   }
 

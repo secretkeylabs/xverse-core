@@ -36,7 +36,7 @@ export class UtxoCache {
 
   private readonly _addressMutexes: { [address: string]: Mutex } = {};
 
-  static readonly VERSION = 3;
+  static readonly VERSION = 4;
 
   constructor(config: UtxoCacheConfig) {
     this._cacheStorageController = config.cacheStorageController;

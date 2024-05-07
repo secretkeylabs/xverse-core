@@ -20,6 +20,12 @@ import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI } from '../constant';
 import {
   AccountAssetsListData,
+  AddressToBnsResponse,
+  CoinMetaData,
+  ContractInterfaceResponse,
+  CoreInfo,
+  DelegationInfo,
+  EsploraTransaction,
   FungibleToken,
   NftEventsResponse,
   NftsListData,
@@ -35,12 +41,9 @@ import {
   StxTransactionListData,
   StxTransactionResponse,
   TokensResponse,
-  EsploraTransaction,
   TransactionData,
   TransferTransactionsData,
 } from '../types';
-import { AddressToBnsResponse, CoinMetaData, CoreInfo, DelegationInfo } from '../types';
-import { ContractInterfaceResponse } from '../types';
 import { getNftDetail } from './gamma';
 import {
   getNetworkURL,
@@ -63,6 +66,8 @@ export async function getConfirmedTransactions({
   offset?: number;
   limit?: number;
 }): Promise<StxTransactionListData> {
+  // deprecated endpoint v1
+  // reference: https://docs.hiro.so/nakamoto
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions`;
 
   const response = await axios.get<StxTransactionResponse>(apiUrl, {
@@ -118,6 +123,8 @@ export async function getTransferTransactions(
   offset?: number,
   limit?: number,
 ): Promise<StxTransactionData[]> {
+  // deprecated endpoint v1
+  // reference: https://docs.hiro.so/nakamoto
   const apiUrl = `${getNetworkURL(network)}/extended/v1/address/${stxAddress}/transactions_with_transfers`;
   const response = await axios.get<TransferTransactionsData>(apiUrl, {
     timeout: API_TIMEOUT_MILLI,
@@ -227,6 +234,7 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
     fungibleToken.assetName = key.substring(index + 2);
     fungibleToken.principal = key.substring(0, index);
     fungibleToken.protocol = 'stacks';
+    fungibleToken.visible = new BigNumber(fungibleToken.balance).gt(0);
     tokens.push(fungibleToken);
   }
   return tokens;
@@ -423,7 +431,7 @@ export async function getStacksInfo(network: string) {
 
 export async function fetchDelegationState(stxAddress: string, network: StacksNetwork): Promise<DelegationInfo> {
   const poxContractAddress = 'SP000000000000000000002Q6VF78';
-  const poxContractName = 'pox-2';
+  const poxContractName = 'pox-4';
   const mapName = 'delegation-state';
   const mapEntryPath = `/${poxContractAddress}/${poxContractName}/${mapName}`;
   const apiUrl = `${getNetworkURL(network)}/v2/map_entry${mapEntryPath}?proof=0`;
@@ -432,7 +440,7 @@ export async function fetchDelegationState(stxAddress: string, network: StacksNe
     'Content-Type': 'application/json',
   };
 
-  const response = await axios.post(apiUrl, JSON.stringify(key), { headers: headers });
+  const response = await axios.post(apiUrl, JSON.stringify(key), { headers });
 
   const responseCV = hexToCV(response.data.data);
   if (responseCV.type === ClarityType.OptionalNone) {

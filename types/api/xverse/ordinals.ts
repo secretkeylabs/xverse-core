@@ -60,13 +60,16 @@ export const Satributes = [
   'OMEGA',
   'FIRST_TRANSACTION',
   'BLOCK9',
+  'BLOCK9_450',
   'BLOCK78',
+  'BLOCK286',
   'NAKAMOTO',
   'VINTAGE',
   'PIZZA',
   'JPEG',
   'HITMAN',
   'SILK_ROAD',
+  'LEGACY',
 ] as const;
 export type SatributesType = (typeof Satributes)[number];
 

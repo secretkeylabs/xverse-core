@@ -1,13 +1,12 @@
 import BigNumber from 'bignumber.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RunesApi } from '../../api';
+import { getRunesClient } from '../../api';
 import { EnhancedTransaction } from '../../transactions/bitcoin/enhancedTransaction';
 import { recoverRunes, sendRunes } from '../../transactions/runes';
 
 vi.mock('../../transactions/bitcoin/enhancedTransaction');
 vi.mock('../../api');
 
-const RUNE_TEST = new Uint8Array(new TextEncoder().encode('RUNE_TEST'));
 const paymentAddress = '3Aog9TGrjGtjFvZ1K675c7sHGkiiYKuV8K';
 const ordinalsAddress = 'bc1pxau0prcas6r24l2jy5gtfy8mcmjkmd7zchynqd3cq7mh788xywys02dn56';
 const recipientAddress = '33bbC6BdnAzSBs69j8nEnaShXeXsHNadc2';
@@ -106,17 +105,12 @@ describe('sendRunes', () => {
 
     const dummyBlock = 12345;
     const dummyTxIdx = 345;
-    vi.mocked(RunesApi).mockImplementationOnce(
-      () =>
-        ({
-          getRuneInfo: vi.fn().mockResolvedValueOnce({
-            id: `${dummyBlock}:${dummyTxIdx}`,
-          }),
-          getRuneVarintFromNum: vi.fn().mockImplementation((num: BigNumber) => {
-            return [num.toNumber()];
-          }),
-        } as any),
-    );
+    vi.mocked(getRunesClient).mockReturnValue({
+      getRuneInfo: vi.fn().mockResolvedValueOnce({
+        id: `${dummyBlock}:${dummyTxIdx}`,
+      }),
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
 
     const transaction = await sendRunes(contextMock, 'MYBIGRUNE', recipientAddress, 1100n, 2);
 
@@ -126,7 +120,7 @@ describe('sendRunes', () => {
       [
         {
           type: 'script',
-          script: ['RETURN', RUNE_TEST, new Uint8Array([0, 809042265, 1100, 1])],
+          script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
       ],
@@ -176,17 +170,12 @@ describe('sendRunes', () => {
 
     const dummyBlock = 12345;
     const dummyTxIdx = 345;
-    vi.mocked(RunesApi).mockImplementationOnce(
-      () =>
-        ({
-          getRuneInfo: vi.fn().mockResolvedValueOnce({
-            id: `${dummyBlock}:${dummyTxIdx}`,
-          }),
-          getRuneVarintFromNum: vi.fn().mockImplementation((num: BigNumber) => {
-            return [num.toNumber()];
-          }),
-        } as any),
-    );
+    vi.mocked(getRunesClient).mockReturnValue({
+      getRuneInfo: vi.fn().mockResolvedValue({
+        id: `${dummyBlock}:${dummyTxIdx}`,
+      }),
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
 
     const transaction = await sendRunes(contextMock, 'MYBIGRUNE', recipientAddress, 600n, 2);
 
@@ -196,7 +185,7 @@ describe('sendRunes', () => {
       [
         {
           type: 'script',
-          script: ['RETURN', RUNE_TEST, new Uint8Array([0, 809042265, 600, 1])],
+          script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
       ],
@@ -246,17 +235,12 @@ describe('sendRunes', () => {
 
     const dummyBlock = 12345;
     const dummyTxIdx = 345;
-    vi.mocked(RunesApi).mockImplementationOnce(
-      () =>
-        ({
-          getRuneInfo: vi.fn().mockResolvedValueOnce({
-            id: `${dummyBlock}:${dummyTxIdx}`,
-          }),
-          getRuneVarintFromNum: vi.fn().mockImplementation((num: BigNumber) => {
-            return [num.toNumber()];
-          }),
-        } as any),
-    );
+    vi.mocked(getRunesClient).mockReturnValue({
+      getRuneInfo: vi.fn().mockResolvedValueOnce({
+        id: `${dummyBlock}:${dummyTxIdx}`,
+      }),
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
 
     const transaction = await sendRunes(contextMock, 'MYBIGRUNE', recipientAddress, 1000n, 2);
 
@@ -266,7 +250,7 @@ describe('sendRunes', () => {
       [
         {
           type: 'script',
-          script: ['RETURN', RUNE_TEST, new Uint8Array([12, 2, 0, 809042265, 1000, 1])],
+          script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
         { type: 'sendBtc', toAddress: ordinalsAddress, amount: 546n, combinable: false },
@@ -320,17 +304,12 @@ describe('sendRunes', () => {
 
     const dummyBlock = 12345;
     const dummyTxIdx = 345;
-    vi.mocked(RunesApi).mockImplementationOnce(
-      () =>
-        ({
-          getRuneInfo: vi.fn().mockResolvedValueOnce({
-            id: `${dummyBlock}:${dummyTxIdx}`,
-          }),
-          getRuneVarintFromNum: vi.fn().mockImplementation((num: BigNumber) => {
-            return [num.toNumber()];
-          }),
-        } as any),
-    );
+    vi.mocked(getRunesClient).mockReturnValue({
+      getRuneInfo: vi.fn().mockResolvedValueOnce({
+        id: `${dummyBlock}:${dummyTxIdx}`,
+      }),
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
 
     const transaction = await sendRunes(contextMock, 'MYBIGRUNE', recipientAddress, 1100n, 2);
 
@@ -340,7 +319,7 @@ describe('sendRunes', () => {
       [
         {
           type: 'script',
-          script: ['RETURN', RUNE_TEST, new Uint8Array([12, 2, 0, 809042265, 1100, 1])],
+          script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
         { type: 'sendBtc', toAddress: ordinalsAddress, amount: 546n, combinable: false },
@@ -398,6 +377,10 @@ describe('recoverRunes', () => {
     ];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
+    vi.mocked(getRunesClient).mockReturnValue({
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
+
     await expect(() => recoverRunes(contextMock, 2)).rejects.toThrow('No runes to recover');
   });
 
@@ -427,6 +410,10 @@ describe('recoverRunes', () => {
     ];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
+    vi.mocked(getRunesClient).mockReturnValue({
+      getEncodedScriptHex: vi.fn().mockResolvedValueOnce('6a05ffff000102'),
+    } as any);
+
     const transaction = await recoverRunes(contextMock, 2);
 
     expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
@@ -435,7 +422,7 @@ describe('recoverRunes', () => {
       [
         {
           type: 'script',
-          script: ['RETURN', RUNE_TEST, new Uint8Array([12, 1])],
+          script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: ordinalsAddress, amount: 546n, combinable: false },
       ],

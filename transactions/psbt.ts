@@ -133,7 +133,7 @@ export async function signPsbt(
       psbt.finalize();
     }
   } catch (error) {
-    throw new Error(`Error signing PSBT ${error.toString()}`);
+    throw new Error(`Error signing PSBT ${error}`);
   }
 
   const signedPsbt = psbt.toPSBT(0);
@@ -198,6 +198,8 @@ export interface ParsedPSBT {
   fees: bigint;
 }
 
+type ScriptType = ReturnType<typeof btc.Script.decode>;
+
 export function parsePsbt(
   account: Account,
   inputsToSign: Array<InputToSign>,
@@ -253,7 +255,7 @@ export function parsePsbt(
     const outputScript = btc.OutScript.decode(output.script);
 
     let outputAddress = '';
-    let script = undefined;
+    let script: ScriptType | undefined = undefined;
 
     if (outputScript.type === 'ms' || outputScript.type === 'tr') {
       // @ts-expect-error: accessing private property

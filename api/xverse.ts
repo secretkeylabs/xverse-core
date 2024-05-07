@@ -1,197 +1,354 @@
 import { StacksTransaction } from '@stacks/transactions';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
 import {
+  APIGetRunesActivityForAddressResponse,
+  AppFeaturesBody,
+  AppFeaturesContext,
+  AppFeaturesResponse,
   AppInfo,
   Brc20TokensResponse,
   BtcFeeResponse,
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  DappSectionData,
   Inscription,
   InscriptionInCollectionsList,
   NetworkType,
+  NotificationBanner,
   OrdinalInfo,
   SignedUrlResponse,
+  SimplePriceResponse,
   SponsorInfoResponse,
   SponsorTransactionResponse,
   StackerInfo,
   StackingPoolInfo,
   SupportedCurrency,
   TokenFiatRateResponse,
-  DappSectionData,
 } from '../types';
+import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
 
+class XverseApi {
+  private client: AxiosInstance;
+
+  private network: NetworkType;
+
+  constructor(network: NetworkType) {
+    this.client = axios.create({
+      baseURL: XVERSE_API_BASE_URL(network),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Version': getXClientVersion() || undefined,
+      },
+    });
+
+    this.network = network;
+  }
+
+  async fetchBtcFeeRate(): Promise<BtcFeeResponse> {
+    const response = await this.client.get('/v1/fees/btc');
+    return response.data;
+  }
+
+  async fetchStxToBtcRate(): Promise<BigNumber> {
+    const response = await this.client.get('/v1/prices/stx/btc', { timeout: API_TIMEOUT_MILLI });
+    return new BigNumber(response.data.stxBtcRate.toString());
+  }
+
+  async fetchBtcToCurrencyRate({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> {
+    const response = await this.client.get(`/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI });
+    return new BigNumber(response.data.btcFiatRate.toString());
+  }
+
+  async fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
+    const url = `/v1/prices/${ft}/${fiatCurrency}`;
+
+    return this.client
+      .get<TokenFiatRateResponse>(url, { timeout: API_TIMEOUT_MILLI })
+      .then((response) => {
+        return new BigNumber(response.data.tokenFiatRate);
+      })
+      .catch(() => {
+        return new BigNumber(0);
+      });
+  }
+
+  async getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse> {
+    const response = await this.client.post<CoinsResponse>('/v1/coins', {
+      currency: fiatCurrency,
+      coins: JSON.stringify(contractids),
+    });
+    return response.data;
+  }
+
+  /**
+   * get BRC-20 supported tokens with the fiat rate
+   * @param tickers provided to get the fiat rate along with supported tokens
+   * @param fiatCurrency
+   */
+  async getBrc20Tokens(tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> {
+    const response = await this.client.get<Brc20TokensResponse>('/v1/brc20/tokens', {
+      params: {
+        currency: fiatCurrency,
+        tickers: tickers,
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * get rune fiat rate data
+   * @param runeNames provided to get the fiat rates of supported tokens from coingecko
+   * @param fiatCurrency
+   */
+  async getRuneFiatRates(runeNames: string[], fiatCurrency: string): Promise<SimplePriceResponse> {
+    const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
+      params: {
+        currency: fiatCurrency,
+        runeNames: runeNames,
+      },
+    });
+    return response.data;
+  }
+
+  /**
+   * get rune tx history for a given address and rune
+   * @param address ordinal address
+   * @param rune e.g.LFG•ROCKET•RUNE
+   */
+  async getRuneTxHistory(
+    address: string,
+    runeId: string,
+    offset: number,
+    limit: number,
+  ): Promise<APIGetRunesActivityForAddressResponse> {
+    const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
+      `/v1/address/${address}/rune/${runeId}?offset=${offset}&limit=${limit}`,
+    );
+    return response.data;
+  }
+
+  async fetchAppInfo(): Promise<AppInfo> {
+    const response = await this.client.get<AppInfo>('/v1/info');
+    return response.data;
+  }
+
+  async fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
+    const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=5`);
+    return response.data;
+  }
+
+  async fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
+    const response = await this.client.get<StackerInfo>(`/v1/pool/${stxAddress}/status`);
+    return response.data;
+  }
+
+  async getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse> {
+    const response = await this.client.post<SignedUrlResponse>('/v1/sign-url', {
+      url: unsignedUrl,
+    });
+    return response.data;
+  }
+
+  async getBinanceSignature(srcData: string): Promise<SignedUrlResponse> {
+    const response = await this.client.post<SignedUrlResponse>('/v1/binance/sign', {
+      url: srcData,
+    });
+    return response.data;
+  }
+
+  async getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
+    const response = await this.client.get(`/v1/ordinals/${ordinalId}`);
+    return response.data;
+  }
+
+  async getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
+    const response = await this.client.get(`/v1/eth/${tokenContract}/${tokenId}`);
+    return response.data;
+  }
+
+  async getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
+    const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
+      params: {
+        limit,
+        offset,
+      },
+    });
+    return response.data;
+  }
+
+  async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
+    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
+    return response.data;
+  }
+
+  async getCollectionSpecificInscriptions(
+    address: string,
+    collectionId: string,
+    offset?: number,
+    limit?: number,
+  ): Promise<InscriptionInCollectionsList> {
+    const response = await this.client.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
+      params: {
+        limit,
+        offset,
+      },
+    });
+    return response.data;
+  }
+
+  async getInscription(address: string, inscriptionId: string): Promise<Inscription> {
+    const response = await this.client.get(`/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`);
+    return response.data;
+  }
+
+  async getAppConfig() {
+    const response = await this.client.get(`/v1/app-config`);
+    return response;
+  }
+
+  async getFeaturedDapps(): Promise<DappSectionData[]> {
+    const response = await this.client.get(`/v2/featured/dapp`);
+    return response.data.featuredDapp;
+  }
+
+  async getNotificationBanners(): Promise<NotificationBanner[]> {
+    const response = await this.client.get(`/v2/notification-banners`);
+    return response.data.notificationBanners;
+  }
+
+  async getSpamTokensList() {
+    const response = await this.client.get(`/v1/spam-tokens`);
+    return response.data;
+  }
+
+  async getAppFeatures(context: Partial<AppFeaturesContext>) {
+    const response = await this.client.post<
+      AppFeaturesResponse,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
+      AxiosResponse<AppFeaturesResponse, any>,
+      AppFeaturesBody
+    >('/v1/app-features', { context: { ...context, network: this.network } });
+    return response.data;
+  }
+}
+
+const apiClients: Partial<Record<NetworkType, XverseApi>> = {};
+
+export const getXverseApiClient = (network: NetworkType): XverseApi => {
+  if (!apiClients[network]) {
+    apiClients[network] = new XverseApi(network);
+  }
+  return apiClients[network] as XverseApi;
+};
+
+/**
+ * @deprecated use XverseApi.fetchBtcFeeRate instead
+ */
 export async function fetchBtcFeeRate(network: NetworkType): Promise<BtcFeeResponse> {
-  return axios
-    .get(`${XVERSE_API_BASE_URL(network)}/v1/fees/btc`, {
-      method: 'GET',
-    })
-    .then((response) => {
-      return response.data;
-    });
+  return getXverseApiClient(network).fetchBtcFeeRate();
 }
 
+/**
+ * @deprecated use XverseApi.fetchStxToBtcRate instead
+ */
 export async function fetchStxToBtcRate(network: NetworkType): Promise<BigNumber> {
-  return axios
-    .get(`${XVERSE_API_BASE_URL(network)}/v1/prices/stx/btc`, { timeout: API_TIMEOUT_MILLI })
-    .then((response) => {
-      return new BigNumber(response.data.stxBtcRate.toString());
-    });
+  return getXverseApiClient(network).fetchStxToBtcRate();
 }
 
+/**
+ * @deprecated use XverseApi.fetchBtcToCurrencyRate instead
+ */
 export async function fetchBtcToCurrencyRate(
   network: NetworkType,
-  {
-    fiatCurrency,
-  }: {
-    fiatCurrency: SupportedCurrency;
-  },
+  { fiatCurrency }: { fiatCurrency: SupportedCurrency },
 ): Promise<BigNumber> {
-  return axios
-    .get(`${XVERSE_API_BASE_URL(network)}/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI })
-    .then((response) => {
-      return new BigNumber(response.data.btcFiatRate.toString());
-    });
+  return getXverseApiClient(network).fetchBtcToCurrencyRate({ fiatCurrency });
 }
 
+/**
+ * @deprecated use XverseApi.fetchTokenFiateRate instead
+ */
 export async function fetchTokenFiateRate(network: NetworkType, ft: string, fiatCurrency: string): Promise<BigNumber> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/prices/${ft}/${fiatCurrency}`;
-
-  return axios
-    .get<TokenFiatRateResponse>(url, { timeout: API_TIMEOUT_MILLI })
-    .then((response) => {
-      return new BigNumber(response.data.tokenFiatRate);
-    })
-    .catch(() => {
-      return new BigNumber(0);
-    });
+  return getXverseApiClient(network).fetchTokenFiateRate(ft, fiatCurrency);
 }
 
+/**
+ * @deprecated use XverseApi.getCoinsInfo instead
+ */
 export async function getCoinsInfo(
   network: NetworkType,
   contractids: string[],
   fiatCurrency: string,
 ): Promise<CoinsResponse | null> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/coins`;
-
-  const requestBody = {
-    currency: fiatCurrency,
-    coins: JSON.stringify(contractids),
-  };
-
-  return axios
-    .post<CoinsResponse>(url, requestBody)
-    .then((response) => {
-      return response.data;
-    })
-    .catch(() => {
-      return null;
-    });
+  return getXverseApiClient(network)
+    .getCoinsInfo(contractids, fiatCurrency)
+    .catch(() => null);
 }
 
 /**
- * get BRC-20 supported tokens with the fiat rate
- * @param network
- * @param tickers provided to get the fiat rate along with supported tokens
- * @param fiatCurrency
+ * @deprecated use XverseApi.getBrc20Tokens instead
  */
 export async function getBrc20Tokens(
   network: NetworkType,
   tickers: string[],
   fiatCurrency: string,
 ): Promise<Brc20TokensResponse | null> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/brc20/tokens`;
-
-  const params = {
-    currency: fiatCurrency,
-    tickers: tickers,
-  };
-
-  return axios
-    .get<Brc20TokensResponse>(url, { params })
-    .then((response) => {
-      return response.data;
-    })
-    .catch(() => {
-      return null;
-    });
+  return getXverseApiClient(network)
+    .getBrc20Tokens(tickers, fiatCurrency)
+    .catch(() => null);
 }
 
+/**
+ * @deprecated use XverseApi.fetchAppInfo instead
+ */
 export async function fetchAppInfo(network: NetworkType): Promise<AppInfo | null> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/info`;
-
-  return axios
-    .get<AppInfo>(url)
-    .then((response) => {
-      return response.data;
-    })
-    .catch(() => {
-      return null;
-    });
+  return getXverseApiClient(network)
+    .fetchAppInfo()
+    .catch(() => null);
 }
 
+/**
+ * @deprecated use XverseApi.fetchStackingPoolInfo instead
+ */
 export async function fetchStackingPoolInfo(network: NetworkType): Promise<StackingPoolInfo> {
-  return fetch(`${XVERSE_API_BASE_URL(network)}/v1/pool/info?pool_version=3`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
-    .then((response) => {
-      return response;
-    });
+  return getXverseApiClient(network).fetchStackingPoolInfo();
 }
 
+/**
+ * @deprecated use XverseApi.fetchPoolStackerInfo instead
+ */
 export async function fetchPoolStackerInfo(network: NetworkType, stxAddress: string): Promise<StackerInfo> {
-  return fetch(`${XVERSE_API_BASE_URL(network)}/v1/pool/${stxAddress}/status`, {
-    method: 'GET',
-  })
-    .then((response) => response.json())
-    .then((response) => {
-      return response;
-    });
+  return getXverseApiClient(network).fetchPoolStackerInfo(stxAddress);
 }
 
+/**
+ * @deprecated use XverseApi.getMoonPaySignedUrl instead
+ */
 export async function getMoonPaySignedUrl(
   network: NetworkType,
   unsignedUrl: string,
 ): Promise<SignedUrlResponse | null> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/sign-url`;
-
-  const requestBody = {
-    url: unsignedUrl,
-  };
-
-  return axios
-    .post<SignedUrlResponse>(url, requestBody)
-    .then((response) => {
-      return response.data;
-    })
-    .catch(() => {
-      return null;
-    });
+  return getXverseApiClient(network)
+    .getMoonPaySignedUrl(unsignedUrl)
+    .catch(() => null);
 }
 
+/**
+ * @deprecated use XverseApi.getBinanceSignature instead
+ */
 export async function getBinaceSignature(network: NetworkType, srcData: string): Promise<SignedUrlResponse | null> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v1/binance/sign`;
-
-  const requestBody = {
-    url: srcData,
-  };
-
-  return axios
-    .post<SignedUrlResponse>(url, requestBody)
-    .then((response) => {
-      return response.data;
-    })
-    .catch(() => {
-      return null;
-    });
+  return getXverseApiClient(network)
+    .getBinanceSignature(srcData)
+    .catch(() => null);
 }
 
+// TODO move this to another file
 /**
  * Return the sponsored signed transaction
  *
@@ -215,11 +372,12 @@ export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHos
     .catch(handleAxiosError);
 }
 
+// TODO move this to another file
 /**
  * Get whether sponsor service is active
  *
  * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
- * @returns {Promise<boolean | null>}
+ * @returns {Promise<boolean>}
  * @throws {ApiResponseError} - if api responded with an error status
  */
 export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
@@ -233,6 +391,7 @@ export async function getSponsorInfo(sponsorHost?: string): Promise<boolean> {
     .catch(handleAxiosError);
 }
 
+// TODO move this to another file
 export async function getOrdinalsByAddress(
   esploraProvider: EsploraApiProvider,
   network: NetworkType,
@@ -241,43 +400,45 @@ export async function getOrdinalsByAddress(
   return fetchBtcOrdinalsData(ordinalsAddress, esploraProvider, network);
 }
 
+/**
+ * @deprecated use XverseApi.getOrdinalInfo instead
+ */
 export async function getOrdinalInfo(network: NetworkType, ordinalId: string): Promise<OrdinalInfo> {
-  const ordinalInfoUrl = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/${ordinalId}`;
-  const ordinalInfo = await axios.get(ordinalInfoUrl);
-  return ordinalInfo.data;
+  return getXverseApiClient(network).getOrdinalInfo(ordinalId);
 }
 
+/**
+ * @deprecated use XverseApi.getErc721Metadata instead
+ */
 export async function getErc721Metadata(network: NetworkType, tokenContract: string, tokenId: string): Promise<string> {
-  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/eth/${tokenContract}/${tokenId}`;
-  const erc721Metadata = await axios.get(requestUrl);
-  return erc721Metadata.data;
+  return getXverseApiClient(network).getErc721Metadata(tokenContract, tokenId);
 }
 
+/**
+ * @deprecated use XverseApi.getCollections instead
+ */
 export async function getCollections(
   network: NetworkType,
   address: string,
   offset?: number,
   limit?: number,
 ): Promise<CollectionsList> {
-  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/collections`;
-  const response = await axios.get(requestUrl, {
-    params: {
-      limit,
-      offset,
-    },
-  });
-  return response.data;
+  return getXverseApiClient(network).getCollections(address, offset, limit);
 }
 
+/**
+ * @deprecated use XverseApi.getCollectionMarketData instead
+ */
 export async function getCollectionMarketData(
   network: NetworkType,
   collectionId: string,
 ): Promise<CollectionMarketDataResponse> {
-  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/ordinals/collections/${collectionId}`;
-  const response = await axios.get(requestUrl);
-  return response.data;
+  return getXverseApiClient(network).getCollectionMarketData(collectionId);
 }
 
+/**
+ * @deprecated use XverseApi.getCollectionSpecificInscriptions instead
+ */
 export async function getCollectionSpecificInscriptions(
   network: NetworkType,
   address: string,
@@ -285,40 +446,37 @@ export async function getCollectionSpecificInscriptions(
   offset?: number,
   limit?: number,
 ): Promise<InscriptionInCollectionsList> {
-  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/collections/${collectionId}`;
-  const response = await axios.get(requestUrl, {
-    params: {
-      limit,
-      offset,
-    },
-  });
-  return response.data;
+  return getXverseApiClient(network).getCollectionSpecificInscriptions(address, collectionId, offset, limit);
 }
 
+/**
+ * @deprecated use XverseApi.getInscription instead
+ */
 export async function getInscription(
   network: NetworkType,
   address: string,
   inscriptionId: string,
 ): Promise<Inscription> {
-  const requestUrl = `${XVERSE_API_BASE_URL(network)}/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`;
-  const response = await axios.get(requestUrl);
-  return response.data;
+  return getXverseApiClient(network).getInscription(address, inscriptionId);
 }
 
+/**
+ * @deprecated use XverseApi.getAppConfig instead
+ */
 export async function getAppConfig(network: NetworkType) {
-  const appConfigUrl = `${XVERSE_API_BASE_URL(network)}/v1/app-config`;
-  const appConfig = await axios.get(appConfigUrl);
-  return appConfig;
+  return getXverseApiClient(network).getAppConfig();
 }
 
+/**
+ * @deprecated use XverseApi.getFeaturedDapps instead
+ */
 export async function getFeaturedDapps(network: NetworkType): Promise<DappSectionData[]> {
-  const url = `${XVERSE_API_BASE_URL(network)}/v2/featured/dapp`;
-  const response = await axios.get(url);
-  return response.data.featuredDapp;
+  return getXverseApiClient(network).getFeaturedDapps();
 }
 
+/**
+ * @deprecated use XverseApi.getSpamTokensList instead
+ */
 export async function getSpamTokensList(network: NetworkType) {
-  const spamTokensUrl = `${XVERSE_API_BASE_URL(network)}/v1/spam-tokens`;
-  const spamTokens = await axios.get(spamTokensUrl);
-  return spamTokens.data;
+  return getXverseApiClient(network).getSpamTokensList();
 }

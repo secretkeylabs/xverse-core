@@ -157,7 +157,7 @@ export const getTransactionVSize = async (
 
     return transactionCopy.vsize;
   } catch (e) {
-    if (e.message === 'Outputs spends more than inputs amount') {
+    if (e instanceof Error && e.message === 'Outputs spends more than inputs amount') {
       return undefined;
     }
     throw e;

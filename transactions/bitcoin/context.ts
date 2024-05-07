@@ -1,6 +1,7 @@
 import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { isAxiosError } from 'axios';
 import * as bip39 from 'bip39';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
@@ -661,7 +662,7 @@ export class TransactionContext {
       const extendedUtxo = await this.paymentAddress.getExternalUtxo(outpoint);
       return { extendedUtxo };
     } catch (err) {
-      if (err.response && err.response.status === 404) {
+      if (isAxiosError(err) && err.response && err.response.status === 404) {
         return {};
       }
 

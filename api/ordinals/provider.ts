@@ -3,6 +3,7 @@ import { HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT, XORD_URL } from '../../cons
 import { Inscription, InscriptionsList } from '../../types/api/ordinals';
 import { NetworkType } from '../../types/network';
 import { OrdinalsApiProvider } from './types';
+import { getXClientVersion } from '../../utils/xClientVersion';
 
 export interface OrdinalsApiProviderOptions {
   network: NetworkType;
@@ -34,6 +35,9 @@ export class OrdinalsApi implements OrdinalsApiProvider {
 
     this.xordClient = axios.create({
       baseURL: `${XORD_URL(network)}/v1`,
+      headers: {
+        'X-Client-Version': getXClientVersion() || undefined,
+      },
     });
 
     this.hiroClient = axios.create({

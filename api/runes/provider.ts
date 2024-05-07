@@ -1,70 +1,138 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosAdapter, AxiosInstance, AxiosResponse } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
-import { FungibleToken, NetworkType, Rune, RuneNum, runeTokenToFungibleToken } from '../../types';
-import { BigNumber, JSONBig } from '../../utils/bignumber';
-import { RunesApiInterface } from './types';
+import {
+  Artifact,
+  Edict,
+  EncodeResponse,
+  FungibleToken,
+  NetworkType,
+  Rune,
+  RuneBalance,
+  runeTokenToFungibleToken,
+} from '../../types';
+import { JSONBig } from '../../utils/bignumber';
+import { getXClientVersion } from '../../utils/xClientVersion';
 
-export class RunesApi implements RunesApiInterface {
-  client: AxiosInstance;
+// these are static cache instances that will live for the lifetime of the application
+// Rune info is immutable, so we can cache it indefinitely
+const runeInfoCache = {
+  network: undefined as NetworkType | undefined,
+  byName: {} as Record<string, Rune>,
+  byId: new Map<bigint, Rune>(),
+};
 
-  clientBigNumber: AxiosInstance;
+const configureCacheForNetwork = (network: NetworkType): void => {
+  if (runeInfoCache.network !== network) {
+    runeInfoCache.network = network;
+    runeInfoCache.byName = {};
+    runeInfoCache.byId = new Map<bigint, Rune>();
+  }
+};
 
-  constructor(network: NetworkType) {
-    this.client = axios.create({
-      baseURL: `${XVERSE_API_BASE_URL(network)}`,
-      transformRequest: (req) => JSONBig.stringify(req),
-    });
+const getRuneInfoFromCache = (runeNameOrId: string | bigint, network: NetworkType): Rune | undefined => {
+  configureCacheForNetwork(network);
 
+  if (typeof runeNameOrId === 'bigint') {
+    return runeInfoCache.byId.get(runeNameOrId);
+  }
+  return runeInfoCache.byName[runeNameOrId.toUpperCase()];
+};
+
+const setRuneInfoInCache = (runeInfo: Rune | undefined, network: NetworkType): void => {
+  if (!runeInfo) {
+    return;
+  }
+
+  configureCacheForNetwork(network);
+
+  const [block, txIdx] = runeInfo.id.split(':').map((part) => BigInt(part));
+
+  const runeId = (block << 16n) + txIdx;
+
+  runeInfoCache.byName[runeInfo.entry.spaced_rune] = runeInfo;
+  runeInfoCache.byId.set(runeId, runeInfo);
+};
+
+class RunesApi {
+  private clientBigNumber: AxiosInstance;
+
+  private network: NetworkType;
+
+  constructor(network: NetworkType, customAdapter?: AxiosAdapter) {
     this.clientBigNumber = axios.create({
       baseURL: `${XVERSE_API_BASE_URL(network)}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Version': getXClientVersion() || undefined,
+      },
       transformResponse: (res, _headers, status) => {
         if (status !== 200) {
           return res;
         }
         return JSONBig.parse(res);
       },
-      transformRequest: (req) => JSONBig.stringify(req),
+      transformRequest: (req) => {
+        return JSONBig.stringify(req);
+      },
+      adapter: customAdapter,
     });
+
+    this.network = network;
   }
 
-  async getRuneBalance(address: string): Promise<Record<string, BigNumber>> {
-    const response = await this.clientBigNumber.get<Record<string, BigNumber>>(`/v1/address/${address}/rune-balance`);
+  /**
+   * Get the balance of all rune tokens an address has
+   * @param {string} address
+   * @return {Promise<RuneBalance[]>}
+   */
+  async getRuneBalances(address: string): Promise<RuneBalance[]> {
+    const response = await this.clientBigNumber.get<RuneBalance[]>(`/v2/address/${address}/rune-balance`);
     return response.data;
   }
 
-  async getRuneInfo(runeName: string): Promise<Rune> {
-    const response = await this.clientBigNumber.get<Rune>(`/v1/runes/${runeName}`);
-    return response.data;
-  }
+  /**
+   * Get the rune details given its rune name or ID
+   * @param {string} runeId
+   * @return {Promise<Rune>}
+   */
+  async getRuneInfo(runeId: bigint): Promise<Rune | undefined>;
+  async getRuneInfo(runeNameOrId: string): Promise<Rune | undefined>;
+  async getRuneInfo(runeNameOrId: string | bigint): Promise<Rune | undefined> {
+    const cachedRuneInfo = getRuneInfoFromCache(runeNameOrId, this.network);
 
-  async getRuneInfos(runeNames: string[]): Promise<Record<string, Rune>> {
-    if (runeNames.length === 0) {
-      return {};
+    if (cachedRuneInfo) {
+      return cachedRuneInfo;
     }
 
-    const response = await this.clientBigNumber.get<Record<string, Rune>>(`/v1/runes`, {
-      params: { runeNames: runeNames.join(',') },
-    });
-    return response.data;
+    let response: AxiosResponse<Rune, any>;
+
+    if (typeof runeNameOrId === 'bigint') {
+      const blockHeight = runeNameOrId >> 16n;
+      const txIdx = runeNameOrId - (blockHeight << 16n);
+      response = await this.clientBigNumber.get<Rune>(`/v1/runes/${blockHeight}:${txIdx}`, {
+        validateStatus: (status) => status === 200 || status === 404,
+      });
+    } else {
+      response = await this.clientBigNumber.get<Rune>(`/v1/runes/${runeNameOrId.toUpperCase()}`, {
+        validateStatus: (status) => status === 200 || status === 404,
+      });
+    }
+
+    const runeInfo = response.status === 200 ? response.data : undefined;
+    setRuneInfoInCache(runeInfo, this.network);
+
+    return runeInfo;
   }
 
+  /**
+   * Get rune details in fungible token format
+   * @param {string} address
+   * @return {Promise<FungibleToken[]>}
+   */
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
-    const runeBalances = await this.getRuneBalance(address);
-    const runeNames = Object.keys(runeBalances);
-
-    if (!runeNames.length) return [];
-
-    const runeInfos = await this.getRuneInfos(runeNames);
-
-    return runeNames
-      .map((runeName) =>
-        runeTokenToFungibleToken(
-          runeName,
-          runeBalances[runeName],
-          // The API returns rune names without dots in them, so we need to remove them from the rune names
-          runeInfos[runeName.replace(/[.•]/g, '')].entry.divisibility.toNumber(),
-        ),
-      )
+    const runeBalances = await this.getRuneBalances(address);
+    return runeBalances
+      .map((runeBalance) => runeTokenToFungibleToken(runeBalance))
       .sort((a, b) => {
         if (a.assetName < b.assetName) {
           return -1;
@@ -76,25 +144,44 @@ export class RunesApi implements RunesApiInterface {
       });
   }
 
-  async getRuneNumFromName(runeName: string): Promise<RuneNum> {
-    const response = await this.client.get<RuneNum>(`/v1/runes/tools/name-to-num/${runeName}`);
-    return response.data;
+  /**
+   * Encode edicts into an op return script
+   * @param payload - The payload to encode. Can have edicts and/or pointer to change output vout
+   * @returns {string} - The encoded script
+   */
+  async getEncodedScriptHex(payload: { edicts: Edict[]; pointer?: number }): Promise<string> {
+    const response = await this.clientBigNumber.post<EncodeResponse>('/v1/runes/tools/encode-edicts', { payload });
+
+    return response.data.payload;
   }
 
-  async getRuneNameFromNum(runeNum: RuneNum): Promise<string> {
-    const response = await this.client.get<string>(
-      `/v1/runes/tools/name-to-num/${runeNum.nameInt}?spacer=${runeNum.spacer}`,
+  /**
+   * Decodes a script into a RuneStone
+   * @param transactionHex - The op return script to decode
+   * @returns {ArtifactResponse | undefined} - The decoded script or undefined if the script is invalid
+   */
+  async getDecodedRuneScript(transactionHex: string): Promise<Artifact | undefined> {
+    const response = await this.clientBigNumber.post<Artifact>(
+      `/v1/runes/tools/decode-script`,
+      { transactionHex },
+      {
+        validateStatus: (status) => status === 200 || status === 400,
+      },
     );
-    return response.data;
-  }
 
-  async getRuneVarintFromNum(num: BigNumber): Promise<number[]> {
-    const response = await this.client.get<number[]>(`/v1/runes/tools/num-to-varint/${num.toString()}`);
-    return response.data;
-  }
+    if (response.status === 400) {
+      return undefined;
+    }
 
-  async getRuneNumFromVarint(varint: number[]): Promise<BigNumber> {
-    const response = await this.client.get<BigNumber>(`/v1/runes/tools/varint-to-num/${varint.join(',')}`);
     return response.data;
   }
 }
+
+const apiClients: Partial<Record<NetworkType, RunesApi>> = {};
+
+export const getRunesClient = (network: NetworkType, adapter?: AxiosAdapter): RunesApi => {
+  if (!apiClients[network]) {
+    apiClients[network] = new RunesApi(network, adapter);
+  }
+  return apiClients[network] as RunesApi;
+};
