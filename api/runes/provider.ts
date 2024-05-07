@@ -7,7 +7,7 @@ import {
   FungibleToken,
   NetworkType,
   Rune,
-  RunesBalance,
+  RuneBalance,
   runeTokenToFungibleToken,
 } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
@@ -83,10 +83,10 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
-   * @return {Promise<RunesBalance>}
+   * @return {Promise<RuneBalance[]>}
    */
-  async getRuneBalance(address: string): Promise<RunesBalance> {
-    const response = await this.clientBigNumber.get<RunesBalance>(`/v2/address/${address}/rune-balance`);
+  async getRuneBalances(address: string): Promise<RuneBalance[]> {
+    const response = await this.clientBigNumber.get<RuneBalance[]>(`/v2/address/${address}/rune-balance`);
     return response.data;
   }
 
@@ -130,10 +130,7 @@ class RunesApi {
    * @return {Promise<FungibleToken[]>}
    */
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
-    const runeBalances = await this.getRuneBalance(address);
-
-    if (!runeBalances.length) return [];
-
+    const runeBalances = await this.getRuneBalances(address);
     return runeBalances
       .map((runeBalance) => runeTokenToFungibleToken(runeBalance))
       .sort((a, b) => {

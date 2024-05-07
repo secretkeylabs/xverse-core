@@ -108,9 +108,6 @@ export type RuneBalance = {
   inscriptionId: string | null;
 };
 
-export type RunesBalance = RuneBalance[];
-
-
 export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
   name: runeBalance.runeName,
   decimals: runeBalance.divisibility,
