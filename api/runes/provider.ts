@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosAdapter, AxiosInstance, AxiosResponse } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
 import {
   Artifact,
@@ -7,7 +7,7 @@ import {
   FungibleToken,
   NetworkType,
   Rune,
-  RuneBalancesResponse,
+  RuneBalance,
   runeTokenToFungibleToken,
 } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
@@ -58,7 +58,7 @@ class RunesApi {
 
   private network: NetworkType;
 
-  constructor(network: NetworkType) {
+  constructor(network: NetworkType, customAdapter?: AxiosAdapter) {
     this.clientBigNumber = axios.create({
       baseURL: `${XVERSE_API_BASE_URL(network)}`,
       headers: {
@@ -74,6 +74,7 @@ class RunesApi {
       transformRequest: (req) => {
         return JSONBig.stringify(req);
       },
+      adapter: customAdapter,
     });
 
     this.network = network;
@@ -82,12 +83,10 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
-   * @return {Promise<Record<string, RuneBalancesResponse>>}
+   * @return {Promise<RuneBalance[]>}
    */
-  async getRuneBalance(address: string): Promise<Record<string, RuneBalancesResponse>> {
-    const response = await this.clientBigNumber.get<Record<string, RuneBalancesResponse>>(
-      `/v2/address/${address}/rune-balance`,
-    );
+  async getRuneBalances(address: string): Promise<RuneBalance[]> {
+    const response = await this.clientBigNumber.get<RuneBalance[]>(`/v2/address/${address}/rune-balance`);
     return response.data;
   }
 
@@ -131,11 +130,9 @@ class RunesApi {
    * @return {Promise<FungibleToken[]>}
    */
   async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
-    const runeBalances = await this.getRuneBalance(address);
-    const runeNames = Object.keys(runeBalances);
-    if (!runeNames.length) return [];
-    return runeNames
-      .map((runeName) => runeTokenToFungibleToken(runeBalances[runeName]))
+    const runeBalances = await this.getRuneBalances(address);
+    return runeBalances
+      .map((runeBalance) => runeTokenToFungibleToken(runeBalance))
       .sort((a, b) => {
         if (a.assetName < b.assetName) {
           return -1;
@@ -182,9 +179,9 @@ class RunesApi {
 
 const apiClients: Partial<Record<NetworkType, RunesApi>> = {};
 
-export const getRunesClient = (network: NetworkType): RunesApi => {
+export const getRunesClient = (network: NetworkType, adapter?: AxiosAdapter): RunesApi => {
   if (!apiClients[network]) {
-    apiClients[network] = new RunesApi(network);
+    apiClients[network] = new RunesApi(network, adapter);
   }
   return apiClients[network] as RunesApi;
 };
