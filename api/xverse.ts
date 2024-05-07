@@ -227,13 +227,13 @@ class XverseApi {
     return response.data;
   }
 
-  async getAppFeatures(context: Partial<AppFeaturesContext>) {
+  async getAppFeatures(context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) {
     const response = await this.client.post<
       AppFeaturesResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
       AxiosResponse<AppFeaturesResponse, any>,
       AppFeaturesBody
-    >('/v1/app-features', { context: { ...context, network: this.network } });
+    >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
   }
 }
