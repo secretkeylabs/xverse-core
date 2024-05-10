@@ -85,8 +85,10 @@ class RunesApi {
    * @param {string} address
    * @return {Promise<RuneBalance[]>}
    */
-  async getRuneBalances(address: string): Promise<RuneBalance[]> {
-    const response = await this.clientBigNumber.get<RuneBalance[]>(`/v2/address/${address}/rune-balance`);
+  async getRuneBalances(address: string, includeUnconfirmed = false): Promise<RuneBalance[]> {
+    const response = await this.clientBigNumber.get<RuneBalance[]>(`/v2/address/${address}/rune-balance`, {
+      params: { includeUnconfirmed },
+    });
     return response.data;
   }
 
