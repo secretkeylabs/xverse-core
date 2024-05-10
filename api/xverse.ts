@@ -123,12 +123,12 @@ class XverseApi {
    */
   async getRuneTxHistory(
     address: string,
-    runeId: string,
+    runeName: string,
     offset: number,
     limit: number,
   ): Promise<APIGetRunesActivityForAddressResponse> {
     const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
-      `/v1/address/${address}/rune/${runeId}?offset=${offset}&limit=${limit}`,
+      `/v1/address/${address}/rune/${runeName}?offset=${offset}&limit=${limit}`,
     );
     return response.data;
   }
