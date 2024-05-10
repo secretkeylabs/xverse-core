@@ -106,7 +106,7 @@ class XverseApi {
    * @param runeNames provided to get the fiat rates of supported tokens from coingecko
    * @param fiatCurrency
    */
-  async getRuneFiatRates(runeNames: string[], fiatCurrency: string): Promise<SimplePriceResponse> {
+  async getRuneFiatRates(runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
     const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
       params: {
         currency: fiatCurrency,
