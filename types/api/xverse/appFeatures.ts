@@ -4,7 +4,8 @@ export type FeatureId = 'RUNES_SUPPORT';
 
 export type AppFeaturesContext = {
   network: NetworkType;
-  masterPubKey: string;
+  paymentAddress: string;
+  ordinalsAddress: string;
 };
 
 export type AppFeaturesBody = {
