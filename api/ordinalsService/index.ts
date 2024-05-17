@@ -88,5 +88,5 @@ export class OrdinalsServiceApi {
 const testnetClient = new OrdinalsServiceApi('Testnet');
 const mainnetClient = new OrdinalsServiceApi('Mainnet');
 
-export const getRunesApiClient = (network: NetworkType = 'Mainnet') =>
+export const getOrdinalsServiceApiClient = (network: NetworkType = 'Mainnet') =>
   network === 'Mainnet' ? mainnetClient : testnetClient;
