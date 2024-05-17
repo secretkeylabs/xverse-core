@@ -83,6 +83,8 @@ class RunesApi {
   /**
    * Get the balance of all rune tokens an address has
    * @param {string} address
+   * @param {boolean} includeUnconfirmed Set to true to include unconfirmed transactions
+   * in the balance (default is false)
    * @return {Promise<RuneBalance[]>}
    */
   async getRuneBalances(address: string, includeUnconfirmed = false): Promise<RuneBalance[]> {
@@ -129,10 +131,12 @@ class RunesApi {
   /**
    * Get rune details in fungible token format
    * @param {string} address
+   * @param {boolean} includeUnconfirmed Set to true to include unconfirmed transactions
+   * in the balance (default is false)
    * @return {Promise<FungibleToken[]>}
    */
-  async getRuneFungibleTokens(address: string): Promise<FungibleToken[]> {
-    const runeBalances = await this.getRuneBalances(address);
+  async getRuneFungibleTokens(address: string, includeUnconfirmed = false): Promise<FungibleToken[]> {
+    const runeBalances = await this.getRuneBalances(address, includeUnconfirmed);
     return runeBalances
       .map((runeBalance) => runeTokenToFungibleToken(runeBalance))
       .sort((a, b) => {
