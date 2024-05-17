@@ -1,6 +1,6 @@
-import * as secp256k1 from '@noble/secp256k1';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
 import * as bip39 from 'bip39';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
@@ -9,7 +9,6 @@ import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
 import { Transport } from '../../ledger/types';
 import SeedVault from '../../seedVault';
-import { getBtcNetwork } from '../../transactions/btcNetwork';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
@@ -43,6 +42,8 @@ export abstract class AddressContext {
 
   protected _esploraApiProvider!: EsploraProvider;
 
+  protected _getUtxoMutex: Mutex = new Mutex();
+
   constructor(
     type: SupportedAddressType,
     address: string,
@@ -72,15 +73,20 @@ export abstract class AddressContext {
   }
 
   async getUtxos(): Promise<ExtendedUtxo[]> {
-    if (!this._utxos) {
-      const utxos = await this._esploraApiProvider.getUnspentUtxos(this._address);
+    const release = await this._getUtxoMutex.acquire();
+    try {
+      if (!this._utxos) {
+        const utxos = await this._esploraApiProvider.getUnspentUtxos(this._address);
 
-      this._utxos = utxos.map(
-        (utxo) => new ExtendedUtxo(utxo, this._address, this._utxoCache, this._esploraApiProvider),
-      );
+        this._utxos = utxos.map(
+          (utxo) => new ExtendedUtxo(utxo, this._address, this._utxoCache, this._esploraApiProvider),
+        );
+      }
+
+      return [...this._utxos];
+    } finally {
+      release();
     }
-
-    return [...this._utxos];
   }
 
   async getCommonUtxos(): Promise<ExtendedUtxo[]> {
@@ -200,9 +206,9 @@ export abstract class AddressContext {
   }
 
   protected abstract getDerivationPath(): string;
+  abstract getIOSizes(): { inputSize: number; outputSize: number };
   abstract addInput(transaction: btc.Transaction, utxo: ExtendedUtxo, options?: CompilationOptions): Promise<void>;
   abstract signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void>;
-  abstract toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void>;
 }
 
 export class P2shAddressContext extends AddressContext {
@@ -253,29 +259,12 @@ export class P2shAddressContext extends AddressContext {
     }
   }
 
-  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
-    const btcNetwork = getBtcNetwork(this._network);
-    const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privateKey, true), btcNetwork);
-    const p2sh = btc.p2sh(p2wpkh, btcNetwork);
-
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2sh.script)) {
-        transaction.updateInput(i, {
-          witnessUtxo: {
-            script: p2sh.script,
-            amount: input.witnessUtxo?.amount ?? 0n,
-          },
-          redeemScript: p2sh.redeemScript,
-          witnessScript: p2sh.witnessScript,
-          nonWitnessUtxo: undefined,
-        });
-      }
-    }
-  }
-
   protected getDerivationPath(): string {
     return getBitcoinDerivationPath({ index: this._accountIndex, network: this._network });
+  }
+
+  getIOSizes(): { inputSize: number; outputSize: number } {
+    return { inputSize: 91, outputSize: 32 };
   }
 }
 
@@ -323,26 +312,12 @@ export class P2wpkhAddressContext extends AddressContext {
     }
   }
 
-  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
-    const btcNetwork = getBtcNetwork(this._network);
-    const p2wpkh = btc.p2wpkh(secp256k1.getPublicKey(privateKey, true), btcNetwork);
-
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2wpkh.script)) {
-        transaction.updateInput(i, {
-          witnessUtxo: {
-            script: p2wpkh.script,
-            amount: input.witnessUtxo?.amount ?? 0n,
-          },
-          nonWitnessUtxo: undefined,
-        });
-      }
-    }
-  }
-
   protected getDerivationPath(): string {
     return getSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+  }
+
+  getIOSizes(): { inputSize: number; outputSize: number } {
+    return { inputSize: 68, outputSize: 31 };
   }
 }
 
@@ -479,28 +454,12 @@ export class P2trAddressContext extends AddressContext {
     }
   }
 
-  async toDummyInputs(transaction: btc.Transaction, privateKey: Uint8Array): Promise<void> {
-    const btcNetwork = getBtcNetwork(this._network);
-    const dummyPublicKey = secp256k1.getPublicKey(privateKey, true);
-    const p2tr = btc.p2tr(dummyPublicKey.slice(1), undefined, btcNetwork);
-
-    for (let i = 0; i < transaction.inputsLength; i++) {
-      const input = transaction.getInput(i);
-      if (areByteArraysEqual(input.witnessUtxo?.script, this._p2tr.script)) {
-        transaction.updateInput(i, {
-          witnessUtxo: {
-            script: p2tr.script,
-            amount: input.witnessUtxo?.amount ?? 0n,
-          },
-          tapInternalKey: p2tr.tapInternalKey,
-          nonWitnessUtxo: undefined,
-        });
-      }
-    }
-  }
-
   protected getDerivationPath(): string {
     return getTaprootDerivationPath({ index: this._accountIndex, network: this._network });
+  }
+
+  getIOSizes(): { inputSize: number; outputSize: number } {
+    return { inputSize: 57, outputSize: 43 };
   }
 }
 
@@ -713,17 +672,5 @@ export class TransactionContext {
     const psbtBase64Signed = base64.encode(psbt);
 
     return psbtBase64Signed;
-  }
-
-  async dummySignTransaction(transaction: btc.Transaction) {
-    const dummyPrivateKey = '0000000000000000000000000000000000000000000000000000000000000001';
-    const dummyPrivateKeyBuffer = hex.decode(dummyPrivateKey);
-
-    await this.paymentAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
-    await this.ordinalsAddress.toDummyInputs(transaction, dummyPrivateKeyBuffer);
-
-    if (transaction.inputsLength > 0) {
-      transaction.sign(dummyPrivateKeyBuffer);
-    }
   }
 }
