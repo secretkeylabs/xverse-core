@@ -1,6 +1,6 @@
 import { ORDINALS_SERVICE_BASE_URL } from '../../constant';
 import { NetworkType } from '../../types';
-import { CreateEtchOrderRequest, CreateMintOrderRequest, CreateOrderResponse } from './types';
+import { CreateEtchOrderRequest, CreateMintOrderRequest, CreateOrderResponse } from '../../types/api/ordinalsService';
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
