@@ -1,16 +1,16 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
 import {
+  Address,
+  BtcAddressBalanceResponse,
   BtcAddressMempool,
+  BtcTransactionBroadcastResponse,
+  EsploraTransaction,
+  NetworkType,
   RecommendedFeeResponse,
   TransactionOutspend,
   UTXO,
-  Address,
-  BtcAddressBalanceResponse,
-  BtcTransactionBroadcastResponse,
-  EsploraTransaction,
 } from '../../types';
-import { NetworkType } from '../../types';
 import { BitcoinApiProvider } from './types';
 
 export interface EsploraApiProviderOptions {
@@ -44,22 +44,20 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
             return Promise.reject(error);
           }
 
-          // if the request times out, we retry on the fallbackBitcoinApi
-          if (error?.code === 'ECONNABORTED') {
+          const requestTimedOut = error?.code === 'ECONNABORTED';
+          const serverError = error?.response?.status >= 500;
+          const addressHasTooManyUtxos =
+            error?.response?.status === 400 &&
+            typeof error.response.data === 'string' &&
+            error.response.data.includes('Too many unspent transaction outputs');
+
+          if (requestTimedOut || serverError || addressHasTooManyUtxos) {
             return this.fallbackBitcoinApi.request({
               ...error.config,
               baseURL: fallbackUrl,
             });
           }
 
-          // if an address has > 500 UTXOs, mempool.space returns a 400 error,
-          // so we retry on the fallbackBitcoinApi
-          if (error?.response?.status >= 400) {
-            return this.fallbackBitcoinApi.request({
-              ...error.config,
-              baseURL: fallbackUrl,
-            });
-          }
           return Promise.reject(error);
         },
       );

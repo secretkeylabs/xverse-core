@@ -985,7 +985,10 @@ describe('bitcoin transactions', () => {
       priority: 30,
     };
 
-    fetchFeeRateSpy.mockReturnValue(Promise.resolve(feeRate));
+    fetchFeeRateSpy.mockResolvedValueOnce(feeRate);
+
+    const getOrdinalsByAddressSpy = vi.spyOn(XverseAPIFunctions, 'getOrdinalsByAddress');
+    getOrdinalsByAddressSpy.mockResolvedValue([]);
 
     const esploraMock = {
       getUnspentUtxos: vi.fn(),

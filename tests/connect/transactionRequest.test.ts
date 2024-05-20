@@ -1,7 +1,8 @@
 import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { BigNumber } from 'bignumber.js';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { fetchStxPendingTxData } from '../../api/stacks';
 import { txPayloadToRequest } from '../../connect';
 import { microstacksToStx } from '../../currency';
 import {
@@ -9,6 +10,8 @@ import {
   generateContractDeployTransaction,
   generateUnsignedStxTokenTransferTransaction,
 } from '../../transactions';
+
+vi.mock('../../api/stacks');
 
 describe('txPayloadToRequest', () => {
   it('should convert TokenTransfer payload to TransactionPayload', async () => {
@@ -104,12 +107,16 @@ describe('txPayloadToRequest', () => {
       stxAddress: 'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
       txType: TransactionTypes.ContractCall,
     };
+
+    vi.mocked(fetchStxPendingTxData).mockResolvedValue({ pendingTransactions: [] });
+
     const unSignedContractCall = await createContractCallPromises(
       contractCallPayload,
       'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
       new StacksMainnet(),
       '03f746046bacb5ff6254124bbdadbe28ca1cfefbd9cd160403667a772f25f298ab',
     );
+
     const result = txPayloadToRequest(unSignedContractCall[0]);
 
     expect(result).toBeDefined();
