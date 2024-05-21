@@ -35,7 +35,7 @@
     "@tanstack/react-query": "^4.29.3",
     "@zondax/ledger-stacks": "^1.0.4",
     "async-mutex": "^0.4.0",
-    "axios": "1.6.2",
+    "axios": "1.7.0",
     "base64url": "^3.0.1",
     "bip32": "^4.0.0",
     "bip39": "3.0.3",
