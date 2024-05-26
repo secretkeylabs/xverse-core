@@ -15,8 +15,8 @@ export class OrdinalsServiceApi {
 
   private parseError = (error: AxiosError) => {
     return {
-      code: error.response?.status,
-      message: JSON.stringify(error.response?.data),
+      code: error.response?.status || 500,
+      message: error.response ? JSON.stringify(error.response.data) : '',
     };
   };
 

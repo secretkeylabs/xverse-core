@@ -1,7 +1,7 @@
 import { getRunesClient } from '../api';
 import { TransactionContext } from '../transactions/bitcoin';
 import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
-import { NetworkType } from '../types';
+import { CreateEtchOrderRequest, NetworkType } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
@@ -15,6 +15,8 @@ export type RuneBase = {
 type Mint = RuneBase & {
   runeIsOpen: boolean;
   runeIsMintable: boolean;
+  // only used for ordinals service mints
+  repeats?: number;
 };
 
 type Transfer = RuneBase & {
@@ -30,6 +32,8 @@ type Receipt = RuneBase & {
 
 type Burn = RuneBase & { sourceAddresses: string[] };
 
+type Etch = Omit<CreateEtchOrderRequest, 'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'>;
+
 export type RuneSummary = {
   inputsHadRunes: boolean;
   // can only do 1 mint per txn
@@ -37,6 +41,8 @@ export type RuneSummary = {
   transfers: Transfer[];
   receipts: Receipt[];
   burns: Burn[];
+  // only used for ordinals service etches
+  etch?: Etch;
 };
 
 const getSpacedName = (name: string, spacerRaw: bigint | BigNumber): string => {
