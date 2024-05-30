@@ -17,6 +17,8 @@ type Mint = RuneBase & {
   runeIsMintable: boolean;
   // only used for ordinals service mints
   repeats?: number;
+  runeSize?: number;
+  destinationAddress?: string;
 };
 
 type Transfer = RuneBase & {
