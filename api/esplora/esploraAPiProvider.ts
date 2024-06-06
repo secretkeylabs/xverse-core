@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
+import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_SIGNET, BTC_BASE_URI_TESTNET } from '../../constant';
 import {
   Address,
   BtcAddressBalanceResponse,
@@ -7,11 +7,9 @@ import {
   BtcTransactionBroadcastResponse,
   EsploraTransaction,
   NetworkType,
-  RecommendedFeeResponse,
   TransactionOutspend,
   UTXO,
 } from '../../types';
-import { BitcoinApiProvider } from './types';
 
 export interface EsploraApiProviderOptions {
   network: NetworkType;
@@ -19,7 +17,7 @@ export interface EsploraApiProviderOptions {
   fallbackUrl?: string;
 }
 
-export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
+export class BitcoinEsploraApiProvider {
   bitcoinApi: AxiosInstance;
 
   fallbackBitcoinApi?: AxiosInstance;
@@ -28,7 +26,23 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
 
   constructor(options: EsploraApiProviderOptions) {
     const { url, network, fallbackUrl } = options;
-    const baseURL = url || (network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET);
+    let baseURL = url;
+
+    if (!baseURL) {
+      switch (network) {
+        case 'Mainnet':
+          baseURL = BTC_BASE_URI_MAINNET;
+          break;
+        case 'Testnet':
+          baseURL = BTC_BASE_URI_TESTNET;
+          break;
+        case 'Signet':
+          baseURL = BTC_BASE_URI_SIGNET;
+          break;
+        default:
+          throw new Error('Invalid network');
+      }
+    }
     const axiosConfig: AxiosRequestConfig = { baseURL };
 
     this._network = network;
@@ -141,18 +155,6 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
 
   async getTransactionOutspends(txid: string): Promise<TransactionOutspend[]> {
     return this.httpGet<TransactionOutspend[]>(`/tx/${txid}/outspends`);
-  }
-
-  /**
-   * @deprecated use mempoolApi.getRecommendedFees instead
-   */
-  async getRecommendedFees(): Promise<RecommendedFeeResponse> {
-    // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
-    // TODO: make sure nothign is using this and remove it from here. It exists in the mempool api file.
-    const { data } = await axios.get<RecommendedFeeResponse>(
-      `https://mempool.space/${this._network === 'Mainnet' ? '' : 'testnet/'}api/v1/fees/recommended`,
-    );
-    return data;
   }
 
   async getLatestBlockHeight(): Promise<number> {

@@ -1,6 +1,6 @@
-export { StacksNetwork, StacksMainnet, StacksTestnet } from '@stacks/network';
+export { StacksMainnet, StacksNetwork, StacksTestnet } from '@stacks/network';
 
-export type NetworkType = 'Mainnet' | 'Testnet';
+export type NetworkType = 'Mainnet' | 'Testnet' | 'Signet';
 
 export type SettingsNetwork = {
   type: NetworkType;

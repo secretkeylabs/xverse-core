@@ -1,15 +1,15 @@
-import { NetworkType } from '../types/network';
-import { networks, payments, initEccLib } from 'bitcoinjs-lib';
+import * as ecc from '@bitcoinerlab/secp256k1';
+import { makeDIDFromAddress } from '@stacks/auth';
+import { publicKeyToBtcAddress } from '@stacks/encryption';
+import StacksApp from '@zondax/ledger-stacks';
+import base64url from 'base64url';
+import { initEccLib, networks, payments } from 'bitcoinjs-lib';
+import ecdsaFormat from 'ecdsa-sig-formatter';
 import { AppClient } from 'ledger-bitcoin';
+import { uuid } from 'uuidv4';
+import { NetworkType } from '../types/network';
 import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, Transport } from './types';
-import { publicKeyToBtcAddress } from '@stacks/encryption';
-import { uuid } from 'uuidv4';
-import { makeDIDFromAddress } from '@stacks/auth';
-import base64url from 'base64url';
-import StacksApp from '@zondax/ledger-stacks';
-import ecdsaFormat from 'ecdsa-sig-formatter';
-import * as ecc from '@bitcoinerlab/secp256k1';
 
 /**
  * This function is used to get the coin type depending on network type

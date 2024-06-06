@@ -33,13 +33,15 @@ export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 // BTC
 export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
 export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
-export const BLOCKCYPHER_BASE_URI_MAINNET = 'https://api.blockcypher.com/v1/btc/main';
-export const BLOCKCYPHER_BASE_URI_TESTNET = 'https://api.blockcypher.com/v1/btc/test3';
+export const BTC_BASE_URI_SIGNET = 'https://mempool.space/signet/api';
 export const XVERSE_BTC_BASE_URI_MAINNET = 'https://btc-1.xverse.app';
 export const XVERSE_BTC_BASE_URI_TESTNET = 'https://btc-testnet.xverse.app';
+export const XVERSE_BTC_BASE_URI_SIGNET = 'https://btc-signet.xverse.app';
+
 // STX
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
 export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
+// !NOTE: Signet is not supported by Hiro
 
 export const defaultMainnet: SettingsNetwork = {
   type: 'Mainnet',
@@ -53,18 +55,43 @@ export const defaultTestnet: SettingsNetwork = {
   btcApiUrl: BTC_BASE_URI_TESTNET,
   fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_TESTNET,
 };
-export const initialNetworksList: SettingsNetwork[] = [{ ...defaultMainnet }, { ...defaultTestnet }];
+export const defaultSignet: SettingsNetwork = {
+  type: 'Signet',
+  address: HIRO_TESTNET_DEFAULT,
+  btcApiUrl: BTC_BASE_URI_SIGNET,
+  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_SIGNET,
+};
+export const initialNetworksList: SettingsNetwork[] = [
+  { ...defaultMainnet },
+  { ...defaultTestnet },
+  { ...defaultSignet },
+];
 
 export const NFT_BASE_URI = 'https://stacks.gamma.io/api/v1/collections';
 
+const xverseApiNetworkSuffix = (network: NetworkType, mainnetOverride = '') => {
+  switch (network) {
+    case 'Mainnet':
+      return `${mainnetOverride}`;
+    case 'Testnet':
+      return '-testnet';
+    case 'Signet':
+      return '-signet';
+    default:
+      throw new Error('Invalid network');
+  }
+};
+
 export const XVERSE_API_BASE_URL = (network: NetworkType) =>
-  `https://api-${network === 'Mainnet' ? '3' : 'testnet'}.xverse.app`;
+  `https://api${xverseApiNetworkSuffix(network, '-3')}.xverse.app`;
 
 export const XVERSE_INSCRIBE_URL = (network: NetworkType) =>
-  `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
+  `https://inscribe${xverseApiNetworkSuffix(network)}.xverse.app`;
 
-export const XORD_URL = (network: NetworkType) =>
-  `https://inscribe${network === 'Mainnet' ? '' : '-testnet'}.xverse.app`;
+export const XORD_URL = (network: NetworkType) => `https://inscribe${xverseApiNetworkSuffix(network)}.xverse.app`;
+
+export const ORDINALS_URL = (network: NetworkType, inscriptionId: string) =>
+  `https://ord${xverseApiNetworkSuffix(network)}.xverse.app/content/${inscriptionId}`;
 
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
@@ -121,11 +148,6 @@ export const supportedCoins = [
   },
 ];
 
-export const ORDINALS_URL = (network: NetworkType, inscriptionId: string) =>
-  `https://ord${network === 'Mainnet' ? '' : '-testnet'}.xverse.app/content/${inscriptionId}`;
-
 export const ORDINALS_FT_INDEXER_API_URL = 'https://unisat.io/brc20-api-v2/address';
-
-export const INSCRIPTION_REQUESTS_SERVICE_URL = 'https://api2.ordinalsbot.com/order';
 
 export const GAMMA_COLLECTION_API = 'https://api.gamma.io/nft-data-service/v1/collections';

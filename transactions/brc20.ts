@@ -1,8 +1,5 @@
-import { base64 } from '@scure/base';
 import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
-import { createInscriptionRequest } from '../api';
-import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
@@ -64,39 +61,6 @@ type ExecuteProps = {
   changeAddress: string;
   feeRate: number;
   network: NetworkType;
-};
-
-const createTransferInscriptionContent = (token: string, amount: string) => ({
-  p: 'brc-20',
-  op: 'transfer',
-  tick: token,
-  amt: amount,
-});
-
-// TODO: deprecate
-export const createBrc20TransferOrder = async (
-  token: string,
-  amount: string,
-  recipientAddress: string,
-  esploraAPiProvider: EsploraApiProvider,
-) => {
-  const transferInscriptionContent = createTransferInscriptionContent(token, amount);
-  const contentB64 = base64.encode(Buffer.from(JSON.stringify(transferInscriptionContent)));
-  const contentSize = Buffer.from(JSON.stringify(transferInscriptionContent)).length;
-  const feesResponse = await esploraAPiProvider.getRecommendedFees();
-  const inscriptionRequest = await createInscriptionRequest(
-    recipientAddress,
-    contentSize,
-    feesResponse.fastestFee,
-    contentB64,
-    token,
-    amount,
-  );
-
-  return {
-    inscriptionRequest,
-    feesResponse,
-  };
 };
 
 const validateProps = (props: EstimateProps): props is EstimateProps & { addressUtxos: UTXO[] } => {

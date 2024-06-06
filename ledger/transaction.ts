@@ -1,5 +1,4 @@
 import { SingleSigSpendingCondition, createMessageSignature, deserializeTransaction } from '@stacks/transactions';
-import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { Psbt, networks } from 'bitcoinjs-lib';
 import { fetchBtcFeeRate } from '../api';
@@ -14,7 +13,6 @@ import {
 } from '../transactions/btc';
 import { getOrdinalsUtxos } from '../transactions/btc.utils';
 import { BtcFeeResponse, ErrorCodes, NetworkType, ResponseError, UTXO } from '../types';
-import { MAINNET_BROADCAST_URI, TESTNET_BROADCAST_URI } from './constants';
 import { Bip32Derivation, TapBip32Derivation } from './types';
 
 /**
@@ -104,6 +102,7 @@ export async function getTransactionData(
  * @returns the psbt without any signatures
  * */
 export async function createNativeSegwitPsbt(
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   recipients: Array<Recipient>,
   changeAddress: string,
@@ -119,9 +118,8 @@ export async function createNativeSegwitPsbt(
 
   await Promise.all(
     inputUTXOs.map(async (utxo) => {
-      const txDataApiUrl = `${network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI}/${utxo.txid}/hex`;
-      const response = await axios.get(txDataApiUrl);
-      transactionMap[utxo.txid] = Buffer.from(response.data, 'hex');
+      const txHex = await esploraProvider.getTransactionHex(utxo.txid);
+      transactionMap[utxo.txid] = Buffer.from(txHex, 'hex');
     }),
   );
 
@@ -235,6 +233,7 @@ export async function createTaprootPsbt(
  * @returns the psbt without any signatures
  * */
 export async function createMixedPsbt(
+  esploraProvider: EsploraApiProvider,
   network: NetworkType,
   recipients: Array<Recipient>,
   changeAddress: string,
@@ -253,9 +252,8 @@ export async function createMixedPsbt(
 
   await Promise.all(
     inputUTXOs.map(async (utxo) => {
-      const txDataApiUrl = `${network === 'Mainnet' ? MAINNET_BROADCAST_URI : TESTNET_BROADCAST_URI}/${utxo.txid}/hex`;
-      const response = await axios.get(txDataApiUrl);
-      transactionMap[utxo.txid] = Buffer.from(response.data, 'hex');
+      const txHex = await esploraProvider.getTransactionHex(utxo.txid);
+      transactionMap[utxo.txid] = Buffer.from(txHex, 'hex');
     }),
   );
 

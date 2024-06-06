@@ -170,7 +170,7 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
 }
 
 const getOutputScript = (output: btc.TransactionOutput, options: Options) => {
-  const NETWORK = options?.network === 'Testnet' ? btc.TEST_NETWORK : btc.NETWORK;
+  const NETWORK = options?.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
   let script;
   if ('address' in output && typeof output.address === 'string') {
     script = btc.OutScript.encode(btc.Address(NETWORK).decode(output.address));

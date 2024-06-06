@@ -91,7 +91,7 @@ describe('UtxoCache', () => {
 
     expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('Mainnet', 'txid1', 0);
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
-      'utxoCache-address1',
+      'utxoCache-Mainnet-address1',
       JSON.stringify({
         utxos: {
           'txid1:0': mockUtxo,
@@ -160,7 +160,7 @@ describe('UtxoCache', () => {
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 1, 1, { hideUnconfirmed: true });
 
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
-      'utxoCache-address1',
+      'utxoCache-Mainnet-address1',
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 0,
@@ -233,7 +233,7 @@ describe('UtxoCache', () => {
     expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('Mainnet', 'txid3', 0);
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
-      'utxoCache-address1',
+      'utxoCache-Mainnet-address1',
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 5,
@@ -296,7 +296,7 @@ describe('UtxoCache', () => {
 
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
-      'utxoCache-address1',
+      'utxoCache-Mainnet-address1',
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 5,
@@ -361,7 +361,7 @@ describe('UtxoCache', () => {
 
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
-      'utxoCache-address1',
+      'utxoCache-Mainnet-address1',
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: msInYear,
