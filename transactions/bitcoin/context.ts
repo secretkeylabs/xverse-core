@@ -158,6 +158,16 @@ export abstract class AddressContext {
     return new ExtendedUtxo(utxo, address, this._utxoCache, this._esploraApiProvider, true);
   }
 
+  async constructUtxo(utxo: Omit<UTXO, 'address'>): Promise<ExtendedUtxo> {
+    const addressUtxo = {
+      ...utxo,
+      address: this._address,
+    };
+    const extendedUtxo = new ExtendedUtxo(addressUtxo, this._address, this._utxoCache, this._esploraApiProvider);
+
+    return extendedUtxo;
+  }
+
   protected async getPrivateKey(seedPhrase: string): Promise<string> {
     const seed = await bip39.mnemonicToSeed(seedPhrase);
     const master = bip32.fromSeed(seed);
@@ -325,11 +335,15 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
     super.addInput(transaction, extendedUtxo, options);
 
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
+    const utxoTxnHex = await extendedUtxo.hex;
 
-    transaction.updateInput(transaction.inputsLength - 1, {
-      nonWitnessUtxo,
-    });
+    if (utxoTxnHex) {
+      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+
+      transaction.updateInput(transaction.inputsLength - 1, {
+        nonWitnessUtxo,
+      });
+    }
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
@@ -438,7 +452,7 @@ export class P2trAddressContext extends AddressContext {
         script: this._p2tr.script,
         amount: BigInt(utxo.value),
       },
-      tapInternalKey: hex.decode(this._publicKey),
+      tapInternalKey: this._p2tr.tapInternalKey,
       sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
     });
   }
@@ -465,21 +479,17 @@ export class P2trAddressContext extends AddressContext {
 
 export class LedgerP2trAddressContext extends P2trAddressContext {
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
-    const utxo = extendedUtxo.utxo;
+    super.addInput(transaction, extendedUtxo, options);
 
-    const nonWitnessUtxo = Buffer.from(await extendedUtxo.hex, 'hex');
+    const utxoTxnHex = await extendedUtxo.hex;
 
-    transaction.addInput({
-      txid: utxo.txid,
-      index: utxo.vout,
-      witnessUtxo: {
-        script: this._p2tr.script,
-        amount: BigInt(utxo.value),
-      },
-      nonWitnessUtxo,
-      tapInternalKey: this._p2tr.tapInternalKey,
-      sequence: options?.rbfEnabled ? 0xfffffffd : 0xffffffff,
-    });
+    if (utxoTxnHex) {
+      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+
+      transaction.updateInput(transaction.inputsLength - 1, {
+        nonWitnessUtxo,
+      });
+    }
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {

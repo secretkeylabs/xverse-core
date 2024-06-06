@@ -41,9 +41,12 @@ const embellishNativeSegwitInputs = async (
     if (areByteArraysEqual(input.witnessUtxo?.script, p2wpkh.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
-        transaction.updateInput(i, {
-          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
-        });
+
+        if (utxoTxn) {
+          transaction.updateInput(i, {
+            nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+          });
+        }
       }
 
       transaction.updateInput(i, {
@@ -83,9 +86,11 @@ const embellishTaprootInputs = async (
     if (areByteArraysEqual(input.witnessUtxo?.script, p2tr.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
-        transaction.updateInput(i, {
-          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
-        });
+        if (utxoTxn) {
+          transaction.updateInput(i, {
+            nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+          });
+        }
       }
 
       transaction.updateInput(i, {

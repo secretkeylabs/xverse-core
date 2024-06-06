@@ -78,12 +78,16 @@ export class BitcoinEsploraApiProvider {
     }
   }
 
-  async httpGet<T = any>(url: string, params: any = {}): Promise<T> {
-    const response = await this.bitcoinApi.get<T>(url, { params });
+  private async httpGet<T>(
+    url: string,
+    params: unknown = {},
+    reqConfig: Omit<AxiosRequestConfig, 'params'> = {},
+  ): Promise<T> {
+    const response = await this.bitcoinApi.get<T>(url, { ...reqConfig, params });
     return response.data;
   }
 
-  async httpPost<T = any>(url: string, data: any): Promise<T> {
+  private async httpPost<T>(url: string, data: unknown): Promise<T> {
     const response = await this.bitcoinApi.post(url, data);
     return response.data;
   }
@@ -133,11 +137,16 @@ export class BitcoinEsploraApiProvider {
   }
 
   async getTransaction(txid: string): Promise<EsploraTransaction> {
+    // TODO: 404 return undefined
     return this.httpGet<EsploraTransaction>(`/tx/${txid}`);
   }
 
-  async getTransactionHex(txid: string): Promise<string> {
-    return this.httpGet<string>(`/tx/${txid}/hex`);
+  async getTransactionHex(txid: string): Promise<string | undefined> {
+    const response = await this.bitcoinApi.get<string>(`/tx/${txid}/hex`, {
+      validateStatus: (status) => status >= 200 && (status < 300 || status === 404),
+    });
+    if (response.status === 404) return undefined;
+    return response.data;
   }
 
   async getAddressMempoolTransactions(address: string): Promise<BtcAddressMempool[]> {
@@ -154,6 +163,7 @@ export class BitcoinEsploraApiProvider {
   }
 
   async getTransactionOutspends(txid: string): Promise<TransactionOutspend[]> {
+    // TODO: 404 return undefined
     return this.httpGet<TransactionOutspend[]>(`/tx/${txid}/outspends`);
   }
 

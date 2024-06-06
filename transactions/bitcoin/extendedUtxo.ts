@@ -48,16 +48,20 @@ export class ExtendedUtxo {
     return this._utxo;
   }
 
-  get hex(): Promise<string> {
+  get hex(): Promise<string | undefined> {
     if (this._hex) {
       return Promise.resolve(this._hex);
     }
 
     return new Promise(async (resolve, reject) => {
       try {
-        this._hex = await this._esploraApiProvider.getTransactionHex(this._utxo.txid);
+        const hex = await this._esploraApiProvider.getTransactionHex(this._utxo.txid);
 
-        resolve(this._hex);
+        if (hex) {
+          this._hex = hex;
+        }
+
+        resolve(hex);
       } catch (error) {
         reject(error);
       }

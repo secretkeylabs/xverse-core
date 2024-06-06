@@ -114,12 +114,12 @@ export async function createNativeSegwitPsbt(
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
 
-  const transactionMap: Record<string, Buffer> = {};
+  const transactionMap: Record<string, Buffer | undefined> = {};
 
   await Promise.all(
     inputUTXOs.map(async (utxo) => {
       const txHex = await esploraProvider.getTransactionHex(utxo.txid);
-      transactionMap[utxo.txid] = Buffer.from(txHex, 'hex');
+      transactionMap[utxo.txid] = txHex ? Buffer.from(txHex, 'hex') : undefined;
     }),
   );
 
@@ -248,12 +248,12 @@ export async function createMixedPsbt(
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const psbt = new Psbt({ network: btcNetwork });
 
-  const transactionMap: Record<string, Buffer> = {};
+  const transactionMap: Record<string, Buffer | undefined> = {};
 
   await Promise.all(
     inputUTXOs.map(async (utxo) => {
       const txHex = await esploraProvider.getTransactionHex(utxo.txid);
-      transactionMap[utxo.txid] = Buffer.from(txHex, 'hex');
+      transactionMap[utxo.txid] = txHex ? Buffer.from(txHex, 'hex') : undefined;
     }),
   );
 
