@@ -268,7 +268,7 @@ export class EnhancedPsbt {
   }
 
   async getSignedPsbtBase64(options: PSBTCompilationOptions = {}): Promise<string> {
-    const transaction = btc.Transaction.fromPSBT(this._psbt);
+    const transaction = btc.Transaction.fromPSBT(this._psbt, { allowUnknownInputs: true, allowUnknownOutputs: true });
     let addedPaddingInput = false;
 
     if (options.ledgerTransport) {
