@@ -90,7 +90,7 @@ const useBrc20TransferExecute = (props: Props) => {
 
       runTransfer();
     },
-    [tick, amount, revealAddress, recipientAddress, feeRate, running],
+    [context, tick, amount, revealAddress, recipientAddress, feeRate],
   );
 
   return {
