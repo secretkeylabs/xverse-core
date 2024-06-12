@@ -66,6 +66,12 @@ export class SeedVault {
       this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, salt);
       this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
       this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+      /**
+       * If the seed is not being overwritten (i.e., this is not a password change operation),
+       * then update the SeedVault version in the common storage adapter.
+       * This ensures that the version is only updated when a new seed is stored,
+       * not when the password is changed.
+       */
       if (!overwriteExistingSeed) {
         this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
       }
