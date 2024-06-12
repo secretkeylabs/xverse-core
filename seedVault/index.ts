@@ -65,8 +65,10 @@ export class SeedVault {
 
       this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, salt);
       this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
-      this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
       this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+      if (!overwriteExistingSeed) {
+        this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
+      }
     } finally {
       release();
     }
