@@ -8,7 +8,7 @@ import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
 import { Transport } from '../../ledger/types';
-import SeedVault from '../../seedVault';
+import { SeedVault } from '../../seedVault';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';

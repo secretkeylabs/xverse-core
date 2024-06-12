@@ -28,73 +28,55 @@ describe('SeedVault', () => {
   const passwordHash = 'passwordHash';
   const encryptedSeed = 'encryptedSeed';
   const seed = 'seed';
+  const prevStoredEncryptedSeed = 'prevStoredEncryptedSeed';
 
-  const seedVault = new SeedVault(config);
+  const seedVault = SeedVault(config);
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('init', () => {
-    it('should set password salt and password hash', async () => {
-      cryptoUtilsAdapter.generateRandomBytes.mockReturnValue(salt);
+  describe('storeSeed', () => {
+    it('should throw an error if a seed is already stored and overwriteExistingSeed is false', async () => {
+      commonStorageAdapter.get.mockResolvedValueOnce(prevStoredEncryptedSeed);
+      await expect(seedVault.storeSeed(seed, password)).rejects.toThrow('Seed already set');
+    });
+
+    it('should store the seed after generating a hash and a salt for the password', async () => {
+      cryptoUtilsAdapter.generateRandomBytes.mockResolvedValue(salt);
       cryptoUtilsAdapter.hash.mockResolvedValue(passwordHash);
-
-      await seedVault.init(password);
-
-      expect(cryptoUtilsAdapter.generateRandomBytes).toHaveBeenCalledWith(32);
-      expect(cryptoUtilsAdapter.hash).toHaveBeenCalledWith(password, salt);
+      cryptoUtilsAdapter.encrypt.mockResolvedValue(encryptedSeed);
+      await seedVault.storeSeed(seed, password);
+      expect(cryptoUtilsAdapter.encrypt).toHaveBeenCalledWith(seed, passwordHash);
       expect(commonStorageAdapter.set).toHaveBeenCalledWith(SeedVaultStorageKeys.PASSWORD_SALT, salt);
       expect(secureStorageAdapter.set).toHaveBeenCalledWith(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
-    });
-
-    it('should throw an error if salt is not set', async () => {
-      cryptoUtilsAdapter.generateRandomBytes.mockReturnValue(null);
-
-      await expect(seedVault.init(password)).rejects.toThrow('Salt not set');
-    });
-
-    it('should throw an error if password hash is not set', async () => {
-      cryptoUtilsAdapter.generateRandomBytes.mockReturnValue(salt);
-      cryptoUtilsAdapter.hash.mockResolvedValue(null);
-
-      await expect(seedVault.init(password)).rejects.toThrow('Password hash not set');
-    });
-  });
-
-  describe('storeSeed', () => {
-    it('should store the seed if the password hash is set and no seed is already stored', async () => {
-      secureStorageAdapter.get.mockResolvedValueOnce(password);
-      commonStorageAdapter.get.mockResolvedValueOnce(undefined);
-      cryptoUtilsAdapter.encrypt.mockResolvedValueOnce(encryptedSeed);
-      await seedVault.storeSeed(seed);
-      expect(cryptoUtilsAdapter.encrypt).toHaveBeenCalledWith(seed, password);
       expect(commonStorageAdapter.set).toHaveBeenCalledWith(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
     });
 
-    it('should throw an error if the password hash is not set', async () => {
-      secureStorageAdapter.get.mockResolvedValueOnce(undefined);
-      await expect(seedVault.storeSeed(seed)).rejects.toThrow('passwordHash not set');
+    it('should throw an error if the salt is not generated', async () => {
+      cryptoUtilsAdapter.generateRandomBytes.mockResolvedValue(undefined);
+      cryptoUtilsAdapter.hash.mockResolvedValue(undefined);
+      await expect(seedVault.storeSeed(seed, password)).rejects.toThrow('passwordSalt generation failed');
     });
 
-    it('should throw an error if a seed is already stored and overwriteExistingSeed is false', async () => {
-      const prevStoredEncryptedSeed = 'prevStoredEncryptedSeed';
-      secureStorageAdapter.get.mockResolvedValueOnce(password);
-      commonStorageAdapter.get.mockResolvedValueOnce(prevStoredEncryptedSeed);
-      await expect(seedVault.storeSeed(seed)).rejects.toThrow('Seed already set');
+    it('should throw an error if the password hash is not generated', async () => {
+      cryptoUtilsAdapter.generateRandomBytes.mockResolvedValue(salt);
+      cryptoUtilsAdapter.hash.mockResolvedValue(undefined);
+      await expect(seedVault.storeSeed(seed, password)).rejects.toThrow('passwordHash creation failed');
     });
 
     it('should throw an error if the seed cannot be encrypted', async () => {
-      secureStorageAdapter.get.mockResolvedValueOnce(password);
-      cryptoUtilsAdapter.encrypt.mockResolvedValueOnce(undefined);
-      await expect(seedVault.storeSeed(seed)).rejects.toThrow('Seed not set');
+      cryptoUtilsAdapter.generateRandomBytes.mockResolvedValue(salt);
+      cryptoUtilsAdapter.hash.mockResolvedValue(passwordHash);
+      cryptoUtilsAdapter.encrypt.mockResolvedValue(undefined);
+      await expect(seedVault.storeSeed(seed, password)).rejects.toThrow('Seed encryption failed');
     });
   });
 
   describe('getSeed', () => {
     it('should get decrypted seed', async () => {
-      secureStorageAdapter.get.mockResolvedValue(passwordHash);
-      commonStorageAdapter.get.mockResolvedValue(encryptedSeed);
+      secureStorageAdapter.get.mockResolvedValueOnce(passwordHash);
+      commonStorageAdapter.get.mockResolvedValueOnce(encryptedSeed);
       cryptoUtilsAdapter.decrypt.mockResolvedValue(seed);
 
       const result = await seedVault.getSeed();
@@ -106,7 +88,8 @@ describe('SeedVault', () => {
     });
 
     it('should throw an error if encrypted seed is not set', async () => {
-      commonStorageAdapter.get.mockResolvedValue(null);
+      commonStorageAdapter.get.mockResolvedValueOnce(null);
+      secureStorageAdapter.get.mockResolvedValueOnce(passwordHash);
 
       await expect(seedVault.getSeed()).rejects.toThrow('Seed not set');
     });
@@ -115,19 +98,21 @@ describe('SeedVault', () => {
   describe('changePassword', () => {
     const oldPassword = 'oldPassword';
     const newPassword = 'newPassword';
+
     it('should change the password if the old password is correct', async () => {
       vi.spyOn(seedVault, 'unlockVault').mockResolvedValueOnce(undefined);
       vi.spyOn(seedVault, 'getSeed').mockResolvedValueOnce(seed);
-      vi.spyOn(seedVault, 'init').mockResolvedValue(undefined);
+
+      cryptoUtilsAdapter.generateRandomBytes.mockResolvedValueOnce(salt);
+      cryptoUtilsAdapter.hash.mockResolvedValueOnce(passwordHash);
       cryptoUtilsAdapter.encrypt.mockResolvedValueOnce(encryptedSeed);
-      vi.spyOn(seedVault, 'storeSeed').mockResolvedValue(undefined);
+
+      vi.spyOn(seedVault, 'storeSeed').mockResolvedValueOnce(undefined);
 
       await seedVault.changePassword(oldPassword, newPassword);
 
       expect(seedVault.unlockVault).toHaveBeenCalledTimes(1);
       expect(seedVault.unlockVault).toHaveBeenCalledWith(oldPassword);
-      expect(seedVault.init).toHaveBeenCalledTimes(1);
-      expect(seedVault.init).toHaveBeenCalledWith(newPassword);
     });
 
     it('should throw an error if the old password is incorrect', async () => {
@@ -136,7 +121,6 @@ describe('SeedVault', () => {
       await expect(seedVault.changePassword(oldPassword, newPassword)).rejects.toThrow('Wrong password');
       expect(seedVault.unlockVault).toHaveBeenCalledTimes(1);
       expect(seedVault.unlockVault).toHaveBeenCalledWith(oldPassword);
-      expect(seedVault.init).not.toHaveBeenCalled();
       expect(seedVault.storeSeed).not.toHaveBeenCalled();
     });
   });
