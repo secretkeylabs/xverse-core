@@ -90,3 +90,5 @@ const mainnetClient = new OrdinalsServiceApi('Mainnet');
 
 export const getOrdinalsServiceApiClient = (network: NetworkType = 'Mainnet') =>
   network === 'Mainnet' ? mainnetClient : testnetClient;
+
+export * from './config';
