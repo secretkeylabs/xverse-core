@@ -121,6 +121,14 @@ export type TransactionOutput = {
   satributes: IOSatribute[];
 };
 
+export type TransactionPubKeyOutput = {
+  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  pubKeys: string[];
+  amount: number;
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
+};
+
 export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type'> & { type: 'fee' };
 
 export type TransactionScriptOutput = {
@@ -136,7 +144,7 @@ export type EnhancedInput = {
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
 };
-export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
+export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 
 export type PsbtSummary = {
   inputs: EnhancedInput[];
