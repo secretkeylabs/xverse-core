@@ -21,7 +21,13 @@ import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputT
 type ParsedOutputMetadata =
   | { address: string; script?: undefined; type?: undefined }
   | { address?: undefined; script: string[]; scriptHex: string; type?: undefined }
-  | { address?: undefined; script?: undefined; pubKeys: string[]; type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk' };
+  | {
+      address?: undefined;
+      script?: undefined;
+      pubKeys: string[];
+      type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
+      m: number;
+    };
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -107,13 +113,23 @@ export class EnhancedPsbt {
       return {
         type: 'pk',
         pubKeys: [hex.encode(outputScript.pubkey)],
+        m: 1,
       };
     }
 
-    if (outputScript.type === 'tr_ms' || outputScript.type === 'tr_ns' || outputScript.type === 'ms') {
+    if (outputScript.type === 'ms' || outputScript.type === 'tr_ms') {
       return {
         type: outputScript.type,
         pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.m,
+      };
+    }
+
+    if (outputScript.type === 'tr_ns') {
+      return {
+        type: outputScript.type,
+        pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.pubkeys.length,
       };
     }
 
@@ -249,6 +265,7 @@ export class EnhancedPsbt {
           amount: Number(amount),
           inscriptions,
           satributes,
+          m: outputMetadata.m,
         });
       }
 

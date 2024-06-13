@@ -127,6 +127,7 @@ export type TransactionPubKeyOutput = {
   amount: number;
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
+  m: number;
 };
 
 export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type'> & { type: 'fee' };
