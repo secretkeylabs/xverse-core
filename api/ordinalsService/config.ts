@@ -1,3 +1,4 @@
+// Runes Protocol defaults
 export const RUNE_DEFAULTS = {
   size: 546,
   divisibility: 0,
