@@ -8,6 +8,7 @@ import {
   NetworkType,
   Rune,
   RuneBalance,
+  SimplePriceResponse,
   runeTokenToFungibleToken,
 } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
@@ -179,6 +180,21 @@ class RunesApi {
       return undefined;
     }
 
+    return response.data;
+  }
+
+  /**
+   * get rune fiat rate data by runeId
+   * @param {string[]|string} runeIds - provided to get the fiat rates of supported tokens from coingecko
+   * @param {string} fiatCurrency
+   */
+  async getRuneFiatRatesByRuneIds(runeIds: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
+    const response = await this.clientBigNumber.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
+      params: {
+        currency: fiatCurrency,
+        runeIds,
+      },
+    });
     return response.data;
   }
 }
