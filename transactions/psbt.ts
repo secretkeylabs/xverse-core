@@ -79,7 +79,7 @@ export async function signPsbt(
   // decode raw tx
   let psbt: btc.Transaction;
   try {
-    psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
+    psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64), { allowUnknownInputs: true, allowUnknownOutputs: true });
   } catch (error) {
     throw new Error('Error decoding transaction');
   }
