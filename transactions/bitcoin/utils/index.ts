@@ -210,6 +210,7 @@ export const extractOutputInscriptionsAndSatributes = async (
 
 export const mapInputToEnhancedInput = async (
   input: ExtendedUtxo | ExtendedDummyUtxo,
+  walletWillSign: boolean,
   sigHash?: SigHash,
 ): Promise<EnhancedInput> => {
   const bundleData = await input.getBundleData();
@@ -241,5 +242,6 @@ export const mapInputToEnhancedInput = async (
     sigHash: sigHash,
     inscriptions,
     satributes,
+    walletWillSign,
   };
 };

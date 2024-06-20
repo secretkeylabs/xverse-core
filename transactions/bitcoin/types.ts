@@ -135,6 +135,7 @@ export type EnhancedInput = {
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
+  walletWillSign: boolean;
 };
 export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
 

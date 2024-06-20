@@ -156,7 +156,7 @@ export class EnhancedTransaction {
     const { address, ...feeOutput } = nonScriptOutputs.pop()!;
 
     const enhancedInputs: EnhancedInput[] = await Promise.all(
-      inputs.map((i) => mapInputToEnhancedInput(i, SigHash.ALL)),
+      inputs.map((i) => mapInputToEnhancedInput(i, true, SigHash.ALL)),
     );
 
     return {
