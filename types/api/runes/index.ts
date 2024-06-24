@@ -106,12 +106,13 @@ export type RuneBalance = {
   divisibility: number;
   symbol: string;
   inscriptionId: string | null;
+  id: string;
 };
 
 export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
   name: runeBalance.runeName,
   decimals: runeBalance.divisibility,
-  principal: runeBalance.runeName,
+  principal: runeBalance.id,
   balance: runeBalance.amount.toString(),
   total_sent: '',
   total_received: '',

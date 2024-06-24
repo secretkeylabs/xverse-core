@@ -95,7 +95,7 @@ export type TransactionSummary = {
 export type PSBTCompilationOptions = {
   ledgerTransport?: Transport;
   finalize?: boolean;
-  allowedSighash?: btc.SigHash[];
+  allowedSigHash?: btc.SigHash[];
 };
 
 export type IOInscription = {
@@ -144,6 +144,7 @@ export type EnhancedInput = {
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
+  walletWillSign: boolean;
 };
 export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 

@@ -193,15 +193,15 @@ describe('applySendBtcActionsAndFee', () => {
       },
       {
         address: paymentAddress,
-        amount: 5840,
+        amount: 5860,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(4160n);
+    expect(actualFee).toEqual(4140n);
     expect(transaction.inputsLength).toEqual(5);
     expect(transaction.outputsLength).toEqual(2);
     expect(transaction.getOutput(0).amount).toEqual(300000n);
-    expect(transaction.getOutput(1).amount).toEqual(5840n);
+    expect(transaction.getOutput(1).amount).toEqual(5860n);
   });
 
   it('Adds action outputs combined correctly', async () => {
@@ -258,17 +258,17 @@ describe('applySendBtcActionsAndFee', () => {
       },
       {
         address: paymentAddress,
-        amount: 5100,
+        amount: 5120,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(4900n);
+    expect(actualFee).toEqual(4880n);
     expect(transaction.inputsLength).toEqual(5);
     expect(transaction.outputsLength).toEqual(4);
     expect(transaction.getOutput(0).amount).toEqual(200000n);
     expect(transaction.getOutput(1).amount).toEqual(50000n);
     expect(transaction.getOutput(2).amount).toEqual(50000n);
-    expect(transaction.getOutput(3).amount).toEqual(5100n);
+    expect(transaction.getOutput(3).amount).toEqual(5120n);
   });
 
   it('Adds confirmed UTXOs only, if enough to cover costs', async () => {
@@ -280,14 +280,14 @@ describe('applySendBtcActionsAndFee', () => {
     expect(outputs).toEqual([
       {
         address: paymentAddress,
-        amount: 5840,
+        amount: 5860,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(4160n);
+    expect(actualFee).toEqual(4140n);
     expect(transaction.inputsLength).toEqual(5);
     expect(transaction.outputsLength).toEqual(2);
-    expect(transaction.getOutput(1).amount).toEqual(5840n);
+    expect(transaction.getOutput(1).amount).toEqual(5860n);
   });
 
   it('Does not add UTXO if it is already present in the txn', async () => {
@@ -304,14 +304,14 @@ describe('applySendBtcActionsAndFee', () => {
     expect(outputs).toEqual([
       {
         address: paymentAddress,
-        amount: 5840,
+        amount: 5860,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(4160n);
+    expect(actualFee).toEqual(4140n);
     expect(transaction.inputsLength).toEqual(5);
     expect(transaction.outputsLength).toEqual(2);
-    expect(transaction.getOutput(1).amount).toEqual(5840n);
+    expect(transaction.getOutput(1).amount).toEqual(5860n);
   });
 
   it('Adds specified UTXOs if specific ones are marked for forced include', async () => {
@@ -330,14 +330,14 @@ describe('applySendBtcActionsAndFee', () => {
     expect(outputs).toEqual([
       {
         address: paymentAddress,
-        amount: 37210,
+        amount: 37220,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(2790n);
+    expect(actualFee).toEqual(2780n);
     expect(transaction.inputsLength).toEqual(3);
     expect(transaction.outputsLength).toEqual(2);
-    expect(transaction.getOutput(1).amount).toEqual(37210n);
+    expect(transaction.getOutput(1).amount).toEqual(37220n);
   });
 
   it('Does not add specified UTXOs from forced include list if already in txn', async () => {
@@ -361,14 +361,14 @@ describe('applySendBtcActionsAndFee', () => {
     expect(outputs).toEqual([
       {
         address: paymentAddress,
-        amount: 37210,
+        amount: 37220,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(2790n);
+    expect(actualFee).toEqual(2780n);
     expect(transaction.inputsLength).toEqual(3);
     expect(transaction.outputsLength).toEqual(2);
-    expect(transaction.getOutput(1).amount).toEqual(37210n);
+    expect(transaction.getOutput(1).amount).toEqual(37220n);
   });
 
   it('Adds unconfirmed UTXOs if not enough confirmed to cover costs', async () => {
@@ -380,14 +380,14 @@ describe('applySendBtcActionsAndFee', () => {
     expect(outputs).toEqual([
       {
         address: paymentAddress,
-        amount: 25840,
+        amount: 25860,
         type: 'address',
       },
     ]);
-    expect(actualFee).toEqual(4160n);
+    expect(actualFee).toEqual(4140n);
     expect(transaction.inputsLength).toEqual(5);
     expect(transaction.outputsLength).toEqual(2);
-    expect(transaction.getOutput(1).amount).toEqual(25840n);
+    expect(transaction.getOutput(1).amount).toEqual(25860n);
   });
 
   it('Throws on enough unconfirmed funds but useUnconfirmed false', async () => {

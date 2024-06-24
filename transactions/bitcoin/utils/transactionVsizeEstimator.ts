@@ -158,11 +158,16 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
     } else if (inputType.txType !== 'segwit') script = inputScript;
   }
 
-  let weight = 160 + 4 * btc.VarBytes.encode(script).length;
+  let weight =
+    32 * 4 + // prev txn id
+    4 * 4 + // prev vout
+    4 * btc.VarBytes.encode(script).length + // script pubkey size
+    4 * 4; // sequence
   let hasWitnesses = false;
 
   if (witness) {
-    weight += btc.RawWitness.encode(witness).length;
+    const rawWitness = btc.RawWitness.encode(witness);
+    weight += rawWitness.length;
     hasWitnesses = true;
   }
 
@@ -189,28 +194,51 @@ type Options = {
   network?: NetworkType;
 };
 export const estimateVSize = (tx: btc.Transaction, options?: Options) => {
+  if (tx.isFinal) throw new Error('Transaction must not be finalized');
+
   const opts = options || {};
 
-  let baseWeight = 32;
-  for (let i = 0; i < tx.outputsLength; i++) {
-    const output = tx.getOutput(i);
-    const script = getOutputScript(output, opts);
-    baseWeight += 32 + 4 * btc.VarBytes.encode(script).length;
-  }
+  // To see where these values came from, go here
+  // https://learnmeabitcoin.com/technical/transaction/
+  let baseWeight =
+    (4 + // version
+      4) * // locktime
+    4; // weight is 4 times the size
 
-  baseWeight += 4 * btc.CompactSize.encode(BigInt(tx.outputsLength)).length;
+  // input count
+  baseWeight += 4 * btc.CompactSize.encode(BigInt(tx.inputsLength)).length;
 
+  // inputs
+  let txnHasWitnesses = false;
   for (let i = 0; i < tx.inputsLength; i++) {
     const input = tx.getInput(i);
 
     const { weight, hasWitnesses } = estimateInput(input, opts);
     baseWeight += weight;
-    if (hasWitnesses) {
-      baseWeight += 2;
-    }
+    txnHasWitnesses = txnHasWitnesses || hasWitnesses;
   }
 
-  baseWeight += 4 * btc.CompactSize.encode(BigInt(tx.inputsLength)).length;
+  if (txnHasWitnesses) {
+    // witness marker and flag - these are not multiplied by the weight factor
+    baseWeight += 1 + 1;
+  }
+
+  // output count
+  baseWeight += 4 * btc.CompactSize.encode(BigInt(tx.outputsLength)).length;
+
+  // outputs
+  for (let i = 0; i < tx.outputsLength; i++) {
+    const output = tx.getOutput(i);
+    const script = getOutputScript(output, opts);
+    const scriptLength = script.length;
+    const scriptLengthLength = btc.CompactSize.encode(BigInt(scriptLength)).length;
+
+    baseWeight +=
+      (8 + // amount
+        scriptLengthLength + // script pubkey size
+        scriptLength) * // script pubkey
+      4;
+  }
 
   return Math.ceil(baseWeight / 4);
 };

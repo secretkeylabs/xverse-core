@@ -2,13 +2,24 @@ import axios, { AxiosAdapter, AxiosInstance, AxiosResponse } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
 import {
   Artifact,
+  CancelOrderRequest,
+  CancelOrderResponse,
   Edict,
   EncodeResponse,
   FungibleToken,
+  GetRunesUtxosResponse,
   NetworkType,
   Rune,
   RuneBalance,
+  SimplePriceResponse,
+  RuneMarketInfo,
+  RuneSellRequest,
+  RuneSellResponse,
   runeTokenToFungibleToken,
+  SubmitCancelOrderRequest,
+  SubmitCancelOrderResponse,
+  SubmitRuneSellRequest,
+  SubmitRunesSellResponse,
 } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
 import { getXClientVersion } from '../../utils/xClientVersion';
@@ -179,6 +190,59 @@ class RunesApi {
       return undefined;
     }
 
+    return response.data;
+  }
+
+  async getRunesSellOrder(args: RuneSellRequest): Promise<RuneSellResponse> {
+    const response = await this.clientBigNumber.post<RuneSellResponse>('/v1/market/runes/create-sell-order', args);
+    return response.data;
+  }
+
+  async submitRunesSellOrder(args: SubmitRuneSellRequest): Promise<SubmitRunesSellResponse> {
+    const response = await this.clientBigNumber.post<SubmitRunesSellResponse>(
+      '/v1/market/runes/submit-sell-order',
+      args,
+    );
+    return response.data;
+  }
+
+  async cancelRunesSellOrder(args: CancelOrderRequest): Promise<CancelOrderResponse> {
+    const response = await this.clientBigNumber.post<CancelOrderResponse>('/v1/market/runes/cancel-sell-order', args);
+    return response.data;
+  }
+
+  async submitCancelRunesSellOrder(args: SubmitCancelOrderRequest): Promise<SubmitCancelOrderResponse> {
+    const response = await this.clientBigNumber.post<SubmitCancelOrderResponse>(
+      '/v1/market/runes/submit-cancel-order',
+      args,
+    );
+    return response.data;
+  }
+
+  async getRunesUtxos(params: { address: string; rune: string }): Promise<GetRunesUtxosResponse> {
+    const response = await this.clientBigNumber.get<GetRunesUtxosResponse>(
+      `/v1/market/address/${params.address}/rune/${params.rune}/utxos`,
+    );
+    return response.data;
+  }
+
+  async getRuneMarketData(rune: string): Promise<RuneMarketInfo> {
+    const response = await this.clientBigNumber.get(`/v1/market/runes/${rune}/market-data`);
+    return response.data;
+  }
+
+  /**
+   * get rune fiat rate data by runeId
+   * @param {string[]|string} runeIds - provided to get the fiat rates of supported tokens from coingecko
+   * @param {string} fiatCurrency
+   */
+  async getRuneFiatRatesByRuneIds(runeIds: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
+    const response = await this.clientBigNumber.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
+      params: {
+        currency: fiatCurrency,
+        runeIds,
+      },
+    });
     return response.data;
   }
 }

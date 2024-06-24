@@ -36,6 +36,7 @@ export class EnhancedPsbt {
 
   private readonly _inputsToSign?: InputToSign[];
 
+  // TODO: Try and make this non-nullable by computing it in the constructor
   private readonly _inputsToSignMap?: Record<number, { address: string; sigHash?: number }[]>;
 
   private readonly _isSigHashAll?: boolean;
@@ -49,6 +50,7 @@ export class EnhancedPsbt {
     this._psbt = base64.decode(psbtBase64);
 
     this._inputsToSign = inputsToSign;
+    const txn = btc.Transaction.fromPSBT(this._psbt);
 
     if (inputsToSign) {
       this._inputsToSignMap = {};
@@ -64,21 +66,22 @@ export class EnhancedPsbt {
 
           this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
 
-          if (!input.sigHash || (input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+          const txnInput = txn.getInput(inputIndex);
+          const sigHashToCheck = txnInput.sighashType ?? input.sigHash ?? btc.SigHash.DEFAULT;
+
+          // we need to do check for single first as it's value is 3 while none is 2 and all is 1
+          if ((sigHashToCheck & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+            hasSigHashSingle = true;
             continue;
           }
 
-          if (input.sigHash === btc.SigHash.DEFAULT || (input.sigHash & btc.SigHash.ALL) === btc.SigHash.ALL) {
+          if (sigHashToCheck === btc.SigHash.DEFAULT || (sigHashToCheck & btc.SigHash.ALL) === btc.SigHash.ALL) {
             isSigHashAll = true;
             continue;
           }
 
-          if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
+          if ((sigHashToCheck & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
-          }
-
-          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
-            hasSigHashSingle = true;
           }
         }
       }
@@ -186,20 +189,26 @@ export class EnhancedPsbt {
 
       inputTotal += inputExtendedUtxo.utxo.value || 0;
 
-      // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
-      // don't have a single before we do the bitwise or for all and none
-      const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
+      if (!this._inputsToSignMap || inputIndex in this._inputsToSignMap) {
+        // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
+        // don't have a single before we do the bitwise or for all and none
+        const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
 
-      isSigHashAll =
-        isSigHashAll ||
-        (!isSigHashSingle &&
-          (sigHash === undefined ||
-            sigHash === btc.SigHash.DEFAULT ||
-            (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
+        isSigHashAll =
+          // if already true, we don't need to check again
+          isSigHashAll ||
+          // if we have a single, we can't have all as their bit-wise values overlap
+          (!isSigHashSingle &&
+            // if the sigHash is undefined, it will be signed as ALL/DEFAULT, so mark it as ALL
+            (sigHash === undefined ||
+              // if the sigHash is ALL or DEFAULT(for taproot), we can mark it as ALL
+              sigHash === btc.SigHash.DEFAULT ||
+              (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
 
-      hasSigHashNone =
-        hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
-      hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
+        hasSigHashNone =
+          hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
+        hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
+      }
     }
 
     return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
@@ -291,7 +300,13 @@ export class EnhancedPsbt {
     }
 
     const enhancedInputs: EnhancedInput[] = await Promise.all(
-      inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
+      inputs.map((input, idx) =>
+        mapInputToEnhancedInput(
+          input.extendedUtxo,
+          !this._inputsToSignMap || idx in this._inputsToSignMap,
+          input.sigHash,
+        ),
+      ),
     );
 
     const runesClient = getRunesClient(this._context.network);
