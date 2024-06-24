@@ -2,7 +2,7 @@ import { ORDINALS_SERVICE_BASE_URL } from '../../constant';
 import { NetworkType } from '../../types';
 import { CreateEtchOrderRequest, CreateMintOrderRequest, CreateOrderResponse } from '../../types/api/ordinalsService';
 
-import axios, { AxiosError, AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 export class OrdinalsServiceApi {
   client: AxiosInstance;
@@ -13,75 +13,32 @@ export class OrdinalsServiceApi {
     });
   }
 
-  private parseError = (error: AxiosError) => {
-    return {
-      code: error.response?.status || 500,
-      message: error.response ? JSON.stringify(error.response.data) : '',
-    };
-  };
-
   createMintOrder = async (mintOrderParams: CreateMintOrderRequest) => {
-    try {
-      const response = await this.client.post<CreateOrderResponse>('/runes/mint/orders', {
-        ...mintOrderParams,
-      });
-      return {
-        data: response.data,
-      };
-    } catch (error) {
-      const err = error as AxiosError;
-      return {
-        error: this.parseError(err),
-      };
-    }
+    const response = await this.client.post<CreateOrderResponse>('/runes/mint/orders', {
+      ...mintOrderParams,
+    });
+    return response.data;
   };
 
   createEtchOrder = async (etchOrderParams: CreateEtchOrderRequest) => {
-    try {
-      const response = await this.client.post<CreateOrderResponse>('/runes/etch/orders', {
-        ...etchOrderParams,
-      });
-      return {
-        data: response.data,
-      };
-    } catch (error) {
-      const err = error as AxiosError;
-      return {
-        error: this.parseError(err),
-      };
-    }
+    const response = await this.client.post<CreateOrderResponse>('/runes/etch/orders', {
+      ...etchOrderParams,
+    });
+    return response.data;
   };
 
   executeMint = async (orderId: string, fundTransactionId: string) => {
-    try {
-      const response = await this.client.post(`/runes/mint/orders/${orderId}/execute`, {
-        fundTransactionId,
-      });
-      return {
-        data: response.data,
-      };
-    } catch (error) {
-      const err = error as AxiosError;
-      return {
-        error: this.parseError(err),
-      };
-    }
+    const response = await this.client.post(`/runes/mint/orders/${orderId}/execute`, {
+      fundTransactionId,
+    });
+    return response.data;
   };
 
   executeEtch = async (orderId: string, fundTransactionId: string) => {
-    try {
-      const response = await this.client.post(`/runes/etch/orders/${orderId}/execute`, {
-        fundTransactionId,
-      });
-      return {
-        data: response.data,
-      };
-    } catch (error) {
-      const err = error as AxiosError;
-      return {
-        error: this.parseError(err),
-      };
-    }
+    const response = await this.client.post(`/runes/etch/orders/${orderId}/execute`, {
+      fundTransactionId,
+    });
+    return response.data;
   };
 }
 
