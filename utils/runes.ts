@@ -81,7 +81,7 @@ const extractRuneInputs = async (context: TransactionContext, summary: Transacti
   return inputRuneData.filter((input) => input.hasRunes);
 };
 
-const parseSummaryWithoutRuneScript = async (
+const parseSummaryWithBurnRuneScript = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
@@ -555,7 +555,7 @@ export const parseSummaryForRunes = async (
   network: NetworkType,
 ): Promise<RuneSummary> => {
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
-    return parseSummaryWithoutRuneScript(context, summary, network);
+    return parseSummaryWithBurnRuneScript(context, summary, network);
   }
 
   return parseSummaryWithRuneScript(context, summary, network);
