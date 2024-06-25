@@ -15,10 +15,6 @@ export type RuneBase = {
 type Mint = RuneBase & {
   runeIsOpen: boolean;
   runeIsMintable: boolean;
-  // only used for ordinals service mints
-  repeats?: number;
-  runeSize?: number;
-  destinationAddress?: string;
 };
 
 type Transfer = RuneBase & {
@@ -34,8 +30,6 @@ type Receipt = RuneBase & {
 
 type Burn = RuneBase & { sourceAddresses: string[] };
 
-type Etch = Omit<CreateEtchOrderRequest, 'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'>;
-
 export type RuneSummary = {
   inputsHadRunes: boolean;
   // can only do 1 mint per txn
@@ -43,9 +37,33 @@ export type RuneSummary = {
   transfers: Transfer[];
   receipts: Receipt[];
   burns: Burn[];
-  // only used for ordinals service etches
-  etch?: Etch;
 };
+
+export type EtchActionDetails = Omit<
+  CreateEtchOrderRequest,
+  'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'
+>;
+
+export type MintActionDetails = Mint & {
+  repeats: number;
+  runeSize: number;
+  destinationAddress: string;
+};
+
+type Override<Type, NewType> = Omit<Type, keyof NewType> & NewType;
+
+/**
+ * RuneSummaryActions is a RuneSummary with the mint and etch properties extended
+ *  with ordinals service specific properties.
+ * for usage with the tx confirmations and etch/mint screens
+ */
+export type RuneSummaryActions = Override<
+  RuneSummary,
+  {
+    mint: MintActionDetails;
+    etch: EtchActionDetails;
+  }
+>;
 
 const getSpacedName = (name: string, spacerRaw: bigint | BigNumber): string => {
   const spacer = BigInt(spacerRaw.toString(10));
@@ -89,7 +107,7 @@ const extractRuneInputs = async (context: TransactionContext, summary: Transacti
   return inputRuneData.filter((input) => input.hasRunes);
 };
 
-const parseSummaryWithBurnRuneScript = async (
+const parseSummaryWithoutRuneScript = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
@@ -563,7 +581,7 @@ export const parseSummaryForRunes = async (
   network: NetworkType,
 ): Promise<RuneSummary> => {
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
-    return parseSummaryWithBurnRuneScript(context, summary, network);
+    return parseSummaryWithoutRuneScript(context, summary, network);
   }
 
   return parseSummaryWithRuneScript(context, summary, network);
