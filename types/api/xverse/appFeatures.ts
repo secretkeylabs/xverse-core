@@ -1,6 +1,6 @@
 import { NetworkType } from '../../network';
 
-export type FeatureId = 'RUNES_SUPPORT' | 'SWAPS';
+export type FeatureId = 'RUNES_SUPPORT' | 'SWAPS' | 'RUNES_LISTING';
 
 export type AppFeaturesContext = {
   network: NetworkType;
