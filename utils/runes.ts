@@ -1,7 +1,7 @@
 import { getRunesClient } from '../api';
 import { TransactionContext } from '../transactions/bitcoin';
 import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
-import { CreateEtchOrderRequest, NetworkType } from '../types';
+import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
@@ -49,8 +49,6 @@ export type MintActionDetails = Mint & {
   runeSize: number;
   destinationAddress: string;
 };
-
-type Override<Type, NewType> = Omit<Type, keyof NewType> & NewType;
 
 /**
  * RuneSummaryActions is a RuneSummary with the mint and etch properties extended
