@@ -42,10 +42,13 @@ export class OrdinalsServiceApi {
   };
 }
 
-const testnetClient = new OrdinalsServiceApi('Testnet');
-const mainnetClient = new OrdinalsServiceApi('Mainnet');
+const apiClients: Partial<Record<NetworkType, OrdinalsServiceApi>> = {};
 
-export const getOrdinalsServiceApiClient = (network: NetworkType = 'Mainnet') =>
-  network === 'Mainnet' ? mainnetClient : testnetClient;
+export const getOrdinalsServiceApiClient = (network: NetworkType): OrdinalsServiceApi => {
+  if (!apiClients[network]) {
+    apiClients[network] = new OrdinalsServiceApi(network);
+  }
+  return apiClients[network] as OrdinalsServiceApi;
+};
 
 export * from './config';
