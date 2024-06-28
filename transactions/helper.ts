@@ -18,11 +18,12 @@ import {
   PostConditionType,
   StacksMessageType,
   StacksTransaction,
+  setNonce,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { fetchAppInfo, fetchStxPendingTxData, getCoinsInfo, getContractInterface } from '../api';
+import { fetchStxPendingTxData, getContractInterface, getXverseApiClient } from '../api';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
-import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce, setNonce } from './stx';
+import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce } from './stx';
 import { Coin, FeesMultipliers, PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import { FungibleToken } from '../types';
 
@@ -148,7 +149,10 @@ export const createContractCallPromises = async (
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
   // Stacks isn't setup for testnet, so we default to mainnet
-  const coinsMetaDataPromise: Coin[] | null = await getCoinsInfo('Mainnet', ftContactAddresses, 'USD');
+  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getCoinsInfo(
+    ftContactAddresses,
+    'USD',
+  );
 
   const tx = {
     publicKey: stxPublicKey,
@@ -164,13 +168,12 @@ export const createContractCallPromises = async (
   };
 
   const unSignedContractCall = await generateUnsignedContractCall(tx);
-  const { fee } = unSignedContractCall.auth.spendingCondition;
 
   const checkForPostConditionMessage = payload?.postConditionMode === 2 && payload?.postConditions?.values.length <= 0;
   const showPostConditionMessage = !!checkForPostConditionMessage;
 
   const newNonce = getNewNonce(pendingTransactions, getNonce(unSignedContractCall));
-  setNonce(unSignedContractCall, newNonce);
+  setNonce(unSignedContractCall.auth, newNonce);
 
   const contractInterfacePromise = getContractInterface(payload.contractAddress, payload.contractName, network);
 
@@ -226,7 +229,7 @@ export const createDeployContractRequest = async (
 };
 
 export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction, network: StacksNetwork) => {
-  const feeMultipliers = await fetchAppInfo(network.isMainnet() ? 'Mainnet' : 'Testnet');
+  const feeMultipliers = await getXverseApiClient(network.isMainnet() ? 'Mainnet' : 'Testnet').fetchAppInfo();
   const fee = getFee(unsignedTx.auth);
   if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
     unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
