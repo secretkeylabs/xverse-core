@@ -1,11 +1,10 @@
 import BigNumber from 'bignumber.js';
 
-import { getOrdinalIdsFromUtxo } from '../api/ordinals';
 import xverseInscribeApi from '../api/xverseInscribe';
-import { NetworkType, UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
-import { getBtcPrivateKey } from '../wallet';
-import { generateSignedBtcTransaction, selectUtxosForSend } from './btc';
+import { ActionType, EnhancedTransaction, ExtendedUtxo, TransactionContext } from './bitcoin';
+import { Action } from './bitcoin/types';
+import { SignOptions } from './brc20';
 
 const MINIMUM_INSCRIPTION_VALUE = 546;
 const MAX_CONTENT_LENGTH = 400e3; // 400kb is the max that miners will mine
@@ -20,10 +19,12 @@ export enum InscriptionErrorCode {
   NO_NON_ORDINAL_UTXOS = 'NO_NON_ORDINAL_UTXOS',
   FAILED_TO_FINALIZE = 'FAILED_TO_FINALIZE',
   SERVER_ERROR = 'SERVER_ERROR',
+  USER_REJECTED = 'USER_REJECTED',
+  DEVICE_LOCKED = 'DEVICE_LOCKED',
+  GENERAL_LEDGER_ERROR = 'GENERAL_LEDGER_ERROR',
 }
 
 type EstimateProps = {
-  addressUtxos: UTXO[];
   content: string;
   contentType: string;
   revealAddress: string;
@@ -31,7 +32,6 @@ type EstimateProps = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
-  network: NetworkType;
   repetitions?: number;
 };
 
@@ -48,11 +48,6 @@ type EstimateResult = {
 };
 
 type ExecuteProps = {
-  getSeedPhrase: () => Promise<string>;
-  accountIndex: number;
-  changeAddress: string;
-  network: NetworkType;
-  addressUtxos: UTXO[];
   contentString?: string;
   contentBase64?: string;
   contentType: string;
@@ -64,9 +59,11 @@ type ExecuteProps = {
   repetitions?: number;
 };
 
-export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): Promise<EstimateResult> {
+export async function inscriptionMintFeeEstimate(
+  estimateProps: EstimateProps,
+  context: TransactionContext,
+): Promise<EstimateResult> {
   const {
-    addressUtxos,
     content,
     contentType,
     revealAddress,
@@ -74,7 +71,6 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     finalInscriptionValue,
     serviceFee,
     serviceFeeAddress,
-    network,
     repetitions,
   } = estimateProps;
 
@@ -98,7 +94,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
   }
 
   const dummyAddress =
-    network === 'Mainnet'
+    context.network === 'Mainnet'
       ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
       : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
@@ -115,7 +111,7 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
     chainFee: revealChainFee,
     serviceFee: revealServiceFee,
     totalInscriptionValue,
-  } = await xverseInscribeApi.getInscriptionFeeEstimate(network, {
+  } = await xverseInscribeApi.getInscriptionFeeEstimate(context.network, {
     contentLength: content.length,
     contentType,
     revealAddress,
@@ -126,67 +122,69 @@ export async function inscriptionMintFeeEstimate(estimateProps: EstimateProps): 
 
   const commitValue = new BigNumber(totalInscriptionValue).plus(revealChainFee).plus(revealServiceFee);
 
-  const recipients = [{ address: revealAddress, amountSats: new BigNumber(commitValue) }];
+  const actions: Action[] = [
+    {
+      type: ActionType.SEND_BTC,
+      toAddress: dummyAddress,
+      amount: BigInt(commitValue.toString()),
+      combinable: true,
+    },
+  ];
 
   if (serviceFee && serviceFeeAddress) {
-    recipients.push({
-      address: serviceFeeAddress,
-      amountSats: new BigNumber(serviceFee),
+    actions.push({
+      type: ActionType.SEND_BTC,
+      toAddress: serviceFeeAddress,
+      amount: BigInt(serviceFee.toString()),
+      combinable: true,
     });
   }
 
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress: dummyAddress,
-    recipients,
-    availableUtxos: addressUtxos,
-    feeRate,
-    network,
-    useUnconfirmed: false,
-  });
+  const fundTransaction = new EnhancedTransaction(context, actions, feeRate);
 
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
+  try {
+    const fundSummary = await fundTransaction.getSummary();
+
+    const commitChainFees = fundSummary.fee;
+
+    return {
+      commitValue: commitValue
+        .plus(serviceFee ?? 0)
+        .plus(commitChainFees.toString())
+        .toNumber(),
+      valueBreakdown: {
+        commitChainFee: Number(commitChainFees),
+        revealChainFee,
+        revealServiceFee,
+        inscriptionValue,
+        totalInscriptionValue,
+        externalServiceFee: serviceFee,
+      },
+    };
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('Insufficient funds')) {
+      throw new CoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
+    }
+    throw e;
   }
-
-  const commitChainFees = bestUtxoData.fee;
-
-  return {
-    commitValue: commitValue
-      .plus(commitChainFees)
-      .plus(serviceFee ?? 0)
-      .toNumber(),
-    valueBreakdown: {
-      commitChainFee: commitChainFees,
-      revealChainFee,
-      revealServiceFee,
-      inscriptionValue,
-      totalInscriptionValue,
-      externalServiceFee: serviceFee,
-    },
-  };
 }
 
-export async function inscriptionMintExecute(executeProps: ExecuteProps): Promise<string> {
+export async function inscriptionMintExecute(
+  executeProps: ExecuteProps,
+  context: TransactionContext,
+  options?: SignOptions,
+): Promise<string> {
   const {
-    getSeedPhrase,
-    accountIndex,
-    addressUtxos,
-    changeAddress,
     contentString,
     contentBase64,
     contentType,
     revealAddress,
     feeRate,
-    network,
     serviceFee,
     serviceFeeAddress,
     finalInscriptionValue,
     repetitions,
   } = executeProps;
-
-  if (!addressUtxos.length) {
-    throw new CoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
-  }
 
   if (feeRate <= 0) {
     throw new CoreError('Fee rate should be a positive number', InscriptionErrorCode.INVALID_FEE_RATE);
@@ -215,17 +213,40 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     );
   }
 
-  const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
+  const paymentUtxos = await context.paymentAddress.getUtxos();
+  paymentUtxos.sort((a, b) => b.utxo.value - a.utxo.value);
 
-  const privateKey = await getBtcPrivateKey({
-    seedPhrase: await getSeedPhrase(),
-    index: BigInt(accountIndex),
-    network,
-  });
+  if (paymentUtxos.length === 0) {
+    throw new CoreError('No available UTXOs', InscriptionErrorCode.INSUFFICIENT_FUNDS);
+  }
+
+  let nonInscribedUtxo: ExtendedUtxo | undefined;
+
+  for (const utxo of paymentUtxos) {
+    const bundleData = await utxo.getBundleData();
+
+    if (
+      bundleData?.block_height &&
+      (bundleData.sat_ranges.length === 0 ||
+        bundleData.sat_ranges.every((rng) => rng.offset !== 0 || rng.inscriptions.length === 0))
+    ) {
+      nonInscribedUtxo = utxo;
+      break;
+    }
+  }
+
+  if (!nonInscribedUtxo) {
+    throw new CoreError(
+      'Must have at least one non-inscribed UTXO for inscription',
+      InscriptionErrorCode.NO_NON_ORDINAL_UTXOS,
+    );
+  }
+
+  const inscriptionValue = finalInscriptionValue ?? MINIMUM_INSCRIPTION_VALUE;
 
   const contentField = contentBase64 ? { contentBase64 } : { contentString: contentString as string };
 
-  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder(network, {
+  const { commitAddress, commitValue } = await xverseInscribeApi.createInscriptionOrder(context.network, {
     ...contentField,
     contentType,
     feeRate,
@@ -236,64 +257,52 @@ export async function inscriptionMintExecute(executeProps: ExecuteProps): Promis
     appServiceFeeAddress: serviceFeeAddress,
   });
 
-  const recipients = [{ address: commitAddress, amountSats: new BigNumber(commitValue) }];
+  const actions: Action[] = [
+    {
+      type: ActionType.SEND_BTC,
+      toAddress: commitAddress,
+      amount: BigInt(commitValue),
+      combinable: true,
+    },
+  ];
 
   if (serviceFee && serviceFeeAddress) {
-    recipients.push({
-      address: serviceFeeAddress,
-      amountSats: new BigNumber(serviceFee),
+    actions.push({
+      type: ActionType.SEND_BTC,
+      toAddress: serviceFeeAddress,
+      amount: BigInt(serviceFee),
+      combinable: true,
     });
   }
 
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress,
-    recipients,
-    availableUtxos: addressUtxos,
-    feeRate,
-    network,
-    useUnconfirmed: false,
+  const fundTransaction = new EnhancedTransaction(context, actions, feeRate, {
+    forceIncludeOutpointList: [nonInscribedUtxo.outpoint],
   });
 
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
-  }
+  let commitHex: string;
 
-  const selectedOrdinalUtxos = [];
-  const selectedNonOrdinalUtxos = [];
-
-  for (const utxo of bestUtxoData.selectedUtxos) {
-    const ordinalIds = await getOrdinalIdsFromUtxo(network, utxo);
-    if (ordinalIds.length > 0) {
-      selectedOrdinalUtxos.push(utxo);
-    } else {
-      selectedNonOrdinalUtxos.push(utxo);
+  try {
+    const commitTransaction = await fundTransaction.getTransactionHexAndId(options);
+    commitHex = commitTransaction.hex;
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('Insufficient funds')) {
+      throw new CoreError('Not enough funds at selected fee rate', InscriptionErrorCode.INSUFFICIENT_FUNDS);
     }
+    if (options?.ledgerTransport && e instanceof Error && e.message.includes('denied by the user')) {
+      throw new CoreError('User rejected transaction', InscriptionErrorCode.USER_REJECTED);
+    }
+    if (e instanceof Error && e.name === 'LockedDeviceError') {
+      throw new CoreError('Ledger device locked', InscriptionErrorCode.DEVICE_LOCKED);
+    }
+    if (e instanceof Error && e.name === 'TransportStatusError') {
+      throw new CoreError('Ledger error', InscriptionErrorCode.GENERAL_LEDGER_ERROR);
+    }
+    throw e;
   }
 
-  if (selectedNonOrdinalUtxos.length === 0) {
-    throw new CoreError(
-      'Must have at least one non-inscribed UTXO for inscription',
-      InscriptionErrorCode.NO_NON_ORDINAL_UTXOS,
-    );
-  }
-
-  const commitChainFees = bestUtxoData.fee;
-  const satsToSend = new BigNumber(commitValue).plus(serviceFee ?? 0);
-
-  const commitTransaction = await generateSignedBtcTransaction(
-    privateKey,
-    [...selectedNonOrdinalUtxos, ...selectedOrdinalUtxos],
-    satsToSend,
-    recipients,
-    changeAddress,
-    new BigNumber(commitChainFees),
-    network,
-    false,
-  );
-
-  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder(network, {
+  const { revealTransactionId } = await xverseInscribeApi.executeInscriptionOrder(context.network, {
     commitAddress,
-    commitTransactionHex: commitTransaction.hex,
+    commitTransactionHex: commitHex,
   });
 
   return revealTransactionId;

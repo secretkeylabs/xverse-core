@@ -24,7 +24,8 @@ export type SupportedCurrency =
   | 'GBP'
   | 'BRL'
   | 'RUB'
-  | 'CHF';
+  | 'CHF'
+  | 'AUD';
 
 export const currencySymbolMap: Record<SupportedCurrency, string> = {
   USD: '$',
@@ -40,4 +41,5 @@ export const currencySymbolMap: Record<SupportedCurrency, string> = {
   BRL: 'R$',
   RUB: '₽',
   CHF: '₣',
+  AUD: 'AU$',
 };

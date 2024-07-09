@@ -105,12 +105,13 @@ class XverseApi {
    * get rune fiat rate data
    * @param runeNames provided to get the fiat rates of supported tokens from coingecko
    * @param fiatCurrency
+   * @deprecated use getRuneFiatRatesByRuneIds instead
    */
-  async getRuneFiatRates(runeNames: string[], fiatCurrency: string): Promise<SimplePriceResponse> {
+  async getRuneFiatRates(runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
     const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
       params: {
         currency: fiatCurrency,
-        runeNames: runeNames,
+        runeNames,
       },
     });
     return response.data;
@@ -123,12 +124,12 @@ class XverseApi {
    */
   async getRuneTxHistory(
     address: string,
-    runeId: string,
+    runeName: string,
     offset: number,
     limit: number,
   ): Promise<APIGetRunesActivityForAddressResponse> {
     const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
-      `/v1/address/${address}/rune/${runeId}?offset=${offset}&limit=${limit}`,
+      `/v1/address/${address}/rune/${runeName}?offset=${offset}&limit=${limit}`,
     );
     return response.data;
   }
@@ -227,13 +228,13 @@ class XverseApi {
     return response.data;
   }
 
-  async getAppFeatures(context: Partial<AppFeaturesContext>) {
+  async getAppFeatures(context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) {
     const response = await this.client.post<
       AppFeaturesResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
       AxiosResponse<AppFeaturesResponse, any>,
       AppFeaturesBody
-    >('/v1/app-features', { context: { ...context, network: this.network } });
+    >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
   }
 }

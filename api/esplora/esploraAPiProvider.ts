@@ -1,17 +1,15 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_TESTNET } from '../../constant';
+import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_SIGNET, BTC_BASE_URI_TESTNET } from '../../constant';
 import {
-  BtcAddressMempool,
-  RecommendedFeeResponse,
-  TransactionOutspend,
-  UTXO,
   Address,
   BtcAddressBalanceResponse,
+  BtcAddressMempool,
   BtcTransactionBroadcastResponse,
   EsploraTransaction,
+  NetworkType,
+  TransactionOutspend,
+  UTXO,
 } from '../../types';
-import { NetworkType } from '../../types';
-import { BitcoinApiProvider } from './types';
 
 export interface EsploraApiProviderOptions {
   network: NetworkType;
@@ -19,7 +17,7 @@ export interface EsploraApiProviderOptions {
   fallbackUrl?: string;
 }
 
-export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
+export class BitcoinEsploraApiProvider {
   bitcoinApi: AxiosInstance;
 
   fallbackBitcoinApi?: AxiosInstance;
@@ -28,7 +26,23 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
 
   constructor(options: EsploraApiProviderOptions) {
     const { url, network, fallbackUrl } = options;
-    const baseURL = url || (network === 'Mainnet' ? BTC_BASE_URI_MAINNET : BTC_BASE_URI_TESTNET);
+    let baseURL = url;
+
+    if (!baseURL) {
+      switch (network) {
+        case 'Mainnet':
+          baseURL = BTC_BASE_URI_MAINNET;
+          break;
+        case 'Testnet':
+          baseURL = BTC_BASE_URI_TESTNET;
+          break;
+        case 'Signet':
+          baseURL = BTC_BASE_URI_SIGNET;
+          break;
+        default:
+          throw new Error('Invalid network');
+      }
+    }
     const axiosConfig: AxiosRequestConfig = { baseURL };
 
     this._network = network;
@@ -44,34 +58,36 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
             return Promise.reject(error);
           }
 
-          // if the request times out, we retry on the fallbackBitcoinApi
-          if (error?.code === 'ECONNABORTED') {
+          const requestTimedOut = error?.code === 'ECONNABORTED';
+          const serverError = error?.response?.status >= 500;
+          const addressHasTooManyUtxos =
+            error?.response?.status === 400 &&
+            typeof error.response.data === 'string' &&
+            error.response.data.includes('Too many unspent transaction outputs');
+
+          if (requestTimedOut || serverError || addressHasTooManyUtxos) {
             return this.fallbackBitcoinApi.request({
               ...error.config,
               baseURL: fallbackUrl,
             });
           }
 
-          // if an address has > 500 UTXOs, mempool.space returns a 400 error,
-          // so we retry on the fallbackBitcoinApi
-          if (error?.response?.status >= 400) {
-            return this.fallbackBitcoinApi.request({
-              ...error.config,
-              baseURL: fallbackUrl,
-            });
-          }
           return Promise.reject(error);
         },
       );
     }
   }
 
-  async httpGet<T = any>(url: string, params: any = {}): Promise<T> {
-    const response = await this.bitcoinApi.get<T>(url, { params });
+  private async httpGet<T>(
+    url: string,
+    params: unknown = {},
+    reqConfig: Omit<AxiosRequestConfig, 'params'> = {},
+  ): Promise<T> {
+    const response = await this.bitcoinApi.get<T>(url, { ...reqConfig, params });
     return response.data;
   }
 
-  async httpPost<T = any>(url: string, data: any): Promise<T> {
+  private async httpPost<T>(url: string, data: unknown): Promise<T> {
     const response = await this.bitcoinApi.post(url, data);
     return response.data;
   }
@@ -121,11 +137,16 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
   }
 
   async getTransaction(txid: string): Promise<EsploraTransaction> {
+    // TODO: 404 return undefined
     return this.httpGet<EsploraTransaction>(`/tx/${txid}`);
   }
 
-  async getTransactionHex(txid: string): Promise<string> {
-    return this.httpGet<string>(`/tx/${txid}/hex`);
+  async getTransactionHex(txid: string): Promise<string | undefined> {
+    const response = await this.bitcoinApi.get<string>(`/tx/${txid}/hex`, {
+      validateStatus: (status) => status >= 200 && (status < 300 || status === 404),
+    });
+    if (response.status === 404) return undefined;
+    return response.data;
   }
 
   async getAddressMempoolTransactions(address: string): Promise<BtcAddressMempool[]> {
@@ -142,19 +163,8 @@ export class BitcoinEsploraApiProvider implements BitcoinApiProvider {
   }
 
   async getTransactionOutspends(txid: string): Promise<TransactionOutspend[]> {
+    // TODO: 404 return undefined
     return this.httpGet<TransactionOutspend[]>(`/tx/${txid}/outspends`);
-  }
-
-  /**
-   * @deprecated use mempoolApi.getRecommendedFees instead
-   */
-  async getRecommendedFees(): Promise<RecommendedFeeResponse> {
-    // !Note: This is not an esplora endpoint, it is a mempool.space endpoint
-    // TODO: make sure nothign is using this and remove it from here. It exists in the mempool api file.
-    const { data } = await axios.get<RecommendedFeeResponse>(
-      `https://mempool.space/${this._network === 'Mainnet' ? '' : 'testnet/'}api/v1/fees/recommended`,
-    );
-    return data;
   }
 
   async getLatestBlockHeight(): Promise<number> {

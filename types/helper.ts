@@ -6,3 +6,5 @@ export function hexToString(hex: string): string {
   str = str.replace(/\0/g, '');
   return str.toString().trim();
 }
+
+export type Override<Type, NewType> = Omit<Type, keyof NewType> & NewType;

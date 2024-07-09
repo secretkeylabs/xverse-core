@@ -1,7 +1,7 @@
 import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { BigNumber } from 'bignumber.js';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { txPayloadToRequest } from '../../connect';
 import { microstacksToStx } from '../../currency';
 import {
@@ -10,7 +10,37 @@ import {
   generateUnsignedStxTokenTransferTransaction,
 } from '../../transactions';
 
+const mocked = vi.hoisted(() => ({
+  estimateTransaction: vi.fn(() => [
+    { fee_rate: 30.004015807209136, fee: 180 },
+    { fee_rate: 30.004782072774063, fee: 180 },
+    { fee_rate: 30.00478207316422, fee: 180 },
+  ]),
+  estimateContractDeploy: vi.fn(() => BigInt('581')),
+  getCoinsInfo: vi.fn(() => null),
+  fetchStxPendingTxData: vi.fn(() => ({ pendingTransactions: [] })),
+  getContractInterface: vi.fn(() => null),
+}));
+vi.mock('@stacks/transactions', async () => ({
+  ...(await vi.importActual('@stacks/transactions')),
+  estimateTransaction: mocked.estimateTransaction,
+  estimateContractDeploy: mocked.estimateContractDeploy,
+}));
+vi.mock('../../api/xverse', () => ({
+  getXverseApiClient: () => ({
+    getCoinsInfo: mocked.getCoinsInfo,
+  }),
+}));
+vi.mock('../../api/stacks', async () => ({
+  fetchStxPendingTxData: mocked.fetchStxPendingTxData,
+  getContractInterface: mocked.getContractInterface,
+}));
+
 describe('txPayloadToRequest', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should convert TokenTransfer payload to TransactionPayload', async () => {
     // Mock data
     const mockTokenTransferPayload = {
@@ -32,10 +62,9 @@ describe('txPayloadToRequest', () => {
       mockTokenTransferPayload.publicKey,
       new StacksTestnet(),
     );
+    expect(mocked.estimateTransaction).toBeCalledTimes(1);
 
     const result = txPayloadToRequest(unsignedSendStxTx);
-
-    expect(result).toBeDefined();
     expect(result).toEqual(
       expect.objectContaining({
         amount: microstacksToStx(new BigNumber(mockTokenTransferPayload.amount)).toString(),
@@ -66,10 +95,9 @@ describe('txPayloadToRequest', () => {
       pendingTxs: [],
       network: new StacksTestnet(),
     });
+    expect(mocked.estimateContractDeploy).toBeCalledTimes(1);
 
     const result = txPayloadToRequest(unsignedSendStxTx);
-
-    expect(result).toBeDefined();
     expect(result).toEqual(
       expect.objectContaining({
         codeBody: mockContractDeploy.codeBody,
@@ -104,22 +132,28 @@ describe('txPayloadToRequest', () => {
       stxAddress: 'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
       txType: TransactionTypes.ContractCall,
     };
-    const unSignedContractCall = await createContractCallPromises(
+
+    const unsignedContractCall = await createContractCallPromises(
       contractCallPayload,
       'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
       new StacksMainnet(),
       '03f746046bacb5ff6254124bbdadbe28ca1cfefbd9cd160403667a772f25f298ab',
     );
-    const result = txPayloadToRequest(unSignedContractCall[0]);
+    expect(mocked.fetchStxPendingTxData).toBeCalledTimes(1);
+    expect(mocked.getContractInterface).toBeCalledTimes(1);
+    expect(mocked.getCoinsInfo).toBeCalledTimes(1);
 
-    expect(result).toBeDefined();
-
-    expect(result.postConditions).toEqual(contractCallPayload.postConditions);
-    expect((result as ContractCallPayload).contractAddress).toEqual(contractCallPayload.contractAddress);
-    expect((result as ContractCallPayload).functionName).toEqual(contractCallPayload.functionName);
-    expect((result as ContractCallPayload).txType).toEqual(contractCallPayload.txType);
-    expect((result as ContractCallPayload).contractName).toEqual(contractCallPayload.contractName);
-    expect((result as ContractCallPayload).functionArgs).toEqual(contractCallPayload.functionArgs);
-    expect((result as ContractCallPayload).postConditionMode).toEqual(contractCallPayload.postConditionMode);
+    const result = txPayloadToRequest(unsignedContractCall[0]);
+    expect(result).toEqual(
+      expect.objectContaining({
+        postConditions: contractCallPayload.postConditions,
+        contractAddress: contractCallPayload.contractAddress,
+        functionName: contractCallPayload.functionName,
+        txType: contractCallPayload.txType,
+        contractName: contractCallPayload.contractName,
+        functionArgs: contractCallPayload.functionArgs,
+        postConditionMode: contractCallPayload.postConditionMode,
+      }),
+    );
   });
 });

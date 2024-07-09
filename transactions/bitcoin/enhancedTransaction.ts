@@ -21,7 +21,12 @@ import {
   TransactionOutput,
   TransactionSummary,
 } from './types';
-import { extractActionMap, extractOutputInscriptionsAndSatributes, mapInputToEnhancedInput } from './utils';
+import {
+  extractActionMap,
+  extractOutputInscriptionsAndSatributes,
+  getTransactionVSize,
+  mapInputToEnhancedInput,
+} from './utils';
 
 const defaultCompilationOptions: CompilationOptions = {
   rbfEnabled: false,
@@ -66,9 +71,9 @@ export class EnhancedTransaction {
     this._actions = extractActionMap(actions);
   }
 
-  private async compile(options: CompilationOptions, dummySign: boolean) {
+  private async compile(options: CompilationOptions) {
     // order actions by type. Send Utxos first, then Ordinal extraction, then payment
-    const txnOpts: TxOpts = { PSBTVersion: 0 };
+    const txnOpts: TxOpts = { PSBTVersion: 2 };
 
     if (this._options.allowUnknownInputs) {
       txnOpts.allowUnknownInputs = true;
@@ -150,17 +155,8 @@ export class EnhancedTransaction {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const { address, ...feeOutput } = nonScriptOutputs.pop()!;
 
-    // now that the transaction is built, we can sign it
-    if (dummySign) {
-      await this._context.dummySignTransaction(transaction);
-    } else {
-      await this._context.signTransaction(transaction, options);
-    }
-
-    transaction.finalize();
-
     const enhancedInputs: EnhancedInput[] = await Promise.all(
-      inputs.map((i) => mapInputToEnhancedInput(i, SigHash.ALL)),
+      inputs.map((i) => mapInputToEnhancedInput(i, true, SigHash.ALL)),
     );
 
     return {
@@ -178,9 +174,9 @@ export class EnhancedTransaction {
 
   async getSummary(options: CompilationOptions = {}): Promise<TransactionSummary> {
     const { actualFee, actualFeeRate, effectiveFeeRate, transaction, inputs, outputs, feeOutput, runeOp, dustValue } =
-      await this.compile(getOptionsWithDefaults(options), true);
+      await this.compile(getOptionsWithDefaults(options));
 
-    const vsize = transaction.vsize;
+    const vsize = getTransactionVSize(this._context, transaction);
 
     const feeSummary = {
       fee: actualFee,
@@ -198,7 +194,10 @@ export class EnhancedTransaction {
   }
 
   async getTransactionHexAndId(options: CompilationOptions = {}) {
-    const { transaction } = await this.compile(getOptionsWithDefaults(options), false);
+    const { transaction } = await this.compile(getOptionsWithDefaults(options));
+
+    await this._context.signTransaction(transaction, options);
+    transaction.finalize();
 
     return { hex: transaction.hex, id: transaction.id };
   }

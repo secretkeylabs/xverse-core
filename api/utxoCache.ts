@@ -11,6 +11,10 @@ import {
 import { JSONBigOnDemand } from '../utils/bignumber';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
 
+// TODO: rethink some of this
+// TODO: add rate limit to API calls and if hit, rather reinit cache with 1 call
+// TODO: ensure mutex on setCache and setCachedItem
+
 export type UtxoCacheStruct<R extends BigNumber | number = BigNumber> = {
   [utxoId: string]: UtxoOrdinalBundle<R>;
 };
@@ -50,7 +54,7 @@ export class UtxoCache {
     return this._addressMutexes[address];
   };
 
-  private _getAddressCacheStorageKey = (address: string): string => `utxoCache-${address}`;
+  private _getAddressCacheStorageKey = (address: string): string => `utxoCache-${this._network}-${address}`;
 
   private _getCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
     const cacheStr = await this._cacheStorageController.get(this._getAddressCacheStorageKey(address));

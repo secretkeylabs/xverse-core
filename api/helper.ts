@@ -161,7 +161,7 @@ export function parseBrc20TransactionData(
   responseTx: Brc20TxHistoryItem,
   address: string,
 ): Brc20HistoryTransactionData {
-  const incoming = responseTx.transfer_send?.to_address === address;
+  const incoming = responseTx.operation === 'mint' || responseTx.transfer_send?.to_address === address;
 
   const date = new Date(0);
   if (responseTx.timestamp) date.setUTCMilliseconds(responseTx.timestamp);

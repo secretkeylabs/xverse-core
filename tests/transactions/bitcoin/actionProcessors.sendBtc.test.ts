@@ -7,7 +7,6 @@ import {
   getSortedAvailablePaymentUtxos,
   getTransactionTotals,
   getTransactionVSize,
-  getVbytesForIO,
 } from '../../../transactions/bitcoin/utils';
 
 vi.mock('../../../transactions/bitcoin/utils');
@@ -18,6 +17,7 @@ describe('applySendBtcActionsAndFee', () => {
     paymentAddress: {
       address: 'paymentAddress',
       addInput: vi.fn(),
+      getIOSizes: () => ({ inputSize: 91, outputSize: 32 }),
     },
     addOutputAddress: vi.fn(),
   };
@@ -33,9 +33,8 @@ describe('applySendBtcActionsAndFee', () => {
     };
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([]);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 2000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 100 });
 
     await expect(() =>
       applySendBtcActionsAndFee(
@@ -63,11 +62,10 @@ describe('applySendBtcActionsAndFee', () => {
     };
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([]);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 2700n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 100 });
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(260);
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(190);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(260);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(190);
 
     await expect(() =>
       applySendBtcActionsAndFee(context as any, {}, transaction as any, {}, [], 10),
@@ -82,9 +80,10 @@ describe('applySendBtcActionsAndFee', () => {
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 100 });
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(260);
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(190);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(190);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(260);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(190);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
@@ -101,8 +100,8 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']), true, 910);
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']), false, 910);
   });
 
   it('adds change if enough output with fees covered', async () => {
@@ -113,9 +112,10 @@ describe('applySendBtcActionsAndFee', () => {
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(170);
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(170);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(100);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(170);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(170);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
@@ -132,9 +132,8 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
-    expect(getTransactionVSize).toHaveBeenCalledTimes(2);
+    expect(getTransactionVSize).toHaveBeenCalledTimes(3);
+    expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction);
     expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction, 'paymentAddress');
     expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction, 'paymentAddress', 1150n);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 1150n);
@@ -148,9 +147,10 @@ describe('applySendBtcActionsAndFee', () => {
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(170);
-    vi.mocked(getTransactionVSize).mockResolvedValueOnce(170);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(100);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(170);
+    vi.mocked(getTransactionVSize).mockReturnValueOnce(170);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
@@ -169,9 +169,8 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
-    expect(getTransactionVSize).toHaveBeenCalledTimes(2);
+    expect(getTransactionVSize).toHaveBeenCalledTimes(3);
+    expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction);
     expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction, 'overrideChangeAddress');
     expect(getTransactionVSize).toHaveBeenCalledWith(context, transaction, 'overrideChangeAddress', 1150n);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'overrideChangeAddress', 1150n);
@@ -181,7 +180,9 @@ describe('applySendBtcActionsAndFee', () => {
     const transaction = {
       inputsLength: 2,
       outputsLength: 1,
-    };
+    } as any;
+
+    transaction.clone = () => transaction;
 
     const dummyUtxo = {
       outpoint: 'f00d:3',
@@ -196,8 +197,7 @@ describe('applySendBtcActionsAndFee', () => {
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
     vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo as any]);
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
+    vi.mocked(getTransactionVSize).mockReturnValue(210);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
@@ -214,131 +214,16 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
     expect(getTransactionVSize).toHaveBeenCalledTimes(4);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 9900n);
   });
 
-  it('ignores input UTXO if it is dust at selected fee rate', async () => {
+  it('uses unconfirmed UTXOs if necessary', async () => {
     const transaction = {
       inputsLength: 2,
       outputsLength: 1,
     };
 
-    const dummyDustUtxo = {
-      outpoint: 'f00d:3',
-      utxo: {
-        value: 990,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
-    const dummyUtxo = {
-      outpoint: 'f00d:3',
-      utxo: {
-        value: 10000,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
-
-    vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo, dummyDustUtxo] as any);
-    vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 100, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
-
-    const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
-      context as any,
-      {},
-      transaction as any,
-      {},
-      [],
-      10,
-    );
-
-    expect(actualFee).toEqual(2100n);
-    expect(inputs).toEqual([dummyUtxo]);
-    expect(outputs).toEqual([{ amount: 9900, address: 'paymentAddress', type: 'address' }]);
-
-    expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
-    expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
-    expect(getTransactionVSize).toHaveBeenCalledTimes(4);
-    expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 9900n);
-  });
-
-  it('uses input UTXO if it is above dust threshold at selected fee rate', async () => {
-    const transaction = {
-      inputsLength: 2,
-      outputsLength: 1,
-    };
-
-    const dummyDustUtxo = {
-      outpoint: 'f00d:3',
-      utxo: {
-        value: 990,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
-    const dummyUtxo = {
-      outpoint: 'f00d:3',
-      utxo: {
-        value: 10000,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
-
-    vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo, dummyDustUtxo] as any);
-    vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 90, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
-
-    const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
-      context as any,
-      {},
-      transaction as any,
-      {},
-      [],
-      10,
-    );
-
-    expect(actualFee).toEqual(2100n);
-    expect(inputs).toEqual([dummyDustUtxo]);
-    expect(outputs).toEqual([{ amount: 890, address: 'paymentAddress', type: 'address' }]);
-
-    expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
-    expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
-    expect(getTransactionVSize).toHaveBeenCalledTimes(4);
-    expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 890n);
-  });
-
-  it('uses unconfirmed UTXO if necessary and ignores dust', async () => {
-    const transaction = {
-      inputsLength: 2,
-      outputsLength: 1,
-    };
-
-    const dummyDustUtxo = {
-      outpoint: 'f00d:2',
-      utxo: {
-        value: 546,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
     const dummyUtxo = {
       outpoint: 'f00d:3',
       utxo: {
@@ -350,10 +235,10 @@ describe('applySendBtcActionsAndFee', () => {
     };
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo, dummyDustUtxo] as any);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([]);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo] as any);
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 10000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 90, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
+    vi.mocked(getTransactionVSize).mockReturnValue(210);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
@@ -370,9 +255,9 @@ describe('applySendBtcActionsAndFee', () => {
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
-    expect(getTransactionVSize).toHaveBeenCalledTimes(2);
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']), true, 910);
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']), false, 910);
+    expect(getTransactionVSize).toHaveBeenCalledTimes(3);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 900n);
   });
 
@@ -382,43 +267,26 @@ describe('applySendBtcActionsAndFee', () => {
       outputsLength: 1,
     };
 
-    const dummyDustUtxo = {
-      outpoint: 'f00d:2',
-      utxo: {
-        value: 546,
-        status: {
-          confirmed: true,
-        },
-      },
-    };
-    const dummyUtxo = {
-      outpoint: 'f00d:3',
-      utxo: {
-        value: 10000,
-        status: {
-          confirmed: false,
-        },
-      },
-    };
-
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo, dummyDustUtxo] as any);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValue([]);
     vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 10000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 90, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
+    vi.mocked(getTransactionVSize).mockReturnValue(210);
 
     await expect(() =>
       applySendBtcActionsAndFee(context as any, {}, transaction as any, { allowUnconfirmedInput: false }, [], 10),
     ).rejects.toThrowError('No more UTXOs to use. Insufficient funds for this transaction');
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledTimes(1);
   });
 
   it('compiles correct outputs from actions', async () => {
     const transaction = {
       inputsLength: 2,
       outputsLength: 1,
-    };
+    } as any;
 
-    const dummyDustUtxo = {
+    transaction.clone = () => transaction;
+
+    const dummyUtxo1 = {
       outpoint: 'f00d:3',
       utxo: {
         value: 990,
@@ -427,7 +295,7 @@ describe('applySendBtcActionsAndFee', () => {
         },
       },
     };
-    const dummyUtxo = {
+    const dummyUtxo2 = {
       outpoint: 'f00d:3',
       utxo: {
         value: 10000,
@@ -438,15 +306,14 @@ describe('applySendBtcActionsAndFee', () => {
     };
 
     vi.mocked(extractUsedOutpoints).mockReturnValueOnce(new Set(['f00d:0', 'f00d:1']));
-    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo, dummyDustUtxo] as any);
-    vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 1000n });
-    vi.mocked(getVbytesForIO).mockResolvedValueOnce({ inputSize: 90, outputSize: 20 });
-    vi.mocked(getTransactionVSize).mockResolvedValue(210);
+    vi.mocked(getSortedAvailablePaymentUtxos).mockResolvedValueOnce([dummyUtxo1, dummyUtxo2] as any);
+    vi.mocked(getTransactionTotals).mockResolvedValueOnce({ inputValue: 3000n, outputValue: 8400n });
+    vi.mocked(getTransactionVSize).mockReturnValue(210);
 
     const { inputs, outputs, actualFee } = await applySendBtcActionsAndFee(
       context as any,
       {},
-      transaction as any,
+      transaction,
       {},
       [
         {
@@ -490,7 +357,7 @@ describe('applySendBtcActionsAndFee', () => {
     );
 
     expect(actualFee).toEqual(2100n);
-    expect(inputs).toEqual([dummyDustUtxo, dummyUtxo]);
+    expect(inputs).toEqual([dummyUtxo2]);
     expect(outputs).toEqual([
       { amount: 3000, address: 'address', type: 'address' },
       { amount: 1000, address: 'address', type: 'address' },
@@ -499,19 +366,18 @@ describe('applySendBtcActionsAndFee', () => {
       // change
       {
         address: 'paymentAddress',
-        amount: 3490,
+        amount: 2500,
         type: 'address',
       },
     ]);
 
     expect(extractUsedOutpoints).toHaveBeenCalledWith(transaction);
     expect(getTransactionTotals).toHaveBeenCalledWith(transaction);
-    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']));
-    expect(getVbytesForIO).toHaveBeenCalledWith(context, context.paymentAddress);
+    expect(getSortedAvailablePaymentUtxos).toHaveBeenCalledWith(context, new Set(['f00d:0', 'f00d:1']), true, 910);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'address', 3000n);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'address', 1000n);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'address3', 900n);
     expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'address2', 2500n);
-    expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 3490n);
+    expect(context.addOutputAddress).toHaveBeenCalledWith(transaction, 'paymentAddress', 2500n);
   });
 });

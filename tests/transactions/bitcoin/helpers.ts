@@ -4,8 +4,10 @@ import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
 import SeedVault from '../../../seedVault';
 import { AddressContext } from '../../../transactions/bitcoin/context';
 import type { SupportedAddressType } from '../../../transactions/bitcoin/types';
+import { bip32, bip39 } from '../../../utils';
 
 export const seedPhrase = 'action action action action action action action action action action action action';
+export const rootKeyPair = bip32.fromSeed(bip39.mnemonicToSeedSync(seedPhrase));
 export const addresses = [
   {
     nativeSegwit: 'bc1qx4kug8qk3npq2te0jattrwdpjutz3x5866e5qc',
@@ -55,4 +57,6 @@ export class TestAddressContext extends AddressContext {
   signInputs = vi.fn();
 
   toDummyInputs = vi.fn();
+
+  getIOSizes = vi.fn();
 }

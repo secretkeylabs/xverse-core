@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
+import { describe, expect, it } from 'vitest';
 import BitcoinEsploraApiProvider from '../../api/esplora/esploraAPiProvider';
 import { BTC_BASE_URI_TESTNET } from '../../constant';
 
@@ -60,7 +60,7 @@ describe('BitcoinEsploraApiProvider', () => {
 
       // mock the bitcoinApi to return a 400 error
       const mockBitcoinApi = new MockAdapter(api.bitcoinApi);
-      mockBitcoinApi.onGet().reply(400);
+      mockBitcoinApi.onGet().reply(400, 'Too many unspent transaction outputs');
 
       // mock the fallbackBitcoinApi to return a 200 response
       const mockFallbackBitcoinApi = new MockAdapter(api.fallbackBitcoinApi!);

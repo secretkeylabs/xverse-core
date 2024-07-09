@@ -1,7 +1,7 @@
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
-import SeedVault from '../../seedVault';
+import { SeedVault } from '../../seedVault';
 import type { Account, AccountType, NetworkType } from '../../types';
 import {
   AddressContext,

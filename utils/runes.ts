@@ -1,38 +1,34 @@
 import { getRunesClient } from '../api';
 import { TransactionContext } from '../transactions/bitcoin';
 import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
-import { NetworkType } from '../types';
+import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
-type Mint = {
+export type RuneBase = {
   runeName: string;
   amount: bigint;
   divisibility: number;
   symbol: string;
+  inscriptionId: string;
+};
+
+type Mint = RuneBase & {
   runeIsOpen: boolean;
   runeIsMintable: boolean;
 };
 
-type Transfer = {
+type Transfer = RuneBase & {
   sourceAddress: string;
   destinationAddresses: string[];
-  runeName: string;
-  amount: bigint;
-  divisibility: number;
-  symbol: string;
   hasSufficientBalance: boolean;
 };
 
-type Receipt = {
+type Receipt = RuneBase & {
   sourceAddresses: string[];
   destinationAddress: string;
-  runeName: string;
-  amount: bigint;
-  divisibility: number;
-  symbol: string;
 };
 
-type Burn = { runeName: string; amount: bigint; divisibility: number; sourceAddresses: string[] };
+type Burn = RuneBase & { sourceAddresses: string[] };
 
 export type RuneSummary = {
   inputsHadRunes: boolean;
@@ -42,6 +38,30 @@ export type RuneSummary = {
   receipts: Receipt[];
   burns: Burn[];
 };
+
+export type EtchActionDetails = Omit<
+  CreateEtchOrderRequest,
+  'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'
+>;
+
+export type MintActionDetails = Mint & {
+  repeats: number;
+  runeSize: number;
+  destinationAddress: string;
+};
+
+/**
+ * RuneSummaryActions is a RuneSummary with the mint and etch properties extended
+ *  with ordinals service specific properties.
+ * for usage with the tx confirmations and etch/mint screens
+ */
+export type RuneSummaryActions = Override<
+  RuneSummary,
+  {
+    mint: MintActionDetails;
+    etch: EtchActionDetails;
+  }
+>;
 
 const getSpacedName = (name: string, spacerRaw: bigint | BigNumber): string => {
   const spacer = BigInt(spacerRaw.toString(10));
@@ -85,7 +105,7 @@ const extractRuneInputs = async (context: TransactionContext, summary: Transacti
   return inputRuneData.filter((input) => input.hasRunes);
 };
 
-const parseSummaryWithoutRuneScript = async (
+const parseSummaryWithBurnRuneScript = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
@@ -115,7 +135,7 @@ const parseSummaryWithoutRuneScript = async (
     }
 
     return acc;
-  }, {} as Record<string, Omit<Burn, 'divisibility'>>);
+  }, {} as Record<string, Omit<Burn, 'divisibility' | 'symbol' | 'inscriptionId'>>);
 
   const embellishedBurns: Burn[] = [];
 
@@ -125,6 +145,8 @@ const parseSummaryWithoutRuneScript = async (
     embellishedBurns.push({
       ...burn,
       divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
+      symbol: runeInfo?.entry.symbol || '',
+      inscriptionId: runeInfo?.parent || '',
     });
   }
 
@@ -186,6 +208,7 @@ const parseSummaryWithRuneScript = async (
         runeIsMintable: runeInfo.mintable,
         divisibility: runeInfo.entry.divisibility.toNumber(),
         symbol: runeInfo.entry.symbol || '¤',
+        inscriptionId: runeInfo.parent || '',
       };
 
       if (runeInfo.mintable) {
@@ -206,6 +229,7 @@ const parseSummaryWithRuneScript = async (
         amount: 0n,
         divisibility: 0,
         symbol: runeInfo?.entry.symbol || '',
+        inscriptionId: runeInfo?.parent || '',
         runeIsOpen: false,
         runeIsMintable: false,
       };
@@ -213,7 +237,10 @@ const parseSummaryWithRuneScript = async (
   }
 
   // start compiling transfers and receipts
-  type PartialTransfer = Omit<Transfer, 'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol'>;
+  type PartialTransfer = Omit<
+    Transfer,
+    'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol' | 'inscriptionId'
+  >;
 
   const transfersByRuneAndAddress = runeInputs
     .filter((r) => r.isUserAddress)
@@ -302,6 +329,8 @@ const parseSummaryWithRuneScript = async (
           amount: amountToTransfer,
           sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
           divisibility: runeInfo.entry.divisibility.toNumber(),
+          symbol: runeInfo.entry.symbol,
+          inscriptionId: runeInfo.parent || '',
         });
         continue;
       }
@@ -440,6 +469,8 @@ const parseSummaryWithRuneScript = async (
             amount,
             sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
             divisibility: runeInfo.entry.divisibility.toNumber(),
+            symbol: runeInfo.entry.symbol,
+            inscriptionId: runeInfo.parent || '',
           });
         }
       }
@@ -482,6 +513,7 @@ const parseSummaryWithRuneScript = async (
             amount,
             divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
             symbol: runeInfo?.entry.symbol || '',
+            inscriptionId: runeInfo?.parent || '',
           });
         }
 
@@ -526,6 +558,7 @@ const parseSummaryWithRuneScript = async (
         amount,
         divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
         symbol: runeInfo?.entry.symbol || '',
+        inscriptionId: runeInfo?.parent || '',
         hasSufficientBalance: unallocatedBalance[runeName].amount >= 0n,
       });
     }
@@ -546,7 +579,7 @@ export const parseSummaryForRunes = async (
   network: NetworkType,
 ): Promise<RuneSummary> => {
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
-    return parseSummaryWithoutRuneScript(context, summary, network);
+    return parseSummaryWithBurnRuneScript(context, summary, network);
   }
 
   return parseSummaryWithRuneScript(context, summary, network);

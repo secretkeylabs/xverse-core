@@ -20,12 +20,7 @@ import {
   getSortedAvailablePaymentUtxos,
   getTransactionTotals,
   getTransactionVSize,
-  getVbytesForIO,
 } from './utils';
-
-// these are conservative estimates
-const ESTIMATED_VBYTES_PER_OUTPUT = 30; // actually around 40
-const ESTIMATED_VBYTES_PER_INPUT = 70; // actually from 75 upward
 
 const DUST_VALUE = 546;
 
@@ -241,7 +236,7 @@ export const applySendBtcActionsAndFee = async (
 ) => {
   /**
    * This overrides the change address from the default payments address. It is used with the transfer action to
-   * send all funds to the destination address (with spendable and combinable set to true)
+   * send all funds to the destination address.
    * */
   const overrideChangeAddress = transactionOptions.overrideChangeAddress;
 
@@ -269,12 +264,6 @@ export const applySendBtcActionsAndFee = async (
     }
   }
 
-  // get available UTXOs to spend
-  const unusedPaymentUtxos = await getSortedAvailablePaymentUtxos(
-    context,
-    new Set([...(transactionOptions.excludeOutpointList ?? []), ...usedOutpoints]),
-  );
-
   // add inputs for all pinned utxos
   for (const pinnedOutpoint of transactionOptions.forceIncludeOutpointList ?? []) {
     if (usedOutpoints.has(pinnedOutpoint)) {
@@ -292,9 +281,6 @@ export const applySendBtcActionsAndFee = async (
     inputs.push(utxo.extendedUtxo);
   }
 
-  // add inputs and outputs for the required actions
-  let { inputValue: totalInputs, outputValue: totalOutputs } = await getTransactionTotals(transaction);
-
   // first add outputs for the required actions
   for (const [toAddress, { combinableAmount, individualAmounts }] of Object.entries(addressSendMap)) {
     for (const amount of [combinableAmount, ...individualAmounts]) {
@@ -302,50 +288,106 @@ export const applySendBtcActionsAndFee = async (
         continue;
       }
 
-      totalOutputs += amount;
       context.addOutputAddress(transaction, toAddress, amount);
       outputs.push({ type: 'address', amount: Number(amount), address: toAddress });
     }
   }
 
-  // ensure inputs cover the fee at desired fee rate
+  // now, add inputs to cover the outputs at the desired fee rate
+  const { inputValue, outputValue: totalOutputs } = await getTransactionTotals(transaction);
+  let totalInputs = inputValue;
+
+  // we get the fee rate for an input of the address (changes per address type)
+  const { inputSize } = context.paymentAddress.getIOSizes();
+  const inputDustValueAtFeeRate = inputSize * feeRate;
+
   let complete = false;
   let actualFee = 0n;
 
-  // we get the exact fee rate for an input of the address (changes per address type)
-  const { inputSize } = await getVbytesForIO(context, context.paymentAddress);
-  const inputDustValueAtFeeRate = BigInt(inputSize * feeRate);
-
+  // if we are using effective fee rate, we need to keep track of unconfirmed UTXO details
   let unconfirmedVsize = 0;
   let unconfirmedFee = 0;
+
+  if (transactionOptions.useEffectiveFeeRate) {
+    for (const outpoint of usedOutpoints) {
+      const utxo = await context.getUtxo(outpoint);
+      if (!utxo.extendedUtxo || (utxo.extendedUtxo?.utxo.status.confirmed ?? true)) {
+        continue;
+      }
+
+      const { totalVsize, totalFee } = await utxo.extendedUtxo.getUnconfirmedUtxoFeeData();
+      unconfirmedVsize += totalVsize;
+      unconfirmedFee += totalFee;
+    }
+  }
 
   let actualFeeRate = feeRate;
   let effectiveFeeRate = feeRate;
 
+  // get available confirmed UTXOs to spend
+  let unusedPaymentUtxos = await getSortedAvailablePaymentUtxos(
+    context,
+    new Set([...(transactionOptions.excludeOutpointList ?? []), ...usedOutpoints]),
+    true,
+    inputDustValueAtFeeRate,
+  );
+  let canCoverCostsWithConfirmed = false;
+
+  // check if we can cover the cost with confirmed UTXOs only, otherwise update UTXO list with unconfirmed UTXOs
+  if (unusedPaymentUtxos.length) {
+    const totalConfirmedInputValue = unusedPaymentUtxos.reduce((acc, utxo) => acc + BigInt(utxo.utxo.value), 0n);
+    const totalInputWithConfirmed = totalInputs + totalConfirmedInputValue;
+
+    const dummyTxn = transaction.clone();
+
+    for (const utxo of unusedPaymentUtxos) {
+      await context.paymentAddress.addInput(dummyTxn, utxo, options);
+    }
+
+    const allConfirmedUtxoTxnVSize = getTransactionVSize(
+      context,
+      dummyTxn,
+      overrideChangeAddress ?? context.changeAddress,
+    );
+
+    const totalCostWithConfirmed = totalOutputs + BigInt(allConfirmedUtxoTxnVSize * feeRate);
+
+    canCoverCostsWithConfirmed = totalInputWithConfirmed - totalCostWithConfirmed >= 0n;
+  }
+
+  if (!canCoverCostsWithConfirmed && transactionOptions.allowUnconfirmedInput !== false) {
+    unusedPaymentUtxos = await getSortedAvailablePaymentUtxos(
+      context,
+      new Set([...(transactionOptions.excludeOutpointList ?? []), ...usedOutpoints]),
+      false,
+      inputDustValueAtFeeRate,
+    );
+  }
+
+  // start adding inputs until we have enough to cover the cost
+  const initialTxVSize = getTransactionVSize(context, transaction);
+  const initialInputCount = transaction.inputsLength;
+
   while (!complete) {
     const currentChange = totalInputs - totalOutputs;
 
-    // use this to get a conservative estimate of the fees so we don't compile too many transactions below
-    const totalEstimatedFee =
-      (transaction.inputsLength * ESTIMATED_VBYTES_PER_INPUT +
-        transaction.outputsLength * ESTIMATED_VBYTES_PER_OUTPUT +
-        unconfirmedVsize) *
-        feeRate -
-      unconfirmedFee;
+    const addedInputs = transaction.inputsLength - initialInputCount;
+    const addedVSized = addedInputs * inputSize;
+
+    const currentVSize = initialTxVSize + addedVSized;
+
+    // use this to get a conservative estimate of the fees so we don't estimate too many transactions below
+    const totalEstimatedFee = (currentVSize + unconfirmedVsize) * feeRate - unconfirmedFee;
 
     if (totalEstimatedFee < currentChange) {
-      const vSizeWithChange = await getTransactionVSize(
-        context,
-        transaction,
-        overrideChangeAddress ?? context.changeAddress,
-      );
+      const vSizeWithChange = getTransactionVSize(context, transaction, overrideChangeAddress ?? context.changeAddress);
 
       if (vSizeWithChange) {
         const feeWithChange = BigInt((vSizeWithChange + unconfirmedVsize) * feeRate - unconfirmedFee);
 
         if (feeWithChange < currentChange && currentChange - feeWithChange > DUST_VALUE) {
           // we do one last test to ensure that adding close to the actual change won't increase the fees
-          const vSizeWithActualChange = await getTransactionVSize(
+          const vSizeWithActualChange = getTransactionVSize(
             context,
             transaction,
             overrideChangeAddress ?? context.changeAddress,
@@ -373,7 +415,7 @@ export const applySendBtcActionsAndFee = async (
         }
       }
 
-      const vSizeNoChange = await getTransactionVSize(context, transaction);
+      const vSizeNoChange = getTransactionVSize(context, transaction);
 
       if (vSizeNoChange) {
         const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
@@ -388,16 +430,7 @@ export const applySendBtcActionsAndFee = async (
       }
     }
 
-    let utxoToUse = unusedPaymentUtxos.pop();
-
-    // ensure UTXO is not dust at selected fee rate and that it is skipped if unconfirmed and not allowed
-    while (
-      utxoToUse &&
-      (inputDustValueAtFeeRate > utxoToUse.utxo.value ||
-        (!transactionOptions.allowUnconfirmedInput && !utxoToUse.utxo.status.confirmed))
-    ) {
-      utxoToUse = unusedPaymentUtxos.pop();
-    }
+    const utxoToUse = unusedPaymentUtxos.pop();
 
     if (!utxoToUse) {
       throw new Error('No more UTXOs to use. Insufficient funds for this transaction');
@@ -421,6 +454,6 @@ export const applySendBtcActionsAndFee = async (
     actualFee,
     inputs,
     outputs,
-    dustValue: inputDustValueAtFeeRate,
+    dustValue: BigInt(inputDustValueAtFeeRate),
   };
 };

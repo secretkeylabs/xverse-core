@@ -7,6 +7,8 @@ export enum AnalyticsEvents {
   ClickApp = 'click_app',
   AppConnected = 'app_connected',
   TransactionConfirmed = 'transaction_confirmed',
+  WalletMigrated = 'wallet_migrated',
+  WalletSkippedMigration = 'wallet_skipped_migration',
 }
 
 type CommonProps = {

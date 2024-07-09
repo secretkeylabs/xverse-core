@@ -1,17 +1,9 @@
 import axios, { CancelToken } from 'axios';
 import { useEffect, useState } from 'react';
 
+import { TransactionContext } from '../../transactions/bitcoin';
 import { BRC20ErrorCode, brc20TransferEstimateFees } from '../../transactions/brc20';
-import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
-
-const DUMMY_UTXO = {
-  address: '',
-  txid: '1234567890123456789012345678901234567890123456789012345678901234',
-  vout: 0,
-  status: { confirmed: true },
-  value: 100e8,
-};
 
 type CommitValueBreakdown = {
   commitChainFee: number;
@@ -22,8 +14,7 @@ type CommitValueBreakdown = {
 };
 
 type Props = {
-  /** The UTXOs in the bitcoin address which will be used for payment. */
-  addressUtxos: UTXO[] | undefined;
+  context: TransactionContext;
 
   /** The 4 letter BRC-20 token name. */
   tick: string;
@@ -39,12 +30,10 @@ type Props = {
 
   /** If true, the initial fetch will be skipped. */
   skipInitialFetch?: boolean;
-
-  network: NetworkType;
 };
 
 const useBrc20TransferFees = (props: Props) => {
-  const { addressUtxos = [], tick, amount, feeRate, revealAddress, network, skipInitialFetch = false } = props;
+  const { context, tick, amount, feeRate, revealAddress, skipInitialFetch = false } = props;
   const [commitValue, setCommitValue] = useState<number | undefined>();
   const [commitValueBreakdown, setCommitValueBreakdown] = useState<CommitValueBreakdown | undefined>();
   const [isLoading, setIsLoading] = useState(false);
@@ -60,17 +49,18 @@ const useBrc20TransferFees = (props: Props) => {
     const feeEstimateCancelToken = axios.CancelToken.source();
 
     const runEstimate = async () => {
-      const callEstimate = async (addressUtxosToUse: UTXO[], cancelToken: CancelToken) => {
+      const callEstimate = async (cancelToken: CancelToken) => {
         try {
-          const result = await brc20TransferEstimateFees({
-            addressUtxos: addressUtxosToUse,
-            tick,
-            amount,
-            revealAddress,
-            feeRate,
-            cancelToken,
-            network,
-          });
+          const result = await brc20TransferEstimateFees(
+            {
+              tick,
+              amount,
+              revealAddress,
+              feeRate,
+              cancelToken,
+            },
+            context,
+          );
           setCommitValue(result.commitValue);
           setCommitValueBreakdown(result.valueBreakdown);
         } catch (e) {
@@ -92,11 +82,12 @@ const useBrc20TransferFees = (props: Props) => {
       };
 
       // we first try to estimate using the actual UTXOs
-      let ephemeralErrorCode = await callEstimate(addressUtxos, feeCancelToken.token);
+      let ephemeralErrorCode = await callEstimate(feeCancelToken.token);
 
       // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
       if (ephemeralErrorCode === BRC20ErrorCode.INSUFFICIENT_FUNDS) {
-        ephemeralErrorCode = await callEstimate([DUMMY_UTXO], feeEstimateCancelToken.token);
+        // TODO:
+        ephemeralErrorCode = await callEstimate(feeEstimateCancelToken.token);
       }
 
       if (ephemeralErrorCode === 'cancelled') {
@@ -116,7 +107,7 @@ const useBrc20TransferFees = (props: Props) => {
       feeCancelToken.cancel('Fee estimate out of scope, cleaning up');
       feeEstimateCancelToken.cancel('Fee estimate out of scope, cleaning up');
     };
-  }, [addressUtxos, tick, amount, revealAddress, feeRate]);
+  }, [tick, amount, revealAddress, feeRate]);
 
   return {
     commitValue,

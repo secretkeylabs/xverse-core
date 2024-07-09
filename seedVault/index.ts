@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex';
 import { StorageAdapter } from '../types';
 
 export type CryptoUtilsAdapter = {
@@ -20,6 +21,14 @@ export enum SeedVaultStorageKeys {
   SEED_VAULT_VERSION = 'seedVaultVersion',
 }
 
+type SingletonRef = {
+  current?: SeedVault;
+};
+
+const ref: SingletonRef = {
+  current: undefined,
+};
+
 export class SeedVault {
   private readonly _secureStorageAdapter: StorageAdapter;
 
@@ -27,7 +36,9 @@ export class SeedVault {
 
   private readonly _commonStorageAdapter: StorageAdapter;
 
-  VERSION = 1;
+  private readonly _StoreSeedMutex: Mutex = new Mutex();
+
+  VERSION = 2;
 
   constructor(config: SeedVaultConfig) {
     this._secureStorageAdapter = config.secureStorageAdapter;
@@ -35,29 +46,41 @@ export class SeedVault {
     this._commonStorageAdapter = config.commonStorageAdapter;
   }
 
-  init = async (password: string) => {
-    this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
-    const salt = await this._cryptoUtilsAdapter.generateRandomBytes(32);
-    if (!salt) throw new Error('Salt not set');
-    const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
-    if (!passwordHash) throw new Error('Password hash not set');
-    this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, salt);
-    this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
-  };
+  private _storeSeed = async (seed: string, password: string, overwriteExistingSeed?: boolean) => {
+    const release = await this._StoreSeedMutex.acquire();
+    try {
+      const prevStoredEncryptedSeed = await this.hasSeed();
+      if (prevStoredEncryptedSeed && !overwriteExistingSeed) {
+        throw new Error('Seed already set');
+      }
 
-  private _storeSeed = async (seed: string, overwriteExistingSeed?: boolean) => {
-    const password = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
-    if (!password) throw new Error('passwordHash not set');
-    const prevStoredEncryptedSeed = await this.hasSeed();
-    if (prevStoredEncryptedSeed && !overwriteExistingSeed) {
-      throw new Error('Seed already set');
+      const salt = await this._cryptoUtilsAdapter.generateRandomBytes(32);
+      if (!salt) throw new Error('passwordSalt generation failed');
+
+      const passwordHash = await this._cryptoUtilsAdapter.hash(password, salt);
+      if (!passwordHash) throw new Error('passwordHash creation failed');
+
+      const encryptedSeed = await this._cryptoUtilsAdapter.encrypt(seed, passwordHash);
+      if (!encryptedSeed) throw new Error('Seed encryption failed');
+
+      this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, salt);
+      this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
+      this._secureStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_HASH, passwordHash);
+      /**
+       * If the seed is not being overwritten (i.e., this is not a password change operation),
+       * then update the SeedVault version in the common storage adapter.
+       * This ensures that the version is only updated when a new seed is stored,
+       * not when the password is changed.
+       */
+      if (!overwriteExistingSeed) {
+        this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
+      }
+    } finally {
+      release();
     }
-    const encryptedSeed = await this._cryptoUtilsAdapter.encrypt(seed, password);
-    if (!encryptedSeed) throw new Error('Seed not set');
-    this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedSeed);
   };
 
-  storeSeed = async (seed: string) => this._storeSeed(seed, false);
+  storeSeed = async (seed: string, password: string) => this._storeSeed(seed, password, false);
 
   getSeed = async () => {
     const passwordHash = await this._secureStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_HASH);
@@ -71,11 +94,21 @@ export class SeedVault {
     return seed;
   };
 
+  restoreVault = async (encryptedKey: string, passwordSalt: string) => {
+    const ExistingEncryptedKey = await this._commonStorageAdapter.get(SeedVaultStorageKeys.ENCRYPTED_KEY);
+    const ExistingPasswordSalt = await this._commonStorageAdapter.get(SeedVaultStorageKeys.PASSWORD_SALT);
+    if (ExistingPasswordSalt || ExistingEncryptedKey) {
+      throw new Error('Cannot override existing seed');
+    }
+    await this._commonStorageAdapter.set(SeedVaultStorageKeys.ENCRYPTED_KEY, encryptedKey);
+    await this._commonStorageAdapter.set(SeedVaultStorageKeys.PASSWORD_SALT, passwordSalt);
+    await this._commonStorageAdapter.set(SeedVaultStorageKeys.SEED_VAULT_VERSION, this.VERSION.toString());
+  };
+
   changePassword = async (oldPassword: string, newPassword: string) => {
     await this.unlockVault(oldPassword);
     const seedPhrase = await this.getSeed();
-    await this.init(newPassword);
-    await this._storeSeed(seedPhrase, true);
+    await this._storeSeed(seedPhrase, newPassword, true);
   };
 
   hasSeed = async () => {
@@ -126,4 +159,13 @@ export class SeedVault {
     });
   };
 }
-export default SeedVault;
+
+export const SeedVaultInstance = (config: SeedVaultConfig) => {
+  if (!ref.current) {
+    ref.current = new SeedVault(config);
+  }
+
+  return ref.current;
+};
+
+export default SeedVaultInstance;

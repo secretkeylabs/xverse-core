@@ -52,9 +52,17 @@ describe('getBrc20Details', () => {
       expected: undefined,
     },
     {
-      name: 'should return undefined when tick is > 4 chars',
+      name: 'should return undefined when tick is > 5 chars',
       inputs: {
-        content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'verse', amt: '4200' }),
+        content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'xverse', amt: '4200' }),
+        contentType: 'application/json',
+      },
+      expected: undefined,
+    },
+    {
+      name: 'should return undefined when tick is < 4 chars',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'mint', tick: 'xve', amt: '4200' }),
         contentType: 'application/json',
       },
       expected: undefined,
@@ -115,6 +123,30 @@ describe('getBrc20Details', () => {
         op: 'mint',
         tick: 'VERS',
         value: '420',
+      },
+    },
+    {
+      name: 'should return brc20 details when tick is 5-byte emoji',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'transfer', tick: 'W☮', amt: '193286' }),
+        contentType: 'application/json',
+      },
+      expected: {
+        op: 'transfer',
+        tick: 'W☮',
+        value: '193286',
+      },
+    },
+    {
+      name: 'should return brc20 details when tick is 4-byte emoji',
+      inputs: {
+        content: JSON.stringify({ p: 'brc-20', op: 'transfer', tick: '🏀', amt: '193286' }),
+        contentType: 'application/json',
+      },
+      expected: {
+        op: 'transfer',
+        tick: '🏀',
+        value: '193286',
       },
     },
   ].forEach(({ name, inputs, expected }) => {

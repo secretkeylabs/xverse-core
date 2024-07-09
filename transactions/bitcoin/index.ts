@@ -15,6 +15,7 @@ import {
   TransactionFeeOutput,
   TransactionOptions,
   TransactionOutput,
+  TransactionPubKeyOutput,
   TransactionScriptOutput,
   TransactionSummary,
 } from './types';
@@ -34,6 +35,7 @@ export type {
   TransactionFeeOutput,
   TransactionOptions,
   TransactionOutput,
+  TransactionPubKeyOutput,
   TransactionScriptOutput,
   TransactionSummary,
 };

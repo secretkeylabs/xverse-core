@@ -1,6 +1,10 @@
+import nock from 'nock';
 import { expect } from 'vitest';
 
 import { CoreError } from '../utils/coreError';
+
+// disable all network requests to ensure tests fail if they are not mocked
+nock.disableNetConnect();
 
 expect.extend({
   toThrowCoreError: (received: unknown, message: string, code: string) => {

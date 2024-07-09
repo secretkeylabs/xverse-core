@@ -340,6 +340,7 @@ describe('EnhancedTransaction summary', () => {
             fromAddress: 'myAddress',
           }))
           .filter((s: any) => s.types.length > 0),
+        walletWillSign: true,
       })),
       outputs: [
         {

@@ -5,6 +5,7 @@ export type FeaturedDapp = {
   description: string;
   order: number;
   banner?: string;
+  category?: string;
 };
 
 export type DappSectionData = {

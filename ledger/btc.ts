@@ -146,6 +146,7 @@ export async function signLedgerNativeSegwitBtcTransaction({
   };
 
   const psbt = await createNativeSegwitPsbt(
+    esploraProvider,
     network,
     recipients,
     senderAddress,
@@ -317,6 +318,7 @@ export async function* signLedgerMixedBtcTransaction({
   // If the ordinal UTXO is in the payment address, we need to create a native segwit PSBT
   const psbt = ordinalUtxoInPaymentAddress
     ? await createNativeSegwitPsbt(
+        esploraProvider,
         network,
         recipients,
         senderAddress,
@@ -326,6 +328,7 @@ export async function* signLedgerMixedBtcTransaction({
         witnessScript,
       )
     : await createMixedPsbt(
+        esploraProvider,
         network,
         recipients,
         senderAddress,

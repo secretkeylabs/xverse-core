@@ -41,9 +41,12 @@ const embellishNativeSegwitInputs = async (
     if (areByteArraysEqual(input.witnessUtxo?.script, p2wpkh.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
-        transaction.updateInput(i, {
-          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
-        });
+
+        if (utxoTxn) {
+          transaction.updateInput(i, {
+            nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+          });
+        }
       }
 
       transaction.updateInput(i, {
@@ -59,6 +62,7 @@ const embellishNativeSegwitInputs = async (
 const embellishTaprootInputs = async (
   transaction: btc.Transaction,
   publicKey: string,
+  esploraProvider: EsploraProvider,
   network: NetworkType,
   addressIndex: number,
   masterFingerPrint: string,
@@ -81,11 +85,12 @@ const embellishTaprootInputs = async (
     const input = transaction.getInput(i);
     if (areByteArraysEqual(input.witnessUtxo?.script, p2tr.script)) {
       if (!input.nonWitnessUtxo && input.txid) {
-        const esploraProvider = new EsploraProvider({ network: network });
         const utxoTxn = await esploraProvider.getTransactionHex(hex.encode(input.txid));
-        transaction.updateInput(i, {
-          nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
-        });
+        if (utxoTxn) {
+          transaction.updateInput(i, {
+            nonWitnessUtxo: Buffer.from(utxoTxn, 'hex'),
+          });
+        }
       }
 
       transaction.updateInput(i, {
@@ -185,7 +190,7 @@ export async function signLedgerPSBT({
     }
   }
 
-  if (await embellishTaprootInputs(txn, taprootPubKey, network, addressIndex, masterFingerPrint)) {
+  if (await embellishTaprootInputs(txn, taprootPubKey, esploraProvider, network, addressIndex, masterFingerPrint)) {
     const psbt = txn.toPSBT(0);
     const psbtBase64 = base64.encode(psbt);
 

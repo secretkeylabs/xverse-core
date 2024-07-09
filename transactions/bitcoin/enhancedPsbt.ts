@@ -8,14 +8,26 @@ import { TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
+  EnhancedOutput,
+  IOInscription,
+  IOSatribute,
   InputMetadata,
   PSBTCompilationOptions,
   PsbtSummary,
   TransactionFeeOutput,
-  TransactionOutput,
-  TransactionScriptOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
+
+type ParsedOutputMetadata =
+  | { address: string; script?: undefined; type?: undefined }
+  | { address?: undefined; script: string[]; scriptHex: string; type?: undefined }
+  | {
+      address?: undefined;
+      script?: undefined;
+      pubKeys: string[];
+      type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
+      m: number;
+    };
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -24,6 +36,7 @@ export class EnhancedPsbt {
 
   private readonly _inputsToSign?: InputToSign[];
 
+  // TODO: Try and make this non-nullable by computing it in the constructor
   private readonly _inputsToSignMap?: Record<number, { address: string; sigHash?: number }[]>;
 
   private readonly _isSigHashAll?: boolean;
@@ -37,6 +50,7 @@ export class EnhancedPsbt {
     this._psbt = base64.decode(psbtBase64);
 
     this._inputsToSign = inputsToSign;
+    const txn = btc.Transaction.fromPSBT(this._psbt);
 
     if (inputsToSign) {
       this._inputsToSignMap = {};
@@ -52,21 +66,22 @@ export class EnhancedPsbt {
 
           this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
 
-          if (!input.sigHash || (input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+          const txnInput = txn.getInput(inputIndex);
+          const sigHashToCheck = txnInput.sighashType ?? input.sigHash ?? btc.SigHash.DEFAULT;
+
+          // we need to do check for single first as it's value is 3 while none is 2 and all is 1
+          if ((sigHashToCheck & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
+            hasSigHashSingle = true;
             continue;
           }
 
-          if (input.sigHash === btc.SigHash.DEFAULT || (input.sigHash & btc.SigHash.ALL) === btc.SigHash.ALL) {
+          if (sigHashToCheck === btc.SigHash.DEFAULT || (sigHashToCheck & btc.SigHash.ALL) === btc.SigHash.ALL) {
             isSigHashAll = true;
             continue;
           }
 
-          if ((input.sigHash & btc.SigHash.NONE) === btc.SigHash.NONE) {
+          if ((sigHashToCheck & btc.SigHash.NONE) === btc.SigHash.NONE) {
             hasSigHashNone = true;
-          }
-
-          if ((input.sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
-            hasSigHashSingle = true;
           }
         }
       }
@@ -77,10 +92,7 @@ export class EnhancedPsbt {
     }
   }
 
-  private parseAddressFromOutput(
-    transaction: btc.Transaction,
-    outputIndex: number,
-  ): { address: string; script?: undefined } | { address?: undefined; script: string[]; scriptHex: string } {
+  private parseAddressFromOutput(transaction: btc.Transaction, outputIndex: number): ParsedOutputMetadata {
     const output = transaction.getOutput(outputIndex);
 
     if (!output?.script) {
@@ -96,6 +108,31 @@ export class EnhancedPsbt {
       return {
         script: btc.Script.decode(outputScript.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
         scriptHex: hex.encode(outputScript.script),
+      };
+    }
+
+    if (outputScript.type === 'pk') {
+      //for script outputs
+      return {
+        type: 'pk',
+        pubKeys: [hex.encode(outputScript.pubkey)],
+        m: 1,
+      };
+    }
+
+    if (outputScript.type === 'ms' || outputScript.type === 'tr_ms') {
+      return {
+        type: outputScript.type,
+        pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.m,
+      };
+    }
+
+    if (outputScript.type === 'tr_ns') {
+      return {
+        type: outputScript.type,
+        pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.pubkeys.length,
       };
     }
 
@@ -152,20 +189,26 @@ export class EnhancedPsbt {
 
       inputTotal += inputExtendedUtxo.utxo.value || 0;
 
-      // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
-      // don't have a single before we do the bitwise or for all and none
-      const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
+      if (!this._inputsToSignMap || inputIndex in this._inputsToSignMap) {
+        // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
+        // don't have a single before we do the bitwise or for all and none
+        const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
 
-      isSigHashAll =
-        isSigHashAll ||
-        (!isSigHashSingle &&
-          (sigHash === undefined ||
-            sigHash === btc.SigHash.DEFAULT ||
-            (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
+        isSigHashAll =
+          // if already true, we don't need to check again
+          isSigHashAll ||
+          // if we have a single, we can't have all as their bit-wise values overlap
+          (!isSigHashSingle &&
+            // if the sigHash is undefined, it will be signed as ALL/DEFAULT, so mark it as ALL
+            (sigHash === undefined ||
+              // if the sigHash is ALL or DEFAULT(for taproot), we can mark it as ALL
+              sigHash === btc.SigHash.DEFAULT ||
+              (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
 
-      hasSigHashNone =
-        hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
-      hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
+        hasSigHashNone =
+          hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
+        hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
+      }
     }
 
     return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
@@ -177,7 +220,7 @@ export class EnhancedPsbt {
     const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
       transaction,
     );
-    const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
+    const outputs: EnhancedOutput[] = [];
 
     let hasScriptOutput = false;
     let outputTotal = 0;
@@ -202,31 +245,38 @@ export class EnhancedPsbt {
       const amount = Number(outputRaw.amount);
       outputTotal += amount;
 
-      if (!isSigHashAll) {
-        const output: TransactionOutput = {
+      let inscriptions: IOInscription[] = [];
+      let satributes: IOSatribute[] = [];
+
+      if (isSigHashAll) {
+        const extractedAssets = await extractOutputInscriptionsAndSatributes(
+          inputsExtendedUtxos,
+          currentOffset,
+          amount,
+        );
+
+        inscriptions = extractedAssets.inscriptions;
+        satributes = extractedAssets.satributes;
+      }
+
+      if (outputMetadata.address !== undefined) {
+        outputs.push({
           type: 'address',
           address: outputMetadata.address,
           amount: Number(amount),
-          inscriptions: [],
-          satributes: [],
-        };
-        outputs.push(output);
-        continue;
+          inscriptions,
+          satributes,
+        });
+      } else {
+        outputs.push({
+          type: outputMetadata.type,
+          pubKeys: outputMetadata.pubKeys,
+          amount: Number(amount),
+          inscriptions,
+          satributes,
+          m: outputMetadata.m,
+        });
       }
-
-      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(
-        inputsExtendedUtxos,
-        currentOffset,
-        amount,
-      );
-      const output: TransactionOutput = {
-        type: 'address',
-        address: outputMetadata.address,
-        amount: Number(amount),
-        inscriptions,
-        satributes,
-      };
-      outputs.push(output);
 
       currentOffset += Number(amount);
     }
@@ -250,7 +300,13 @@ export class EnhancedPsbt {
     }
 
     const enhancedInputs: EnhancedInput[] = await Promise.all(
-      inputs.map((i) => mapInputToEnhancedInput(i.extendedUtxo, i.sigHash)),
+      inputs.map((input, idx) =>
+        mapInputToEnhancedInput(
+          input.extendedUtxo,
+          !this._inputsToSignMap || idx in this._inputsToSignMap,
+          input.sigHash,
+        ),
+      ),
     );
 
     const runesClient = getRunesClient(this._context.network);
@@ -268,7 +324,7 @@ export class EnhancedPsbt {
   }
 
   async getSignedPsbtBase64(options: PSBTCompilationOptions = {}): Promise<string> {
-    const transaction = btc.Transaction.fromPSBT(this._psbt);
+    const transaction = btc.Transaction.fromPSBT(this._psbt, { allowUnknownInputs: true, allowUnknownOutputs: true });
     let addedPaddingInput = false;
 
     if (options.ledgerTransport) {

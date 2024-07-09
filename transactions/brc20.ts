@@ -1,16 +1,20 @@
-import { base64 } from '@scure/base';
+import * as btc from '@scure/btc-signer';
 import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
-import { createInscriptionRequest } from '../api';
-import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import xverseInscribeApi from '../api/xverseInscribe';
-import { NetworkType, UTXO } from '../types';
+import { Transport } from '../ledger';
+import { UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
-import { getBtcPrivateKey } from '../wallet';
-import { generateSignedBtcTransaction, selectUtxosForSend, signNonOrdinalBtcSendTransaction } from './btc';
+import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
+import { signNonOrdinalBtcSendTransaction } from './btc';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
+const DUMMY_SEEDPHRASE = 'action action action action action action action action action action action action';
+
+export type SignOptions = {
+  ledgerTransport?: Transport | undefined;
+};
 
 export enum BRC20ErrorCode {
   INSUFFICIENT_FUNDS = 'INSUFFICIENT_FUNDS',
@@ -20,16 +24,17 @@ export enum BRC20ErrorCode {
   INVALID_AMOUNT = 'INVALID_AMOUNT',
   INVALID_FEE_RATE = 'INVALID_FEE_RATE',
   SERVER_ERROR = 'SERVER_ERROR',
+  USER_REJECTED = 'USER_REJECTED',
+  DEVICE_LOCKED = 'DEVICE_LOCKED',
+  GENERAL_LEDGER_ERROR = 'GENERAL_LEDGER_ERROR',
 }
 
 type EstimateProps = {
-  addressUtxos?: UTXO[];
   tick: string;
   amount: number;
   revealAddress: string;
   feeRate: number;
   cancelToken?: CancelToken;
-  network: NetworkType;
 };
 
 type BaseEstimateResult = {
@@ -41,12 +46,6 @@ type BaseEstimateResult = {
   };
 };
 
-type EstimateResult = BaseEstimateResult & {
-  valueBreakdown: {
-    inscriptionValue: number;
-  };
-};
-
 type TransferEstimateResult = BaseEstimateResult & {
   valueBreakdown: {
     transferChainFee: number;
@@ -55,60 +54,14 @@ type TransferEstimateResult = BaseEstimateResult & {
 };
 
 type ExecuteProps = {
-  getSeedPhrase: () => Promise<string>;
-  accountIndex: number;
-  addressUtxos: UTXO[];
   tick: string;
   amount: number;
   revealAddress: string;
-  changeAddress: string;
   feeRate: number;
-  network: NetworkType;
-};
-
-const createTransferInscriptionContent = (token: string, amount: string) => ({
-  p: 'brc-20',
-  op: 'transfer',
-  tick: token,
-  amt: amount,
-});
-
-// TODO: deprecate
-export const createBrc20TransferOrder = async (
-  token: string,
-  amount: string,
-  recipientAddress: string,
-  esploraAPiProvider: EsploraApiProvider,
-) => {
-  const transferInscriptionContent = createTransferInscriptionContent(token, amount);
-  const contentB64 = base64.encode(Buffer.from(JSON.stringify(transferInscriptionContent)));
-  const contentSize = Buffer.from(JSON.stringify(transferInscriptionContent)).length;
-  const feesResponse = await esploraAPiProvider.getRecommendedFees();
-  const inscriptionRequest = await createInscriptionRequest(
-    recipientAddress,
-    contentSize,
-    feesResponse.fastestFee,
-    contentB64,
-    token,
-    amount,
-  );
-
-  return {
-    inscriptionRequest,
-    feesResponse,
-  };
 };
 
 const validateProps = (props: EstimateProps): props is EstimateProps & { addressUtxos: UTXO[] } => {
-  const { addressUtxos, tick, amount, feeRate } = props;
-
-  if (!addressUtxos) {
-    throw new CoreError('UTXOs empty', BRC20ErrorCode.UTXOS_MISSING);
-  }
-
-  if (!addressUtxos.length) {
-    throw new CoreError('Insufficient funds, no UTXOs found', BRC20ErrorCode.INSUFFICIENT_FUNDS);
-  }
+  const { tick, amount, feeRate } = props;
 
   if (tick.length !== 4) {
     throw new CoreError('Invalid tick; should be 4 characters long', BRC20ErrorCode.INVALID_TICK);
@@ -125,118 +78,16 @@ const validateProps = (props: EstimateProps): props is EstimateProps & { address
   return true;
 };
 
-export const brc20MintEstimateFees = async (estimateProps: EstimateProps): Promise<EstimateResult> => {
+export const brc20TransferEstimateFees = async (
+  estimateProps: EstimateProps,
+  context: TransactionContext,
+): Promise<TransferEstimateResult> => {
   validateProps(estimateProps);
 
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
+  const { tick, amount, revealAddress, feeRate, cancelToken } = estimateProps;
 
   const dummyAddress =
-    network === 'Mainnet'
-      ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
-      : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
-
-  const { chainFee: revealChainFee, serviceFee: revealServiceFee } = await xverseInscribeApi.getBrc20MintFees(
-    tick,
-    amount,
-    revealAddress,
-    feeRate,
-    network,
-    FINAL_SATS_VALUE,
-    cancelToken,
-  );
-
-  const commitValue = new BigNumber(FINAL_SATS_VALUE).plus(revealChainFee).plus(revealServiceFee);
-
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress: dummyAddress,
-    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos!,
-    feeRate,
-    network,
-  });
-
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
-  }
-
-  const commitChainFees = bestUtxoData.fee;
-
-  return {
-    commitValue: commitValue.plus(commitChainFees).toNumber(),
-    valueBreakdown: {
-      commitChainFee: commitChainFees,
-      revealChainFee,
-      revealServiceFee,
-      inscriptionValue: FINAL_SATS_VALUE,
-    },
-  };
-};
-
-export async function brc20MintExecute(executeProps: ExecuteProps): Promise<string> {
-  validateProps(executeProps);
-  const { getSeedPhrase, accountIndex, addressUtxos, tick, amount, revealAddress, changeAddress, feeRate, network } =
-    executeProps;
-
-  const privateKey = await getBtcPrivateKey({
-    seedPhrase: await getSeedPhrase(),
-    index: BigInt(accountIndex),
-    network,
-  });
-
-  const { commitAddress, commitValue } = await xverseInscribeApi.createBrc20MintOrder(
-    tick,
-    amount,
-    revealAddress,
-    feeRate,
-    network,
-    FINAL_SATS_VALUE,
-  );
-
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress,
-    recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos,
-    feeRate,
-    network,
-  });
-
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
-  }
-
-  const commitChainFees = bestUtxoData.fee;
-
-  const commitTransaction = await generateSignedBtcTransaction(
-    privateKey,
-    bestUtxoData.selectedUtxos,
-    new BigNumber(commitValue),
-    [
-      {
-        address: commitAddress,
-        amountSats: new BigNumber(commitValue),
-      },
-    ],
-    changeAddress,
-    new BigNumber(commitChainFees),
-    network,
-  );
-
-  const { revealTransactionId } = await xverseInscribeApi.executeBrc20Order(
-    network,
-    commitAddress,
-    commitTransaction.hex,
-  );
-
-  return revealTransactionId;
-}
-
-export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): Promise<TransferEstimateResult> => {
-  validateProps(estimateProps);
-
-  const { addressUtxos, tick, amount, revealAddress, feeRate, cancelToken, network } = estimateProps;
-
-  const dummyAddress =
-    network === 'Mainnet'
+    context.network === 'Mainnet'
       ? 'bc1pgkwmp9u9nel8c36a2t7jwkpq0hmlhmm8gm00kpdxdy864ew2l6zqw2l6vh'
       : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
@@ -255,8 +106,8 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
       },
     ],
     0,
-    'action action action action action action action action action action action action',
-    network,
+    DUMMY_SEEDPHRASE,
+    context.network,
     new BigNumber(1),
   );
 
@@ -269,37 +120,47 @@ export const brc20TransferEstimateFees = async (estimateProps: EstimateProps): P
     amount,
     revealAddress,
     feeRate,
-    network,
+    context.network,
     inscriptionValue.toNumber(),
     cancelToken,
   );
 
   const commitValue = inscriptionValue.plus(revealChainFee).plus(revealServiceFee);
 
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress: dummyAddress,
-    recipients: [{ address: revealAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos!,
+  const fundTransaction = new EnhancedTransaction(
+    context,
+    [
+      {
+        type: ActionType.SEND_BTC,
+        toAddress: dummyAddress,
+        amount: BigInt(commitValue.toString()),
+        combinable: true,
+      },
+    ],
     feeRate,
-    network,
-  });
+  );
 
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
+  try {
+    const fundSummary = await fundTransaction.getSummary();
+
+    const commitChainFees = fundSummary.fee;
+
+    return {
+      commitValue: commitValue.plus(commitChainFees.toString()).toNumber(),
+      valueBreakdown: {
+        commitChainFee: Number(commitChainFees),
+        revealChainFee,
+        revealServiceFee,
+        transferChainFee: transferFeeEstimate,
+        transferUtxoValue: finalRecipientUtxoValue.toNumber(),
+      },
+    };
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('Insufficient funds')) {
+      throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
+    }
+    throw e;
   }
-
-  const commitChainFees = bestUtxoData.fee;
-
-  return {
-    commitValue: commitValue.plus(commitChainFees).toNumber(),
-    valueBreakdown: {
-      commitChainFee: commitChainFees,
-      revealChainFee,
-      revealServiceFee,
-      transferChainFee: transferFeeEstimate,
-      transferUtxoValue: finalRecipientUtxoValue.toNumber(),
-    },
-  };
 };
 
 export enum ExecuteTransferProgressCodes {
@@ -310,7 +171,11 @@ export enum ExecuteTransferProgressCodes {
   Finalizing = 'Finalizing',
 }
 
-export async function* brc20TransferExecute(executeProps: ExecuteProps & { recipientAddress: string }): AsyncGenerator<
+export async function* brc20TransferExecute(
+  executeProps: ExecuteProps & { recipientAddress: string },
+  context: TransactionContext,
+  options: SignOptions,
+): AsyncGenerator<
   ExecuteTransferProgressCodes,
   {
     revealTransactionId: string;
@@ -320,24 +185,7 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
   never
 > {
   validateProps(executeProps);
-  const {
-    getSeedPhrase,
-    accountIndex,
-    addressUtxos,
-    tick,
-    amount,
-    revealAddress,
-    changeAddress,
-    feeRate,
-    recipientAddress,
-    network,
-  } = executeProps;
-
-  const privateKey = await getBtcPrivateKey({
-    seedPhrase: await getSeedPhrase(),
-    index: BigInt(accountIndex),
-    network,
-  });
+  const { tick, amount, revealAddress, feeRate, recipientAddress } = executeProps;
 
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
@@ -355,10 +203,10 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
         value: FINAL_SATS_VALUE,
       },
     ],
-    accountIndex,
-    await getSeedPhrase(),
-    network,
-    new BigNumber(1),
+    0,
+    DUMMY_SEEDPHRASE,
+    context.network,
+    new BigNumber(1000),
   );
 
   const transferFeeEstimate = tx.vsize * feeRate;
@@ -370,79 +218,88 @@ export async function* brc20TransferExecute(executeProps: ExecuteProps & { recip
     amount,
     revealAddress,
     feeRate,
-    network,
+    context.network,
     inscriptionValue.toNumber(),
   );
 
   yield ExecuteTransferProgressCodes.CreatingCommitTransaction;
 
-  const bestUtxoData = selectUtxosForSend({
-    changeAddress,
-    recipients: [{ address: commitAddress, amountSats: new BigNumber(commitValue) }],
-    availableUtxos: addressUtxos,
-    feeRate,
-    network,
-  });
-
-  if (!bestUtxoData) {
-    throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
-  }
-
-  const commitChainFees = bestUtxoData.fee;
-
-  const commitTransaction = await generateSignedBtcTransaction(
-    privateKey,
-    bestUtxoData.selectedUtxos,
-    new BigNumber(commitValue),
+  const fundTransaction = new EnhancedTransaction(
+    context,
     [
       {
-        address: commitAddress,
-        amountSats: new BigNumber(commitValue),
+        type: ActionType.SEND_BTC,
+        toAddress: commitAddress,
+        amount: BigInt(commitValue.toString()),
+        combinable: true,
       },
     ],
-    changeAddress,
-    new BigNumber(commitChainFees),
-    network,
-    false,
+    feeRate,
   );
+
+  let commitHex: string;
+
+  try {
+    const commitTransaction = await fundTransaction.getTransactionHexAndId(options);
+    commitHex = commitTransaction.hex;
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('Insufficient funds')) {
+      throw new CoreError('Not enough funds at selected fee rate', BRC20ErrorCode.INSUFFICIENT_FUNDS);
+    }
+    if (options.ledgerTransport && e instanceof Error && e.message.includes('denied by the user')) {
+      throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
+    }
+    if (e instanceof Error && e.name === 'LockedDeviceError') {
+      throw new CoreError('Ledger device locked', BRC20ErrorCode.DEVICE_LOCKED);
+    }
+    if (e instanceof Error && e.name === 'TransportStatusError') {
+      throw new CoreError('Ledger error', BRC20ErrorCode.GENERAL_LEDGER_ERROR);
+    }
+    throw e;
+  }
 
   yield ExecuteTransferProgressCodes.ExecutingInscriptionOrder;
 
   const { revealTransactionId, revealUTXOVOut, revealUTXOValue } = await xverseInscribeApi.executeBrc20Order(
-    network,
+    context.network,
     commitAddress,
-    commitTransaction.hex,
+    commitHex,
     true,
   );
 
   yield ExecuteTransferProgressCodes.CreatingTransferTransaction;
 
-  const transferTransaction = await signNonOrdinalBtcSendTransaction(
-    recipientAddress,
-    [
-      {
-        address: revealAddress,
-        status: {
-          confirmed: false,
-        },
-        txid: revealTransactionId,
-        vout: revealUTXOVOut,
-        value: revealUTXOValue,
-      },
-    ],
-    accountIndex,
-    await getSeedPhrase(),
-    network,
-    new BigNumber(transferFeeEstimate),
-  );
+  const transferUtxo = await context.ordinalsAddress.constructUtxo({
+    value: revealUTXOValue,
+    txid: revealTransactionId,
+    vout: revealUTXOVOut,
+    status: {
+      confirmed: false,
+    },
+  });
+
+  const transferTransaction = new btc.Transaction();
+  await context.ordinalsAddress.addInput(transferTransaction, transferUtxo, { rbfEnabled: true });
+  context.addOutputAddress(transferTransaction, recipientAddress, BigInt(finalRecipientUtxoValue.toString()));
+
+  try {
+    await context.signTransaction(transferTransaction, options);
+  } catch (e) {
+    if (options.ledgerTransport && e instanceof Error && e.message.includes('denied by the user')) {
+      throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
+    }
+    throw e;
+  }
+
+  transferTransaction.finalize();
 
   yield ExecuteTransferProgressCodes.Finalizing;
 
   try {
     const response = await xverseInscribeApi.finalizeBrc20TransferOrder(
-      network,
+      context.network,
       commitAddress,
-      transferTransaction.signedTx,
+      transferTransaction.hex,
     );
 
     return response;

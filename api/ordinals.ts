@@ -2,13 +2,7 @@ import axios, { isAxiosError } from 'axios';
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { OrdinalsApi } from '../api/ordinals/provider';
-import {
-  API_TIMEOUT_MILLI,
-  INSCRIPTION_REQUESTS_SERVICE_URL,
-  ORDINALS_URL,
-  XVERSE_API_BASE_URL,
-  XVERSE_INSCRIBE_URL,
-} from '../constant';
+import { API_TIMEOUT_MILLI, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
 import {
   Account,
   AddressBundleResponse,
@@ -19,7 +13,6 @@ import {
   FungibleToken,
   HiroApiBrc20TxHistoryResponse,
   Inscription,
-  InscriptionRequestResponse,
   NetworkType,
   RareSatsType,
   SatRangeInscription,
@@ -199,32 +192,6 @@ export async function getBrc20History(
     });
 }
 
-export async function createInscriptionRequest(
-  recipientAddress: string,
-  size: number,
-  totalFeeSats: number,
-  fileBase64: string,
-  tokenName: string,
-  amount: string,
-): Promise<InscriptionRequestResponse> {
-  const response = await axios.post(INSCRIPTION_REQUESTS_SERVICE_URL, {
-    fee: totalFeeSats,
-    files: [
-      {
-        dataURL: `data:plain/text;base64,${fileBase64}`,
-        name: `${tokenName}-${amount}-1.txt`,
-        size: size,
-        type: 'plain/text',
-        url: '',
-      },
-    ],
-    lowPostage: true,
-    receiveAddress: recipientAddress,
-    referral: '',
-  });
-  return response.data;
-}
-
 export const isBrcTransferValid = (inscription: Inscription) => {
   const output: string = inscription.output.split(':')[0];
   return output === inscription.genesis_tx_id;
@@ -241,8 +208,8 @@ export const getAddressUtxoOrdinalBundles = async (
   options?: {
     /** Filter out unconfirmed UTXOs */
     hideUnconfirmed?: boolean;
-    /** Filter out UTXOs that only have one or more inscriptions (and no rare sats) */
-    hideInscriptionOnly?: boolean;
+    /** Filter out UTXOs that only have one or more inscriptions or other assets (and no rare sats) */
+    hideSpecialWithoutSatributes?: boolean;
   },
 ): Promise<AddressBundleResponse> => {
   const params: Record<string, unknown> = {
@@ -253,8 +220,8 @@ export const getAddressUtxoOrdinalBundles = async (
   if (options?.hideUnconfirmed) {
     params.hideUnconfirmed = 'true';
   }
-  if (options?.hideInscriptionOnly) {
-    params.hideInscriptionOnly = 'true';
+  if (options?.hideSpecialWithoutSatributes) {
+    params.hideSpecialWithoutSatributes = 'true';
   }
 
   const response = await axios.get<AddressBundleResponse>(

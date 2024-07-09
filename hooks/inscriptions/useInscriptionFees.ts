@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { TransactionContext } from '../../transactions/bitcoin';
 import { InscriptionErrorCode, inscriptionMintFeeEstimate } from '../../transactions/inscriptionMint';
-import { NetworkType, UTXO } from '../../types';
 import { CoreError } from '../../utils/coreError';
 
 type CommitValueBreakdown = {
@@ -14,7 +14,7 @@ type CommitValueBreakdown = {
 };
 
 type Props = {
-  addressUtxos: UTXO[] | undefined;
+  context: TransactionContext;
   content: string;
   contentType: string;
   feeRate: number;
@@ -22,21 +22,12 @@ type Props = {
   finalInscriptionValue?: number;
   serviceFee?: number;
   serviceFeeAddress?: string;
-  network: NetworkType;
   repetitions?: number;
-};
-
-const DUMMY_UTXO = {
-  address: '',
-  txid: '1234567890123456789012345678901234567890123456789012345678901234',
-  vout: 0,
-  status: { confirmed: true },
-  value: 100e8,
 };
 
 const useInscriptionFees = (props: Props) => {
   const {
-    addressUtxos,
+    context,
     content,
     contentType,
     feeRate,
@@ -44,7 +35,6 @@ const useInscriptionFees = (props: Props) => {
     finalInscriptionValue,
     serviceFee,
     serviceFeeAddress,
-    network,
     repetitions,
   } = props;
 
@@ -61,41 +51,24 @@ const useInscriptionFees = (props: Props) => {
 
     const runEstimate = async () => {
       try {
-        const result = await inscriptionMintFeeEstimate({
-          addressUtxos: addressUtxos || [DUMMY_UTXO],
-          content,
-          contentType,
-          revealAddress,
-          feeRate,
-          finalInscriptionValue,
-          serviceFee,
-          serviceFeeAddress,
-          network,
-          repetitions,
-        });
+        const result = await inscriptionMintFeeEstimate(
+          {
+            content,
+            contentType,
+            revealAddress,
+            feeRate,
+            finalInscriptionValue,
+            serviceFee,
+            serviceFeeAddress,
+            repetitions,
+          },
+          context,
+        );
         setCommitValue(result.commitValue);
         setCommitValueBreakdown(result.valueBreakdown);
       } catch (e) {
         if (CoreError.isCoreError(e) && (e.code ?? '') in InscriptionErrorCode) {
           setErrorCode(e.code as InscriptionErrorCode);
-
-          // if there are not enough funds, we get the fee again with a fictitious UTXO to show what the fee would be
-          if (e.code === InscriptionErrorCode.INSUFFICIENT_FUNDS) {
-            const result = await inscriptionMintFeeEstimate({
-              addressUtxos: [DUMMY_UTXO],
-              content,
-              contentType,
-              revealAddress,
-              feeRate,
-              finalInscriptionValue,
-              serviceFee,
-              serviceFeeAddress,
-              network,
-              repetitions,
-            });
-            setCommitValue(result.commitValue);
-            setCommitValueBreakdown(result.valueBreakdown);
-          }
         } else {
           setErrorCode(InscriptionErrorCode.SERVER_ERROR);
         }
@@ -107,16 +80,7 @@ const useInscriptionFees = (props: Props) => {
     };
 
     runEstimate();
-  }, [
-    addressUtxos,
-    content,
-    contentType,
-    serviceFee,
-    serviceFeeAddress,
-    finalInscriptionValue,
-    revealAddress,
-    feeRate,
-  ]);
+  }, [context, content, contentType, serviceFee, serviceFeeAddress, finalInscriptionValue, revealAddress, feeRate]);
 
   return {
     commitValue,

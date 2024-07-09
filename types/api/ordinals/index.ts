@@ -35,8 +35,10 @@ export interface InscriptionsList {
   results: Inscription[];
 }
 
+export type Brc20TxHistoryOperation = 'mint' | 'deploy' | 'transfer' | 'transfer_send';
+
 export interface Brc20TxHistoryItem {
-  operation: string;
+  operation: Brc20TxHistoryOperation;
   ticker: string;
   inscription_id: string;
   block_height: number;
@@ -64,33 +66,7 @@ export interface Brc20TxHistoryItem {
   };
 }
 
-export interface Brc20HistoryTransactionData extends TransactionData {
-  operation: string;
-  ticker: string;
-  inscription_id: string;
-  block_height: number;
-  block_hash: string;
-  location: string;
-  address: string;
-  timestamp: number;
-  transfer_send?: {
-    amount: string;
-    from_address: string;
-    to_address: string;
-  };
-  transfer?: {
-    amount: string;
-    from_address: string;
-  };
-  deploy?: {
-    max_supply: string;
-    mint_limit: string;
-    decimals: number;
-  };
-  mint?: {
-    amount: string;
-  };
-}
+export type Brc20HistoryTransactionData = Omit<Brc20TxHistoryItem, 'tx_id'> & TransactionData;
 
 export interface HiroApiBrc20TxHistoryResponse {
   limit: number;

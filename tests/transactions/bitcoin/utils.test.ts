@@ -286,7 +286,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
         runes: [],
       }),
     },
-    withRunes: {
+    withRunes1000: {
       outpoint: '1234:41',
       utxo: { value: 1000, status: { confirmed: true } },
       isEmbellished: () => false,
@@ -343,7 +343,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxoMap.confirmed3000,
       utxoMap.unconfirmed2500,
       utxoMap.embellished500,
-      utxoMap.withRunes,
+      utxoMap.withRunes1000,
       utxoMap.unconfirmed500,
       utxoMap.confirmed2000,
     ];
@@ -354,18 +354,80 @@ describe('getSortedAvailablePaymentUtxos', () => {
       paymentAddress: addressContext,
     } as any;
 
-    const utxos = await getSortedAvailablePaymentUtxos(context, new Set());
+    const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), false);
 
     // order should be: embellished, unconfirmed, confirmed
     // and internally by value
     expect(utxos).toEqual([
-      utxoMap.withRunes,
-      utxoMap.embellished500,
-      utxoMap.embellished1500,
       utxoMap.unconfirmed500,
-      utxoMap.unconfirmed2500,
+      utxoMap.embellished500,
       utxoMap.confirmed1000,
+      utxoMap.withRunes1000,
+      utxoMap.embellished1500,
       utxoMap.confirmed2000,
+      utxoMap.unconfirmed2500,
+      utxoMap.confirmed3000,
+    ]);
+  });
+
+  it('should skip unconfirmed', async () => {
+    const testUtxos = [
+      utxoMap.confirmed1000,
+      utxoMap.embellished1500,
+      utxoMap.confirmed3000,
+      utxoMap.unconfirmed2500,
+      utxoMap.embellished500,
+      utxoMap.withRunes1000,
+      utxoMap.unconfirmed500,
+      utxoMap.confirmed2000,
+    ];
+    const addressContext = {
+      getUtxos: async () => testUtxos,
+    };
+    const context = {
+      paymentAddress: addressContext,
+    } as any;
+
+    const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), true);
+
+    // order should be: embellished, unconfirmed, confirmed
+    // and internally by value
+    expect(utxos).toEqual([
+      utxoMap.embellished500,
+      utxoMap.confirmed1000,
+      utxoMap.withRunes1000,
+      utxoMap.embellished1500,
+      utxoMap.confirmed2000,
+      utxoMap.confirmed3000,
+    ]);
+  });
+
+  it('should skip at or below dust value', async () => {
+    const testUtxos = [
+      utxoMap.confirmed1000,
+      utxoMap.embellished1500,
+      utxoMap.confirmed3000,
+      utxoMap.unconfirmed2500,
+      utxoMap.embellished500,
+      utxoMap.withRunes1000,
+      utxoMap.unconfirmed500,
+      utxoMap.confirmed2000,
+    ];
+    const addressContext = {
+      getUtxos: async () => testUtxos,
+    };
+    const context = {
+      paymentAddress: addressContext,
+    } as any;
+
+    const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), false, 1000);
+
+    // order should be: embellished, unconfirmed, confirmed
+    // and internally by value
+    expect(utxos).toEqual([
+      utxoMap.embellished1500,
+      utxoMap.confirmed2000,
+      utxoMap.unconfirmed2500,
       utxoMap.confirmed3000,
     ]);
   });
@@ -376,7 +438,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxoMap.embellished1500,
       utxoMap.confirmed3000,
       utxoMap.unconfirmed2500,
-      utxoMap.withRunes,
+      utxoMap.withRunes1000,
       utxoMap.embellished500,
       utxoMap.unconfirmed500,
       utxoMap.confirmed2000,
@@ -391,17 +453,10 @@ describe('getSortedAvailablePaymentUtxos', () => {
     const utxos = await getSortedAvailablePaymentUtxos(
       context,
       new Set([utxoMap.embellished500.outpoint, utxoMap.confirmed1000.outpoint, utxoMap.confirmed3000.outpoint]),
+      true,
     );
 
-    // order should be: embellished, unconfirmed, confirmed
-    // and internally by value
-    expect(utxos).toEqual([
-      utxoMap.withRunes,
-      utxoMap.embellished1500,
-      utxoMap.unconfirmed500,
-      utxoMap.unconfirmed2500,
-      utxoMap.confirmed2000,
-    ]);
+    expect(utxos).toEqual([utxoMap.withRunes1000, utxoMap.embellished1500, utxoMap.confirmed2000]);
   });
 });
 

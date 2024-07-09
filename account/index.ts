@@ -127,7 +127,7 @@ export async function restoreWalletWithAccounts(
         }
       }),
     );
-    return newAccounts;
+    return [...newAccounts, ...currentAccounts.slice(newAccounts.length)];
   }
   return currentAccounts;
 }

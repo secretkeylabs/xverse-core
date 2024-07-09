@@ -95,7 +95,7 @@ export type TransactionSummary = {
 export type PSBTCompilationOptions = {
   ledgerTransport?: Transport;
   finalize?: boolean;
-  allowedSighash?: btc.SigHash[];
+  allowedSigHash?: btc.SigHash[];
 };
 
 export type IOInscription = {
@@ -121,6 +121,15 @@ export type TransactionOutput = {
   satributes: IOSatribute[];
 };
 
+export type TransactionPubKeyOutput = {
+  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  pubKeys: string[];
+  amount: number;
+  inscriptions: IOInscription[];
+  satributes: IOSatribute[];
+  m: number;
+};
+
 export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type'> & { type: 'fee' };
 
 export type TransactionScriptOutput = {
@@ -135,8 +144,9 @@ export type EnhancedInput = {
   inscriptions: IOInscription[];
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
+  walletWillSign: boolean;
 };
-export type EnhancedOutput = TransactionOutput | TransactionScriptOutput;
+export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 
 export type PsbtSummary = {
   inputs: EnhancedInput[];

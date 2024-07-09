@@ -24,7 +24,68 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Extract Coverage and Set Environment Variables
+        id: get-coverage
+        run: |
+          echo "LINE_COVERAGE=$(node extractCoverage.js line)" >> $GITHUB_ENV
+          echo "STATEMENT_COVERAGE=$(node extractCoverage.js statement)" >> $GITHUB_ENV
+          echo "BRANCH_COVERAGE=$(node extractCoverage.js branch)" >> $GITHUB_ENV
+          echo "FUNCTION_COVERAGE=$(node extractCoverage.js function)" >> $GITHUB_ENV
+      - name: Comment PR and delete old comments
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
+            // Fetch all comments in the PR
+            try {
+              const comments = await github.rest.issues.listComments({
+                owner,
+                repo,
+                issue_number,
+              });
+
+              // Find the existing coverage comment
+              const coverageComment = comments.data.find(comment => comment.body.includes('<!-- coverage-comment -->'));
+
+              // Attempt to delete the existing coverage comment if found
+              if (coverageComment) {
+                try {
+                  await github.rest.issues.deleteComment({
+                    owner,
+                    repo,
+                    comment_id: coverageComment.id,
+                  });
+                } catch (error) {
+                  console.error('Error deleting previous coverage comment:', error);
+                  // Continue execution even if deletion fails
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching comments:', error);
+            }
+
+            // Prepare the coverage comment body
+            const body = `<!-- coverage-comment -->\n📊 **Test Coverage**\n\n` +
+                        `- Line Coverage: ${process.env.LINE_COVERAGE}%\n` +
+                        `- Statement Coverage: ${process.env.STATEMENT_COVERAGE}%\n` +
+                        `- Branch Coverage: ${process.env.BRANCH_COVERAGE}%\n` +
+                        `- Function Coverage: ${process.env.FUNCTION_COVERAGE}%`;
+
+            // Post the new coverage comment
+            try {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            } catch (error) {
+              console.error('Failed to post new coverage comment:', error);
+            }
   publish-beta:
     needs:
       - test
