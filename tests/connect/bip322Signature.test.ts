@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Verifier } from 'bip322-js';
 import { verify } from 'bitcoinjs-message';
 
-import { bip0322Hash, signBip322Message } from '../../connect/bip322Signature';
+import { bip0322Hash, MessageSigningProtocols, signMessage } from '../../connect/messageSigning';
 import { testSeed, walletAccounts } from '../mocks/restore.mock';
 
 describe('bip0322Hash', () => {
@@ -18,11 +18,12 @@ describe('bip0322Hash', () => {
 describe('Bip322 Signatures', () => {
   it('generates a valid Bip322 signature for taproot Address', async () => {
     const message = 'Hello world';
-    const signature = await signBip322Message({
+    const signature = await signMessage({
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
-      signatureAddress: walletAccounts[0].ordinalsAddress,
+      address: walletAccounts[0].ordinalsAddress,
+      protocol: MessageSigningProtocols.BIP322,
       seedPhrase: testSeed,
     });
     // Function generates a signature
@@ -43,12 +44,13 @@ describe('Bip322 Signatures', () => {
 
   it('generates a valid Bip322 signature for segwit Address', async () => {
     const message = 'Hello world';
-    const signature = await signBip322Message({
+    const signature = await signMessage({
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
-      signatureAddress: walletAccounts[0].btcAddress,
+      address: walletAccounts[0].btcAddress,
       seedPhrase: testSeed,
+      protocol: MessageSigningProtocols.BIP322,
     });
     // Function generates a signature
     expect(signature.length).toBeGreaterThan(0);
@@ -69,12 +71,13 @@ describe('Bip322 Signatures', () => {
   it('should throw an error if accounts are not provided', async () => {
     const options = {
       accounts: [],
-      signatureAddress: 'test-address',
+      address: 'test-address',
       message: 'test message',
       network: 'Mainnet' as const,
       seedPhrase: 'test seed phrase',
+      protocol: MessageSigningProtocols.BIP322,
     };
 
-    await expect(signBip322Message(options)).rejects.toThrow('List of Accounts are required');
+    await expect(signMessage(options)).rejects.toThrow('List of Accounts are required');
   });
 });
