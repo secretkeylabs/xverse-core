@@ -18,7 +18,7 @@ describe('bip0322Hash', () => {
 describe('Bip322 Signatures', () => {
   it('generates a valid Bip322 signature for taproot Address', async () => {
     const message = 'Hello world';
-    const signature = await signMessage({
+    const signedMessage = await signMessage({
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
@@ -27,24 +27,24 @@ describe('Bip322 Signatures', () => {
       seedPhrase: testSeed,
     });
     // Function generates a signature
-    expect(signature.length).toBeGreaterThan(0);
+    expect(signedMessage.signature.length).toBeGreaterThan(0);
 
     // positive test
-    const shouldBeValid = Verifier.verifySignature(walletAccounts[0].ordinalsAddress, message, signature);
+    const shouldBeValid = Verifier.verifySignature(walletAccounts[0].ordinalsAddress, message, signedMessage.signature);
     expect(shouldBeValid).toEqual(true);
 
     // negative test
     const shouldBeInValid = Verifier.verifySignature(
       walletAccounts[0].ordinalsAddress,
       message + 'not my original message',
-      signature,
+      signedMessage.signature,
     );
     expect(shouldBeInValid).toEqual(false);
   });
 
   it('generates a valid Bip322 signature for segwit Address', async () => {
     const message = 'Hello world';
-    const signature = await signMessage({
+    const signedMessage = await signMessage({
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
@@ -52,19 +52,24 @@ describe('Bip322 Signatures', () => {
       seedPhrase: testSeed,
       protocol: MessageSigningProtocols.BIP322,
     });
+    console.log(signedMessage);
     // Function generates a signature
-    expect(signature.length).toBeGreaterThan(0);
+    expect(signedMessage.signature.length).toBeGreaterThan(0);
     // Function generates the same signature
-    expect(signature).toEqual(
-      'JAA5OEh613wRJaMzfUkYILNP7Ny5MsPk77syQxznAG4QIkckJO5knVoQHi8L9BcMM6beSMEOjklBWQdOsnGaBak=',
+    expect(signedMessage.signature).toEqual(
+      'AkgwRQIhAOOz/DsVTdCHHJR/bUtQ42vwjEP2Qypk29laJXzCs8fbAiARV2Qiwx0Z1rAuA+hGjgP/mTZzRWcH1xXBY+iUxdQTKAEhAyIV2BIoLAeSyFNcNwLMqZT149qc2FAsPhkNQi8AZv3/',
     );
 
     // positive test
-    const shouldBeValid = verify(message, walletAccounts[0].btcAddress, signature);
+    const shouldBeValid = Verifier.verifySignature(walletAccounts[0].btcAddress, message, signedMessage.signature);
     expect(shouldBeValid).toEqual(true);
 
     // negative test
-    const shouldBeInValid = verify(message + 'not my original message', walletAccounts[0].btcAddress, signature);
+    const shouldBeInValid = Verifier.verifySignature(
+      walletAccounts[0].btcAddress,
+      message + 'not my original message',
+      signedMessage.signature,
+    );
     expect(shouldBeInValid).toEqual(false);
   });
 
@@ -79,5 +84,36 @@ describe('Bip322 Signatures', () => {
     };
 
     await expect(signMessage(options)).rejects.toThrow('List of Accounts are required');
+  });
+});
+
+describe('ECDSA Signatures', () => {
+  it('generates a valid ECDSA signature for p2sh address', async () => {
+    const message = 'Hello world';
+    const signedMessage = await signMessage({
+      message,
+      accounts: walletAccounts,
+      network: 'Mainnet',
+      address: walletAccounts[0].btcAddress,
+      seedPhrase: testSeed,
+      protocol: MessageSigningProtocols.ECDSA,
+    });
+    // Function generates a signature
+    expect(signedMessage.signature.length).toBeGreaterThan(0);
+    // Function generates the same signature
+    expect(signedMessage.signature).toEqual(
+      'JAA5OEh613wRJaMzfUkYILNP7Ny5MsPk77syQxznAG4QIkckJO5knVoQHi8L9BcMM6beSMEOjklBWQdOsnGaBak=',
+    );
+
+    // positive test
+    const shouldBeValid = verify(message, walletAccounts[0].btcAddress, signedMessage.signature);
+    expect(shouldBeValid).toEqual(true);
+    // negative test
+    const shouldBeInValid = verify(
+      message + 'not my original message',
+      walletAccounts[0].btcAddress,
+      signedMessage.signature,
+    );
+    expect(shouldBeInValid).toEqual(false);
   });
 });

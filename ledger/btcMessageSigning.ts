@@ -3,7 +3,7 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { encode } from 'varuint-bitcoin';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
-import { bip0322Hash } from '../connect';
+import { bip0322Hash, MessageSigningProtocols } from '../connect';
 import { NetworkType } from '../types';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
 import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
@@ -135,6 +135,26 @@ const createTaprootBip322Signature = async ({
   );
 };
 
+export async function createNativeSegwitECDSA({
+  transport,
+  networkType,
+  message,
+  addressIndex,
+}: {
+  transport: Transport;
+  networkType: NetworkType;
+  message: string;
+  addressIndex: number;
+}) {
+  const app = new AppClient(transport);
+  const coinType = getCoinType(networkType);
+  const signature = await app.signMessage(
+    Buffer.from(message),
+    `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+  );
+  return signature;
+}
+
 /**
  * This function is used to sign an incoming BIP 322 message with the ledger
  * @param transport - the transport object with connected ledger device
@@ -143,25 +163,34 @@ const createTaprootBip322Signature = async ({
  * @param message - the incoming message in string format to sign
  * @returns the signature in string (base64) format
  * */
-export async function signSimpleBip322Message({
+export async function signMessageLedger({
   transport,
   networkType,
   addressIndex,
   address,
   message,
+  protocol,
 }: {
   transport: Transport;
   networkType: NetworkType;
   addressIndex: number;
   address: string;
   message: string;
+  protocol?: MessageSigningProtocols;
 }) {
   const app = new AppClient(transport);
   const { type } = getAddressInfo(address);
-  if (type === AddressType.p2tr) {
-    return createTaprootBip322Signature({ message, app, addressIndex, networkType });
-  } else if (type === AddressType.p2wpkh) {
+  if (!protocol) {
+    if (type === AddressType.p2tr) {
+      return createTaprootBip322Signature({ message, app, addressIndex, networkType });
+    }
     return createSegwitBip322Signature({ message, app, addressIndex, networkType });
+  }
+  if (protocol === MessageSigningProtocols.ECDSA) {
+    return createNativeSegwitECDSA({ transport, networkType, message, addressIndex });
+  }
+  if (protocol === MessageSigningProtocols.BIP322) {
+    return createTaprootBip322Signature({ message, app, addressIndex, networkType });
   }
   throw new Error('Invalid Address Type');
 }

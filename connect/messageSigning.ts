@@ -70,7 +70,13 @@ const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: Bitc
 };
 
 export const signMessageECDSA = async (message: string, privateKey: Buffer) => {
-  return (await signAsync(message, privateKey, false, { segwitType: 'p2sh(p2wpkh)' })).toString('base64');
+  // to-do support signing with p2wpkh
+  const signature = await signAsync(message, privateKey, false, { segwitType: 'p2sh(p2wpkh)' });
+  return {
+    signature: signature.toString('base64'),
+    publicKey: hex.encode(secp256k1.getPublicKey(privateKey, true)),
+    protocol: MessageSigningProtocols.ECDSA,
+  };
 };
 
 type SignBip322Options = {
@@ -118,7 +124,7 @@ export const signMessageBip322 = async ({ addressType, message, network, private
       script: txScript.script,
       amount: BigInt(0),
     },
-    redeemScript: AddressType.p2sh ? txScript.redeemScript : Buffer.alloc(0),
+    redeemScript: addressType === AddressType.p2sh ? txScript.redeemScript : Buffer.alloc(0),
   });
   txToSign.addOutput({ script: btc.Script.encode(['RETURN']), amount: BigInt(0) });
   txToSign.sign(hex.decode(privateKeyHex));
@@ -129,9 +135,13 @@ export const signMessageBip322 = async ({ addressType, message, network, private
   if (firstInput.finalScriptWitness?.length) {
     const len = encode(firstInput.finalScriptWitness?.length);
     const result = Buffer.concat([len, ...firstInput.finalScriptWitness.map((w) => encodeVarString(w))]);
-    return result.toString('base64');
+    return {
+      signature: result.toString('base64'),
+      publicKey: hex.encode(publicKey),
+      protocol: MessageSigningProtocols.BIP322,
+    };
   } else {
-    return '';
+    throw new Error('Unable to Sign Message with BIP322');
   }
 };
 
@@ -155,7 +165,6 @@ export const signMessage = async ({
   if (!accounts?.length) {
     throw new Error('a List of Accounts are required to derive the correct Private Key');
   }
-  console.log('Signing Message with Protocol: ', protocol, 'Address: ', address);
 
   const { type } = getAddressInfo(address);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
@@ -173,7 +182,7 @@ export const signMessage = async ({
       }
       if (type === AddressType.p2sh) {
         // default to ECDSA for p2sh
-        return (await signAsync(message, child.privateKey, false, { segwitType: 'p2sh(p2wpkh)' })).toString('base64');
+        return signMessageECDSA(message, child.privateKey);
       }
     }
     if (protocol === MessageSigningProtocols.ECDSA) {
