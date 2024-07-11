@@ -4,7 +4,7 @@ import * as btc from '@scure/btc-signer';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
-import { signAsync } from 'bitcoinjs-message';
+import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
@@ -68,6 +68,8 @@ const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: Bitc
     }
   }
 };
+
+export const legacyHash = (message: string) => magicHash(message);
 
 export const signMessageECDSA = async (message: string, privateKey: Buffer) => {
   // to-do support signing with p2wpkh
@@ -186,6 +188,9 @@ export const signMessage = async ({
       }
     }
     if (protocol === MessageSigningProtocols.ECDSA) {
+      if (type === AddressType.p2tr) {
+        throw new Error('ECDSA is not supported for Taproot Addresses');
+      }
       return signMessageECDSA(message, child.privateKey);
     }
     if (protocol === MessageSigningProtocols.BIP322) {
