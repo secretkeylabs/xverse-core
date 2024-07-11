@@ -15,11 +15,26 @@ import {
   CollectionMarketDataResponse,
   CollectionsList,
   DappSectionData,
+  ExecuteOrderRequest,
+  ExecuteOrderResponse,
+  ExecuteUtxoOrderRequest,
+  ExecuteUtxoOrderResponse,
+  GetDestinationTokensRequest,
+  GetDestinationTokensResponse,
+  GetQuotesRequest,
+  GetQuotesResponse,
+  GetSourceTokensRequest,
+  GetUtxosRequest,
+  GetUtxosResponse,
   Inscription,
   InscriptionInCollectionsList,
   NetworkType,
   NotificationBanner,
   OrdinalInfo,
+  PlaceOrderRequest,
+  PlaceOrderResponse,
+  PlaceUtxoOrderRequest,
+  PlaceUtxoOrderResponse,
   SignedUrlResponse,
   SimplePriceResponse,
   SponsorInfoResponse,
@@ -27,6 +42,7 @@ import {
   StackerInfo,
   StackingPoolInfo,
   SupportedCurrency,
+  TokenBasic,
   TokenFiatRateResponse,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
@@ -237,6 +253,49 @@ class XverseApi {
     >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
   }
+
+  swaps = {
+    /** Get the tokens that the user has which are supported by the swap services */
+    getSourceTokens: async (body: GetSourceTokensRequest): Promise<TokenBasic[]> => {
+      const response = await this.client.post<TokenBasic[]>('/v1/swaps/get-source-tokens', body);
+      return response.data;
+    },
+    /** Get the tokens that the user can swap to, depending on the tokens they have in their wallet */
+    getDestinationTokens: async (body: GetDestinationTokensRequest): Promise<GetDestinationTokensResponse> => {
+      const response = await this.client.post<GetDestinationTokensResponse>('/v1/swaps/get-destination-tokens', body);
+      return response.data;
+    },
+    /** Get quotes for a specific token swap */
+    getQuotes: async (body: GetQuotesRequest): Promise<GetQuotesResponse> => {
+      const response = await this.client.post<GetQuotesResponse>('/v1/swaps/get-quotes', body);
+      return response.data;
+    },
+    /** Get utxos for a swap pair from a specific provider */
+    getUtxos: async (body: GetUtxosRequest): Promise<GetUtxosResponse> => {
+      const response = await this.client.post<GetUtxosResponse>('/v1/swaps/get-utxos', body);
+      return response.data;
+    },
+    /** Place a swap order. This is for AMM providers. */
+    placeOrder: async (body: PlaceOrderRequest): Promise<PlaceOrderResponse> => {
+      const response = await this.client.post<PlaceOrderResponse>('/v1/swaps/place-order', body);
+      return response.data;
+    },
+    /** Execute a swap order. This is for AMM providers. */
+    executeOrder: async (body: ExecuteOrderRequest): Promise<ExecuteOrderResponse> => {
+      const response = await this.client.post<ExecuteOrderResponse>('/v1/swaps/execute-order', body);
+      return response.data;
+    },
+    /** Place a swap order. This is for UTXO based providers. */
+    placeUtxoOrder: async (body: PlaceUtxoOrderRequest): Promise<PlaceUtxoOrderResponse> => {
+      const response = await this.client.post<PlaceUtxoOrderResponse>('/v1/swaps/place-utxo-order', body);
+      return response.data;
+    },
+    /** Execute a swap order. This is for UTXO based providers. */
+    executeUtxoOrder: async (body: ExecuteUtxoOrderRequest): Promise<ExecuteUtxoOrderResponse> => {
+      const response = await this.client.post<ExecuteUtxoOrderResponse>('/v1/swaps/execute-utxo-order', body);
+      return response.data;
+    },
+  };
 }
 
 const apiClients: Partial<Record<NetworkType, XverseApi>> = {};
