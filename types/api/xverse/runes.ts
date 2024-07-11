@@ -95,7 +95,7 @@ export type RuneMarketInfo = {
   minOrderSize: number;
   maxOrderSize: number;
   pendingTxnCount: number;
-  floorUnitPrice: FloorUnitPrice;
+  floorUnitPrice?: FloorUnitPrice;
   marketCap: number;
   volume: Volume;
 };
