@@ -176,8 +176,6 @@ export type PlaceUtxoOrderRequest = {
   ordAddress: string;
   /** The user's ordinals address's public key */
   ordPubKey: string;
-  /** If an identifier was passed in with the quote, it should be sent here */
-  identifier?: unknown;
 };
 
 export type PlaceUtxoOrderResponse = {
