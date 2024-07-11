@@ -93,6 +93,9 @@ export const XORD_URL = (network: NetworkType) => `https://inscribe${xverseApiNe
 export const ORDINALS_URL = (network: NetworkType, inscriptionId: string) =>
   `https://ord${xverseApiNetworkSuffix(network)}.xverse.app/content/${inscriptionId}`;
 
+export const ORDINALS_SERVICE_BASE_URL = (network: NetworkType = 'Mainnet') =>
+  `https://ordinals${xverseApiNetworkSuffix(network)}.xverse.app/v1`;
+
 export const XVERSE_SPONSOR_URL = 'https://sponsor.xverse.app';
 
 export const GAIA_HUB_URL = 'https://hub.hiro.so';

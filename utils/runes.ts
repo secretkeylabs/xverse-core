@@ -1,7 +1,7 @@
 import { getRunesClient } from '../api';
 import { TransactionContext } from '../transactions/bitcoin';
 import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
-import { NetworkType } from '../types';
+import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
@@ -38,6 +38,30 @@ export type RuneSummary = {
   receipts: Receipt[];
   burns: Burn[];
 };
+
+export type EtchActionDetails = Omit<
+  CreateEtchOrderRequest,
+  'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'
+>;
+
+export type MintActionDetails = Mint & {
+  repeats: number;
+  runeSize: number;
+  destinationAddress: string;
+};
+
+/**
+ * RuneSummaryActions is a RuneSummary with the mint and etch properties extended
+ *  with ordinals service specific properties.
+ * for usage with the tx confirmations and etch/mint screens
+ */
+export type RuneSummaryActions = Override<
+  RuneSummary,
+  {
+    mint: MintActionDetails;
+    etch: EtchActionDetails;
+  }
+>;
 
 const getSpacedName = (name: string, spacerRaw: bigint | BigNumber): string => {
   const spacer = BigInt(spacerRaw.toString(10));
@@ -81,7 +105,7 @@ const extractRuneInputs = async (context: TransactionContext, summary: Transacti
   return inputRuneData.filter((input) => input.hasRunes);
 };
 
-const parseSummaryWithoutRuneScript = async (
+const parseSummaryWithBurnRuneScript = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
@@ -555,7 +579,7 @@ export const parseSummaryForRunes = async (
   network: NetworkType,
 ): Promise<RuneSummary> => {
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
-    return parseSummaryWithoutRuneScript(context, summary, network);
+    return parseSummaryWithBurnRuneScript(context, summary, network);
   }
 
   return parseSummaryWithRuneScript(context, summary, network);

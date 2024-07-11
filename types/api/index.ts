@@ -8,3 +8,4 @@ export * from './shared';
 export * from './stacks';
 export * from './xverse';
 export * from './xverseInscribe';
+export * from './ordinalsService';

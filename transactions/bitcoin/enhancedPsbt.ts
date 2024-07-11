@@ -8,14 +8,26 @@ import { TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
+  EnhancedOutput,
+  IOInscription,
+  IOSatribute,
   InputMetadata,
   PSBTCompilationOptions,
   PsbtSummary,
   TransactionFeeOutput,
-  TransactionOutput,
-  TransactionScriptOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
+
+type ParsedOutputMetadata =
+  | { address: string; script?: undefined; type?: undefined }
+  | { address?: undefined; script: string[]; scriptHex: string; type?: undefined }
+  | {
+      address?: undefined;
+      script?: undefined;
+      pubKeys: string[];
+      type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
+      m: number;
+    };
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -80,10 +92,7 @@ export class EnhancedPsbt {
     }
   }
 
-  private parseAddressFromOutput(
-    transaction: btc.Transaction,
-    outputIndex: number,
-  ): { address: string; script?: undefined } | { address?: undefined; script: string[]; scriptHex: string } {
+  private parseAddressFromOutput(transaction: btc.Transaction, outputIndex: number): ParsedOutputMetadata {
     const output = transaction.getOutput(outputIndex);
 
     if (!output?.script) {
@@ -99,6 +108,31 @@ export class EnhancedPsbt {
       return {
         script: btc.Script.decode(outputScript.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`)),
         scriptHex: hex.encode(outputScript.script),
+      };
+    }
+
+    if (outputScript.type === 'pk') {
+      //for script outputs
+      return {
+        type: 'pk',
+        pubKeys: [hex.encode(outputScript.pubkey)],
+        m: 1,
+      };
+    }
+
+    if (outputScript.type === 'ms' || outputScript.type === 'tr_ms') {
+      return {
+        type: outputScript.type,
+        pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.m,
+      };
+    }
+
+    if (outputScript.type === 'tr_ns') {
+      return {
+        type: outputScript.type,
+        pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        m: outputScript.pubkeys.length,
       };
     }
 
@@ -186,7 +220,7 @@ export class EnhancedPsbt {
     const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
       transaction,
     );
-    const outputs: (TransactionOutput | TransactionScriptOutput)[] = [];
+    const outputs: EnhancedOutput[] = [];
 
     let hasScriptOutput = false;
     let outputTotal = 0;
@@ -211,31 +245,38 @@ export class EnhancedPsbt {
       const amount = Number(outputRaw.amount);
       outputTotal += amount;
 
-      if (!isSigHashAll) {
-        const output: TransactionOutput = {
+      let inscriptions: IOInscription[] = [];
+      let satributes: IOSatribute[] = [];
+
+      if (isSigHashAll) {
+        const extractedAssets = await extractOutputInscriptionsAndSatributes(
+          inputsExtendedUtxos,
+          currentOffset,
+          amount,
+        );
+
+        inscriptions = extractedAssets.inscriptions;
+        satributes = extractedAssets.satributes;
+      }
+
+      if (outputMetadata.address !== undefined) {
+        outputs.push({
           type: 'address',
           address: outputMetadata.address,
           amount: Number(amount),
-          inscriptions: [],
-          satributes: [],
-        };
-        outputs.push(output);
-        continue;
+          inscriptions,
+          satributes,
+        });
+      } else {
+        outputs.push({
+          type: outputMetadata.type,
+          pubKeys: outputMetadata.pubKeys,
+          amount: Number(amount),
+          inscriptions,
+          satributes,
+          m: outputMetadata.m,
+        });
       }
-
-      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(
-        inputsExtendedUtxos,
-        currentOffset,
-        amount,
-      );
-      const output: TransactionOutput = {
-        type: 'address',
-        address: outputMetadata.address,
-        amount: Number(amount),
-        inscriptions,
-        satributes,
-      };
-      outputs.push(output);
 
       currentOffset += Number(amount);
     }

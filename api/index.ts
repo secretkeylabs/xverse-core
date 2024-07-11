@@ -9,3 +9,4 @@ export * from './runes/provider';
 export * from './stacks';
 export * from './utxoCache';
 export * from './xverse';
+export * from './ordinalsService';
