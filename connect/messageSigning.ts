@@ -71,9 +71,14 @@ const getSignerScript = (type: AddressType, publicKey: Uint8Array, network: Bitc
 
 export const legacyHash = (message: string) => magicHash(message);
 
-export const signMessageECDSA = async (message: string, privateKey: Buffer) => {
-  // to-do support signing with p2wpkh
-  const signature = await signAsync(message, privateKey, false, { segwitType: 'p2sh(p2wpkh)' });
+export const signMessageECDSA = async (
+  message: string,
+  privateKey: Buffer,
+  addressType: AddressType.p2sh | AddressType.p2wpkh,
+) => {
+  const signature = await signAsync(message, privateKey, false, {
+    segwitType: addressType === AddressType.p2sh ? 'p2sh(p2wpkh)' : 'p2wpkh',
+  });
   return {
     signature: signature.toString('base64'),
     publicKey: hex.encode(secp256k1.getPublicKey(privateKey, true)),
@@ -164,10 +169,12 @@ export const signMessage = async ({
   seedPhrase,
   protocol,
 }: SingMessageOptions) => {
+  /**
+   * Derive Private Key for signing
+   */
   if (!accounts?.length) {
     throw new Error('a List of Accounts are required to derive the correct Private Key');
   }
-
   const { type } = getAddressInfo(address);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const master = bip32.fromSeed(seed);
@@ -177,25 +184,21 @@ export const signMessage = async ({
    * sing Message with Protocol
    */
   if (child.privateKey) {
-    if (!protocol) {
-      if (type === AddressType.p2tr || type === AddressType.p2wpkh) {
-        // default to BIP322 for p2tr and p2wpkh
+    if (child.privateKey) {
+      const protocolToUse =
+        protocol || (type === AddressType.p2sh ? MessageSigningProtocols.ECDSA : MessageSigningProtocols.BIP322);
+
+      if (protocolToUse === MessageSigningProtocols.ECDSA) {
+        if (type === AddressType.p2tr) {
+          throw new Error('ECDSA is not supported for Taproot Addresses');
+        }
+        return signMessageECDSA(message, child.privateKey, type as AddressType.p2sh | AddressType.p2wpkh);
+      }
+      if (protocolToUse === MessageSigningProtocols.BIP322) {
         return signMessageBip322({ addressType: type, message, network, privateKey: child.privateKey });
       }
-      if (type === AddressType.p2sh) {
-        // default to ECDSA for p2sh
-        return signMessageECDSA(message, child.privateKey);
-      }
     }
-    if (protocol === MessageSigningProtocols.ECDSA) {
-      if (type === AddressType.p2tr) {
-        throw new Error('ECDSA is not supported for Taproot Addresses');
-      }
-      return signMessageECDSA(message, child.privateKey);
-    }
-    if (protocol === MessageSigningProtocols.BIP322) {
-      return signMessageBip322({ addressType: type, message, network, privateKey: child.privateKey });
-    }
+    throw new Error("Couldn't sign Message");
   }
   throw new Error("Couldn't sign Message");
 };

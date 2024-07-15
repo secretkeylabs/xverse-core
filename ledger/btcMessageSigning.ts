@@ -180,24 +180,19 @@ export async function signMessageLedger({
 }) {
   const app = new AppClient(transport);
   const { type } = getAddressInfo(address);
-  if (!protocol) {
-    if (type === AddressType.p2tr) {
-      return createTaprootBip322Signature({ message, app, addressIndex, networkType });
-    }
-    return createSegwitBip322Signature({ message, app, addressIndex, networkType });
-  }
-  if (protocol === MessageSigningProtocols.ECDSA) {
+  // if protocol isn't specified, we default to bip322 for both address types
+  const protocolToSign = protocol || MessageSigningProtocols.BIP322;
+  if (protocolToSign === MessageSigningProtocols.ECDSA) {
     if (type === AddressType.p2tr) {
       throw new Error('ECDSA is not supported for Taproot Addresses');
     }
     return createNativeSegwitECDSA({ transport, networkType, message, addressIndex });
   }
-  if (protocol === MessageSigningProtocols.BIP322) {
+  if (protocolToSign === MessageSigningProtocols.BIP322) {
     if (type === AddressType.p2tr) {
       return createTaprootBip322Signature({ message, app, addressIndex, networkType });
-    } else {
-      return createSegwitBip322Signature({ message, app, addressIndex, networkType });
     }
+    return createSegwitBip322Signature({ message, app, addressIndex, networkType });
   }
   throw new Error('Invalid Address Type');
 }

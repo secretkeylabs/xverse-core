@@ -52,7 +52,6 @@ describe('Bip322 Signatures', () => {
       seedPhrase: testSeed,
       protocol: MessageSigningProtocols.BIP322,
     });
-    console.log(signedMessage);
     // Function generates a signature
     expect(signedMessage.signature.length).toBeGreaterThan(0);
     // Function generates the same signature
