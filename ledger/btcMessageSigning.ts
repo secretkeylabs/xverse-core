@@ -3,8 +3,8 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { encode } from 'varuint-bitcoin';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
-import { bip0322Hash, MessageSigningProtocols } from '../connect';
-import { NetworkType, SignedMessage } from '../types';
+import { bip0322Hash } from '../connect';
+import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
 import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
 
