@@ -8,6 +8,15 @@ export type Provider = {
 };
 
 export type TokenBasic = {
+  /**
+   * The ticker of the token. This should be unique across all tokens per protocol.
+   *
+   * These are the expected formats for each protocol:
+   * btc: "BTC"
+   * stx: "STX"
+   * brc20: the brc-20 ticker
+   * runes: the rune name WITH spacers (e.g. "UNCOMMON•GOODS")
+   */
   ticker: string;
   protocol: Protocol;
 };
