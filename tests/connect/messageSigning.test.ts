@@ -4,8 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { Verifier } from 'bip322-js';
 import { verify } from 'bitcoinjs-message';
 
-import { bip0322Hash, MessageSigningProtocols, signMessage } from '../../connect/messageSigning';
+import { bip0322Hash, signMessage } from '../../connect/messageSigning';
 import { testSeed, walletAccounts } from '../mocks/restore.mock';
+import { MessageSigningProtocols } from '../../types';
 
 describe('bip0322Hash', () => {
   it('should return the BIP0322 message hash', () => {

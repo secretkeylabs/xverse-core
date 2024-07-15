@@ -8,7 +8,7 @@ import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { getSigningDerivationPath } from '../transactions/psbt';
-import { Account, NetworkType } from '../types';
+import { Account, MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { bip32 } from '../utils/bip32';
 
 /**
@@ -27,11 +27,6 @@ export function bip0322Hash(message: string) {
 
 function encodeVarString(b: Uint8Array) {
   return Buffer.concat([encode(b.byteLength), b]);
-}
-
-export enum MessageSigningProtocols {
-  ECDSA = 'ECDSA',
-  BIP322 = 'BIP322',
 }
 
 const getSigningPk = (type: AddressType, privateKey: string | Buffer) => {
@@ -75,13 +70,12 @@ export const signMessageECDSA = async (
   message: string,
   privateKey: Buffer,
   addressType: AddressType.p2sh | AddressType.p2wpkh,
-) => {
+): Promise<SignedMessage> => {
   const signature = await signAsync(message, privateKey, false, {
     segwitType: addressType === AddressType.p2sh ? 'p2sh(p2wpkh)' : 'p2wpkh',
   });
   return {
     signature: signature.toString('base64'),
-    publicKey: hex.encode(secp256k1.getPublicKey(privateKey, true)),
     protocol: MessageSigningProtocols.ECDSA,
   };
 };
@@ -93,7 +87,12 @@ type SignBip322Options = {
   network: NetworkType;
 };
 
-export const signMessageBip322 = async ({ addressType, message, network, privateKey }: SignBip322Options) => {
+export const signMessageBip322 = async ({
+  addressType,
+  message,
+  network,
+  privateKey,
+}: SignBip322Options): Promise<SignedMessage> => {
   const privateKeyHex = privateKey?.toString('hex');
   const publicKey = getSigningPk(addressType, privateKeyHex);
   const txScript = getSignerScript(addressType, publicKey, getBtcNetwork(network));
@@ -144,7 +143,6 @@ export const signMessageBip322 = async ({ addressType, message, network, private
     const result = Buffer.concat([len, ...firstInput.finalScriptWitness.map((w) => encodeVarString(w))]);
     return {
       signature: result.toString('base64'),
-      publicKey: hex.encode(publicKey),
       protocol: MessageSigningProtocols.BIP322,
     };
   } else {
@@ -168,7 +166,7 @@ export const signMessage = async ({
   accounts,
   seedPhrase,
   protocol,
-}: SingMessageOptions) => {
+}: SingMessageOptions): Promise<SignedMessage> => {
   /**
    * Derive Private Key for signing
    */
@@ -184,21 +182,18 @@ export const signMessage = async ({
    * sing Message with Protocol
    */
   if (child.privateKey) {
-    if (child.privateKey) {
-      const protocolToUse =
-        protocol || (type === AddressType.p2sh ? MessageSigningProtocols.ECDSA : MessageSigningProtocols.BIP322);
+    const protocolToUse =
+      protocol || (type === AddressType.p2sh ? MessageSigningProtocols.ECDSA : MessageSigningProtocols.BIP322);
 
-      if (protocolToUse === MessageSigningProtocols.ECDSA) {
-        if (type === AddressType.p2tr) {
-          throw new Error('ECDSA is not supported for Taproot Addresses');
-        }
-        return signMessageECDSA(message, child.privateKey, type as AddressType.p2sh | AddressType.p2wpkh);
+    if (protocolToUse === MessageSigningProtocols.ECDSA) {
+      if (type === AddressType.p2tr) {
+        throw new Error('ECDSA is not supported for Taproot Addresses');
       }
-      if (protocolToUse === MessageSigningProtocols.BIP322) {
-        return signMessageBip322({ addressType: type, message, network, privateKey: child.privateKey });
-      }
+      return signMessageECDSA(message, child.privateKey, type as AddressType.p2sh | AddressType.p2wpkh);
     }
-    throw new Error("Couldn't sign Message");
+    if (protocolToUse === MessageSigningProtocols.BIP322) {
+      return signMessageBip322({ addressType: type, message, network, privateKey: child.privateKey });
+    }
   }
   throw new Error("Couldn't sign Message");
 };
