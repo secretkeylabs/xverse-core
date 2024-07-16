@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActionType, combineUtxos, sendBtc, sendMaxBtc, sendOrdinals } from '../../../transactions/bitcoin';
+import {
+  ActionType,
+  combineUtxos,
+  sendBtc,
+  sendMaxBtc,
+  sendOrdinals,
+  sendOrdinalsWithSplit,
+} from '../../../transactions/bitcoin';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
 import { addresses } from './helpers';
 
@@ -392,5 +399,417 @@ describe('sendOrdinals', () => {
     contextMock.getInscriptionUtxo.mockResolvedValueOnce({});
 
     await expect(() => sendOrdinals(contextMock, recipients, 2)).rejects.toThrow('No utxo found for inscription');
+  });
+});
+
+describe('sendOrdinalsWithSplit', () => {
+  const paymentAddress = addresses[0].nestedSegwit;
+
+  const recipientAddress = addresses[0].nativeSegwit;
+  const recipientAddress2 = addresses[1].nativeSegwit;
+
+  const contextMock = {
+    paymentAddress: {
+      address: paymentAddress,
+    },
+    getInscriptionUtxo: vi.fn(),
+    getUtxo: vi.fn(),
+  } as any;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('should throw on no recipients', async () => {
+    await expect(() => sendOrdinalsWithSplit(contextMock, [], 2)).rejects.toThrow('Must provide at least 1 recipient');
+  });
+
+  it('should generate send utxo if single recipient and one sat range', async () => {
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 1000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}],
+        }),
+      },
+    });
+
+    const transaction = await sendOrdinalsWithSplit(
+      contextMock,
+      [{ toAddress: recipientAddress, location: 'out:1:0' }],
+      2,
+    );
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SEND_UTXO,
+          toAddress: recipientAddress,
+          outpoint: 'out:1',
+        },
+      ],
+      2,
+      undefined,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct transaction for single recipient', async () => {
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 1000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}, {}],
+        }),
+      },
+    });
+
+    const transaction = await sendOrdinalsWithSplit(
+      contextMock,
+      [{ toAddress: recipientAddress, location: 'out:1:0' }],
+      2,
+    );
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SPLIT_UTXO,
+          toAddress: recipientAddress,
+          location: 'out:1:0',
+        },
+      ],
+      2,
+      undefined,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct transaction for sending inscriptions', async () => {
+    contextMock.getInscriptionUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        outpoint: 'out:1',
+        getBundleData: () => ({
+          sat_ranges: [
+            {
+              inscriptions: [{ id: 'inscriptionIdi1' }],
+            },
+            {
+              inscriptions: [{ id: 'inscriptionIdi0' }],
+              offset: 4,
+            },
+          ],
+        }),
+      },
+    });
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 1000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}, {}],
+        }),
+      },
+    });
+
+    const transaction = await sendOrdinalsWithSplit(
+      contextMock,
+      [{ toAddress: recipientAddress, inscriptionId: 'inscriptionIdi0' }],
+      2,
+    );
+
+    expect(contextMock.getInscriptionUtxo).toHaveBeenCalledTimes(1);
+    expect(contextMock.getInscriptionUtxo).toHaveBeenCalledWith('inscriptionIdi0');
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          type: ActionType.SPLIT_UTXO,
+          toAddress: recipientAddress,
+          location: 'out:1:0',
+        },
+      ],
+      2,
+      undefined,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct txn for many sends', async () => {
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 100000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}],
+        }),
+      },
+    });
+
+    const transaction = await sendOrdinalsWithSplit(
+      contextMock,
+      [
+        { toAddress: recipientAddress, location: 'out:1:10' },
+        { toAddress: recipientAddress, location: 'out:1:600' },
+        { toAddress: recipientAddress, location: 'out:1:10000' },
+        { toAddress: recipientAddress2, location: 'out:1:50000' },
+        { toAddress: recipientAddress, location: 'out:1:50200' },
+        { toAddress: recipientAddress, location: 'out:1:70000' },
+        { toAddress: recipientAddress2, location: 'out:1:80000' },
+      ],
+      2,
+    );
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          location: 'out:1:0',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:600',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:1146',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:10000',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:10546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:49654',
+          toAddress: recipientAddress2,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:50200',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:50746',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:70000',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:70546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:80000',
+          toAddress: recipientAddress2,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:80546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+      ],
+      2,
+      undefined,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  it('should generate correct txn for complex stuff', async () => {
+    contextMock.getInscriptionUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        outpoint: 'out:1',
+        getBundleData: () => ({
+          sat_ranges: [
+            {
+              inscriptions: [{ id: 'inscriptionIdi1' }],
+            },
+            {
+              inscriptions: [{ id: 'inscriptionIdi0' }],
+              offset: 4,
+            },
+          ],
+        }),
+      },
+    });
+    contextMock.getInscriptionUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        outpoint: 'out:2',
+        getBundleData: () => ({
+          sat_ranges: [
+            {
+              inscriptions: [{ id: 'inscriptionIdi3' }],
+            },
+            {
+              inscriptions: [{ id: 'inscriptionIdi2' }],
+              offset: 1500,
+            },
+          ],
+        }),
+      },
+    });
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 10000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}],
+        }),
+      },
+    });
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 100000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}],
+        }),
+      },
+    });
+    contextMock.getUtxo.mockResolvedValueOnce({
+      extendedUtxo: {
+        utxo: { value: 10000, address: paymentAddress },
+        getBundleData: () => ({
+          sat_ranges: [{}],
+        }),
+      },
+    });
+
+    const transaction = await sendOrdinalsWithSplit(
+      contextMock,
+      [
+        { toAddress: recipientAddress, inscriptionId: 'inscriptionIdi0' },
+        { toAddress: recipientAddress, location: 'out:1:600' },
+        { toAddress: recipientAddress, location: 'out:1:10000' },
+        { toAddress: recipientAddress2, inscriptionId: 'inscriptionIdi2' },
+        { toAddress: recipientAddress, location: 'out:1:5000' },
+        { toAddress: recipientAddress, location: 'out:2:70000' },
+        { toAddress: recipientAddress2, location: 'out:2:80000' },
+        { toAddress: recipientAddress2, location: 'out:3:1000' },
+      ],
+      2,
+    );
+
+    expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(
+      contextMock,
+      [
+        {
+          location: 'out:1:0',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:600',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:1146',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:5000',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:5546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:1:9454',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:1500',
+          toAddress: recipientAddress2,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:2046',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:70000',
+          toAddress: recipientAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:70546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:80000',
+          toAddress: recipientAddress2,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:2:80546',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:3:0',
+          toAddress: recipientAddress2,
+          type: ActionType.SPLIT_UTXO,
+        },
+        {
+          location: 'out:3:1500',
+          toAddress: paymentAddress,
+          type: ActionType.SPLIT_UTXO,
+        },
+      ],
+      2,
+      undefined,
+    );
+    expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
+  });
+
+  describe('should throw on splits too close together', () => {
+    it.each([
+      [['out:1:10', 'out:1:20']],
+      [['out:1:10', 'out:1:200']],
+      [['out:1:9500', 'out:1:9501']],
+      [['out:1:8500', 'out:1:9000', 'out:1:9001']],
+    ])('%s', async (locations) => {
+      contextMock.getUtxo.mockResolvedValueOnce({
+        extendedUtxo: {
+          utxo: { value: 10000, address: paymentAddress },
+          getBundleData: () => ({
+            sat_ranges: [{}],
+          }),
+        },
+      });
+
+      await expect(() =>
+        sendOrdinalsWithSplit(
+          contextMock,
+          locations.map((location) => ({ toAddress: recipientAddress, location })),
+          2,
+        ),
+      ).rejects.toThrow('Cannot split utxo, desired offsets interfere with each other');
+    });
   });
 });
