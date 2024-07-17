@@ -15,7 +15,7 @@ export type TokenBasic = {
    * btc: "BTC"
    * stx: "STX"
    * brc20: the brc-20 ticker
-   * runes: the rune name WITH spacers (e.g. "UNCOMMON•GOODS")
+   * runes: the rune id
    */
   ticker: string;
   protocol: Protocol;
