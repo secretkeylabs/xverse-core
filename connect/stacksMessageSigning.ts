@@ -14,7 +14,7 @@ export interface SignatureData {
   publicKey: string;
 }
 
-export function signMessage(message: string, privateKey: string): SignatureData {
+export function signStacksMessage(message: string, privateKey: string): SignatureData {
   const hash = hashMessage(message);
   const sk = createStacksPrivateKey(privateKey);
   return {

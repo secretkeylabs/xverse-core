@@ -8,3 +8,4 @@ export * from './mixpanel';
 export * from './network';
 export * from './storage';
 export * from './wallet';
+export * from './messageSigning';
