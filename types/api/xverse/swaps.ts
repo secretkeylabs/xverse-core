@@ -174,7 +174,7 @@ export type PlaceUtxoOrderRequest = {
   /** the counter token that the user wants to swap to */
   to: TokenBasic;
   /** The identifier of the listings being requested for purchase */
-  orderIdentifiers: string[];
+  orders: Omit<MarketUtxo, 'token'>[];
   /** The fee rate to use for the swap transaction */
   feeRate: number;
   /** The user's btc address */
@@ -193,10 +193,10 @@ export type PlaceUtxoOrderResponse = {
   /** The PSBT that the user needs to sign in order to execute the order */
   psbt: string;
   /**
-   * The identifier of the listings which were successfully added to the PSBT.
+   * The orders/listings which were successfully added to the PSBT.
    * It will either be the full list from the request or a subset if some orders were already taken.
    * */
-  orderIdentifiers: string[];
+  validOrders: Omit<MarketUtxo, 'token'>[];
 };
 
 export type ExecuteUtxoOrderRequest = {
@@ -207,10 +207,10 @@ export type ExecuteUtxoOrderRequest = {
   /** The signed PSBT from the place order response */
   psbt: string;
   /**
-   * The identifier of the listings which were successfully added to the PSBT.
+   * The orders/listings which were successfully added to the PSBT.
    * This would have been returned with the place order response.
    * */
-  orderIdentifiers: string[];
+  orders: Omit<MarketUtxo, 'token'>[];
   /** The user's btc address */
   btcAddress: string;
   /** The user's btc address's public ke. */
