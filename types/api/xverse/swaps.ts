@@ -197,6 +197,8 @@ export type PlaceUtxoOrderResponse = {
    * It will either be the full list from the request or a subset if some orders were already taken.
    * */
   validOrders: Omit<MarketUtxo, 'token'>[];
+  /** The service fee for the order */
+  serviceFee: string;
 };
 
 export type ExecuteUtxoOrderRequest = {
