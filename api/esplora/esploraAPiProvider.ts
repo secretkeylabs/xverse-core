@@ -64,8 +64,9 @@ export class BitcoinEsploraApiProvider {
             error?.response?.status === 400 &&
             typeof error.response.data === 'string' &&
             error.response.data.includes('Too many unspent transaction outputs');
+          const rateLimitError = error?.response?.status === 429;
 
-          if (requestTimedOut || serverError || addressHasTooManyUtxos) {
+          if (requestTimedOut || serverError || addressHasTooManyUtxos || rateLimitError) {
             return this.fallbackBitcoinApi.request({
               ...error.config,
               baseURL: fallbackUrl,
