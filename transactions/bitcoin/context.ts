@@ -200,7 +200,14 @@ export abstract class AddressContext {
       for (let i = 0; i < transaction.inputsLength; i++) {
         const input = transaction.getInput(i);
 
-        if (areByteArraysEqual(input.witnessUtxo?.script, witnessScript)) {
+        const witnessLockingScript = input.witnessUtxo?.script;
+        const matchesWitnessUtxo = areByteArraysEqual(witnessLockingScript, witnessScript);
+
+        const nonWitnessLockingScript =
+          (input.index !== undefined && input.nonWitnessUtxo?.outputs[input.index]?.script) || undefined;
+        const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, witnessScript);
+
+        if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
           signIndexes[i] = options.allowedSigHash;
         }
       }
