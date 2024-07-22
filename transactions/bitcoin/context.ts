@@ -185,6 +185,7 @@ export abstract class AddressContext {
     const signIndexes: Record<number, btc.SigHash[] | undefined> = {};
 
     if (options.inputsToSign) {
+      // This is the path use by sats-connect for external parties wanting to sign a transaction
       for (const inputToSign of options.inputsToSign) {
         if (inputToSign.address === this._address) {
           inputToSign.signingIndexes.forEach((index) => {
@@ -197,6 +198,7 @@ export abstract class AddressContext {
         }
       }
     } else {
+      // This is the internal path used by the wallet to sign transactions
       for (let i = 0; i < transaction.inputsLength; i++) {
         const input = transaction.getInput(i);
 
@@ -209,6 +211,10 @@ export abstract class AddressContext {
 
         if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
           signIndexes[i] = options.allowedSigHash;
+
+          if (options.allowedSigHash === undefined && input.sighashType !== undefined) {
+            signIndexes[i] = [input.sighashType];
+          }
         }
       }
     }
