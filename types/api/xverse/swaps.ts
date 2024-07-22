@@ -189,14 +189,14 @@ export type PlaceUtxoOrderRequest = {
 
 export type PlaceUtxoOrderResponse = {
   /** The ID of the order. Should be sent with the execute request if defined. */
-  orderID?: string;
+  orderId?: string;
   /** The PSBT that the user needs to sign in order to execute the order */
   psbt: string;
   /**
    * The orders/listings which were successfully added to the PSBT.
    * It will either be the full list from the request or a subset if some orders were already taken.
    * */
-  validOrders: Omit<MarketUtxo, 'token'>[];
+  orders: Omit<MarketUtxo, 'token'>[];
   /** The service fee for the order */
   serviceFee: string;
 };
@@ -205,7 +205,7 @@ export type ExecuteUtxoOrderRequest = {
   /** the code of the provider whose quote is being used */
   providerCode: string;
   /** The ID of the order if it was returned with the place order response */
-  orderID?: string;
+  orderId?: string;
   /** The signed PSBT from the place order response */
   psbt: string;
   /**
