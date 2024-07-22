@@ -11,9 +11,9 @@
     "build": "webpack --mode production",
     "clean": "rimraf dist",
     "build:esm": "npm run clean && tsc -p ./tsconfig.build.json",
-    "build:esm:dev": "npm run clean && tsc --watch -p ./tsconfig.build.json",
+    "build:esm:watch": "npm run clean && tsc --watch -p ./tsconfig.build.json",
     "test": "vitest run --coverage",
-    "test-dev": "vitest",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:prettier": "echo 'TODO: move to lint script' && prettier -c '**/*.{ts,tsx,js,jsx}'",
     "prepare": "husky install"
