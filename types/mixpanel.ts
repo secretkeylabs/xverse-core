@@ -20,13 +20,15 @@ type CommonProps = {
   wallet_type: AccountType;
 };
 
-type QuoteSwapProps = {
+type FromToAmount = { fromAmount: string; toAmount: string };
+
+type FromToToken = { from: string; to: string };
+
+type QuoteSwapProps = FromToToken & {
   provider: string;
-  from: string;
-  to: string;
 };
 
-type QuoteSwapAmountProps = QuoteSwapProps & { fromAmount: string; toAmount: string };
+type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
 
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
@@ -47,11 +49,8 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.InitiateSwapFlow]: {
     token?: string;
   };
-  [AnalyticsEvents.FetchSwapQuote]: {
-    from: string;
-    to: string;
-  };
-  [AnalyticsEvents.SelectSwapQuote]: QuoteSwapAmountProps;
+  [AnalyticsEvents.FetchSwapQuote]: FromToToken & FromToAmount;
+  [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
   [AnalyticsEvents.ConfirmSwap]: QuoteSwapAmountProps;
   [AnalyticsEvents.SignSwap]: QuoteSwapAmountProps;
 };
