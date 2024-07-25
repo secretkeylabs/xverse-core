@@ -26,6 +26,8 @@ type QuoteSwapProps = {
   to: string;
 };
 
+type QuoteSwapAmountProps = QuoteSwapProps & { fromAmount: string; toAmount: string };
+
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
     link: string;
@@ -49,7 +51,7 @@ export type AnalyticsEventProperties = {
     from: string;
     to: string;
   };
-  [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
-  [AnalyticsEvents.ConfirmSwap]: QuoteSwapProps;
-  [AnalyticsEvents.SignSwap]: QuoteSwapProps;
+  [AnalyticsEvents.SelectSwapQuote]: QuoteSwapAmountProps;
+  [AnalyticsEvents.ConfirmSwap]: QuoteSwapAmountProps;
+  [AnalyticsEvents.SignSwap]: QuoteSwapAmountProps;
 };
