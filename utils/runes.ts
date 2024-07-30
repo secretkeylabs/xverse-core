@@ -30,6 +30,8 @@ type Receipt = RuneBase & {
 
 type Burn = RuneBase & { sourceAddresses: string[] };
 
+export type RuneSummaryParseOptions = { separateTransfersOnNoExternalInputs?: boolean };
+
 export type RuneSummary = {
   inputsHadRunes: boolean;
   // can only do 1 mint per txn
@@ -162,12 +164,16 @@ const parseSummaryWithRuneScript = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
+  options?: RuneSummaryParseOptions,
 ): Promise<RuneSummary> => {
+  const separateTransfersOnNoExternalInputs = options?.separateTransfersOnNoExternalInputs ?? false;
+
   const runeOp = summary.runeOp;
 
   const runeClient = getRunesClient(network);
   const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
   const runeInputs = await extractRuneInputs(context, summary);
+  const hasExternalInputs = summary.inputs.some((input) => !userAddresses.has(input.extendedUtxo.address));
 
   const inputsHadRunes = runeInputs.filter((r) => r.isUserAddress).length > 0;
 
@@ -250,9 +256,7 @@ const parseSummaryWithRuneScript = async (
       for (const runeName in input.balances) {
         const balance = BigInt(input.balances[runeName].toString());
 
-        if (!(runeName in acc)) {
-          acc[runeName] = {};
-        }
+        acc[runeName] ||= {};
 
         if (!(inputAddress in acc[runeName])) {
           acc[runeName][inputAddress] = {
@@ -479,15 +483,15 @@ const parseSummaryWithRuneScript = async (
 
   // generate receipts and add destination addresses
   const receipts: Receipt[] = [];
-  const runeRecipients: Record<string, string[]> = {};
+  const runeRecipients: Record<string, Record<string, bigint>> = {};
   const userReceiptRuneAmounts = {} as Record<string, Record<string, bigint>>;
 
   for (const i in allocated) {
     const index = Number(i);
     const summaryOutput = summary.outputs[index];
 
-    if (summaryOutput.type !== 'address') {
-      throw new Error('Something went wrong while parsing the runeOp. All allocated outputs should be addresses.');
+    if (summaryOutput.type === 'script') {
+      throw new Error('Something went wrong while parsing the runeOp. All allocated outputs should be non-script.');
     }
 
     const output = allocated[index];
@@ -497,8 +501,9 @@ const parseSummaryWithRuneScript = async (
       const sourceAddresses = output[runeName].sourceAddresses;
       const destinationAddress = output[runeName].destinationAddress;
 
-      runeRecipients[runeName] = runeRecipients[runeName] || [];
-      runeRecipients[runeName].push(destinationAddress);
+      runeRecipients[runeName] ||= {};
+      runeRecipients[runeName][destinationAddress] ||= 0n;
+      runeRecipients[runeName][destinationAddress] += amount;
 
       if (userAddresses.has(destinationAddress)) {
         const runeInfo = await runeClient.getRuneInfo(runeName);
@@ -539,28 +544,40 @@ const parseSummaryWithRuneScript = async (
       const runeInfo = await runeClient.getRuneInfo(runeName);
 
       const amount = BigInt(
-        bigUtils
-          .max(
-            transfer.amount - (userReceiptRuneAmounts[sourceAddress]?.[runeName] ?? 0n) - (burnt[runeName] ?? 0n),
-            0n,
-          )
-          .toString(10),
+        transfer.amount - (userReceiptRuneAmounts[sourceAddress]?.[runeName] ?? 0n) - (burnt[runeName] ?? 0n),
       );
 
-      if (amount === 0n) {
+      if (amount <= 0n) {
         continue;
       }
 
-      transfers.push({
-        sourceAddress,
-        destinationAddresses: runeRecipients[runeName].filter((a) => a !== sourceAddress) || [],
-        runeName,
-        amount,
-        divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
-        symbol: runeInfo?.entry.symbol || '',
-        inscriptionId: runeInfo?.parent || '',
-        hasSufficientBalance: unallocatedBalance[runeName].amount >= 0n,
-      });
+      if (separateTransfersOnNoExternalInputs && !hasExternalInputs) {
+        for (const recipientAddress in runeRecipients[runeName]) {
+          if (!userAddresses.has(recipientAddress)) {
+            transfers.push({
+              sourceAddress,
+              destinationAddresses: [recipientAddress],
+              runeName,
+              amount: runeRecipients[runeName][recipientAddress],
+              divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
+              symbol: runeInfo?.entry.symbol || '',
+              inscriptionId: runeInfo?.parent || '',
+              hasSufficientBalance: unallocatedBalance[runeName].amount >= 0n,
+            });
+          }
+        }
+      } else {
+        transfers.push({
+          sourceAddress,
+          destinationAddresses: Object.keys(runeRecipients[runeName]).filter((a) => a !== sourceAddress) || [],
+          runeName,
+          amount,
+          divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
+          symbol: runeInfo?.entry.symbol || '',
+          inscriptionId: runeInfo?.parent || '',
+          hasSufficientBalance: unallocatedBalance[runeName].amount >= 0n,
+        });
+      }
     }
   }
 
@@ -577,10 +594,11 @@ export const parseSummaryForRunes = async (
   context: TransactionContext,
   summary: TransactionSummary | PsbtSummary,
   network: NetworkType,
+  options?: RuneSummaryParseOptions,
 ): Promise<RuneSummary> => {
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
     return parseSummaryWithBurnRuneScript(context, summary, network);
   }
 
-  return parseSummaryWithRuneScript(context, summary, network);
+  return parseSummaryWithRuneScript(context, summary, network, options);
 };
