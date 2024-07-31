@@ -34,6 +34,7 @@ export type RuneSummaryParseOptions = { separateTransfersOnNoExternalInputs?: bo
 
 export type RuneSummary = {
   inputsHadRunes: boolean;
+  txnHasExternalInputs: boolean;
   // can only do 1 mint per txn
   mint?: Mint;
   transfers: Transfer[];
@@ -114,6 +115,8 @@ const parseSummaryWithBurnRuneScript = async (
 ): Promise<RuneSummary> => {
   const runeClient = getRunesClient(network);
 
+  const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
+  const hasExternalInputs = summary.inputs.some((input) => !userAddresses.has(input.extendedUtxo.address));
   const runeInputs = await extractRuneInputs(context, summary);
 
   const inputsHadRunes = runeInputs.length > 0;
@@ -154,6 +157,7 @@ const parseSummaryWithBurnRuneScript = async (
 
   return {
     inputsHadRunes,
+    txnHasExternalInputs: hasExternalInputs,
     receipts: [],
     transfers: [],
     burns: embellishedBurns,
@@ -171,8 +175,8 @@ const parseSummaryWithRuneScript = async (
   const runeOp = summary.runeOp;
 
   const runeClient = getRunesClient(network);
-  const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
   const runeInputs = await extractRuneInputs(context, summary);
+  const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
   const hasExternalInputs = summary.inputs.some((input) => !userAddresses.has(input.extendedUtxo.address));
 
   const inputsHadRunes = runeInputs.filter((r) => r.isUserAddress).length > 0;
@@ -587,6 +591,7 @@ const parseSummaryWithRuneScript = async (
     receipts,
     transfers,
     burns,
+    txnHasExternalInputs: hasExternalInputs,
   };
 };
 

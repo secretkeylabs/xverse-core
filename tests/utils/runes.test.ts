@@ -127,6 +127,7 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
@@ -152,6 +153,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
@@ -164,6 +166,7 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
@@ -201,6 +204,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
@@ -213,6 +217,7 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
@@ -245,6 +250,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: {
         amount: 0n,
         divisibility: 0,
@@ -299,6 +305,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 100n,
@@ -360,6 +367,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       burns: [
@@ -426,6 +434,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
@@ -493,6 +502,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
@@ -558,6 +568,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'ordinalsAddress',
@@ -636,6 +647,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'paymentAddress',
@@ -753,6 +765,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -872,6 +885,7 @@ describe('parseSummaryForRunes', () => {
     });
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 500n,
@@ -1011,6 +1025,7 @@ describe('parseSummaryForRunes', () => {
     });
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -1151,6 +1166,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -1284,6 +1300,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1500n,
@@ -1357,6 +1374,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [
         {
@@ -1446,6 +1464,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 500n,
@@ -1527,6 +1546,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: {
@@ -1592,6 +1612,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -1660,6 +1681,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: true,
       transfers: [],
       receipts: [
         {
@@ -1727,6 +1749,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 10000n,
@@ -1816,6 +1839,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 7503n,
@@ -1906,6 +1930,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 300n,
@@ -1997,6 +2022,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -2107,6 +2133,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -2196,6 +2223,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
