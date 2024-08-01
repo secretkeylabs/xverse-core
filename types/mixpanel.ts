@@ -14,6 +14,8 @@ export enum AnalyticsEvents {
   SelectSwapQuote = 'select_swap_quote',
   ConfirmSwap = 'confirm_swap',
   SignSwap = 'sign_swap',
+  SelectTokenToSwapFrom = 'select_token_to_swap_from',
+  SelectTokenToSwapTo = 'select_token_to_swap_to',
 }
 
 type CommonProps = {
@@ -29,6 +31,10 @@ type QuoteSwapProps = FromToToken & {
 };
 
 type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
+
+type SelectSwapTokenProps = {
+  token: string;
+};
 
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
@@ -53,4 +59,6 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
   [AnalyticsEvents.ConfirmSwap]: QuoteSwapAmountProps;
   [AnalyticsEvents.SignSwap]: QuoteSwapAmountProps;
+  [AnalyticsEvents.SelectTokenToSwapFrom]: SelectSwapTokenProps;
+  [AnalyticsEvents.SelectTokenToSwapTo]: SelectSwapTokenProps;
 };
