@@ -244,7 +244,7 @@ export async function generateUnsignedContractCall(
     publicKey,
     network,
     postConditions: postConditions,
-    postConditionMode: postConditionMode ?? 1,
+    postConditionMode: postConditionMode ?? PostConditionMode.Deny,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
     sponsored: sponsored,
   };
