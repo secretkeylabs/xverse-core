@@ -33,7 +33,7 @@ type QuoteSwapProps = FromToToken & {
 type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
 
 type SelectSwapTokenProps = {
-  token: string;
+  selectedToken: string;
 };
 
 export type AnalyticsEventProperties = {
@@ -53,7 +53,7 @@ export type AnalyticsEventProperties = {
     batch?: number;
   } & CommonProps;
   [AnalyticsEvents.InitiateSwapFlow]: {
-    token?: string;
+    selectedToken?: string;
   };
   [AnalyticsEvents.FetchSwapQuote]: FromToToken & FromToAmount;
   [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
