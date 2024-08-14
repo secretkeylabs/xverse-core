@@ -33,6 +33,8 @@ export type Quote = {
   from: TokenBasic;
   to: TokenBasic;
   slippageSupported: boolean;
+  slippageDecimals?: number;
+  slippageThreshold?: number;
   feePercentage?: string;
   feeFlat?: string;
   identifier?: unknown;
@@ -140,6 +142,8 @@ export type PlaceOrderRequest = {
 export type PlaceOrderResponse = {
   /** The ID of the order. Should be sent with the execute request if defined. */
   orderId?: string;
+  /** The time in milliseconds at which the order expires. */
+  expiresInMilliseconds: number | null;
   /** The PSBT that the user needs to sign in order to execute the order */
   psbt: string;
 };
