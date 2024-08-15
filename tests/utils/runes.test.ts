@@ -127,11 +127,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -144,11 +146,14 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
     };
 
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
@@ -161,11 +166,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -178,6 +185,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -195,6 +204,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
@@ -207,11 +217,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -224,6 +236,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -236,6 +250,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: false,
       mint: {
         amount: 0n,
         divisibility: 0,
@@ -264,6 +279,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -282,11 +298,14 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
     };
 
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 100n,
@@ -317,6 +336,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -335,6 +355,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Cenotaph: {
           flaws: 1,
@@ -345,6 +367,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       burns: [
@@ -373,6 +396,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -391,6 +415,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -408,6 +434,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
@@ -437,6 +464,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -455,6 +483,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -472,6 +502,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
@@ -492,6 +523,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -517,6 +549,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(2),
@@ -534,6 +568,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'ordinalsAddress',
@@ -575,6 +610,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -593,6 +629,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -609,6 +647,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'paymentAddress',
@@ -651,6 +690,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -663,6 +703,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -695,6 +736,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(3),
@@ -722,6 +765,267 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
+      transfers: [
+        {
+          amount: 1000n,
+          destinationAddresses: ['recipient1', 'recipient2'],
+          divisibility: 0,
+          hasSufficientBalance: true,
+          runeName: 'DUMMYRUNE',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'A',
+          inscriptionId: 'AINSCRIPTIONID',
+        },
+        {
+          amount: 1500n,
+          destinationAddresses: ['recipient2'],
+          divisibility: 1,
+          hasSufficientBalance: true,
+          runeName: 'DUMMYRUNE2',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'B',
+          inscriptionId: '',
+        },
+      ],
+      receipts: [],
+      mint: undefined,
+      burns: [],
+    });
+  });
+
+  it('parses send to multiple recipients with separateTransfersOnNoExternalInputs flag correctly', async () => {
+    const summary: PsbtSummary = {
+      inputs: [
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE: BigNumber(1000),
+              DUMMYRUNE2: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE2: BigNumber(1000),
+              DUMMYRUNE3: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+      ],
+      outputs: [
+        {
+          type: 'script',
+          scriptHex: '6a4c4d52554e450',
+          script: ['RETURN', '4c4d52554e450'],
+          amount: 0,
+        },
+        {
+          type: 'address',
+          address: 'recipient1',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+        {
+          type: 'address',
+          address: 'recipient2',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+        {
+          type: 'address',
+          address: 'ordinalsAddress',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+      ],
+      hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
+      runeOp: {
+        Runestone: {
+          pointer: BigNumber(3),
+          edicts: [
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(1),
+            },
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(2),
+            },
+            {
+              id: '2:2',
+              amount: BigNumber(1500),
+              output: BigNumber(2),
+            },
+          ],
+        },
+      },
+    };
+
+    const runes = await parseSummaryForRunes(context, summary, 'Mainnet', {
+      separateTransfersOnNoExternalInputs: true,
+    });
+    expect(runes).toEqual({
+      inputsHadRunes: true,
+      txnHasExternalInputs: false,
+      transfers: [
+        {
+          amount: 500n,
+          destinationAddresses: ['recipient1'],
+          divisibility: 0,
+          hasSufficientBalance: true,
+          inscriptionId: 'AINSCRIPTIONID',
+          runeName: 'DUMMYRUNE',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'A',
+        },
+        {
+          amount: 500n,
+          destinationAddresses: ['recipient2'],
+          divisibility: 0,
+          hasSufficientBalance: true,
+          inscriptionId: 'AINSCRIPTIONID',
+          runeName: 'DUMMYRUNE',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'A',
+        },
+        {
+          amount: 1500n,
+          destinationAddresses: ['recipient2'],
+          divisibility: 1,
+          hasSufficientBalance: true,
+          inscriptionId: '',
+          runeName: 'DUMMYRUNE2',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'B',
+        },
+      ],
+      receipts: [],
+      mint: undefined,
+      burns: [],
+    });
+  });
+
+  it('parses send with separateTransfersOnNoExternalInputs flag and external inputs correctly', async () => {
+    const summary: PsbtSummary = {
+      inputs: [
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE: BigNumber(1000),
+              DUMMYRUNE2: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE2: BigNumber(1000),
+              DUMMYRUNE3: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+        {
+          extendedUtxo: {
+            address: 'otherAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({}),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+      ],
+      outputs: [
+        {
+          type: 'script',
+          scriptHex: '6a4c4d52554e450',
+          script: ['RETURN', '4c4d52554e450'],
+          amount: 0,
+        },
+        {
+          type: 'address',
+          address: 'recipient1',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+        {
+          type: 'address',
+          address: 'recipient2',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+        {
+          type: 'address',
+          address: 'ordinalsAddress',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+        },
+      ],
+      hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
+      runeOp: {
+        Runestone: {
+          pointer: BigNumber(3),
+          edicts: [
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(1),
+            },
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(2),
+            },
+            {
+              id: '2:2',
+              amount: BigNumber(1500),
+              output: BigNumber(2),
+            },
+          ],
+        },
+      },
+    };
+
+    const runes = await parseSummaryForRunes(context, summary, 'Mainnet', {
+      separateTransfersOnNoExternalInputs: true,
+    });
+    expect(runes).toEqual({
+      inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -764,6 +1068,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -775,6 +1080,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -786,6 +1092,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -825,6 +1132,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(4),
@@ -857,6 +1166,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -909,6 +1219,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -920,6 +1231,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -931,6 +1243,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -963,6 +1276,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(3),
@@ -985,6 +1300,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1500n,
@@ -1026,6 +1342,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1044,6 +1361,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '1:1',
@@ -1055,6 +1374,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [
         {
@@ -1093,6 +1413,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1118,6 +1439,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '1:1',
@@ -1141,6 +1464,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 500n,
@@ -1190,6 +1514,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1208,6 +1533,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '4:4',
@@ -1219,6 +1546,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: {
@@ -1247,6 +1575,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1265,6 +1594,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1281,6 +1612,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -1312,6 +1644,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1330,6 +1663,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1346,6 +1681,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
+      txnHasExternalInputs: true,
       transfers: [],
       receipts: [
         {
@@ -1376,6 +1712,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1394,6 +1731,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1410,6 +1749,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 10000n,
@@ -1441,6 +1781,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1480,6 +1821,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1496,6 +1839,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 7503n,
@@ -1527,6 +1871,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1566,6 +1911,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(4),
@@ -1583,6 +1930,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 300n,
@@ -1615,6 +1963,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1627,6 +1976,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1659,6 +2009,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(2),
@@ -1670,6 +2022,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -1722,6 +2075,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1734,6 +2088,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1766,6 +2121,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [],
@@ -1776,6 +2133,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -1828,6 +2186,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1840,6 +2199,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1851,6 +2211,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [],
@@ -1861,6 +2223,7 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
+      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
