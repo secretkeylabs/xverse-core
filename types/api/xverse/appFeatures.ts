@@ -6,6 +6,7 @@ export enum FeatureId {
   SWAPS = 'SWAPS',
   PAYPAL = 'PAYPAL',
   CROSS_CHAIN_SWAPS = 'CROSS_CHAIN_SWAPS',
+  STACKS_SWAPS = 'STACKS_SWAPS',
 }
 export type AppFeaturesContext = {
   network: NetworkType;
