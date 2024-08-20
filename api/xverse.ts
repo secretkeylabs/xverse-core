@@ -14,6 +14,8 @@ import {
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  CreateRuneListingRequest,
+  CreateRuneListingResponse,
   DappSectionData,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
@@ -30,6 +32,8 @@ import {
   GetUtxosResponse,
   Inscription,
   InscriptionInCollectionsList,
+  ListingRuneMarketInfo,
+  Marketplace,
   NetworkType,
   NotificationBanner,
   OrdinalInfo,
@@ -45,9 +49,12 @@ import {
   SponsorTransactionResponse,
   StackerInfo,
   StackingPoolInfo,
+  SubmitRuneListingRequest,
+  SubmitRuneListingResponse,
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
+  TokenId,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
@@ -257,6 +264,21 @@ class XverseApi {
     >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
   }
+
+  listings = {
+    getRuneMarketData: async (token: TokenId, marketplaces: Marketplace[]): Promise<ListingRuneMarketInfo[]> => {
+      const response = await this.client.post(`/v1/listings/runes/market-data`, { token, marketplaces });
+      return response.data;
+    },
+    getRuneSellOrder: async (body: CreateRuneListingRequest): Promise<CreateRuneListingResponse[]> => {
+      const response = await this.client.post<CreateRuneListingResponse[]>('/v1/listings/runes/create-order', body);
+      return response.data;
+    },
+    submitRuneSellOrder: async (body: SubmitRuneListingRequest[]): Promise<SubmitRuneListingResponse[]> => {
+      const response = await this.client.post<SubmitRuneListingResponse[]>('/v1/listings/runes/submit-order', body);
+      return response.data;
+    },
+  };
 
   swaps = {
     /** Get the tokens that the user has which are supported by the swap services */
