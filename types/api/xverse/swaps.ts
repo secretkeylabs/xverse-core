@@ -220,8 +220,6 @@ export type ExecuteStxOrderRequest = {
   orderId?: string;
   /** The signed transaction from the place order response */
   signedTransaction: string;
-  /** The user's stx address */
-  stxAddress: string;
 };
 
 export type ExecuteStxOrderResponse = {
