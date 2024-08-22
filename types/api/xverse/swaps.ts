@@ -50,6 +50,19 @@ export type UtxoQuote = {
   feeFlat?: string;
 };
 
+export type StxQuote = {
+  provider: Provider;
+  from: TokenBasic;
+  to: TokenBasic;
+  slippageSupported: boolean;
+  slippageDecimals?: number;
+  slippageThreshold?: number;
+  feePercentage?: string;
+  feeFlat?: string;
+  identifier?: unknown;
+  receiveAmount: string;
+};
+
 export type MarketUtxo = {
   identifier: string;
   token: TokenBasic;
@@ -94,6 +107,8 @@ export type GetQuotesResponse = {
   amm: Quote[];
   /** the list of quotes from UTXO providers */
   utxo: UtxoQuote[];
+  /** the list of quotes from STX providers */
+  stx: StxQuote[];
 };
 
 export type GetUtxosRequest = {
@@ -148,6 +163,34 @@ export type PlaceOrderResponse = {
   psbt: string;
 };
 
+export type PlaceStxOrderRequest = {
+  /** the code of the provider whose quote is being used */
+  providerCode: string;
+  /** the base token that the user wants to swap from */
+  from: TokenBasic;
+  /** the counter token that the user wants to swap to */
+  to: TokenBasic;
+  /** Number as string. The amount of base tokens that the user wants to swap. */
+  sendAmount: string;
+  /** Number as string. The amount of counter tokens that the user expects back. */
+  receiveAmount: string;
+  /** The allowable slippage percentage. Should be a whole number from 0-100. */
+  slippage: number;
+  /** The user's btc address */
+  stxAddress: string;
+  /** The user's btc address's public key */
+  stxPublicKey: string;
+  /** If an identifier was passed in with the quote, it should be sent here */
+  identifier?: unknown;
+};
+
+export type PlaceStxOrderResponse = {
+  /** The ID of the order. Should be sent with the execute request if defined. */
+  orderId?: string;
+  /** The transaction that the user needs to sign in order to execute the order */
+  unsignedTransaction: string;
+};
+
 export type ExecuteOrderRequest = {
   /** the code of the provider whose quote is being used */
   providerCode: string;
@@ -166,6 +209,20 @@ export type ExecuteOrderRequest = {
 };
 
 export type ExecuteOrderResponse = {
+  /** The transaction ID of the executed swap */
+  txid: string;
+};
+
+export type ExecuteStxOrderRequest = {
+  /** the code of the provider whose quote is being used */
+  providerCode: string;
+  /** The ID of the order if it was returned with the place order response */
+  orderId?: string;
+  /** The signed transaction from the place order response */
+  signedTransaction: string;
+};
+
+export type ExecuteStxOrderResponse = {
   /** The transaction ID of the executed swap */
   txid: string;
 };
