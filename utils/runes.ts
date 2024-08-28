@@ -1,11 +1,11 @@
 import { getRunesClient } from '../api';
-import { TransactionContext } from '../transactions/bitcoin';
-import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
+import { TransactionContext, PsbtSummary, TransactionSummary } from '../transactions/bitcoin';
 import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
   runeName: string;
+  runeId: string;
   amount: bigint;
   divisibility: number;
   symbol: string;
@@ -140,7 +140,7 @@ const parseSummaryWithBurnRuneScript = async (
     }
 
     return acc;
-  }, {} as Record<string, Omit<Burn, 'divisibility' | 'symbol' | 'inscriptionId'>>);
+  }, {} as Record<string, Omit<Burn, 'runeId' | 'divisibility' | 'symbol' | 'inscriptionId'>>);
 
   const embellishedBurns: Burn[] = [];
 
@@ -149,6 +149,7 @@ const parseSummaryWithBurnRuneScript = async (
 
     embellishedBurns.push({
       ...burn,
+      runeId: runeInfo?.id || '',
       divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
       symbol: runeInfo?.entry.symbol || '',
       inscriptionId: runeInfo?.parent || '',
@@ -213,6 +214,7 @@ const parseSummaryWithRuneScript = async (
 
       mint = {
         runeName,
+        runeId: runeInfo.id,
         amount: mintAmount,
         runeIsOpen,
         runeIsMintable: runeInfo.mintable,
@@ -236,6 +238,7 @@ const parseSummaryWithRuneScript = async (
       // rune being minted does not exist or is not open
       mint = {
         runeName: runeInfo?.entry.spaced_rune || '',
+        runeId: runeInfo?.id || '',
         amount: 0n,
         divisibility: 0,
         symbol: runeInfo?.entry.symbol || '',
@@ -249,7 +252,7 @@ const parseSummaryWithRuneScript = async (
   // start compiling transfers and receipts
   type PartialTransfer = Omit<
     Transfer,
-    'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol' | 'inscriptionId'
+    'runeId' | 'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol' | 'inscriptionId'
   >;
 
   const transfersByRuneAndAddress = runeInputs
@@ -334,6 +337,7 @@ const parseSummaryWithRuneScript = async (
 
         burns.push({
           runeName,
+          runeId: runeInfo.id,
           amount: amountToTransfer,
           sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
           divisibility: runeInfo.entry.divisibility.toNumber(),
@@ -475,6 +479,7 @@ const parseSummaryWithRuneScript = async (
           burns.push({
             runeName,
             amount,
+            runeId: runeInfo.id,
             sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
             divisibility: runeInfo.entry.divisibility.toNumber(),
             symbol: runeInfo.entry.symbol,
@@ -520,6 +525,7 @@ const parseSummaryWithRuneScript = async (
             destinationAddress,
             runeName,
             amount,
+            runeId: runeInfo?.id || '',
             divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
             symbol: runeInfo?.entry.symbol || '',
             inscriptionId: runeInfo?.parent || '',
@@ -563,6 +569,7 @@ const parseSummaryWithRuneScript = async (
               destinationAddresses: [recipientAddress],
               runeName,
               amount: runeRecipients[runeName][recipientAddress],
+              runeId: runeInfo?.id || '',
               divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
               symbol: runeInfo?.entry.symbol || '',
               inscriptionId: runeInfo?.parent || '',
@@ -575,6 +582,7 @@ const parseSummaryWithRuneScript = async (
           sourceAddress,
           destinationAddresses: Object.keys(runeRecipients[runeName]).filter((a) => a !== sourceAddress) || [],
           runeName,
+          runeId: runeInfo?.id || '',
           amount,
           divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
           symbol: runeInfo?.entry.symbol || '',
