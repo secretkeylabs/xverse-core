@@ -17,8 +17,6 @@ import {
   DappSectionData,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
-  ExecuteStxOrderRequest,
-  ExecuteStxOrderResponse,
   ExecuteUtxoOrderRequest,
   ExecuteUtxoOrderResponse,
   GetDestinationTokensRequest,
@@ -35,8 +33,6 @@ import {
   OrdinalInfo,
   PlaceOrderRequest,
   PlaceOrderResponse,
-  PlaceStxOrderRequest,
-  PlaceStxOrderResponse,
   PlaceUtxoOrderRequest,
   PlaceUtxoOrderResponse,
   SignedUrlResponse,
@@ -287,16 +283,6 @@ class XverseApi {
     /** Execute a swap order. This is for AMM providers. */
     executeOrder: async (body: ExecuteOrderRequest): Promise<ExecuteOrderResponse> => {
       const response = await this.client.post<ExecuteOrderResponse>('/v1/swaps/execute-order', body);
-      return response.data;
-    },
-    /** Place a swap order. This is for STX providers. */
-    placeStxOrder: async (body: PlaceStxOrderRequest): Promise<PlaceStxOrderResponse> => {
-      const response = await this.client.post<PlaceStxOrderResponse>('/v1/swaps/place-stx-order', body);
-      return response.data;
-    },
-    /** Execute a swap order. This is for STX providers. */
-    executeStxOrder: async (body: ExecuteStxOrderRequest): Promise<ExecuteStxOrderResponse> => {
-      const response = await this.client.post<ExecuteStxOrderResponse>('/v1/swaps/execute-stx-order', body);
       return response.data;
     },
     /** Place a swap order. This is for UTXO based providers. */
