@@ -377,10 +377,10 @@ export function parseStxTransactionData({
 
 /**
  * Solves issue wiht proper network address
- *
  * @param {StacksNetwork} network object to be used for distinguish is user on mainnet or testnet
  *
  * @returns {string} Network URL to be used
+ * @deprecated use StacksNetwork().coreApiURL instead
  */
 export const getNetworkURL = (network: StacksNetwork): string => {
   return network.isMainnet() ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
