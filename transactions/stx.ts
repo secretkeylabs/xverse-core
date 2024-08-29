@@ -472,6 +472,12 @@ export async function getLatestNonce(stxAddress: string, network: SettingsNetwor
   });
 }
 
+export async function possiblNexteNonce(stxAddress: string, network: SettingsNetwork): Promise<bigint> {
+  const nonceData = await getLatestNonce(stxAddress, network);
+
+  return BigInt(nonceData.possible_next_nonce);
+}
+
 export async function getRawTransaction(txId: string, network: SettingsNetwork): Promise<string> {
   const baseUrl = network.address;
   const apiUrl = `${baseUrl}/extended/v1/tx/${txId}/raw`;
