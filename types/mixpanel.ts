@@ -24,7 +24,7 @@ type CommonProps = {
 
 type FromToAmount = { fromAmount: string; toAmount: string };
 
-type FromToToken = { from: string; to: string };
+type FromToToken = { from: string; to: string; fromPrincipal?: string; toPrincipal?: string };
 
 type QuoteSwapProps = FromToToken & {
   provider: string;
@@ -34,6 +34,7 @@ type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
 
 type SelectSwapTokenProps = {
   selectedToken: string;
+  principal?: string;
 };
 
 export type AnalyticsEventProperties = {
@@ -54,6 +55,7 @@ export type AnalyticsEventProperties = {
   } & CommonProps;
   [AnalyticsEvents.InitiateSwapFlow]: {
     selectedToken?: string;
+    principal?: string;
   };
   [AnalyticsEvents.FetchSwapQuote]: FromToToken & FromToAmount;
   [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
