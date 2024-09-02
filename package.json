@@ -31,6 +31,7 @@
     "@stacks/encryption": "6.16.1",
     "@stacks/network": "6.16.0",
     "@stacks/stacking": "6.16.1",
+    "@stacks/stacks-blockchain-api-types": "^7.14.1",
     "@stacks/storage": "6.16.1",
     "@stacks/transactions": "6.16.1",
     "@stacks/wallet-sdk": "6.16.1",
