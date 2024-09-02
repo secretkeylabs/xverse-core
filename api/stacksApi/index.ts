@@ -4,6 +4,7 @@ import { StacksNetwork } from '../../types';
 import {
   AccountDataResponse,
   AddressTransaction,
+  AddressTransactionEventListResponse,
   AddressTransactionsV2ListResponse,
   MempoolTransaction,
   MempoolTransactionListResponse,
@@ -14,6 +15,9 @@ import BigNumber from 'bignumber.js';
 export interface StacksApiProviderOptions {
   network: StacksNetwork;
 }
+
+const LIMIT = 100;
+const OFFSET = 0;
 
 export class StacksApiProvider {
   StacksApi: AxiosInstance;
@@ -96,7 +100,6 @@ export class StacksApiProvider {
     limit,
   }: {
     stxAddress: string;
-    network: StacksNetwork;
     offset: number;
     limit: number;
   }): Promise<{
@@ -116,6 +119,60 @@ export class StacksApiProvider {
       list: response.results,
       total: response.total,
     };
+  };
+
+  getTransactionEvents = async ({
+    txid,
+    stxAddress,
+    limit,
+    offset,
+  }: {
+    txid: string;
+    stxAddress: string;
+    limit: number;
+    offset: number;
+  }): Promise<AddressTransactionEventListResponse> => {
+    const apiUrl = `/extended/v2/addresses/${stxAddress}/transactions/${txid}/events`;
+    const response = await this.httpGet<AddressTransactionEventListResponse>(apiUrl, {
+      params: {
+        limit,
+        offset,
+      },
+    });
+    return response;
+  };
+
+  getAllTransactions = async ({
+    stxAddress,
+    offset = OFFSET,
+    limit = LIMIT,
+  }: {
+    stxAddress: string;
+    offset: number;
+    limit: number;
+  }): Promise<(AddressTransaction | MempoolTransaction)[]> => {
+    let allTransactions: (AddressTransaction | MempoolTransaction)[] = [];
+    let hasMore = true;
+
+    while (hasMore) {
+      const [transactionsWithTransfers, mempoolTransactions] = await Promise.all([
+        this.getAddressTransactions({ stxAddress, offset, limit }),
+        this.getAddressMempoolTransactions({ stxAddress, limit, offset }),
+      ]);
+
+      const combinedTransactions = [...mempoolTransactions.list, ...transactionsWithTransfers.list];
+
+      allTransactions = [...allTransactions, ...combinedTransactions];
+
+      // Check if we received fewer transactions than the limit, indicating no more transactions
+      if (combinedTransactions.length < limit) {
+        hasMore = false;
+      } else {
+        offset += limit;
+      }
+    }
+
+    return allTransactions;
   };
 
   getTransaction = async (txid: string): Promise<Transaction> => {
