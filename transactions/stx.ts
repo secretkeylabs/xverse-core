@@ -472,8 +472,15 @@ export async function getLatestNonce(stxAddress: string, network: SettingsNetwor
   });
 }
 
-export async function possiblNexteNonce(stxAddress: string, network: SettingsNetwork): Promise<bigint> {
+/**
+ * Suggests the next best nonce, taking into account any missing nonces.
+ */
+export async function nextBestNonce(stxAddress: string, network: SettingsNetwork): Promise<bigint> {
   const nonceData = await getLatestNonce(stxAddress, network);
+
+  if (nonceData.detected_missing_nonces.length > 0) {
+    return BigInt(nonceData.detected_missing_nonces.at(-1) as number);
+  }
 
   return BigInt(nonceData.possible_next_nonce);
 }
