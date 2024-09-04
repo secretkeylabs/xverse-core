@@ -21,7 +21,11 @@ import {
   TransactionSummary,
 } from './types';
 
-const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
+// Note: OG ordinals collections like OMB are inscribed on 10k sat utxos,
+// and we prefer to preserve these.
+const SPLIT_UTXO_MIN_SIZE = 10000; // threshold to determine if we split the UTXO at all
+const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a sat range to be split
+
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
 export { ActionType, EnhancedPsbt, EnhancedTransaction, ExtendedUtxo, TransactionContext, createTransactionContext };
@@ -275,7 +279,7 @@ export const sendOrdinalsWithSplit = async (
     if (
       (!utxoBundleData?.sat_ranges || utxoBundleData?.sat_ranges.length <= 1) &&
       recipientCollection.length === 1 &&
-      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_VALUE + DUST_VALUE
+      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_SIZE + DUST_VALUE
     ) {
       actions.push({
         type: ActionType.SEND_UTXO,
