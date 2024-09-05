@@ -92,8 +92,75 @@ describe('brc20TransferEstimateFees', () => {
     );
   });
 
+  it('should estimate 5 byte BRC20 transfer fees correctly', async () => {
+    const mockedTick = 'FR8NK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    vi.mocked(signNonOrdinalBtcSendTransaction).mockResolvedValueOnce({
+      tx: { vsize: 150 },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use this field in this function
+    } as any);
+
+    vi.mocked(xverseInscribeApi.getBrc20TransferFees).mockResolvedValue({
+      chainFee: 1080,
+      serviceFee: 2000,
+      inscriptionValue: 1000,
+      vSize: 150,
+    });
+
+    vi.mocked(selectUtxosForSend).mockReturnValueOnce({
+      change: 2070,
+      fee: 1070,
+      feeRate: 12,
+      selectedUtxos: [],
+    });
+
+    vi.mocked(EnhancedTransaction).mockImplementationOnce(
+      () =>
+        ({
+          getSummary: async () =>
+            ({
+              fee: 1070,
+            } as any),
+        } as any),
+    );
+
+    const result = await brc20TransferEstimateFees(
+      {
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      },
+      context,
+    );
+
+    expect(result).toEqual({
+      commitValue: 1070 + 1080 + 2000 + 1800 + 1000,
+      valueBreakdown: {
+        commitChainFee: 1070,
+        revealChainFee: 1080,
+        revealServiceFee: 2000,
+        transferChainFee: 1800,
+        transferUtxoValue: 1000,
+      },
+    });
+
+    expect(xverseInscribeApi.getBrc20TransferFees).toHaveBeenCalledWith(
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedFeeRate,
+      'Mainnet',
+      2800,
+      undefined,
+    );
+  });
+
   it('should throw on invalid tick', async () => {
-    const mockedTick = 'TICKs';
+    const mockedTick = 'TICKss';
     const mockedAmount = 10;
     const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
     const mockedFeeRate = 12;
@@ -108,7 +175,7 @@ describe('brc20TransferEstimateFees', () => {
         },
         context,
       ),
-    ).rejects.toThrow('Invalid tick; should be 4 characters long');
+    ).rejects.toThrow('Invalid tick; should be 4 or 5 bytes long');
   });
 
   it('should throw on invalid amount', async () => {

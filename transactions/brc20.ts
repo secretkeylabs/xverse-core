@@ -7,6 +7,7 @@ import { UTXO } from '../types';
 import { CoreError } from '../utils/coreError';
 import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
 import { signNonOrdinalBtcSendTransaction } from './btc';
+import { isValidTick } from '../utils';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
@@ -63,8 +64,8 @@ type ExecuteProps = {
 const validateProps = (props: EstimateProps): props is EstimateProps & { addressUtxos: UTXO[] } => {
   const { tick, amount, feeRate } = props;
 
-  if (tick.length !== 4) {
-    throw new CoreError('Invalid tick; should be 4 characters long', BRC20ErrorCode.INVALID_TICK);
+  if (!isValidTick(tick)) {
+    throw new CoreError('Invalid tick; should be 4 or 5 bytes long', BRC20ErrorCode.INVALID_TICK);
   }
 
   if (amount <= 0) {
