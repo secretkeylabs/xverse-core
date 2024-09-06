@@ -1,3 +1,15 @@
+import BigNumber from 'bignumber.js';
+import { BundleSatRange, UtxoRuneEntry } from './ordinals';
+
+export type ListingBundle<B extends BigNumber | number = BigNumber> = {
+  txid: string;
+  vout: number;
+  block_height?: number;
+  value: number;
+  sat_ranges: BundleSatRange[];
+  runes: UtxoRuneEntry<B>[];
+};
+
 export type Marketplace = 'Magic Eden' | 'OKX' | 'Unisat';
 
 export type ListingProvider = {
@@ -15,6 +27,11 @@ export type TokenId = {
 export type ListingRuneMarketInfo = {
   floorPrice: string;
   marketplace: ListingProvider;
+};
+
+export type GetRuneMarketDataRequest = {
+  marketplaces: Marketplace[];
+  rune: TokenId;
 };
 
 export type CreateRuneListingRequest = {
@@ -45,6 +62,59 @@ export type SubmitRuneListingRequest = {
 };
 
 export type SubmitRuneListingResponse = {
-  successfull: boolean;
+  successful: boolean;
   marketplace: ListingProvider;
+};
+
+export type CreateRuneListingCancellationRequest = {
+  btcPublicKey: string;
+  ordinalsAddress: string;
+  ordinalsPublicKey: string;
+  orderIdsPerMarketplace: {
+    orderId: string;
+    marketplace: Marketplace;
+  }[];
+};
+
+export type CreateRuneListingCancellationResponse = {
+  marketplace: ListingProvider;
+  orderId: string;
+  magicEden?: {
+    token: string;
+    message: string;
+  };
+  unisat?: {
+    psbt: string;
+  };
+};
+
+export type SubmitRuneListingCancellationRequest = {
+  cancellationsPerMarketplace: {
+    marketplace: Marketplace;
+    orderId: string;
+    psbt: string;
+  }[];
+};
+
+export type SubmitRuneListingCancellationResponse = {
+  marketplace: ListingProvider;
+  successful: boolean;
+  unisat?: {
+    txid: string;
+  };
+};
+
+export type Listing = {
+  location: string;
+  balance: number;
+  totalPriceSats: number;
+  unitPriceSats: number;
+  orderId: string;
+};
+export type ListingWithMarketplace = Listing & { marketplaceName: Marketplace };
+export type GetListedUtxosRequest = { address: string; rune: TokenId };
+export type GetListedUtxosResponseUtxo = ListingBundle & { listings: ListingWithMarketplace[] };
+export type GetListedUtxosResponse = {
+  marketplaces: ListingProvider[];
+  utxos: GetListedUtxosResponseUtxo[];
 };

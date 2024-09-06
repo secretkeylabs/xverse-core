@@ -14,6 +14,8 @@ import {
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  CreateRuneListingCancellationRequest,
+  CreateRuneListingCancellationResponse,
   CreateRuneListingRequest,
   CreateRuneListingResponse,
   DappSectionData,
@@ -25,15 +27,17 @@ import {
   ExecuteUtxoOrderResponse,
   GetDestinationTokensRequest,
   GetDestinationTokensResponse,
+  GetListedUtxosRequest,
+  GetListedUtxosResponse,
   GetQuotesRequest,
   GetQuotesResponse,
+  GetRuneMarketDataRequest,
   GetSourceTokensRequest,
   GetUtxosRequest,
   GetUtxosResponse,
   Inscription,
   InscriptionInCollectionsList,
   ListingRuneMarketInfo,
-  Marketplace,
   NetworkType,
   NotificationBanner,
   OrdinalInfo,
@@ -49,12 +53,13 @@ import {
   SponsorTransactionResponse,
   StackerInfo,
   StackingPoolInfo,
+  SubmitRuneListingCancellationRequest,
+  SubmitRuneListingCancellationResponse,
   SubmitRuneListingRequest,
   SubmitRuneListingResponse,
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
-  TokenId,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
@@ -266,8 +271,8 @@ class XverseApi {
   }
 
   listings = {
-    getRuneMarketData: async (token: TokenId, marketplaces: Marketplace[]): Promise<ListingRuneMarketInfo[]> => {
-      const response = await this.client.post(`/v1/listings/runes/market-data`, { token, marketplaces });
+    getRuneMarketData: async (body: GetRuneMarketDataRequest): Promise<ListingRuneMarketInfo[]> => {
+      const response = await this.client.post(`/v1/listings/runes/market-data`, body);
       return response.data;
     },
     getRuneSellOrder: async (body: CreateRuneListingRequest): Promise<CreateRuneListingResponse[]> => {
@@ -276,6 +281,28 @@ class XverseApi {
     },
     submitRuneSellOrder: async (body: SubmitRuneListingRequest[]): Promise<SubmitRuneListingResponse[]> => {
       const response = await this.client.post<SubmitRuneListingResponse[]>('/v1/listings/runes/submit-order', body);
+      return response.data;
+    },
+    getListedUtxos: async (body: GetListedUtxosRequest): Promise<GetListedUtxosResponse> => {
+      const response = await this.client.post<GetListedUtxosResponse>('/v1/listings/runes/listed-utxos', body);
+      return response.data;
+    },
+    getRuneCancelOrder: async (
+      body: CreateRuneListingCancellationRequest,
+    ): Promise<CreateRuneListingCancellationResponse[]> => {
+      const response = await this.client.post<CreateRuneListingCancellationResponse[]>(
+        '/v1/listings/runes/create-cancellation',
+        body,
+      );
+      return response.data;
+    },
+    submitRuneCancelOrder: async (
+      body: SubmitRuneListingCancellationRequest,
+    ): Promise<SubmitRuneListingCancellationResponse[]> => {
+      const response = await this.client.post<SubmitRuneListingCancellationResponse[]>(
+        '/v1/listings/runes/submit-cancellation',
+        body,
+      );
       return response.data;
     },
   };
