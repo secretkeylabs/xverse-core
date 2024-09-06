@@ -16,16 +16,15 @@ import {
   NonFungibleConditionCode,
   PostCondition,
   PostConditionType,
+  setNonce,
   StacksMessageType,
   StacksTransaction,
-  setNonce,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
 import { fetchStxPendingTxData, getContractInterface, getXverseApiClient } from '../api';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
+import { Coin, FeesMultipliers, FungibleToken, PostConditionsOptions, StxMempoolTransactionData } from '../types';
 import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce } from './stx';
-import { Coin, FeesMultipliers, PostConditionsOptions, StxMempoolTransactionData } from '../types';
-import { FungibleToken } from '../types';
 
 export function getNewNonce(pendingTransactions: StxMempoolTransactionData[], currentNonce: bigint): bigint {
   if ((pendingTransactions ?? []).length === 0) {
@@ -169,7 +168,7 @@ export const createContractCallPromises = async (
 
   const unSignedContractCall = await generateUnsignedContractCall(tx);
 
-  const checkForPostConditionMessage = payload?.postConditionMode === 2 && payload?.postConditions?.values.length <= 0;
+  const checkForPostConditionMessage = payload?.postConditionMode === 2 && payload?.postConditions?.length <= 0;
   const showPostConditionMessage = !!checkForPostConditionMessage;
 
   const newNonce = getNewNonce(pendingTransactions, getNonce(unSignedContractCall));
