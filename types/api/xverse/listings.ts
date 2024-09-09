@@ -79,14 +79,17 @@ export type CreateRuneListingCancellationRequest = {
 export type CreateRuneListingCancellationResponse = {
   marketplace: ListingProvider;
   orderId: string;
-  magicEden?: {
-    token: string;
-    message: string;
-  };
-  unisat?: {
-    psbt: string;
-  };
-};
+} & (
+  | {
+      type: 'withMessage';
+      token: string;
+      message: string;
+    }
+  | {
+      type: 'withPsbt';
+      psbt: string;
+    }
+);
 
 export type SubmitRuneListingCancellationRequest = {
   cancellationsPerMarketplace: {
@@ -99,9 +102,7 @@ export type SubmitRuneListingCancellationRequest = {
 export type SubmitRuneListingCancellationResponse = {
   marketplace: ListingProvider;
   successful: boolean;
-  unisat?: {
-    txid: string;
-  };
+  txid?: string;
 };
 
 export type Listing = {
@@ -116,5 +117,5 @@ export type GetListedUtxosRequest = { address: string; rune: TokenId };
 export type GetListedUtxosResponseUtxo = ListingBundle & { listings: ListingWithMarketplace[] };
 export type GetListedUtxosResponse = {
   marketplaces: ListingProvider[];
-  utxos: GetListedUtxosResponseUtxo[];
+  utxos: { [key: string]: GetListedUtxosResponseUtxo };
 };
