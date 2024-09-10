@@ -56,6 +56,8 @@ import {
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import axios from 'axios';
+import { Payload } from '@stacks/transactions/dist/payload';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 
 export interface StacksRecipient {
   address: string;
@@ -276,6 +278,49 @@ export async function estimateContractCallFees(
   });
 }
 
+const getMempoolFeePriorities = async (network: StacksNetwork) => {
+  const apiUrl = `${network.coreApiUrl}/extended/v2/mempool/fees`;
+  const response = await axios.get<MempoolFeePriorities>(apiUrl);
+  return response;
+};
+
+interface FeeEstimation {
+  fee: number;
+  fee_rate?: number;
+}
+
+export const estimateStacksTransaction = async (
+  transactionPayload: Payload,
+  network: StacksNetwork,
+): Promise<[FeeEstimation, FeeEstimation, FeeEstimation]> => {
+  try {
+    const [slower, regular, faster] = await estimateTransaction(transactionPayload, undefined, network);
+    return [slower, regular, faster];
+  } catch (error) {
+    const err = error.toString();
+    if (err.includes('NoEstimateAvailable')) {
+      const mempoolFees = await getMempoolFeePriorities(network);
+      if (!mempoolFees.data) {
+        return Promise.reject('NoEstimateAvailable');
+      }
+      if (transactionPayload.payloadType === PayloadType.ContractCall && mempoolFees.data.contract_call) {
+        return [
+          { fee: mempoolFees.data.contract_call.low_priority },
+          { fee: mempoolFees.data.contract_call.medium_priority },
+          { fee: mempoolFees.data.contract_call?.high_priority },
+        ];
+      } else if (transactionPayload.payloadType === PayloadType.TokenTransfer && mempoolFees.data.token_transfer) {
+        return [
+          { fee: mempoolFees.data.token_transfer.low_priority },
+          { fee: mempoolFees.data.token_transfer.medium_priority },
+          { fee: mempoolFees.data.token_transfer.high_priority },
+        ];
+      }
+    }
+    return Promise.reject('NoEstimateAvailable');
+  }
+};
+
 /**
  * generate fungible token transfer or nft transfer transaction
  * @param amount
@@ -343,7 +388,7 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
-    const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
+    const [slower, regular, faster] = await estimateStacksTransaction(unsignedTx.payload, network);
     unsignedTx.setFee(regular.fee);
 
     // bump nonce by number of pending transactions

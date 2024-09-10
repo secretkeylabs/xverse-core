@@ -6,6 +6,7 @@ import {
   AddressTransaction,
   AddressTransactionEventListResponse,
   AddressTransactionsV2ListResponse,
+  MempoolFeePriorities,
   MempoolTransaction,
   MempoolTransactionListResponse,
   Transaction,
@@ -53,6 +54,12 @@ export class StacksApiProvider {
     const response = await this.StacksApi.post(url, data);
     return response.data;
   }
+
+  getMempoolFeePriorities = async () => {
+    const apiUrl = '/extended/v2/mempool/fees';
+    const response = await this.httpGet<MempoolFeePriorities>(apiUrl);
+    return response;
+  };
 
   getAddressBalance = async (stxAddress: string) => {
     const apiUrl = `/v2/accounts/${stxAddress}?proof=0`;

@@ -1,6 +1,6 @@
-import { deserializeTransaction, estimateTransaction } from '@stacks/transactions';
+import { deserializeTransaction } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { RbfRecommendedFees, getRawTransaction, rbf } from '../../transactions';
+import { RbfRecommendedFees, estimateStacksTransaction, getRawTransaction, rbf } from '../../transactions';
 import {
   AppInfo,
   RecommendedFeeResponse,
@@ -66,7 +66,7 @@ export const calculateStxRbfData = async (
   fee: BigNumber,
   feeEstimations: {
     fee: number;
-    fee_rate: number;
+    fee_rate?: number;
   }[],
   appInfo: AppInfo | null,
   stxAvailableBalance: string,
@@ -114,7 +114,7 @@ export const fetchStxRbfData = async (
   const { fee } = transaction;
   const txRaw: string = await getRawTransaction(transaction.txid, btcNetwork);
   const unsignedTx: StacksTransaction = deserializeTransaction(txRaw);
-  const feeEstimations = await estimateTransaction(unsignedTx.payload, undefined, stacksNetwork);
+  const feeEstimations = await estimateStacksTransaction(unsignedTx.payload, stacksNetwork);
 
   return calculateStxRbfData(fee, feeEstimations, appInfo, stxAvailableBalance);
 };
