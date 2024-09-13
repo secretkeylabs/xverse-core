@@ -32,6 +32,7 @@ import {
   estimateContractDeploy,
   estimateContractFunctionCall,
   estimateTransaction,
+  estimateTransactionByteLength,
   estimateTransfer,
   getNonce as fetchNewNonce,
   hexToCV,
@@ -56,7 +57,6 @@ import {
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import axios from 'axios';
-import { Payload } from '@stacks/transactions/dist/payload';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 
 export interface StacksRecipient {
@@ -278,10 +278,10 @@ export async function estimateContractCallFees(
   });
 }
 
-const getMempoolFeePriorities = async (network: StacksNetwork) => {
+export const getMempoolFeePriorities = async (network: StacksNetwork): Promise<MempoolFeePriorities> => {
   const apiUrl = `${network.coreApiUrl}/extended/v2/mempool/fees`;
   const response = await axios.get<MempoolFeePriorities>(apiUrl);
-  return response;
+  return response.data;
 };
 
 interface FeeEstimation {
@@ -289,35 +289,52 @@ interface FeeEstimation {
   fee_rate?: number;
 }
 
-export const estimateStacksTransaction = async (
-  transactionPayload: Payload,
+const getFallbackFees = (
+  transaction: StacksTransaction,
+  mempoolFees: MempoolFeePriorities,
+): [FeeEstimation, FeeEstimation, FeeEstimation] => {
+  const { payloadType } = transaction.payload;
+
+  if (payloadType === PayloadType.ContractCall && mempoolFees.contract_call) {
+    return [
+      { fee: mempoolFees.contract_call.low_priority },
+      { fee: mempoolFees.contract_call.medium_priority },
+      { fee: mempoolFees.contract_call.high_priority },
+    ];
+  } else if (payloadType === PayloadType.TokenTransfer && mempoolFees.token_transfer) {
+    return [
+      { fee: mempoolFees.token_transfer.low_priority },
+      { fee: mempoolFees.token_transfer.medium_priority },
+      { fee: mempoolFees.token_transfer.high_priority },
+    ];
+  }
+  return [
+    { fee: mempoolFees.all.low_priority },
+    { fee: mempoolFees.all.medium_priority },
+    { fee: mempoolFees.all.high_priority },
+  ];
+};
+
+/**
+ * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
+ * {@link estimateTransaction} does not get an estimation due to the
+ * {@link NoEstimateAvailableError} error.
+ */
+export const estimateStacksTransactionWithFallback = async (
+  transaction: StacksTransaction,
   network: StacksNetwork,
 ): Promise<[FeeEstimation, FeeEstimation, FeeEstimation]> => {
   try {
-    const [slower, regular, faster] = await estimateTransaction(transactionPayload, undefined, network);
+    const estimatedLen = estimateTransactionByteLength(transaction);
+    const [slower, regular, faster] = await estimateTransaction(transaction.payload, estimatedLen, network);
     return [slower, regular, faster];
   } catch (error) {
     const err = error.toString();
-    if (err.includes('NoEstimateAvailable')) {
-      const mempoolFees = await getMempoolFeePriorities(network);
-      if (!mempoolFees.data) {
-        return Promise.reject('NoEstimateAvailable');
-      }
-      if (transactionPayload.payloadType === PayloadType.ContractCall && mempoolFees.data.contract_call) {
-        return [
-          { fee: mempoolFees.data.contract_call.low_priority },
-          { fee: mempoolFees.data.contract_call.medium_priority },
-          { fee: mempoolFees.data.contract_call?.high_priority },
-        ];
-      } else if (transactionPayload.payloadType === PayloadType.TokenTransfer && mempoolFees.data.token_transfer) {
-        return [
-          { fee: mempoolFees.data.token_transfer.low_priority },
-          { fee: mempoolFees.data.token_transfer.medium_priority },
-          { fee: mempoolFees.data.token_transfer.high_priority },
-        ];
-      }
+    if (!err.includes('NoEstimateAvailable')) {
+      throw error;
     }
-    return Promise.reject('NoEstimateAvailable');
+    const mempoolFees = await getMempoolFeePriorities(network);
+    return getFallbackFees(transaction, mempoolFees);
   }
 };
 
@@ -388,7 +405,7 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
-    const [slower, regular, faster] = await estimateStacksTransaction(unsignedTx.payload, network);
+    const [slower, regular, faster] = await estimateStacksTransactionWithFallback(unsignedTx, network);
     unsignedTx.setFee(regular.fee);
 
     // bump nonce by number of pending transactions
