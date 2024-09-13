@@ -51,6 +51,7 @@ import {
   parseMempoolStxTransactionsData,
   parseStxTransactionData,
 } from './helper';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 
 // TODO: these methods needs to be refactored
 // reference https://github.com/secretkeylabs/xverse-core/pull/217/files#r1298242728
@@ -479,4 +480,15 @@ export async function fetchCoinMetaData(contract: string, network: StacksNetwork
   } catch (err) {
     return undefined;
   }
+}
+
+export const getMempoolFeePriorities = async (network: StacksNetwork): Promise<MempoolFeePriorities> => {
+  const apiUrl = `${network.coreApiUrl}/extended/v2/mempool/fees`;
+  const response = await axios.get<MempoolFeePriorities>(apiUrl);
+  return response.data;
+};
+
+export interface FeeEstimation {
+  fee: number;
+  fee_rate?: number;
 }

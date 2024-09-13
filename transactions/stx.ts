@@ -58,6 +58,7 @@ import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import axios from 'axios';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
+import { FeeEstimation, getMempoolFeePriorities } from '../api';
 
 export interface StacksRecipient {
   address: string;
@@ -276,17 +277,6 @@ export async function estimateContractCallFees(
   return estimateContractFunctionCall(transaction, network).then((fee) => {
     return fee;
   });
-}
-
-export const getMempoolFeePriorities = async (network: StacksNetwork): Promise<MempoolFeePriorities> => {
-  const apiUrl = `${network.coreApiUrl}/extended/v2/mempool/fees`;
-  const response = await axios.get<MempoolFeePriorities>(apiUrl);
-  return response.data;
-};
-
-interface FeeEstimation {
-  fee: number;
-  fee_rate?: number;
 }
 
 const getFallbackFees = (
