@@ -18,6 +18,7 @@ import {
   CreateRuneListingCancellationResponse,
   CreateRuneListingRequest,
   CreateRuneListingResponse,
+  CollectionsListFilters,
   DappSectionData,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
@@ -152,7 +153,9 @@ class XverseApi {
   /**
    * get rune tx history for a given address and rune
    * @param address ordinal address
-   * @param rune e.g.LFG•ROCKET•RUNE
+   * @param runeName e.g.LFG•ROCKET•RUNE
+   * @param offset
+   * @param limit
    */
   async getRuneTxHistory(
     address: string,
@@ -205,18 +208,26 @@ class XverseApi {
     return response.data;
   }
 
-  async getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
+  /**
+   * Get inscription collections by address
+   * @param address ordinal address
+   * @param offset
+   * @param limit
+   * @param filters options to star/hide certain collectibleIds or inscriptionIds
+   */
+  async getCollections(
+    address: string,
+    offset?: number,
+    limit?: number,
+    filters?: CollectionsListFilters,
+  ): Promise<CollectionsList> {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
       params: {
         limit,
         offset,
+        filters,
       },
     });
-    return response.data;
-  }
-
-  async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
-    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
     return response.data;
   }
 
@@ -225,13 +236,20 @@ class XverseApi {
     collectionId: string,
     offset?: number,
     limit?: number,
+    filters?: CollectionsListFilters,
   ): Promise<InscriptionInCollectionsList> {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
       params: {
         limit,
         offset,
+        filters,
       },
     });
+    return response.data;
+  }
+
+  async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
+    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
     return response.data;
   }
 
