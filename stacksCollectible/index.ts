@@ -147,7 +147,7 @@ export async function getNftCollections(
   const { nftData, collectionData } = await fetchNftData(nftContracts);
   const nftCollectionList: StacksCollectionData[] = Object.values(organizeNftsIntoCollection(nftData, collectionData));
   const hideCollectibleIdsSet = new Set(hiddenCollectibleIds);
-  if(showHiddenOnly) {
+  if (showHiddenOnly) {
     const hiddenCollectiblesList: StacksCollectionData[] = nftCollectionList.filter(({ collection_id }) => {
       return collection_id && hideCollectibleIdsSet.has(collection_id);
     });
@@ -163,11 +163,12 @@ export async function getNftCollections(
   const unstarredCollectiblesData: StacksCollectionData[] = [];
   const starredCollectiblesDataMap = new Map<StacksCollectionData, number>();
   for (const collection of notHiddenCollectiblesList) {
-    const { collection_id, all_nfts } = collection;
-    const starredCollectionIndex = collection_id ? starredCollectibleIds.indexOf(collection_id) : -1;
+    const starredCollectionIndex = collection.collection_id
+      ? starredCollectibleIds.indexOf(collection.collection_id)
+      : -1;
     const orderedCollection = {
       ...collection,
-      all_nfts: all_nfts.sort((a, b) => {
+      all_nfts: collection.all_nfts.sort((a, b) => {
         const aStarred = starredCollectibleIds.indexOf(a.asset_identifier);
         const bStarred = starredCollectibleIds.indexOf(b.asset_identifier);
         // Non-starred items have -1, so they should move to the right
@@ -175,7 +176,7 @@ export async function getNftCollections(
         if (bStarred === -1) return -1;
         // Both are starred, sort by their order in starCollectibleIds
         return aStarred - bStarred;
-      })
+      }),
     };
     if (starredCollectionIndex === -1) {
       unstarredCollectiblesData.push(orderedCollection);
