@@ -35,13 +35,13 @@ export type GetRuneMarketDataRequest = {
 };
 
 export type CreateRuneListingRequest = {
-  rune: string;
+  rune: TokenId;
   makerRunesPublicKey: string;
   makerRunesAddress: string;
   makerReceiveAddress: string;
   expiresAt: string;
   marketplaces: Marketplace[];
-  utxos: Array<{ index: number; location: string; priceSats: number; amount: number }>;
+  utxos: Array<{ index: number; txid: string; priceSatsPerRune: number; runeAmount: number }>;
 };
 
 export type CreateRuneListingResponse = {
@@ -59,6 +59,7 @@ export type SubmitRuneListingRequest = {
   btcAddress: string;
   rune: TokenId;
   expiresAt: string;
+  utxos: Array<{ index: number; txid: string; priceSatsPerRune: number; runeAmount: number }>;
 };
 
 export type SubmitRuneListingResponse = {
@@ -92,11 +93,12 @@ export type CreateRuneListingCancellationResponse = {
 );
 
 export type SubmitRuneListingCancellationRequest = {
-  cancellationsPerMarketplace: {
-    marketplace: Marketplace;
-    orderId: string;
-    psbt: string;
-  }[];
+  cancellationsPerMarketplace: [
+    {
+      marketplace: Marketplace;
+      orderId: string;
+    } & ({ type: 'withMessage'; signature: string; token: string } | { type: 'withPsbt'; psbt: string }),
+  ];
 };
 
 export type SubmitRuneListingCancellationResponse = {
