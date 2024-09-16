@@ -1,11 +1,15 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
-import { getNftsCollectionData } from '../api/gamma';
-import { getNftsData } from '../api/stacks';
+import { getNftsCollectionData, getNftsData } from '../api';
 import { BNS_CONTRACT_ID } from '../constant';
 import { microstacksToStx } from '../currency';
-import { NftCollectionData, NftEventsResponse, NonFungibleToken, NonFungibleTokenApiResponse } from '../types';
+import {
+  CollectionsListFilters,
+  NftCollectionData,
+  NftEventsResponse,
+  NonFungibleToken,
+  NonFungibleTokenApiResponse,
+} from '../types';
 
 export interface StacksCollectionData {
   collection_id: string | null;
@@ -21,44 +25,28 @@ export interface StacksCollectionList {
 export async function getAllNftContracts(
   address: string,
   network: StacksNetwork,
-  limit: number,
 ): Promise<NonFungibleTokenApiResponse[]> {
-  const listofContracts: NonFungibleTokenApiResponse[] = [];
-
+  const BATCH_SIZE = 4;
+  const MAX_LIMIT = 200;
+  const listOfContracts: NonFungibleTokenApiResponse[] = [];
   // make initial call to get the total inscriptions count and limit
   let offset = 0;
-  const response = await getNftsData(address, network, offset, limit);
-  const total = response.total;
-  offset += limit;
-  listofContracts.push(...response.results);
-
-  let listofContractPromises: Promise<NftEventsResponse>[] = [];
-
-  // Make API calls in parallel to speed up fetching data
+  const { total, results: initialResults } = await getNftsData(address, network, offset, MAX_LIMIT);
+  listOfContracts.push(...initialResults);
+  offset += MAX_LIMIT;
+  // Prepare all remaining API call promises
+  const promises: Promise<NftEventsResponse>[] = [];
   while (offset < total) {
-    listofContractPromises.push(getNftsData(address, network, offset, limit));
-    offset += limit;
-
-    if (listofContractPromises.length === 4) {
-      // await promises in batches of 4
-      const resolvedPromises = await Promise.all(listofContractPromises);
-
-      resolvedPromises.forEach((resolvedPromise) => {
-        listofContracts.push(...resolvedPromise.results);
-      });
-
-      listofContractPromises = [];
-    }
+    promises.push(getNftsData(address, network, offset, MAX_LIMIT));
+    offset += MAX_LIMIT;
   }
-
-  // Handle any promises left in case total count wasn't a multiple of 4
-  if (listofContractPromises.length > 0) {
-    const resolvedPromises = await Promise.all(listofContractPromises);
-    resolvedPromises.forEach((resolvedPromise) => {
-      listofContracts.push(...resolvedPromise.results);
-    });
+  // Process promises in batches
+  for (let i = 0; i < promises.length; i += BATCH_SIZE) {
+    const batch = promises.slice(i, i + BATCH_SIZE);
+    const responses = await Promise.all(batch);
+    responses.forEach(({ results }) => listOfContracts.push(...results));
   }
-  return listofContracts;
+  return listOfContracts;
 }
 
 async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
@@ -164,15 +152,15 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   });
 }
 
-export async function getNftCollections(stxAddress: string, network: StacksNetwork): Promise<StacksCollectionList> {
-  const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
-
+export async function getNftCollections(
+  stxAddress: string,
+  network: StacksNetwork,
+  filters?: CollectionsListFilters
+): Promise<StacksCollectionList> {
+  const nfts = await getAllNftContracts(stxAddress, network);
   const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
-
   const nftCollectionList = sortNftCollectionList(Object.values(collectionRecord));
-
   const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
-
   return {
     total_nfts,
     results: nftCollectionList,

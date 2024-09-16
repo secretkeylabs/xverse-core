@@ -1,6 +1,6 @@
 import { StacksMainnet } from '@stacks/network';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getNftsData } from '../../api/stacks';
+import { getNftsData } from '../../api';
 import { getAllNftContracts, organizeNFTsIntoCollection } from '../../stacksCollectible';
 import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
 
@@ -46,24 +46,19 @@ describe('getAllNftContracts', () => {
         },
         name: `NFT ${offset + index}`,
       }));
-
       return Promise.resolve({ results, total, limit, offset });
     };
-
     const address = 'SP3RW6BW9F5STYG2K8XS5EP5PM33E0DNQT4XEG864';
     const network = new StacksMainnet();
-    const limit = 200;
+    const maxLimit = 200;
     const totalItems = 3500; // Total should not be a multiple of the limit to test edge cases
-    const expectedCalls = Math.ceil(totalItems / limit);
-
+    const expectedCalls = Math.ceil(totalItems / maxLimit);
     for (let i = 0; i < expectedCalls; i++) {
-      const offset = i * limit;
-      const responseLimit = i === expectedCalls - 1 ? totalItems % limit : limit;
+      const offset = i * maxLimit;
+      const responseLimit = i === expectedCalls - 1 ? totalItems % maxLimit : maxLimit;
       vi.mocked(getNftsData).mockResolvedValueOnce(await mockResponse(offset, responseLimit, totalItems));
     }
-
-    const contracts = await getAllNftContracts(address, network, limit);
-
+    const contracts = await getAllNftContracts(address, network);
     expect(vi.mocked(getNftsData)).toHaveBeenCalledTimes(expectedCalls);
     expect(contracts).toHaveLength(totalItems);
     for (let i = 0; i < totalItems; i++) {
