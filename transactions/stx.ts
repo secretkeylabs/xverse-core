@@ -308,7 +308,7 @@ const getFallbackFees = (
 /**
  * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
  * {@link estimateTransaction} does not get an estimation due to the
- * {@link NoEstimateAvailableError} error.
+ * {NoEstimateAvailableError} error.
  */
 export const estimateStacksTransactionWithFallback = async (
   transaction: StacksTransaction,
