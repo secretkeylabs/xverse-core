@@ -283,6 +283,14 @@ const getFallbackFees = (
   transaction: StacksTransaction,
   mempoolFees: MempoolFeePriorities,
 ): [FeeEstimation, FeeEstimation, FeeEstimation] => {
+  if (!transaction || !transaction.payload) {
+    throw new Error('Invalid transaction object');
+  }
+
+  if (!mempoolFees) {
+    throw new Error('Invalid mempool fees object');
+  }
+
   const { payloadType } = transaction.payload;
 
   if (payloadType === PayloadType.ContractCall && mempoolFees.contract_call) {
