@@ -1,7 +1,7 @@
 import { StacksMainnet } from '@stacks/network';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNftsData } from '../../api';
-import { getAllNftContracts, organizeNFTsIntoCollection } from '../../stacksCollectible';
+import { getAllNftContracts, organizeNftsIntoCollection } from '../../stacksCollectible';
 import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
 
 vi.mock('../../api/stacks', () => ({
@@ -67,12 +67,12 @@ describe('getAllNftContracts', () => {
   });
 });
 
-describe('organizeNFTsIntoCollection', () => {
+describe('organizeNftsIntoCollection', () => {
   describe('real address returning duplicated holdings', () => {
     it('should return a empty object', () => {
       const nftArray: NonFungibleToken[] = [];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
+      const result = organizeNftsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {};
       expect(result).toStrictEqual(expected);
@@ -95,7 +95,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
+      const result = organizeNftsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {
         'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys': {
@@ -155,7 +155,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
+      const result = organizeNftsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expected = {
         'SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys': {
@@ -235,7 +235,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
+      const result = organizeNftsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expectedAllNfts = [
         {
@@ -317,7 +317,7 @@ describe('organizeNFTsIntoCollection', () => {
         },
       ];
       const nftCollectionDataArray: NftCollectionData[] = [];
-      const result = organizeNFTsIntoCollection(nftArray, nftCollectionDataArray);
+      const result = organizeNftsIntoCollection(nftArray, nftCollectionDataArray);
 
       const expectedAllNfts = [
         {
