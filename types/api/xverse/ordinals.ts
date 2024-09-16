@@ -22,6 +22,13 @@ export interface InscriptionCollectionsData {
   total_inscriptions: number;
   thumbnail_inscriptions?: Array<CondensedInscription>;
 }
+
+export interface CollectionsListFilters {
+  hiddenCollectibleIds?: string[];
+  starredCollectibleIds?: string[];
+  showHiddenOnly?: boolean;
+}
+
 export interface CollectionsList {
   limit: number;
   offset: number;

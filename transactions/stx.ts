@@ -32,6 +32,7 @@ import {
   estimateContractDeploy,
   estimateContractFunctionCall,
   estimateTransaction,
+  estimateTransactionByteLength,
   estimateTransfer,
   getNonce as fetchNewNonce,
   hexToCV,
@@ -56,6 +57,8 @@ import {
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import axios from 'axios';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
+import { FeeEstimation, getMempoolFeePriorities } from '../api';
 
 export interface StacksRecipient {
   address: string;
@@ -276,6 +279,63 @@ export async function estimateContractCallFees(
   });
 }
 
+const getFallbackFees = (
+  transaction: StacksTransaction,
+  mempoolFees: MempoolFeePriorities,
+): [FeeEstimation, FeeEstimation, FeeEstimation] => {
+  if (!transaction || !transaction.payload) {
+    throw new Error('Invalid transaction object');
+  }
+
+  if (!mempoolFees) {
+    throw new Error('Invalid mempool fees object');
+  }
+
+  const { payloadType } = transaction.payload;
+
+  if (payloadType === PayloadType.ContractCall && mempoolFees.contract_call) {
+    return [
+      { fee: mempoolFees.contract_call.low_priority },
+      { fee: mempoolFees.contract_call.medium_priority },
+      { fee: mempoolFees.contract_call.high_priority },
+    ];
+  } else if (payloadType === PayloadType.TokenTransfer && mempoolFees.token_transfer) {
+    return [
+      { fee: mempoolFees.token_transfer.low_priority },
+      { fee: mempoolFees.token_transfer.medium_priority },
+      { fee: mempoolFees.token_transfer.high_priority },
+    ];
+  }
+  return [
+    { fee: mempoolFees.all.low_priority },
+    { fee: mempoolFees.all.medium_priority },
+    { fee: mempoolFees.all.high_priority },
+  ];
+};
+
+/**
+ * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
+ * {@link estimateTransaction} does not get an estimation due to the
+ * {NoEstimateAvailableError} error.
+ */
+export const estimateStacksTransactionWithFallback = async (
+  transaction: StacksTransaction,
+  network: StacksNetwork,
+): Promise<[FeeEstimation, FeeEstimation, FeeEstimation]> => {
+  try {
+    const estimatedLen = estimateTransactionByteLength(transaction);
+    const [slower, regular, faster] = await estimateTransaction(transaction.payload, estimatedLen, network);
+    return [slower, regular, faster];
+  } catch (error) {
+    const err = error.toString();
+    if (!err.includes('NoEstimateAvailable')) {
+      throw error;
+    }
+    const mempoolFees = await getMempoolFeePriorities(network);
+    return getFallbackFees(transaction, mempoolFees);
+  }
+};
+
 /**
  * generate fungible token transfer or nft transfer transaction
  * @param amount
@@ -343,7 +403,7 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
-    const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
+    const [slower, regular, faster] = await estimateStacksTransactionWithFallback(unsignedTx, network);
     unsignedTx.setFee(regular.fee);
 
     // bump nonce by number of pending transactions

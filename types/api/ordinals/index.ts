@@ -25,7 +25,7 @@ export interface Inscription {
   category?: 'brc-20' | 'sns' | null;
   collection_id?: string | null;
   collection_name?: string | null;
-  inscription_floor_price?: number;
+  inscription_floor_price?: number | null;
 }
 
 export interface InscriptionsList {
