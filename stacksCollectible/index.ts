@@ -129,36 +129,24 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   });
 }
 
-function prepareNftResponse(sortedNftCollectionList: StacksCollectionData[]): StacksCollectionList {
-  const totalNfts = sortedNftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
-  return {
-    total_nfts: totalNfts,
-    results: sortedNftCollectionList,
-  };
-}
-
-export async function getNftCollections(
-  stxAddress: string,
-  network: StacksNetwork,
+export function applySortAndCollectionsFilters(
+  collections: StacksCollectionData[],
   filters: CollectionsListFilters = {},
-): Promise<StacksCollectionList> {
+): StacksCollectionData[] {
   const { showHiddenOnly = false, hiddenCollectibleIds = [], starredCollectibleIds = [] } = filters;
-  const nftContracts = await getAllNftContracts(stxAddress, network);
-  const { nftData, collectionData } = await fetchNftData(nftContracts);
-  const nftCollectionList: StacksCollectionData[] = Object.values(organizeNftsIntoCollection(nftData, collectionData));
   const hideCollectibleIdsSet = new Set(hiddenCollectibleIds);
+
   if (showHiddenOnly) {
-    const hiddenCollectiblesList: StacksCollectionData[] = nftCollectionList.filter(({ collection_id }) => {
+    const hiddenCollectiblesList = collections.filter(({ collection_id }) => {
       return collection_id && hideCollectibleIdsSet.has(collection_id);
     });
-    return prepareNftResponse(sortNftCollectionList(hiddenCollectiblesList));
+    return sortNftCollectionList(hiddenCollectiblesList);
   }
-
   const notHiddenCollectiblesList: StacksCollectionData[] = hiddenCollectibleIds.length
-    ? nftCollectionList.filter(({ collection_id }) => collection_id && !hideCollectibleIdsSet.has(collection_id))
-    : nftCollectionList;
+    ? collections.filter(({ collection_id }) => collection_id && !hideCollectibleIdsSet.has(collection_id))
+    : collections;
 
-  if (starredCollectibleIds.length === 0) return prepareNftResponse(sortNftCollectionList(notHiddenCollectiblesList));
+  if (starredCollectibleIds.length === 0) return sortNftCollectionList(notHiddenCollectiblesList);
 
   const unstarredCollectiblesData: StacksCollectionData[] = [];
   const starredCollectiblesDataMap = new Map<StacksCollectionData, number>();
@@ -169,8 +157,8 @@ export async function getNftCollections(
     const orderedCollection = {
       ...collection,
       all_nfts: collection.all_nfts.sort((a, b) => {
-        const aStarred = starredCollectibleIds.indexOf(a.asset_identifier);
-        const bStarred = starredCollectibleIds.indexOf(b.asset_identifier);
+        const aStarred = starredCollectibleIds.indexOf(`${a.asset_identifier}::${a.identifier.tokenId}`);
+        const bStarred = starredCollectibleIds.indexOf(`${b.asset_identifier}::${b.identifier.tokenId}`);
         // Non-starred items have -1, so they should move to the right
         if (aStarred === -1) return 1;
         if (bStarred === -1) return -1;
@@ -191,5 +179,21 @@ export async function getNftCollections(
   const starredCollectiblesData = starredCollectiblesDataPlaceholder.filter(
     (collection): collection is StacksCollectionData => !!collection,
   );
-  return prepareNftResponse([...starredCollectiblesData, ...sortNftCollectionList(unstarredCollectiblesData)]);
+  return [...starredCollectiblesData, ...sortNftCollectionList(unstarredCollectiblesData)];
+}
+
+export async function getNftCollections(
+  stxAddress: string,
+  network: StacksNetwork,
+  filters: CollectionsListFilters,
+): Promise<StacksCollectionList> {
+  const nftContracts = await getAllNftContracts(stxAddress, network);
+  const { nftData, collectionData } = await fetchNftData(nftContracts);
+  const nftCollectionList = Object.values(organizeNftsIntoCollection(nftData, collectionData));
+  const filteredNftCollectionList = applySortAndCollectionsFilters(nftCollectionList, filters);
+  const totalNfts = filteredNftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
+  return {
+    total_nfts: totalNfts,
+    results: filteredNftCollectionList,
+  };
 }

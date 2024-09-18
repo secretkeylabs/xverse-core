@@ -1,8 +1,15 @@
 import { StacksMainnet } from '@stacks/network';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNftsData } from '../../api';
-import { getAllNftContracts, organizeNftsIntoCollection } from '../../stacksCollectible';
+import {
+  applySortAndCollectionsFilters,
+  getAllNftContracts,
+  organizeNftsIntoCollection,
+} from '../../stacksCollectible';
 import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
+import mockStacksCollection from '../mocks/stacks.collection.mock.json';
+import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
+import mockStarredItemInACollection from '../mocks/stacks.collection.starred.in.collection.mock.json';
 
 vi.mock('../../api/stacks', () => ({
   getNftsData: vi.fn(() => Promise.resolve({ results: [], total: 0, limit: 0, offset: 0 })),
@@ -12,7 +19,6 @@ describe('getAllNftContracts', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
-
   it('should fetch all NFT contracts', async () => {
     const mockResponse = (offset: number, limit: number, total: number): Promise<NftEventsResponse> => {
       const results: NonFungibleToken[] = new Array(limit).fill(null).map((_, index) => ({
@@ -48,6 +54,7 @@ describe('getAllNftContracts', () => {
       }));
       return Promise.resolve({ results, total, limit, offset });
     };
+
     const address = 'SP3RW6BW9F5STYG2K8XS5EP5PM33E0DNQT4XEG864';
     const network = new StacksMainnet();
     const maxLimit = 200;
@@ -122,7 +129,6 @@ describe('organizeNftsIntoCollection', () => {
       };
       expect(result).toStrictEqual(expected);
     });
-
     it('should sort bns names', () => {
       const nftArray: NonFungibleToken[] = [
         {
@@ -202,7 +208,6 @@ describe('organizeNftsIntoCollection', () => {
       };
       expect(result).toStrictEqual(expected);
     });
-
     it('should return sorted all_nfts by tokenId', () => {
       const nftArray: NonFungibleToken[] = [
         {
@@ -270,7 +275,6 @@ describe('organizeNftsIntoCollection', () => {
       const resultAllNfts = result['SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys'].all_nfts;
       expect(resultAllNfts).toStrictEqual(expectedAllNfts);
     });
-
     it('should return no duplicates', () => {
       const nftArray: NonFungibleToken[] = [
         {
@@ -352,5 +356,50 @@ describe('organizeNftsIntoCollection', () => {
       const resultAllNfts = result['SP125J1ADVYWGWB9NQRCVGKYAG73R17ZNMV17XEJ7.mutant-monkeys'].all_nfts;
       expect(resultAllNfts).toStrictEqual(expectedAllNfts);
     });
+  });
+});
+
+describe('applySortAndCollectionsFilters', () => {
+  it('should return default sorted collection with no filters', () => {
+    const result = applySortAndCollectionsFilters(mockStacksCollection);
+    expect(result).toStrictEqual(mockStacksCollection);
+  });
+
+  it('should return only hidden collections with showHiddenOnly toggle', () => {
+    const hiddenCollectibleIds = [
+      'SP2ZGCAHJ2GFECRG754NP98N4F18CP39HSP8PBNXA.trump-on-stacks',
+      'SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts',
+    ];
+    const result = applySortAndCollectionsFilters(mockStacksCollection, {
+      showHiddenOnly: true,
+      hiddenCollectibleIds,
+    });
+    const expected = mockStacksCollection.filter(({ collection_id }) => hiddenCollectibleIds.includes(collection_id));
+    expect(result).toStrictEqual(expected);
+  });
+
+  it('should filter out hidden collections in hiddenCollectibleIds', () => {
+    const hiddenCollectibleIds = [
+      'SP2ZGCAHJ2GFECRG754NP98N4F18CP39HSP8PBNXA.trump-on-stacks',
+      'SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts',
+    ];
+    const result = applySortAndCollectionsFilters(mockStacksCollection, { hiddenCollectibleIds });
+    const expected = mockStacksCollection.filter(({ collection_id }) => !hiddenCollectibleIds.includes(collection_id));
+    expect(result).toStrictEqual(expected);
+  });
+
+  it('should show starred collections in front', () => {
+    const starredCollectibleIds = [
+      'SP156CPYZP5VV2C09NWYWQT4CP0T9EWJP76Y18E3T.morphing-panda-gifs',
+      'SP2ABNX65BSKVM00ZQZ7K174DFV18CXVGGEMP7Y6X.syzfarts-frank-trask',
+    ];
+    const result = applySortAndCollectionsFilters(mockStacksCollection, { starredCollectibleIds });
+    expect(result).toStrictEqual(mockStarredStacksCollection);
+  });
+
+  it('should show starred NFTs inside a collection in front', () => {
+    const starredCollectibleIds = ['SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts::boom::13285'];
+    const result = applySortAndCollectionsFilters(mockStacksCollection, { starredCollectibleIds });
+    expect(result).toStrictEqual(mockStarredItemInACollection);
   });
 });

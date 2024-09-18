@@ -8,6 +8,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "useUnknownInCatchVariables": false,
