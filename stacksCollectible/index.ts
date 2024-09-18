@@ -185,7 +185,7 @@ export function applySortAndCollectionsFilters(
 export async function getNftCollections(
   stxAddress: string,
   network: StacksNetwork,
-  filters: CollectionsListFilters,
+  filters?: CollectionsListFilters,
 ): Promise<StacksCollectionList> {
   const nftContracts = await getAllNftContracts(stxAddress, network);
   const { nftData, collectionData } = await fetchNftData(nftContracts);
