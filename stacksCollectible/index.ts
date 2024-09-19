@@ -10,6 +10,7 @@ import {
   NonFungibleToken,
   NonFungibleTokenApiResponse,
 } from '../types';
+import { processPromisesBatch } from '../dist/utils/promises';
 
 export interface StacksCollectionData {
   collection_id: string | null;
@@ -26,25 +27,23 @@ export async function getAllNftContracts(
   address: string,
   network: StacksNetwork,
 ): Promise<NonFungibleTokenApiResponse[]> {
-  const BATCH_SIZE = 4;
-  const MAX_LIMIT = 200;
+  const limit = 200; // 200 is max on the API
+  let offset = 0;
   // make initial call to get the total inscriptions count
-  const { total, results: initialResults } = await getNftsData(address, network, 0, MAX_LIMIT);
+  const { total, results: initialResults } = await getNftsData(address, network, offset, limit);
   const listOfContracts = initialResults;
-  let offset = MAX_LIMIT;
+  offset += limit;
   // Prepare all remaining API call promises
   const promises: Promise<NftEventsResponse>[] = [];
   while (offset < total) {
-    promises.push(getNftsData(address, network, offset, MAX_LIMIT));
-    offset += MAX_LIMIT;
+    promises.push(getNftsData(address, network, offset, limit));
+    offset += limit;
   }
-  // Process promises in batches
-  for (let i = 0; i < promises.length; i += BATCH_SIZE) {
-    const batch = promises.slice(i, i + BATCH_SIZE);
-    const responses = await Promise.all(batch);
-    responses.forEach(({ results }) => listOfContracts.push(...results));
-  }
-  return listOfContracts;
+  const remainingContracts = await processPromisesBatch(promises, 4, async (promise) => {
+    const { results } = await promise;
+    return results;
+  });
+  return [...listOfContracts, ...remainingContracts.flat()];
 }
 
 async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
