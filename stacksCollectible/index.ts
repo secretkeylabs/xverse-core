@@ -1,11 +1,16 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import { StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
-import { getNftsCollectionData } from '../api/gamma';
-import { getNftsData } from '../api/stacks';
+import { getNftsCollectionData, getNftsData } from '../api';
 import { BNS_CONTRACT_ID } from '../constant';
 import { microstacksToStx } from '../currency';
-import { NftCollectionData, NftEventsResponse, NonFungibleToken, NonFungibleTokenApiResponse } from '../types';
+import {
+  CollectionsListFilters,
+  NftCollectionData,
+  NftEventsResponse,
+  NonFungibleToken,
+  NonFungibleTokenApiResponse,
+} from '../types';
+import { processPromisesBatch } from '../utils/promises';
 
 export interface StacksCollectionData {
   collection_id: string | null;
@@ -21,60 +26,36 @@ export interface StacksCollectionList {
 export async function getAllNftContracts(
   address: string,
   network: StacksNetwork,
-  limit: number,
 ): Promise<NonFungibleTokenApiResponse[]> {
-  const listofContracts: NonFungibleTokenApiResponse[] = [];
-
-  // make initial call to get the total inscriptions count and limit
+  const limit = 200; // 200 is max on the API
   let offset = 0;
-  const response = await getNftsData(address, network, offset, limit);
-  const total = response.total;
+  // make initial call to get the total inscriptions count
+  const { total, results: initialContracts } = await getNftsData(address, network, offset, limit);
   offset += limit;
-  listofContracts.push(...response.results);
-
-  let listofContractPromises: Promise<NftEventsResponse>[] = [];
-
-  // Make API calls in parallel to speed up fetching data
+  // Prepare all remaining API call promises
+  const promises: Promise<NftEventsResponse>[] = [];
   while (offset < total) {
-    listofContractPromises.push(getNftsData(address, network, offset, limit));
+    promises.push(getNftsData(address, network, offset, limit));
     offset += limit;
-
-    if (listofContractPromises.length === 4) {
-      // await promises in batches of 4
-      const resolvedPromises = await Promise.all(listofContractPromises);
-
-      resolvedPromises.forEach((resolvedPromise) => {
-        listofContracts.push(...resolvedPromise.results);
-      });
-
-      listofContractPromises = [];
-    }
   }
-
-  // Handle any promises left in case total count wasn't a multiple of 4
-  if (listofContractPromises.length > 0) {
-    const resolvedPromises = await Promise.all(listofContractPromises);
-    resolvedPromises.forEach((resolvedPromise) => {
-      listofContracts.push(...resolvedPromise.results);
-    });
-  }
-  return listofContracts;
+  const remainingContracts = await processPromisesBatch(promises, 4, async (promise) => {
+    const { results } = await promise;
+    return results;
+  });
+  return [...initialContracts, ...remainingContracts.flat()];
 }
 
 async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
   const collectionDataPromises: Promise<NftCollectionData | undefined>[] = [];
   const collectionDataPromiseMap: Record<string, Promise<NftCollectionData | undefined>> = {};
   const nftArray: NonFungibleToken[] = [];
-
   for (const nft of nfts) {
     const principal: string[] = nft.asset_identifier?.split('::');
-    const contractInfo: string[] = principal[0]?.split('.');
-    const contractId = principal[0];
-
     const tokenId = nft.value.repr.replace('u', '');
+    const contractId = principal[0];
+    const contractInfo: string[] = contractId?.split('.');
     const contractAddress = contractInfo[0];
     const contractName = contractInfo[1];
-
     const nftData = {
       ...nft,
       identifier: {
@@ -83,32 +64,26 @@ async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
         contractAddress,
       },
     };
-
     if (!(contractId in collectionDataPromiseMap)) {
       collectionDataPromiseMap[contractId] = getNftsCollectionData(contractId);
     }
-
     collectionDataPromises.push(collectionDataPromiseMap[contractId]);
     nftArray.push(nftData);
   }
-
   const collectionData = await Promise.all(collectionDataPromises);
-
-  return { collectionData, nftArray };
+  return { collectionData, nftData: nftArray };
 }
 
-export function organizeNFTsIntoCollection(
+export function organizeNftsIntoCollection(
   nftArray: NonFungibleToken[],
   nftCollectionDataArray: Array<NftCollectionData | undefined>,
 ) {
   const organized: Record<string, StacksCollectionData> = {};
-
   for (let i = 0; i < nftArray.length; i++) {
     const nft = nftArray[i];
     const principal: string[] = nft.asset_identifier.split('::');
     const contractInfo: string[] = principal[0].split('.');
     const contractId = principal[0];
-
     if (contractInfo[1] === 'bns') {
       // currently stacks only supports 1 bns name per address
       organized.bns = {
@@ -118,13 +93,10 @@ export function organizeNFTsIntoCollection(
       };
       continue;
     }
-
     const collectionData = nftCollectionDataArray[i];
-
     // group NFTs into collections
     if (organized[contractId]) {
-      const data = organized[contractId];
-      data.all_nfts.push(nft);
+      organized[contractId].all_nfts.push(nft);
     } else {
       organized[contractId] = {
         collection_id: contractId,
@@ -136,22 +108,13 @@ export function organizeNFTsIntoCollection(
       };
     }
   }
-
   // sort and unique all_nfts
   Object.values(organized).forEach((collection) => {
     const map = new Map(collection.all_nfts.map((nft) => [nft.identifier.tokenId, nft]));
     const sorted = Array.from(map.values()).sort((a, b) => (a.identifier.tokenId < b.identifier.tokenId ? -1 : 1));
     collection.all_nfts = sorted;
   });
-
   return organized;
-}
-
-async function fetchNFTCollectionDetailsRecord(
-  nfts: NonFungibleTokenApiResponse[],
-): Promise<Record<string, StacksCollectionData>> {
-  const { collectionData, nftArray } = await fetchNftData(nfts);
-  return organizeNFTsIntoCollection(nftArray, collectionData);
 }
 
 function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
@@ -164,17 +127,71 @@ function sortNftCollectionList(nftCollectionList: StacksCollectionData[]) {
   });
 }
 
-export async function getNftCollections(stxAddress: string, network: StacksNetwork): Promise<StacksCollectionList> {
-  const nfts = await getAllNftContracts(stxAddress, network, 200); // limit: 200 is max on the API
+export function applySortAndCollectionsFilters(
+  collections: StacksCollectionData[],
+  filters: CollectionsListFilters = {},
+): StacksCollectionData[] {
+  const { showHiddenOnly = false, hiddenCollectibleIds = [], starredCollectibleIds = [] } = filters;
+  const hideCollectibleIdsSet = new Set(hiddenCollectibleIds);
 
-  const collectionRecord = await fetchNFTCollectionDetailsRecord(nfts);
+  if (showHiddenOnly) {
+    const hiddenCollectiblesList = collections.filter(({ collection_id }) => {
+      return collection_id && hideCollectibleIdsSet.has(collection_id);
+    });
+    return sortNftCollectionList(hiddenCollectiblesList);
+  }
+  const notHiddenCollectiblesList: StacksCollectionData[] = hiddenCollectibleIds.length
+    ? collections.filter(({ collection_id }) => collection_id && !hideCollectibleIdsSet.has(collection_id))
+    : collections;
 
-  const nftCollectionList = sortNftCollectionList(Object.values(collectionRecord));
+  if (starredCollectibleIds.length === 0) return sortNftCollectionList(notHiddenCollectiblesList);
 
-  const total_nfts = nftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
+  const unstarredCollectiblesData: StacksCollectionData[] = [];
+  const starredCollectiblesDataMap = new Map<StacksCollectionData, number>();
+  for (const collection of notHiddenCollectiblesList) {
+    const starredCollectionIndex = collection.collection_id
+      ? starredCollectibleIds.indexOf(collection.collection_id)
+      : -1;
+    const orderedCollection = {
+      ...collection,
+      all_nfts: collection.all_nfts.sort((a, b) => {
+        const aStarred = starredCollectibleIds.indexOf(`${a.asset_identifier}::${a.identifier.tokenId}`);
+        const bStarred = starredCollectibleIds.indexOf(`${b.asset_identifier}::${b.identifier.tokenId}`);
+        // Non-starred items have -1, so they should move to the right
+        if (aStarred === -1) return 1;
+        if (bStarred === -1) return -1;
+        // Both are starred, sort by their order in starCollectibleIds
+        return aStarred - bStarred;
+      }),
+    };
+    if (starredCollectionIndex === -1) {
+      unstarredCollectiblesData.push(orderedCollection);
+    } else {
+      starredCollectiblesDataMap.set(orderedCollection, starredCollectionIndex);
+    }
+  }
+  const starredCollectiblesDataPlaceholder: (StacksCollectionData | undefined)[] = [];
+  for (const [starredCollection, index] of starredCollectiblesDataMap.entries()) {
+    starredCollectiblesDataPlaceholder[index] = starredCollection;
+  }
+  const starredCollectiblesData = starredCollectiblesDataPlaceholder.filter(
+    (collection): collection is StacksCollectionData => !!collection,
+  );
+  return [...starredCollectiblesData, ...sortNftCollectionList(unstarredCollectiblesData)];
+}
 
+export async function getNftCollections(
+  stxAddress: string,
+  network: StacksNetwork,
+  filters?: CollectionsListFilters,
+): Promise<StacksCollectionList> {
+  const nftContracts = await getAllNftContracts(stxAddress, network);
+  const { nftData, collectionData } = await fetchNftData(nftContracts);
+  const nftCollectionList = Object.values(organizeNftsIntoCollection(nftData, collectionData));
+  const filteredNftCollectionList = applySortAndCollectionsFilters(nftCollectionList, filters);
+  const totalNfts = filteredNftCollectionList.reduce((total, collection) => total + collection.all_nfts.length, 0);
   return {
-    total_nfts,
-    results: nftCollectionList,
+    total_nfts: totalNfts,
+    results: filteredNftCollectionList,
   };
 }
