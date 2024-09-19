@@ -8,6 +8,8 @@ import {
 } from '../../stacksCollectible';
 import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
 import mockStacksCollection from '../mocks/stacks.collection.mock.json';
+import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
+import mockHiddenStacksCollection from '../mocks/stacks.collection.hidden.mock.json';
 import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
 import mockStarredItemInACollection from '../mocks/stacks.collection.starred.in.collection.mock.json';
 
@@ -374,8 +376,7 @@ describe('applySortAndCollectionsFilters', () => {
       showHiddenOnly: true,
       hiddenCollectibleIds,
     });
-    const expected = mockStacksCollection.filter(({ collection_id }) => hiddenCollectibleIds.includes(collection_id));
-    expect(result).toStrictEqual(expected);
+    expect(result).toStrictEqual(mockHiddenShowHiddenOnlyStacksCollection);
   });
 
   it('should filter out hidden collections in hiddenCollectibleIds', () => {
@@ -384,8 +385,7 @@ describe('applySortAndCollectionsFilters', () => {
       'SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts',
     ];
     const result = applySortAndCollectionsFilters(mockStacksCollection, { hiddenCollectibleIds });
-    const expected = mockStacksCollection.filter(({ collection_id }) => !hiddenCollectibleIds.includes(collection_id));
-    expect(result).toStrictEqual(expected);
+    expect(result).toStrictEqual(mockHiddenStacksCollection);
   });
 
   it('should show starred collections in front', () => {
