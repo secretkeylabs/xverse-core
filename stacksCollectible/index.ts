@@ -10,7 +10,7 @@ import {
   NonFungibleToken,
   NonFungibleTokenApiResponse,
 } from '../types';
-import { processPromisesBatch } from '../dist/utils/promises';
+import { processPromisesBatch } from '../utils/promises';
 
 export interface StacksCollectionData {
   collection_id: string | null;
