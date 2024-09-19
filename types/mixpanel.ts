@@ -16,6 +16,8 @@ export enum AnalyticsEvents {
   SignSwap = 'sign_swap',
   SelectTokenToSwapFrom = 'select_token_to_swap_from',
   SelectTokenToSwapTo = 'select_token_to_swap_to',
+  ListRuneInitiated = 'list_rune_initiated',
+  ListRuneSigned = 'list_rune_signed',
 }
 
 type CommonProps = {
