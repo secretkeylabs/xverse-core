@@ -30,8 +30,7 @@ export async function getAllNftContracts(
   const limit = 200; // 200 is max on the API
   let offset = 0;
   // make initial call to get the total inscriptions count
-  const { total, results: initialResults } = await getNftsData(address, network, offset, limit);
-  const listOfContracts = initialResults;
+  const { total, results: initialContracts } = await getNftsData(address, network, offset, limit);
   offset += limit;
   // Prepare all remaining API call promises
   const promises: Promise<NftEventsResponse>[] = [];
@@ -43,7 +42,7 @@ export async function getAllNftContracts(
     const { results } = await promise;
     return results;
   });
-  return [...listOfContracts, ...remainingContracts.flat()];
+  return [...initialContracts, ...remainingContracts.flat()];
 }
 
 async function fetchNftData(nfts: NonFungibleTokenApiResponse[]) {
