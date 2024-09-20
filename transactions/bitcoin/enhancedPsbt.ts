@@ -17,17 +17,18 @@ import {
   TransactionFeeOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
+import { estimateVSize } from './utils/transactionVsizeEstimator';
 
-type ParsedOutputMetadata =
-  | { address: string; script?: undefined; type?: undefined }
-  | { address?: undefined; script: string[]; scriptHex: string; type?: undefined }
+type ParsedOutputMetadata = { script: string[]; scriptHex: string } & (
+  | { address: string; type?: undefined }
+  | { address?: undefined; type?: undefined }
   | {
       address?: undefined;
-      script?: undefined;
       pubKeys: string[];
       type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
       m: number;
-    };
+    }
+);
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -111,11 +112,16 @@ export class EnhancedPsbt {
       };
     }
 
+    const script = btc.Script.decode(output.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`));
+    const scriptHex = hex.encode(output.script);
+
     if (outputScript.type === 'pk') {
       //for script outputs
       return {
         type: 'pk',
         pubKeys: [hex.encode(outputScript.pubkey)],
+        script,
+        scriptHex,
         m: 1,
       };
     }
@@ -124,6 +130,8 @@ export class EnhancedPsbt {
       return {
         type: outputScript.type,
         pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        script,
+        scriptHex,
         m: outputScript.m,
       };
     }
@@ -132,11 +140,17 @@ export class EnhancedPsbt {
       return {
         type: outputScript.type,
         pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        script,
+        scriptHex,
         m: outputScript.pubkeys.length,
       };
     }
 
-    return { address: btc.Address(btcNetwork).encode(outputScript) };
+    return {
+      address: btc.Address(btcNetwork).encode(outputScript),
+      script,
+      scriptHex,
+    };
   }
 
   getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
@@ -230,7 +244,7 @@ export class EnhancedPsbt {
       const outputMetadata = this.parseAddressFromOutput(transaction, outputIndex);
       const outputRaw = transaction.getOutput(outputIndex);
 
-      if (outputMetadata.script !== undefined) {
+      if (outputMetadata.type === undefined && outputMetadata.address === undefined) {
         outputs.push({
           type: 'script',
           script: outputMetadata.script,
@@ -263,6 +277,8 @@ export class EnhancedPsbt {
         outputs.push({
           type: 'address',
           address: outputMetadata.address,
+          script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           amount: Number(amount),
           inscriptions,
           satributes,
@@ -270,6 +286,8 @@ export class EnhancedPsbt {
       } else {
         outputs.push({
           type: outputMetadata.type,
+          script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           pubKeys: outputMetadata.pubKeys,
           amount: Number(amount),
           inscriptions,
@@ -312,14 +330,28 @@ export class EnhancedPsbt {
     const runesClient = getRunesClient(this._context.network);
     const runeOp = hasScriptOutput ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
 
+    const isFinal = isSigHashAll;
+    let feeRate: number | undefined = undefined;
+
+    if (isFinal && feeOutput) {
+      // if the transaction is final, we can calculate the fee rate by estimating the size of the transaction
+      try {
+        const txnSize = estimateVSize(transaction);
+        feeRate = feeOutput.amount / txnSize;
+      } catch (e) {
+        // if we can't estimate the size, we can't calculate the fee rate, so we just ignore it
+      }
+    }
+
     return {
       inputs: enhancedInputs,
       outputs,
       feeOutput,
       hasSigHashNone,
       hasSigHashSingle,
-      isFinal: isSigHashAll,
+      isFinal,
       runeOp,
+      feeRate,
     };
   }
 

@@ -1,5 +1,5 @@
 import * as btc from '@scure/btc-signer';
-import { Transport } from '../../ledger/types';
+import { Transport } from '../../ledger';
 import { Artifact, RareSatsType } from '../../types';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
@@ -107,14 +107,16 @@ export type IOInscription = {
 };
 
 export type IOSatribute = {
-  types: RareSatsType[];
-  amount: number;
+  types: RareSatsType[]; // the satribute combo on the sats in this group of sats
+  amount: number; // total amount of sats in this group
   offset: number;
   fromAddress: string;
 };
 
 export type TransactionOutput = {
   type: 'address';
+  script: string[];
+  scriptHex: string;
   address: string;
   amount: number;
   inscriptions: IOInscription[];
@@ -123,6 +125,8 @@ export type TransactionOutput = {
 
 export type TransactionPubKeyOutput = {
   type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  script: string[];
+  scriptHex: string;
   pubKeys: string[];
   amount: number;
   inscriptions: IOInscription[];
@@ -130,7 +134,9 @@ export type TransactionPubKeyOutput = {
   m: number;
 };
 
-export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type'> & { type: 'fee' };
+export type TransactionFeeOutput = Omit<TransactionOutput, 'address' | 'type' | 'script' | 'scriptHex'> & {
+  type: 'fee';
+};
 
 export type TransactionScriptOutput = {
   type: 'script';
@@ -156,6 +162,7 @@ export type PsbtSummary = {
   hasSigHashSingle: boolean;
   isFinal: boolean;
   runeOp?: Artifact;
+  feeRate?: number;
 };
 
 export type InputMetadata = {

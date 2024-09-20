@@ -70,6 +70,10 @@ describe('applySendUtxoActions', () => {
       addressContext: { addInput: vi.fn() },
       extendedUtxo: { utxo: { value: 1000 } },
     });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
 
     const transaction = { inputsLength: 0 };
 
@@ -109,6 +113,10 @@ describe('applySendUtxoActions', () => {
       },
     };
     context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo2 });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
 
     const transaction = { inputsLength: 0 };
 
@@ -157,6 +165,10 @@ describe('applySendUtxoActions', () => {
       },
     };
     context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo2 });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
 
     const transaction = { inputsLength: 0 };
 
@@ -204,6 +216,11 @@ describe('applySendUtxoActions', () => {
       },
     };
     context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo2 });
+
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
 
     const transaction = { inputsLength: 0 };
 
@@ -266,6 +283,11 @@ describe('applySendUtxoActions', () => {
       },
     };
     context.getUtxo.mockResolvedValueOnce({ addressContext, extendedUtxo: utxo4 });
+
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
 
     const transaction = { inputsLength: 0 };
 

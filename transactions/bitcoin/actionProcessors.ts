@@ -103,8 +103,9 @@ export const applySendUtxoActions = async (
 
       // if output value is 0, then all actions are spendable, so we can skip this
       if (outputAmount > 0) {
-        context.addOutputAddress(transaction, toAddress, BigInt(outputAmount));
-        outputs.push({ type: 'address', amount: outputAmount, address: toAddress });
+        const { script, scriptHex } = context.addOutputAddress(transaction, toAddress, BigInt(outputAmount));
+
+        outputs.push({ type: 'address', amount: outputAmount, address: toAddress, script, scriptHex });
       }
     }
   }
@@ -199,8 +200,8 @@ export const applySplitUtxoActions = async (
             `Cannot split offset ${offset} on  ${extendedUtxo.outpoint} as it the first output would be below dust`,
           );
         }
-        context.addOutputAddress(transaction, extendedUtxo.utxo.address, BigInt(offset));
-        outputs.push({ type: 'address', amount: offset, address: extendedUtxo.utxo.address });
+        const { script, scriptHex } = context.addOutputAddress(transaction, extendedUtxo.utxo.address, BigInt(offset));
+        outputs.push({ type: 'address', amount: offset, address: extendedUtxo.utxo.address, script, scriptHex });
       }
 
       const nextAction = outpointActions[i + 1];
@@ -217,8 +218,12 @@ export const applySplitUtxoActions = async (
         // if a split action is spendable but is not the last output, then we need to return the value to the
         // payment to the originating address
         const toAddress = action.spendable ? extendedUtxo.utxo.address : action.toAddress;
-        context.addOutputAddress(transaction, toAddress, BigInt(outputEndOffset - offset));
-        outputs.push({ type: 'address', amount: outputEndOffset - offset, address: toAddress });
+        const { script, scriptHex } = context.addOutputAddress(
+          transaction,
+          toAddress,
+          BigInt(outputEndOffset - offset),
+        );
+        outputs.push({ type: 'address', amount: outputEndOffset - offset, address: toAddress, script, scriptHex });
       }
     }
   }
@@ -288,8 +293,8 @@ export const applySendBtcActionsAndFee = async (
         continue;
       }
 
-      context.addOutputAddress(transaction, toAddress, amount);
-      outputs.push({ type: 'address', amount: Number(amount), address: toAddress });
+      const { script, scriptHex } = context.addOutputAddress(transaction, toAddress, amount);
+      outputs.push({ type: 'address', amount: Number(amount), address: toAddress, script, scriptHex });
     }
   }
 
@@ -402,11 +407,17 @@ export const applySendBtcActionsAndFee = async (
             effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (finalVSizeWithChange + unconfirmedVsize);
 
             const change = currentChange - actualFee;
-            context.addOutputAddress(transaction, overrideChangeAddress ?? context.changeAddress, change);
+            const { script, scriptHex } = context.addOutputAddress(
+              transaction,
+              overrideChangeAddress ?? context.changeAddress,
+              change,
+            );
             outputs.push({
               type: 'address',
               amount: Number(change),
               address: overrideChangeAddress ?? context.changeAddress,
+              script,
+              scriptHex,
             });
 
             complete = true;

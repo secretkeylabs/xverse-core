@@ -7,5 +7,6 @@ export * from './brc20';
 export * from './coreError';
 export * from './ecpair';
 export * from './runes';
+export * from './transactionSummary';
 export * from './xClientVersion';
 export { bip39, bs58 };

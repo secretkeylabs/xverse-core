@@ -168,6 +168,8 @@ describe('EnhancedTransaction summary', () => {
           type: 'address',
           address: 'address1',
           amount: 100,
+          script: ['DUMMY_SCRIPT'],
+          scriptHex: 'DUMMY_SCRIPT_HEX',
         },
       ],
     });
@@ -207,11 +209,15 @@ describe('EnhancedTransaction summary', () => {
           type: 'address',
           address: 'address2',
           amount: 1000,
+          script: ['DUMMY_SCRIPT2'],
+          scriptHex: 'DUMMY_SCRIPT_HEX2',
         },
         {
           type: 'address',
           address: 'address3',
           amount: 1000,
+          script: ['DUMMY_SCRIPT3'],
+          scriptHex: 'DUMMY_SCRIPT_HEX3',
         },
       ],
     });
@@ -272,11 +278,15 @@ describe('EnhancedTransaction summary', () => {
           type: 'address',
           address: 'address4',
           amount: 2500,
+          script: ['DUMMY_SCRIPT4'],
+          scriptHex: 'DUMMY_SCRIPT_HEX4',
         },
         {
           type: 'address',
           address: 'myAddress',
           amount: 1000,
+          script: ['DUMMY_SCRIPT_MY'],
+          scriptHex: 'DUMMY_SCRIPT_HEX_MY',
         },
       ],
       actualFee: 500n,
@@ -370,6 +380,8 @@ describe('EnhancedTransaction summary', () => {
               fromAddress: 'myAddress',
             },
           ],
+          script: ['DUMMY_SCRIPT'],
+          scriptHex: 'DUMMY_SCRIPT_HEX',
         },
         {
           type: 'address',
@@ -385,6 +397,8 @@ describe('EnhancedTransaction summary', () => {
             },
           ],
           satributes: [],
+          script: ['DUMMY_SCRIPT2'],
+          scriptHex: 'DUMMY_SCRIPT_HEX2',
         },
         {
           type: 'address',
@@ -407,6 +421,8 @@ describe('EnhancedTransaction summary', () => {
               fromAddress: 'myAddress',
             },
           ],
+          script: ['DUMMY_SCRIPT3'],
+          scriptHex: 'DUMMY_SCRIPT_HEX3',
         },
         {
           type: 'address',
@@ -436,6 +452,8 @@ describe('EnhancedTransaction summary', () => {
               fromAddress: 'myAddress',
             },
           ],
+          script: ['DUMMY_SCRIPT4'],
+          scriptHex: 'DUMMY_SCRIPT_HEX4',
         },
         {
           type: 'address',
@@ -443,6 +461,8 @@ describe('EnhancedTransaction summary', () => {
           amount: 1000,
           inscriptions: [],
           satributes: [],
+          script: ['DUMMY_SCRIPT_MY'],
+          scriptHex: 'DUMMY_SCRIPT_HEX_MY',
         },
       ],
       feeOutput: {

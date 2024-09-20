@@ -28,7 +28,7 @@ const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a sat range to be sp
 
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
-export { ActionType, EnhancedPsbt, EnhancedTransaction, ExtendedUtxo, TransactionContext, createTransactionContext };
+export { ActionType, createTransactionContext, EnhancedPsbt, EnhancedTransaction, ExtendedUtxo, TransactionContext };
 export type {
   EnhancedInput,
   EnhancedOutput,

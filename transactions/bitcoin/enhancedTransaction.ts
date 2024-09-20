@@ -130,6 +130,8 @@ export class EnhancedTransaction {
       {
         type: 'address',
         address: '',
+        script: [],
+        scriptHex: '',
         amount: Number(actualFee),
       },
     ];
@@ -153,7 +155,7 @@ export class EnhancedTransaction {
 
     // we know there is at least the dummy fee output which we added above
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const { address, ...feeOutput } = nonScriptOutputs.pop()!;
+    const { address, script, scriptHex, ...feeOutput } = nonScriptOutputs.pop()!;
 
     const enhancedInputs: EnhancedInput[] = await Promise.all(
       inputs.map((i) => mapInputToEnhancedInput(i, true, SigHash.ALL)),

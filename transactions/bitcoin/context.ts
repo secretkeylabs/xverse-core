@@ -674,8 +674,23 @@ export class TransactionContext {
     return {};
   }
 
-  addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {
+  addOutputAddress(
+    transaction: btc.Transaction,
+    address: string,
+    amount: bigint,
+  ): { script: string[]; scriptHex: string } {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+
+    const output = transaction.getOutput(transaction.outputsLength - 1);
+
+    if (!output.script) {
+      throw new Error('Output script is undefined');
+    }
+
+    const script = btc.Script.decode(output.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`));
+    const scriptHex = hex.encode(output.script);
+
+    return { script, scriptHex };
   }
 
   async signTransaction(transaction: btc.Transaction, options: SignOptions): Promise<void> {

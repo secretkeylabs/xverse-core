@@ -143,6 +143,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -153,11 +155,11 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
-      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -182,6 +184,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -204,11 +208,11 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
-      txnHasExternalInputs: false,
       mint: undefined,
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -233,6 +237,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -250,7 +256,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
-      txnHasExternalInputs: false,
       mint: {
         amount: 0n,
         divisibility: 0,
@@ -264,6 +269,7 @@ describe('parseSummaryForRunes', () => {
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -296,6 +302,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -306,7 +314,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 100n,
@@ -322,6 +329,19 @@ describe('parseSummaryForRunes', () => {
       ],
       receipts: [],
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -354,6 +374,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -369,7 +391,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       burns: [
@@ -383,6 +404,7 @@ describe('parseSummaryForRunes', () => {
           sourceAddresses: ['ordinalsAddress'],
         },
       ],
+      outputMapping: {},
     });
   });
 
@@ -415,6 +437,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -437,7 +461,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
@@ -452,6 +475,7 @@ describe('parseSummaryForRunes', () => {
           sourceAddresses: ['ordinalsAddress'],
         },
       ],
+      outputMapping: {},
     });
   });
 
@@ -484,6 +508,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -506,11 +532,23 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -543,6 +581,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -550,6 +590,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -572,7 +614,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'ordinalsAddress',
@@ -600,6 +641,30 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 50n,
+            destinationAddress: 'paymentAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 50n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -632,6 +697,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -653,7 +720,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           sourceAddress: 'paymentAddress',
@@ -681,6 +747,19 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -727,6 +806,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -734,6 +815,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -741,6 +824,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -773,7 +858,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -801,139 +885,59 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
-    });
-  });
-
-  it('parses send to multiple recipients with separateTransfersOnNoExternalInputs flag correctly', async () => {
-    const summary: PsbtSummary = {
-      inputs: [
-        {
-          extendedUtxo: {
-            address: 'ordinalsAddress',
-            hasRunes: () => true,
-            getRuneBalances: () => ({
-              DUMMYRUNE: BigNumber(1000),
-              DUMMYRUNE2: BigNumber(1000),
-            }),
-          } as any,
-          inscriptions: [],
-          satributes: [],
-          walletWillSign: true,
-        },
-        {
-          extendedUtxo: {
-            address: 'ordinalsAddress',
-            hasRunes: () => true,
-            getRuneBalances: () => ({
-              DUMMYRUNE2: BigNumber(1000),
-              DUMMYRUNE3: BigNumber(1000),
-            }),
-          } as any,
-          inscriptions: [],
-          satributes: [],
-          walletWillSign: true,
-        },
-      ],
-      outputs: [
-        {
-          type: 'script',
-          scriptHex: '6a4c4d52554e450',
-          script: ['RETURN', '4c4d52554e450'],
-          amount: 0,
-        },
-        {
-          type: 'address',
-          address: 'recipient1',
-          amount: 100,
-          inscriptions: [],
-          satributes: [],
-        },
-        {
-          type: 'address',
-          address: 'recipient2',
-          amount: 100,
-          inscriptions: [],
-          satributes: [],
-        },
-        {
-          type: 'address',
-          address: 'ordinalsAddress',
-          amount: 100,
-          inscriptions: [],
-          satributes: [],
-        },
-      ],
-      hasSigHashNone: false,
-      hasSigHashSingle: false,
-      isFinal: true,
-      runeOp: {
-        Runestone: {
-          pointer: BigNumber(3),
-          edicts: [
-            {
-              id: '1:1',
-              amount: BigNumber(500),
-              output: BigNumber(1),
-            },
-            {
-              id: '1:1',
-              amount: BigNumber(500),
-              output: BigNumber(2),
-            },
-            {
-              id: '2:2',
-              amount: BigNumber(1500),
-              output: BigNumber(2),
-            },
-          ],
-        },
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
       },
-    };
-
-    const runes = await parseSummaryForRunes(context, summary, 'Mainnet', {
-      separateTransfersOnNoExternalInputs: true,
-    });
-    expect(runes).toEqual({
-      inputsHadRunes: true,
-      txnHasExternalInputs: false,
-      transfers: [
-        {
-          amount: 500n,
-          destinationAddresses: ['recipient1'],
-          divisibility: 0,
-          hasSufficientBalance: true,
-          inscriptionId: 'AINSCRIPTIONID',
-          runeId: '1:1',
-          runeName: 'DUMMYRUNE',
-          sourceAddress: 'ordinalsAddress',
-          symbol: 'A',
-        },
-        {
-          amount: 500n,
-          destinationAddresses: ['recipient2'],
-          divisibility: 0,
-          hasSufficientBalance: true,
-          inscriptionId: 'AINSCRIPTIONID',
-          runeName: 'DUMMYRUNE',
-          runeId: '1:1',
-          sourceAddress: 'ordinalsAddress',
-          symbol: 'A',
-        },
-        {
-          amount: 1500n,
-          destinationAddresses: ['recipient2'],
-          divisibility: 1,
-          hasSufficientBalance: true,
-          inscriptionId: '',
-          runeName: 'DUMMYRUNE2',
-          runeId: '2:2',
-          sourceAddress: 'ordinalsAddress',
-          symbol: 'B',
-        },
-      ],
-      receipts: [],
-      mint: undefined,
-      burns: [],
     });
   });
 
@@ -990,6 +994,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -997,6 +1003,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1004,6 +1012,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1033,12 +1043,9 @@ describe('parseSummaryForRunes', () => {
       },
     };
 
-    const runes = await parseSummaryForRunes(context, summary, 'Mainnet', {
-      separateTransfersOnNoExternalInputs: true,
-    });
+    const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -1066,6 +1073,59 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -1123,6 +1183,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1130,6 +1192,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1137,6 +1201,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1144,6 +1210,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
@@ -1181,7 +1249,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1000n,
@@ -1220,6 +1287,61 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+        '4': [
+          {
+            amount: 500n,
+            destinationAddress: 'changeAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -1277,6 +1399,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1284,6 +1408,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1291,6 +1417,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1318,7 +1446,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: true,
       transfers: [
         {
           amount: 1500n,
@@ -1346,6 +1473,50 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+        '2': [
+          {
+            amount: 1500n,
+            destinationAddress: 'otherAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -1378,6 +1549,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1394,7 +1567,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [
         {
@@ -1419,6 +1591,28 @@ describe('parseSummaryForRunes', () => {
         inscriptionId: 'AINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 10000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1451,6 +1645,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1458,6 +1654,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1486,7 +1684,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 500n,
@@ -1523,6 +1720,48 @@ describe('parseSummaryForRunes', () => {
         inscriptionId: 'AINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 9000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1555,6 +1794,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1571,7 +1812,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: {
@@ -1585,6 +1825,19 @@ describe('parseSummaryForRunes', () => {
         inscriptionId: 'DINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -1617,6 +1870,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -1638,7 +1893,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -1655,6 +1909,19 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1687,6 +1954,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -1708,7 +1977,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: false,
-      txnHasExternalInputs: true,
       transfers: [],
       receipts: [
         {
@@ -1724,6 +1992,19 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1756,6 +2037,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
@@ -1777,7 +2060,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 10000n,
@@ -1794,6 +2076,19 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 10000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1826,6 +2121,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1833,6 +2130,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1840,6 +2139,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1847,6 +2148,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
@@ -1868,7 +2171,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 7503n,
@@ -1885,6 +2187,52 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '3': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient3',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '4': [
+          {
+            amount: 2500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1917,6 +2265,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1924,6 +2274,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1931,6 +2283,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1938,6 +2292,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
@@ -1960,7 +2316,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 300n,
@@ -1977,6 +2332,52 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '3': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient3',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '4': [
+          {
+            amount: 9703n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -2023,6 +2424,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -2030,6 +2433,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -2037,6 +2442,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -2053,7 +2460,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -2092,6 +2498,37 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '2': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 2000n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient2',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -2138,6 +2575,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -2145,6 +2584,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -2152,6 +2593,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
@@ -2167,7 +2610,6 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [
         {
           amount: 1000n,
@@ -2206,6 +2648,37 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 2000n,
+            destinationAddress: 'recipient1',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -2260,10 +2733,10 @@ describe('parseSummaryForRunes', () => {
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
     expect(runes).toEqual({
       inputsHadRunes: true,
-      txnHasExternalInputs: false,
       transfers: [],
       receipts: [],
       mint: undefined,
+      outputMapping: {},
       burns: [
         {
           amount: 1000n,
