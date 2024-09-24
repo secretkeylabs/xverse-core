@@ -11,6 +11,12 @@ export type BtcUsdCurrencyRate = {
   };
 };
 
+//
+
+/**
+ * Standardize to ISO codes/symbols
+ * Refer here: https://www.newbridgefx.com/currency-codes-symbols/
+ */
 export type SupportedCurrency =
   | 'CAD'
   | 'CNY'
@@ -58,7 +64,7 @@ export const currencySymbolMap: Record<SupportedCurrency, string> = {
   NGN: '₦', // Nigerian Naira
   TRY: 'TL', // Turkish Lira
   INR: '₨', // Indian Rupee
-  CHF: 'CHF', // Swiss Franc
+  CHF: '₣', // Swiss Franc
   VND: '₫', // Vietnamese Dong
   PLN: 'zł', // Polish Zloty
   MYR: 'RM', // Malaysian Ringgit
