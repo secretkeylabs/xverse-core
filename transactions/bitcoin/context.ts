@@ -19,7 +19,6 @@ import { areByteArraysEqual } from './utils';
 
 export type SignOptions = {
   ledgerTransport?: Transport;
-  allowedSigHash?: btc.SigHash[];
   inputsToSign?: InputToSign[];
 };
 
@@ -192,8 +191,12 @@ export abstract class AddressContext {
             if (signIndexes[index]) {
               throw new Error(`Duplicate signing index ${index} for address ${this._address}`);
             }
+            const input = transaction.getInput(index);
 
-            signIndexes[index] = inputToSign.sigHash ? [inputToSign.sigHash] : undefined;
+            signIndexes[index] = undefined;
+            if (input.sighashType !== undefined) {
+              signIndexes[index] = [input.sighashType];
+            }
           });
         }
       }
@@ -210,9 +213,8 @@ export abstract class AddressContext {
         const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, witnessScript);
 
         if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
-          signIndexes[i] = options.allowedSigHash;
-
-          if (options.allowedSigHash === undefined && input.sighashType !== undefined) {
+          signIndexes[i] = undefined;
+          if (input.sighashType !== undefined) {
             signIndexes[i] = [input.sighashType];
           }
         }

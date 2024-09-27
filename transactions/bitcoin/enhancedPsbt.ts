@@ -38,7 +38,7 @@ export class EnhancedPsbt {
   private readonly _inputsToSign?: InputToSign[];
 
   // TODO: Try and make this non-nullable by computing it in the constructor
-  private readonly _inputsToSignMap?: Record<number, { address: string; sigHash?: number }[]>;
+  private readonly _inputsToSignMap?: Record<number, { address: string }[]>;
 
   private readonly _isSigHashAll?: boolean;
 
@@ -65,10 +65,10 @@ export class EnhancedPsbt {
             this._inputsToSignMap[inputIndex] = [];
           }
 
-          this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
+          this._inputsToSignMap[inputIndex].push({ address: input.address });
 
           const txnInput = txn.getInput(inputIndex);
-          const sigHashToCheck = txnInput.sighashType ?? input.sigHash ?? btc.SigHash.DEFAULT;
+          const sigHashToCheck = txnInput.sighashType ?? btc.SigHash.DEFAULT;
 
           // we need to do check for single first as it's value is 3 while none is 2 and all is 1
           if ((sigHashToCheck & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
@@ -195,7 +195,7 @@ export class EnhancedPsbt {
         throw new Error(`Could not parse input ${inputIndex}`);
       }
 
-      const sigHash = this._inputsToSignMap?.[inputIndex]?.[0]?.sigHash ?? inputRaw.sighashType;
+      const sigHash = inputRaw.sighashType;
       inputs.push({
         extendedUtxo: inputExtendedUtxo,
         sigHash,

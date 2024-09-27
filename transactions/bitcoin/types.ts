@@ -95,7 +95,6 @@ export type TransactionSummary = {
 export type PSBTCompilationOptions = {
   ledgerTransport?: Transport;
   finalize?: boolean;
-  allowedSigHash?: btc.SigHash[];
 };
 
 export type IOInscription = {
