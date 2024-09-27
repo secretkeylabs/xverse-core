@@ -2,18 +2,14 @@ import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
 import BigNumber from 'bignumber.js';
 import {
+  ExtendedStorageAdapter,
   NetworkType,
-  StorageAdapter,
   isApiSatributeKnown,
   type UtxoOrdinalBundle,
   type UtxoOrdinalBundleApi,
 } from '../types';
 import { JSONBigOnDemand } from '../utils/bignumber';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from './ordinals';
-
-// TODO: rethink some of this
-// TODO: add rate limit to API calls and if hit, rather reinit cache with 1 call
-// TODO: ensure mutex on setCache and setCachedItem
 
 export type UtxoCacheStruct<R extends BigNumber | number = BigNumber> = {
   [utxoId: string]: UtxoOrdinalBundle<R>;
@@ -27,25 +23,48 @@ type UtxoCacheStorage<R extends BigNumber | number = BigNumber> = {
 };
 
 type UtxoCacheConfig = {
-  cacheStorageController: StorageAdapter;
+  cacheStorageController: ExtendedStorageAdapter;
   network: NetworkType;
 };
 
-const CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
+const CACHE_TTL = 1000 * 60 * 60 * 24 * 3; // 3 days
+const UTXO_CACHE_KEY_PREFIX = 'utxoCache';
 
 export class UtxoCache {
-  private readonly _cacheStorageController: StorageAdapter;
+  private readonly _cacheStorageController: ExtendedStorageAdapter;
 
   private readonly _network: NetworkType;
 
   private readonly _addressMutexes: { [address: string]: Mutex } = {};
+
+  private readonly _writeMutex = new Mutex();
 
   static readonly VERSION = 4;
 
   constructor(config: UtxoCacheConfig) {
     this._cacheStorageController = config.cacheStorageController;
     this._network = config.network;
+
+    this._clearExpiredCaches().catch(console.error);
   }
+
+  private _getAddressCacheStorageKey = (address: string): string =>
+    `${UTXO_CACHE_KEY_PREFIX}-${this._network}-${address}`;
+
+  private _clearExpiredCaches = async (): Promise<void> => {
+    const keys = await this._cacheStorageController.getAllKeys();
+    const prefix = UTXO_CACHE_KEY_PREFIX;
+    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+    const now = Date.now();
+
+    for (const cacheKey of cacheKeys) {
+      const cache = await this._getCacheDataByKey(cacheKey);
+
+      if (!cache || now - cache.syncTime > CACHE_TTL || cache.version !== UtxoCache.VERSION) {
+        await this._cacheStorageController.remove(cacheKey);
+      }
+    }
+  };
 
   private _getAddressMutex = (address: string): Mutex => {
     if (!this._addressMutexes[address]) {
@@ -54,19 +73,11 @@ export class UtxoCache {
     return this._addressMutexes[address];
   };
 
-  private _getAddressCacheStorageKey = (address: string): string => `utxoCache-${this._network}-${address}`;
-
-  private _getCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
-    const cacheStr = await this._cacheStorageController.get(this._getAddressCacheStorageKey(address));
+  private _getCacheDataByKey = async (cacheKey: string): Promise<UtxoCacheStorage | undefined> => {
+    const cacheStr = await this._cacheStorageController.get(cacheKey);
     if (cacheStr) {
       try {
-        let cache = JSONBigOnDemand.parse(cacheStr) as UtxoCacheStorage<BigNumber | number>;
-
-        // check if cache TTL is expired
-        const now = Date.now();
-        if (now - cache.syncTime > CACHE_TTL) {
-          cache = await this._initCache(address);
-        }
+        const cache = JSONBigOnDemand.parse(cacheStr) as UtxoCacheStorage<BigNumber | number>;
 
         // convert all rune amounts to BigNumber for runes
         for (const utxoOutpoint in cache.utxos) {
@@ -84,21 +95,49 @@ export class UtxoCache {
     return undefined;
   };
 
-  private _setCache = async (address: string, addressCache: UtxoCacheStorage): Promise<void> => {
-    await this._cacheStorageController.set(
-      this._getAddressCacheStorageKey(address),
-      JSONBigOnDemand.stringify(addressCache),
-    );
+  private _getAddressCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
+    const cacheKey = this._getAddressCacheStorageKey(address);
+    const cachedData = await this._getCacheDataByKey(cacheKey);
+
+    if (cachedData) {
+      // check if cache TTL is expired or version is old
+      const now = Date.now();
+      if (now - cachedData.syncTime > CACHE_TTL || cachedData.version !== UtxoCache.VERSION) {
+        await this._cacheStorageController.remove(cacheKey);
+        return undefined;
+      }
+    }
+
+    return cachedData;
+  };
+
+  private _setAddressCache = async (address: string, addressCache: UtxoCacheStorage, lock = false): Promise<void> => {
+    const releaseWrite = lock ? await this._writeMutex.acquire() : undefined;
+
+    try {
+      await this._cacheStorageController.set(
+        this._getAddressCacheStorageKey(address),
+        JSONBigOnDemand.stringify(addressCache),
+      );
+    } finally {
+      releaseWrite?.();
+    }
   };
 
   private _setCachedItem = async (address: string, outpoint: string, utxo: UtxoOrdinalBundle): Promise<void> => {
-    const cache = await this._getCache(address);
-    if (!cache) {
-      // this should never happen as init would run first
-      return;
+    const releaseWrite = await this._writeMutex.acquire();
+
+    try {
+      const cache = await this._getAddressCache(address);
+      if (!cache) {
+        // this should never happen as init would run first
+        return;
+      }
+      cache.utxos[outpoint] = utxo;
+      await this._setAddressCache(address, cache);
+    } finally {
+      releaseWrite();
     }
-    cache.utxos[outpoint] = utxo;
-    await this._setCache(address, cache);
   };
 
   private _mapUtxoApiBundleToBundle = (utxo: UtxoOrdinalBundleApi): UtxoOrdinalBundle => ({
@@ -177,7 +216,7 @@ export class UtxoCache {
     while (addressMutex.isLocked()) {
       // another thread is already initialising the cache, wait for it to finish and return
       await addressMutex.waitForUnlock();
-      const cache = await this._getCache(address);
+      const cache = await this._getAddressCache(address);
       if (cache) {
         // cache was initialised while we were waiting, return it
         return cache;
@@ -187,7 +226,7 @@ export class UtxoCache {
       // mutex again, hence, check the mutex lock state in a loop until we can acquire it
     }
 
-    const release = await addressMutex.acquire();
+    const releaseInit = await addressMutex.acquire();
     try {
       const [utxos, xVersion] = await this._getAllUtxos(address);
 
@@ -198,11 +237,11 @@ export class UtxoCache {
         xVersion,
       };
 
-      await this._setCache(address, cacheToStore);
+      await this._setAddressCache(address, cacheToStore, true);
 
       return cacheToStore;
     } finally {
-      release();
+      releaseInit();
     }
   };
 
@@ -217,10 +256,16 @@ export class UtxoCache {
       return utxo;
     }
 
-    const cache = await this._getCache(address);
+    const addressMutex = this._getAddressMutex(address);
+    while (addressMutex.isLocked()) {
+      // another thread is initialising the cache, wait for it to finish
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
-    // check if cache is initialised and up to date
-    if (!cache || cache.version !== UtxoCache.VERSION) {
+    const cache = await this._getAddressCache(address);
+
+    // initialise cache if it doesn't exist
+    if (!cache) {
       const { utxos } = await this._initCache(address);
       return utxos[outpoint];
     }
@@ -236,12 +281,11 @@ export class UtxoCache {
     if (cache.xVersion !== xVersion) {
       // if server deployed update to satributes, the xVersion will be bumped, so we need to resync
       await this._initCache(address);
-    }
-
-    if (bundle?.block_height) {
+    } else if (bundle?.block_height) {
       // we only want to store confirmed utxos in the cache
       await this._setCachedItem(address, outpoint, bundle);
     }
+
     return bundle;
   };
 
