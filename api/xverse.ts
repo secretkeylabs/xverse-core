@@ -14,11 +14,11 @@ import {
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  CollectionsListFilters,
   CreateRuneListingCancellationRequest,
   CreateRuneListingCancellationResponse,
   CreateRuneListingRequest,
   CreateRuneListingResponse,
-  CollectionsListFilters,
   DappSectionData,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
@@ -83,22 +83,22 @@ class XverseApi {
     this.network = network;
   }
 
-  async fetchBtcFeeRate(): Promise<BtcFeeResponse> {
+  fetchBtcFeeRate = async (): Promise<BtcFeeResponse> => {
     const response = await this.client.get('/v1/fees/btc');
     return response.data;
-  }
+  };
 
-  async fetchStxToBtcRate(): Promise<BigNumber> {
+  fetchStxToBtcRate = async (): Promise<BigNumber> => {
     const response = await this.client.get('/v1/prices/stx/btc', { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.stxBtcRate.toString());
-  }
+  };
 
-  async fetchBtcToCurrencyRate({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> {
+  fetchBtcToCurrencyRate = async ({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> => {
     const response = await this.client.get(`/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.btcFiatRate.toString());
-  }
+  };
 
-  async fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
+  fetchTokenFiateRate = async (ft: string, fiatCurrency: string): Promise<BigNumber> => {
     const url = `/v1/prices/${ft}/${fiatCurrency}`;
 
     return this.client
@@ -109,22 +109,22 @@ class XverseApi {
       .catch(() => {
         return new BigNumber(0);
       });
-  }
+  };
 
-  async getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse> {
+  getCoinsInfo = async (contractids: string[], fiatCurrency: string): Promise<CoinsResponse> => {
     const response = await this.client.post<CoinsResponse>('/v1/coins', {
       currency: fiatCurrency,
       coins: JSON.stringify(contractids),
     });
     return response.data;
-  }
+  };
 
   /**
    * get BRC-20 supported tokens with the fiat rate
    * @param tickers provided to get the fiat rate along with supported tokens
    * @param fiatCurrency
    */
-  async getBrc20Tokens(tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> {
+  getBrc20Tokens = async (tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> => {
     const response = await this.client.get<Brc20TokensResponse>('/v1/brc20/tokens', {
       params: {
         currency: fiatCurrency,
@@ -132,7 +132,7 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
   /**
    * get rune fiat rate data
@@ -140,7 +140,7 @@ class XverseApi {
    * @param fiatCurrency
    * @deprecated use getRuneFiatRatesByRuneIds instead
    */
-  async getRuneFiatRates(runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
+  getRuneFiatRates = async (runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> => {
     const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
       params: {
         currency: fiatCurrency,
@@ -148,7 +148,7 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
   /**
    * get rune tx history for a given address and rune
@@ -157,56 +157,56 @@ class XverseApi {
    * @param offset
    * @param limit
    */
-  async getRuneTxHistory(
+  getRuneTxHistory = async (
     address: string,
     runeName: string,
     offset: number,
     limit: number,
-  ): Promise<APIGetRunesActivityForAddressResponse> {
+  ): Promise<APIGetRunesActivityForAddressResponse> => {
     const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
       `/v1/address/${address}/rune/${runeName}?offset=${offset}&limit=${limit}`,
     );
     return response.data;
-  }
+  };
 
-  async fetchAppInfo(): Promise<AppInfo> {
+  fetchAppInfo = async (): Promise<AppInfo> => {
     const response = await this.client.get<AppInfo>('/v1/info');
     return response.data;
-  }
+  };
 
-  async fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
+  fetchStackingPoolInfo = async (): Promise<StackingPoolInfo> => {
     const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=5`);
     return response.data;
-  }
+  };
 
-  async fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
+  fetchPoolStackerInfo = async (stxAddress: string): Promise<StackerInfo> => {
     const response = await this.client.get<StackerInfo>(`/v1/pool/${stxAddress}/status`);
     return response.data;
-  }
+  };
 
-  async getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse> {
+  getMoonPaySignedUrl = async (unsignedUrl: string): Promise<SignedUrlResponse> => {
     const response = await this.client.post<SignedUrlResponse>('/v1/sign-url', {
       url: unsignedUrl,
     });
     return response.data;
-  }
+  };
 
-  async getBinanceSignature(srcData: string): Promise<SignedUrlResponse> {
+  getBinanceSignature = async (srcData: string): Promise<SignedUrlResponse> => {
     const response = await this.client.post<SignedUrlResponse>('/v1/binance/sign', {
       url: srcData,
     });
     return response.data;
-  }
+  };
 
-  async getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
+  getOrdinalInfo = async (ordinalId: string): Promise<OrdinalInfo> => {
     const response = await this.client.get(`/v1/ordinals/${ordinalId}`);
     return response.data;
-  }
+  };
 
-  async getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
+  getErc721Metadata = async (tokenContract: string, tokenId: string): Promise<string> => {
     const response = await this.client.get(`/v1/eth/${tokenContract}/${tokenId}`);
     return response.data;
-  }
+  };
 
   /**
    * Get inscription collections by address
@@ -215,12 +215,12 @@ class XverseApi {
    * @param limit
    * @param filters options to star/hide certain collectibleIds or inscriptionIds
    */
-  async getCollections(
+  getCollections = async (
     address: string,
     offset?: number,
     limit?: number,
     filters?: CollectionsListFilters,
-  ): Promise<CollectionsList> {
+  ): Promise<CollectionsList> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
       params: {
         limit,
@@ -229,15 +229,15 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
-  async getCollectionSpecificInscriptions(
+  getCollectionSpecificInscriptions = async (
     address: string,
     collectionId: string,
     offset?: number,
     limit?: number,
     filters?: CollectionsListFilters,
-  ): Promise<InscriptionInCollectionsList> {
+  ): Promise<InscriptionInCollectionsList> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
       params: {
         limit,
@@ -246,39 +246,39 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
-  async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
+  getCollectionMarketData = async (collectionId: string): Promise<CollectionMarketDataResponse> => {
     const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
     return response.data;
-  }
+  };
 
-  async getInscription(address: string, inscriptionId: string): Promise<Inscription> {
+  getInscription = async (address: string, inscriptionId: string): Promise<Inscription> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`);
     return response.data;
-  }
+  };
 
-  async getAppConfig() {
+  getAppConfig = async () => {
     const response = await this.client.get(`/v1/app-config`);
     return response;
-  }
+  };
 
-  async getFeaturedDapps(): Promise<DappSectionData[]> {
+  getFeaturedDapps = async (): Promise<DappSectionData[]> => {
     const response = await this.client.get(`/v2/featured/dapp`);
     return response.data.featuredDapp;
-  }
+  };
 
-  async getNotificationBanners(): Promise<NotificationBanner[]> {
+  getNotificationBanners = async (): Promise<NotificationBanner[]> => {
     const response = await this.client.get(`/v2/notification-banners`);
     return response.data.notificationBanners;
-  }
+  };
 
-  async getSpamTokensList() {
+  getSpamTokensList = async () => {
     const response = await this.client.get(`/v1/spam-tokens`);
     return response.data;
-  }
+  };
 
-  async getAppFeatures(context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) {
+  getAppFeatures = async (context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) => {
     const response = await this.client.post<
       AppFeaturesResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
@@ -286,7 +286,7 @@ class XverseApi {
       AppFeaturesBody
     >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
-  }
+  };
 
   listings = {
     getRuneMarketData: async (body: GetRuneMarketDataRequest): Promise<ListingRuneMarketInfo[]> => {
