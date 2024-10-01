@@ -1,6 +1,6 @@
 import { getRunesClient } from '../api';
-import { PsbtSummary, TransactionSummary, TransactionContext } from '../transactions/bitcoin';
-import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
+import { PsbtSummary, TransactionContext, TransactionSummary } from '../transactions/bitcoin';
+import { CreateEtchOrderRequest, FungibleToken, Marketplace, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
@@ -600,4 +600,14 @@ export const parseSummaryForRunes = async (
     return parseSummaryWithBurnRuneScript(context, summary, network);
   }
   return parseSummaryWithRuneScript(context, summary, network);
+};
+
+export const marketplaceRuneDashboardUrl = (rune: FungibleToken, marketplace: Marketplace): string => {
+  const marketplaceToUrl: { [key in Marketplace]: string } = {
+    'Magic Eden': `https://magiceden.io/runes/${rune.name}`,
+    Unisat: `https://unisat.io/runes/market?tick=${rune.name}`,
+    OKX: `https://www.okx.com/web3/marketplace/runes/token/${rune.name}/${rune.principal}`,
+  };
+
+  return marketplaceToUrl[marketplace];
 };
