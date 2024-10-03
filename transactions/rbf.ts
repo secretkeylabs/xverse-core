@@ -1,16 +1,10 @@
-import * as secp256k1 from '@noble/secp256k1';
-import { base64, hex } from '@scure/base';
+import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
-import * as bip39 from 'bip39';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
-import { signLedgerPSBT } from '../ledger/psbt';
 import { Transport } from '../ledger/types';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
-import { bip32 } from '../utils/bip32';
-import { getBitcoinDerivationPath, getTaprootDerivationPath } from '../wallet';
-
-// TODO: A lot of the below can be done much more easily with the consolidation logic
-// TODO: so we should refactor this file to use that once merged
+import { TransactionContext } from './bitcoin';
+import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
 
 const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -121,7 +115,7 @@ export type TierFees = {
 type CompileOptions = {
   feeRate: number;
   ledgerTransport?: Transport;
-  getSeedPhrase: () => string | Promise<string>;
+  context: TransactionContext;
 };
 
 export type RbfRecommendedFees = {
@@ -141,8 +135,6 @@ class RbfTransaction {
   private transaction!: BtcTransactionData;
 
   private p2btc!: btc.P2Ret;
-
-  private p2tr!: btc.P2TROut;
 
   private network!: typeof btc.NETWORK;
 
@@ -242,7 +234,6 @@ class RbfTransaction {
     this.transaction = transaction;
     this.network = network;
     this.p2btc = p2btc;
-    this.p2tr = p2tr;
   }
 
   private getMinimumRbfFeeRate = async () => {
@@ -276,146 +267,9 @@ class RbfTransaction {
     return [...this._paymentUtxos];
   };
 
-  private getBip32Master = async (options: CompileOptions) => {
-    // keep this method short so seed phrase is as short lived as possible
-    const seedPhrase = await options.getSeedPhrase();
-    const seed = await bip39.mnemonicToSeed(seedPhrase);
-    return bip32.fromSeed(seed);
-  };
-
-  private signTxSoftware = async (transaction: btc.Transaction, options?: CompileOptions): Promise<btc.Transaction> => {
-    if (!options?.getSeedPhrase) {
-      throw new Error('getSeedPhrase option is required to sign the transaction');
-    }
-
-    const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
-    const master = await this.getBip32Master(options);
-
-    const btcDerivationPath = getBitcoinDerivationPath({
-      index: BigInt(this.options.accountId),
-      network: this.options.network,
-    });
-    const btcChild = master.derivePath(btcDerivationPath);
-    const btcpk = hex.decode(btcChild.privateKey!.toString('hex'));
-
-    const trDerivationPath = getTaprootDerivationPath({
-      index: BigInt(this.options.accountId),
-      network: this.options.network,
-    });
-    const trChild = master.derivePath(trDerivationPath);
-    let trpk = hex.decode(trChild.privateKey!.toString('hex'));
-    if (trpk.length === 33) {
-      trpk = trpk.slice(1);
-    }
-
-    for (let i = 0; i < tx.inputsLength; i++) {
-      const input = tx.getInput(i);
-
-      if (areByteArraysEqual(input.witnessUtxo?.script, this.p2tr.script)) {
-        tx.signIdx(trpk, i);
-      } else if (areByteArraysEqual(input.witnessUtxo?.script, this.p2btc.script)) {
-        tx.signIdx(btcpk, i);
-      } else {
-        throw new Error(`Cannot sign input at index ${i}`);
-      }
-    }
-
-    return tx;
-  };
-
-  private signTxLedger = async (transaction: btc.Transaction, options?: CompileOptions): Promise<btc.Transaction> => {
-    if (!options?.ledgerTransport) {
-      throw new Error('Options are required for non-dummy transactions');
-    }
-
-    const txnPsbt = transaction.toPSBT(0);
-    const signedPsbtBase64 = await signLedgerPSBT({
-      addressIndex: this.options.accountId,
-      finalize: false,
-      nativeSegwitPubKey: this.options.btcPublicKey,
-      esploraProvider: this.options.esploraProvider,
-      network: this.options.network,
-      psbtInputBase64: base64.encode(txnPsbt),
-      taprootPubKey: this.options.ordinalsPublicKey,
-      transport: options.ledgerTransport,
-    });
-
-    const signedTransaction = btc.Transaction.fromPSBT(base64.decode(signedPsbtBase64));
-
-    return signedTransaction;
-  };
-
-  private dummySignTransaction = async (transaction: btc.Transaction): Promise<btc.Transaction> => {
-    const dummyPrivateKey = hex.decode('0000000000000000000000000000000000000000000000000000000000000001');
-    const publicKey = secp256k1.getPublicKey(dummyPrivateKey, true);
-    const p2wpkh = btc.p2wpkh(publicKey, this.network);
-    const p2sh = btc.p2sh(p2wpkh, this.network);
-
-    const schnorrPublicKeyBuff = publicKey.length === 33 ? publicKey.slice(1) : publicKey;
-    const p2tr = btc.p2tr(schnorrPublicKeyBuff, undefined, this.network);
-
-    const tx = btc.Transaction.fromPSBT(transaction.toPSBT(0));
-
-    for (let i = 0; i < tx.inputsLength; i++) {
-      const input = tx.getInput(i);
-      if (input.tapInternalKey) {
-        tx.updateInput(i, {
-          witnessUtxo: {
-            script: p2tr.script,
-            amount: input.witnessUtxo!.amount,
-          },
-          tapInternalKey: p2tr.tapInternalKey,
-        });
-      } else if (input.redeemScript) {
-        tx.updateInput(i, {
-          witnessUtxo: {
-            script: p2sh.script,
-            amount: input.witnessUtxo!.amount,
-          },
-          redeemScript: p2sh.redeemScript,
-          witnessScript: p2sh.witnessScript,
-        });
-      } else {
-        tx.updateInput(i, {
-          witnessUtxo: {
-            script: p2wpkh.script,
-            amount: input.witnessUtxo!.amount,
-          },
-        });
-      }
-    }
-
-    tx.sign(dummyPrivateKey);
-
-    return tx;
-  };
-
-  private signTx = async (
-    tx: btc.Transaction,
-    isDummy: boolean,
-    options?: CompileOptions,
-  ): Promise<btc.Transaction> => {
-    if (isDummy) {
-      return this.dummySignTransaction(tx);
-    }
-
-    if (this.options.accountType === 'ledger') {
-      return this.signTxLedger(tx, options);
-    }
-
-    return this.signTxSoftware(tx, options);
-  };
-
-  private getTxSize = async (tx: btc.Transaction) => {
-    const txCopy = btc.Transaction.fromPSBT(tx.toPSBT(0));
-    const signedTxCopy = await this.signTx(txCopy, true);
-    signedTxCopy.finalize();
-    return signedTxCopy.vsize;
-  };
-
-  private compileTransaction = async (desiredFeeRate: number, isDummy: boolean, options?: CompileOptions) => {
-    if (!isDummy && !options) {
-      throw new Error('Options are required for non-dummy transactions');
+  private compileTransaction = async (desiredFeeRate: number, sign: boolean, options?: CompileOptions) => {
+    if (sign && !options) {
+      throw new Error('Options are required for signing RBF transactions');
     }
 
     const tx = btc.Transaction.fromPSBT(this.baseTx.toPSBT(0));
@@ -428,7 +282,7 @@ class RbfTransaction {
     let outputsTotal = this.initialOutputTotal;
     // ensure inputs can cover new fee rate
     while (!done) {
-      const size = await this.getTxSize(tx);
+      const size = estimateVSize(tx, { network: this.options.network });
 
       const change = inputsTotal - outputsTotal;
       const newFee = Math.max(size * desiredFeeRate, this.transaction.fees + size);
@@ -456,7 +310,7 @@ class RbfTransaction {
         const txWithChange = btc.Transaction.fromPSBT(tx.toPSBT(0));
         actualFee = change;
         txWithChange.addOutputAddress(this.options.btcAddress, BigInt(change), this.network);
-        const sizeWithChange = await this.getTxSize(txWithChange);
+        const sizeWithChange = estimateVSize(txWithChange, { network: this.options.network });
         const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fees + sizeWithChange);
 
         if (newFeeWithChange + 1000 < change) {
@@ -471,11 +325,17 @@ class RbfTransaction {
       }
     }
 
-    const signedTransaction = await this.signTx(tx, isDummy, options);
-    signedTransaction.finalize();
+    if (sign) {
+      if (!options) {
+        throw new Error('Options are required for signing RBF transactions');
+      }
+
+      await options.context.signTransaction(tx, options);
+      tx.finalize();
+    }
 
     return {
-      transaction: signedTransaction,
+      transaction: tx,
       fee: actualFee,
     };
   };
@@ -505,11 +365,13 @@ class RbfTransaction {
     }
 
     try {
-      const tx = await this.compileTransaction(feeRate, true);
+      const tx = await this.compileTransaction(feeRate, false);
+
+      const vSize = estimateVSize(tx.transaction, { network: this.options.network });
 
       return {
         fee: tx.fee,
-        feeRate: Math.ceil(tx.fee / tx.transaction.vsize),
+        feeRate: Math.ceil(tx.fee / vSize),
         enoughFunds: true,
       };
     } catch (e) {
@@ -549,7 +411,7 @@ class RbfTransaction {
   };
 
   getReplacementTransaction = async (options: CompileOptions) => {
-    const { transaction, fee } = await this.compileTransaction(options.feeRate, false, options);
+    const { transaction, fee } = await this.compileTransaction(options.feeRate, true, options);
     return {
       transaction,
       hex: transaction.hex,

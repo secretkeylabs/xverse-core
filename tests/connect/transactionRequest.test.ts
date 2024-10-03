@@ -1,7 +1,8 @@
 import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
 import { StacksMainnet, StacksTestnet } from '@stacks/network';
+import { PayloadType } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { txPayloadToRequest } from '../../connect';
 import { microstacksToStx } from '../../currency';
 import {
@@ -18,17 +19,35 @@ const mocked = vi.hoisted(() => ({
   ]),
   estimateContractDeploy: vi.fn(() => BigInt('581')),
   getCoinsInfo: vi.fn(() => null),
+  fetchAppInfo: vi.fn(() => null),
   fetchStxPendingTxData: vi.fn(() => ({ pendingTransactions: [] })),
   getContractInterface: vi.fn(() => null),
+  makeUnsignedSTXTokenTransfer: vi.fn(),
+  cvToValue: vi.fn(),
+  getNonce: vi.fn(),
+  makeUnsignedContractCall: vi.fn(),
+  getFee: vi.fn(),
+  serializePostCondition: vi.fn(),
+  addressToString: vi.fn(),
+  serializeCV: vi.fn(),
 }));
 vi.mock('@stacks/transactions', async () => ({
   ...(await vi.importActual('@stacks/transactions')),
   estimateTransaction: mocked.estimateTransaction,
   estimateContractDeploy: mocked.estimateContractDeploy,
+  makeUnsignedSTXTokenTransfer: mocked.makeUnsignedSTXTokenTransfer,
+  cvToValue: mocked.cvToValue,
+  getNonce: mocked.getNonce,
+  makeUnsignedContractCall: mocked.makeUnsignedContractCall,
+  getFee: mocked.getFee,
+  serializePostCondition: mocked.serializePostCondition,
+  addressToString: mocked.addressToString,
+  serializeCV: mocked.serializeCV,
 }));
 vi.mock('../../api/xverse', () => ({
   getXverseApiClient: () => ({
     getCoinsInfo: mocked.getCoinsInfo,
+    fetchAppInfo: mocked.fetchAppInfo,
   }),
 }));
 vi.mock('../../api/stacks', async () => ({
@@ -52,7 +71,25 @@ describe('txPayloadToRequest', () => {
       recipient: 'ST1X6M947Z7E58CNE0H8YJVJTVKS9VW0PHEG3NHN3',
       stxAddress: 'ST143SNE1S5GHKR9JN89BEVFK9W03S1FSNZ4RCVAY',
       txType: TransactionTypes.STXTransfer,
+      payloadType: PayloadType.TokenTransfer,
     };
+    const mockedTxn = {
+      auth: {
+        spendingCondition: { nonce: 4 },
+      },
+      payload: {
+        amount: 102,
+        payloadType: mockTokenTransferPayload.payloadType,
+        memo: { content: mockTokenTransferPayload.memo },
+        recipient: {},
+      },
+      setFee: vi.fn(),
+      setNonce: vi.fn(),
+      postConditions: { values: [] },
+      functionArgs: [],
+    };
+    mocked.cvToValue.mockReturnValueOnce(mockTokenTransferPayload.recipient);
+    mocked.makeUnsignedSTXTokenTransfer.mockResolvedValueOnce(mockedTxn);
 
     const unsignedSendStxTx = await generateUnsignedStxTokenTransferTransaction(
       mockTokenTransferPayload.recipient,
@@ -87,6 +124,8 @@ describe('txPayloadToRequest', () => {
       stxAddress: 'ST143SNE1S5GHKR9JN89BEVFK9W03S1FSNZ4RCVAY',
       txType: 'smart_contract',
     };
+
+    mocked.getNonce.mockReturnValueOnce(100n);
 
     const unsignedSendStxTx = await generateContractDeployTransaction({
       codeBody: mockContractDeploy.codeBody,
@@ -133,6 +172,28 @@ describe('txPayloadToRequest', () => {
       txType: TransactionTypes.ContractCall,
     };
 
+    mocked.makeUnsignedContractCall.mockResolvedValue({
+      ...contractCallPayload,
+      auth: {
+        spendingCondition: {
+          nonce: 1n,
+          fee: 2n,
+        },
+      },
+      postConditions: { values: contractCallPayload.postConditions },
+      payload: {
+        ...contractCallPayload,
+        payloadType: PayloadType.ContractCall,
+        contractName: {
+          content: contractCallPayload.contractName,
+        },
+        functionName: {
+          content: contractCallPayload.functionName,
+        },
+      },
+    });
+    mocked.getFee.mockReturnValueOnce(1n);
+
     const unsignedContractCall = await createContractCallPromises(
       contractCallPayload,
       'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
@@ -143,7 +204,12 @@ describe('txPayloadToRequest', () => {
     expect(mocked.getContractInterface).toBeCalledTimes(1);
     expect(mocked.getCoinsInfo).toBeCalledTimes(1);
 
+    mocked.serializePostCondition.mockImplementation((arg) => Buffer.from(arg, 'hex'));
+    mocked.addressToString.mockReturnValue(contractCallPayload.contractAddress);
+    mocked.serializeCV.mockImplementation((arg) => Buffer.from(arg, 'hex'));
+
     const result = txPayloadToRequest(unsignedContractCall[0]);
+
     expect(result).toEqual(
       expect.objectContaining({
         postConditions: contractCallPayload.postConditions,

@@ -12,10 +12,15 @@ import { SeedVault } from '../../seedVault';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
-import { InputToSign } from '../psbt';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
+
+export type InputToSign = {
+  address: string;
+  signingIndexes: Array<number>;
+  sigHash?: number;
+};
 
 export type SignOptions = {
   ledgerTransport?: Transport;

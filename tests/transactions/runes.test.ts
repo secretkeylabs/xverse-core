@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getRunesClient } from '../../api';
 import { EnhancedTransaction } from '../../transactions/bitcoin/enhancedTransaction';
 import { recoverRunes, sendManyRunes, sendRunes } from '../../transactions/runes';
-import { recipientAddress1 } from './btc.fixtures';
+import { addresses } from './bitcoin/helpers';
 
 vi.mock('../../transactions/bitcoin/enhancedTransaction');
 vi.mock('../../api');
@@ -733,7 +733,7 @@ describe('sendManyRunes', () => {
       contextMock,
       [
         { runeName: 'MYBIGRUNE', toAddress: recipientAddress, amount: 500n },
-        { runeName: 'MYBIGRUNE', toAddress: recipientAddress1, amount: 500n },
+        { runeName: 'MYBIGRUNE', toAddress: addresses[0].nativeSegwit, amount: 500n },
         { runeName: 'MYBIGRUNE2', toAddress: recipientAddress, amount: 50n },
       ],
       2,
@@ -748,7 +748,7 @@ describe('sendManyRunes', () => {
           script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
-        { type: 'sendBtc', toAddress: recipientAddress1, amount: 546n, combinable: false },
+        { type: 'sendBtc', toAddress: addresses[0].nativeSegwit, amount: 546n, combinable: false },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
         { type: 'sendBtc', toAddress: ordinalsAddress, amount: 546n, combinable: false },
       ],
@@ -830,7 +830,7 @@ describe('sendManyRunes', () => {
       contextMock,
       [
         { runeName: 'MYBIGRUNE', toAddress: recipientAddress, amount: 500n },
-        { runeName: 'MYBIGRUNE', toAddress: recipientAddress1, amount: 600n },
+        { runeName: 'MYBIGRUNE', toAddress: addresses[0].nativeSegwit, amount: 600n },
         { runeName: 'MYBIGRUNE2', toAddress: recipientAddress, amount: 100n },
       ],
       2,
@@ -845,7 +845,7 @@ describe('sendManyRunes', () => {
           script: new Uint8Array([0x6a, 5, 255, 255, 0, 1, 2]),
         },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
-        { type: 'sendBtc', toAddress: recipientAddress1, amount: 546n, combinable: false },
+        { type: 'sendBtc', toAddress: addresses[0].nativeSegwit, amount: 546n, combinable: false },
         { type: 'sendBtc', toAddress: recipientAddress, amount: 546n, combinable: false },
       ],
       2,

@@ -7,9 +7,9 @@ import { crypto } from 'bitcoinjs-lib';
 import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
-import { getSigningDerivationPath } from '../transactions/psbt';
 import { Account, MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { bip32 } from '../utils/bip32';
+import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../wallet';
 
 /**
  *
@@ -149,6 +149,43 @@ export const signMessageBip322 = async ({
     throw new Error('Unable to Sign Message with BIP322');
   }
 };
+
+function getSigningDerivationPath(accounts: Array<Account>, address: string, network: NetworkType): string {
+  const { type } = getAddressInfo(address);
+
+  if (accounts.length <= 0) {
+    throw new Error('Invalid accounts list');
+  }
+
+  let path = '';
+
+  for (const account of accounts) {
+    if (type === 'p2sh') {
+      if (account.btcAddress === address) {
+        path = getBitcoinDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else if (type === 'p2wpkh') {
+      if (account.btcAddress === address) {
+        path = getSegwitDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else if (type === 'p2tr') {
+      if (account.ordinalsAddress === address) {
+        path = getTaprootDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else {
+      throw new Error('Unsupported address type');
+    }
+  }
+
+  if (path.length <= 0) {
+    throw new Error('Address not found');
+  }
+
+  return path;
+}
 
 interface SingMessageOptions {
   accounts: Account[];
