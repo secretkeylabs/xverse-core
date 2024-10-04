@@ -76,8 +76,8 @@ export const compileUserTransactionSummary = (
   runeSummary: RuneSummary,
   base: BaseSummary,
 ): UserTransactionSummary => {
-  if (!summary.feeOutput || !summary.feeRate) {
-    throw new Error('Transaction summary should be compiled with fee output and fee rate for user transaction summary');
+  if (!summary.feeOutput) {
+    throw new Error('Transaction summary should be compiled with fee output for user transaction summary');
   }
 
   const transfers = extractIOSummaries(context, summary, runeSummary);

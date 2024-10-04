@@ -1,10 +1,22 @@
 import { PsbtSummary, TransactionContext, TransactionSummary } from '../../transactions/bitcoin';
 import { NetworkType } from '../../types';
-import { parseSummaryForRunes } from '../runes';
+import { parseSummaryForRunes, RuneSummary } from '../runes';
 import { compileAggregatedSummary } from './aggregatedSummary';
 import { isPsbtSummary } from './shared';
 import { AggregatedSummary, BaseSummary, UserTransactionSummary } from './types';
 import { compileUserTransactionSummary } from './userTransactionSummary';
+
+export const compileViewSummary = (
+  context: TransactionContext,
+  summary: TransactionSummary | PsbtSummary,
+  runeSummary: RuneSummary,
+  base: BaseSummary,
+) => {
+  if (base.isFinal && !base.hasExternalInputs && summary.feeOutput) {
+    return compileUserTransactionSummary(context, summary, runeSummary, base);
+  }
+  return compileAggregatedSummary(context, summary, runeSummary, base);
+};
 
 export const extractViewSummary = async (
   context: TransactionContext,
@@ -35,10 +47,7 @@ export const extractViewSummary = async (
     ),
   };
 
-  if (base.isFinal && !base.hasExternalInputs) {
-    return compileUserTransactionSummary(context, summary, runeSummary, base);
-  }
-  return compileAggregatedSummary(context, summary, runeSummary, base);
+  return compileViewSummary(context, summary, runeSummary, base);
 };
 
 export * from './aggregatedSummary';
