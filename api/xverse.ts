@@ -111,8 +111,8 @@ class XverseApi {
       });
   };
 
-  getCoinsInfo = async (contractids: string[], fiatCurrency: string): Promise<CoinsResponse> => {
-    const response = await this.client.post<CoinsResponse>('/v1/coins', {
+  getSip10Tokens = async (contractids: string[], fiatCurrency: string): Promise<CoinsResponse> => {
+    const response = await this.client.post<CoinsResponse>('/v1/sip10/tokens', {
       currency: fiatCurrency,
       coins: JSON.stringify(contractids),
     });
@@ -428,7 +428,7 @@ export async function getCoinsInfo(
   fiatCurrency: string,
 ): Promise<CoinsResponse | null> {
   return getXverseApiClient(network)
-    .getCoinsInfo(contractids, fiatCurrency)
+    .getSip10Tokens(contractids, fiatCurrency)
     .catch(() => null);
 }
 

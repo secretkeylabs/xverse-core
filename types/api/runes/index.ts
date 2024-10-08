@@ -1,5 +1,4 @@
 import { BigNumber } from '../../../utils/bignumber';
-import { FungibleToken } from '../shared';
 
 type BigNullable = BigNumber | null;
 
@@ -108,18 +107,3 @@ export type RuneBalance = {
   inscriptionId: string | null;
   id: string;
 };
-
-export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
-  name: runeBalance.runeName,
-  decimals: runeBalance.divisibility,
-  principal: runeBalance.id,
-  balance: runeBalance.amount.toString(),
-  total_sent: '',
-  total_received: '',
-  assetName: runeBalance.runeName,
-  visible: true,
-  ticker: '',
-  runeSymbol: runeBalance.symbol,
-  runeInscriptionId: runeBalance.inscriptionId,
-  protocol: 'runes',
-});

@@ -234,7 +234,6 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
     fungibleToken.assetName = key.substring(index + 2);
     fungibleToken.principal = key.substring(0, index);
     fungibleToken.protocol = 'stacks';
-    fungibleToken.visible = new BigNumber(fungibleToken.balance).gt(0);
     tokens.push(fungibleToken);
   }
   return tokens;

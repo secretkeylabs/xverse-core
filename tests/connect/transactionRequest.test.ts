@@ -18,7 +18,7 @@ const mocked = vi.hoisted(() => ({
     { fee_rate: 30.00478207316422, fee: 180 },
   ]),
   estimateContractDeploy: vi.fn(() => BigInt('581')),
-  getCoinsInfo: vi.fn(() => null),
+  getSip10Tokens: vi.fn(() => null),
   fetchAppInfo: vi.fn(() => null),
   fetchStxPendingTxData: vi.fn(() => ({ pendingTransactions: [] })),
   getContractInterface: vi.fn(() => null),
@@ -46,7 +46,7 @@ vi.mock('@stacks/transactions', async () => ({
 }));
 vi.mock('../../api/xverse', () => ({
   getXverseApiClient: () => ({
-    getCoinsInfo: mocked.getCoinsInfo,
+    getSip10Tokens: mocked.getSip10Tokens,
     fetchAppInfo: mocked.fetchAppInfo,
   }),
 }));
@@ -202,7 +202,7 @@ describe('txPayloadToRequest', () => {
     );
     expect(mocked.fetchStxPendingTxData).toBeCalledTimes(1);
     expect(mocked.getContractInterface).toBeCalledTimes(1);
-    expect(mocked.getCoinsInfo).toBeCalledTimes(1);
+    expect(mocked.getSip10Tokens).toBeCalledTimes(1);
 
     mocked.serializePostCondition.mockImplementation((arg) => Buffer.from(arg, 'hex'));
     mocked.addressToString.mockReturnValue(contractCallPayload.contractAddress);
