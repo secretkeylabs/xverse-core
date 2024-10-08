@@ -4,7 +4,7 @@ import { Psbt, Transaction } from 'bitcoinjs-lib';
 import { encode } from 'varuint-bitcoin';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { bip0322Hash } from '../connect';
-import { NetworkType } from '../types';
+import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
 import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
 
@@ -21,7 +21,7 @@ const createMessageSignature = async (
   witnessScript: Buffer,
   inputArgs: Pick<PsbtInput, 'bip32Derivation'> | Pick<PsbtInput, 'tapBip32Derivation' | 'tapInternalKey'>,
   isSegwit: boolean,
-): Promise<string> => {
+): Promise<SignedMessage> => {
   const scriptSig = Buffer.concat([Buffer.from('0020', 'hex'), Buffer.from(bip0322Hash(message), 'hex')]);
   const txToSpend = new Transaction();
   txToSpend.version = 0;
@@ -57,7 +57,10 @@ const createMessageSignature = async (
   const len = encode(txToSign.ins[0].witness.length);
   const result = Buffer.concat([len, ...txToSign.ins[0].witness.map((w) => encodeVarString(w))]);
   const signature = result.toString('base64');
-  return signature;
+  return {
+    signature,
+    protocol: MessageSigningProtocols.BIP322,
+  };
 };
 
 const createSegwitBip322Signature = async ({
@@ -70,7 +73,7 @@ const createSegwitBip322Signature = async ({
   app: AppClient;
   addressIndex: number;
   networkType: NetworkType;
-}): Promise<string> => {
+}): Promise<SignedMessage> => {
   const coinType = getCoinType(networkType);
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
@@ -106,7 +109,7 @@ const createTaprootBip322Signature = async ({
   app: AppClient;
   addressIndex: number;
   networkType: NetworkType;
-}): Promise<string> => {
+}): Promise<SignedMessage> => {
   const coinType = getCoinType(networkType);
   const masterFingerPrint = await app.getMasterFingerprint();
   const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
@@ -135,6 +138,29 @@ const createTaprootBip322Signature = async ({
   );
 };
 
+export async function createNativeSegwitECDSA({
+  transport,
+  networkType,
+  message,
+  addressIndex,
+}: {
+  transport: Transport;
+  networkType: NetworkType;
+  message: string;
+  addressIndex: number;
+}): Promise<SignedMessage> {
+  const app = new AppClient(transport);
+  const coinType = getCoinType(networkType);
+  const signature = await app.signMessage(
+    Buffer.from(message),
+    `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+  );
+  return {
+    signature,
+    protocol: MessageSigningProtocols.ECDSA,
+  };
+}
+
 /**
  * This function is used to sign an incoming BIP 322 message with the ledger
  * @param transport - the transport object with connected ledger device
@@ -143,25 +169,36 @@ const createTaprootBip322Signature = async ({
  * @param message - the incoming message in string format to sign
  * @returns the signature in string (base64) format
  * */
-export async function signSimpleBip322Message({
+export async function signMessageLedger({
   transport,
   networkType,
   addressIndex,
   address,
   message,
+  protocol,
 }: {
   transport: Transport;
   networkType: NetworkType;
   addressIndex: number;
   address: string;
   message: string;
-}) {
+  protocol?: MessageSigningProtocols;
+}): Promise<SignedMessage> {
   const app = new AppClient(transport);
   const { type } = getAddressInfo(address);
-  if (type === AddressType.p2tr) {
-    return createTaprootBip322Signature({ message, app, addressIndex, networkType });
-  } else if (type === AddressType.p2wpkh) {
+  // if protocol isn't specified, we default to bip322 for both address types
+  const protocolToSign = protocol || MessageSigningProtocols.BIP322;
+  if (protocolToSign === MessageSigningProtocols.ECDSA) {
+    if (type === AddressType.p2tr) {
+      throw new Error('ECDSA is not supported for Taproot Addresses');
+    }
+    return createNativeSegwitECDSA({ transport, networkType, message, addressIndex });
+  }
+  if (protocolToSign === MessageSigningProtocols.BIP322) {
+    if (type === AddressType.p2tr) {
+      return createTaprootBip322Signature({ message, app, addressIndex, networkType });
+    }
     return createSegwitBip322Signature({ message, app, addressIndex, networkType });
   }
-  throw new Error('Invalid Address Type');
+  throw new Error("Couldn't sign Message");
 }

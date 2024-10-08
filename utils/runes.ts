@@ -1,42 +1,45 @@
 import { getRunesClient } from '../api';
-import { TransactionContext } from '../transactions/bitcoin';
-import { PsbtSummary, TransactionSummary } from '../transactions/bitcoin/types';
-import { CreateEtchOrderRequest, NetworkType, Override } from '../types';
+import { PsbtSummary, TransactionContext, TransactionSummary } from '../transactions/bitcoin';
+import { CreateEtchOrderRequest, FungibleToken, Marketplace, NetworkType, Override } from '../types';
 import { BigNumber, bigUtils } from './bignumber';
 
 export type RuneBase = {
   runeName: string;
+  runeId: string;
   amount: bigint;
   divisibility: number;
   symbol: string;
   inscriptionId: string;
 };
 
-type Mint = RuneBase & {
+export type RuneMint = RuneBase & {
   runeIsOpen: boolean;
   runeIsMintable: boolean;
 };
 
-type Transfer = RuneBase & {
+export type RuneTransfer = RuneBase & {
   sourceAddress: string;
   destinationAddresses: string[];
   hasSufficientBalance: boolean;
 };
 
-type Receipt = RuneBase & {
+export type RuneReceipt = RuneBase & {
   sourceAddresses: string[];
   destinationAddress: string;
 };
 
-type Burn = RuneBase & { sourceAddresses: string[] };
+export type RuneBurn = RuneBase & { sourceAddresses: string[] };
+
+export type RuneSummaryParseOptions = { separateTransfersOnNoExternalInputs?: boolean };
 
 export type RuneSummary = {
   inputsHadRunes: boolean;
   // can only do 1 mint per txn
-  mint?: Mint;
-  transfers: Transfer[];
-  receipts: Receipt[];
-  burns: Burn[];
+  mint?: RuneMint;
+  transfers: RuneTransfer[];
+  receipts: RuneReceipt[];
+  burns: RuneBurn[];
+  outputMapping: Record<number, (RuneBase & { destinationAddress: string })[]>;
 };
 
 export type EtchActionDetails = Omit<
@@ -44,7 +47,7 @@ export type EtchActionDetails = Omit<
   'appServiceFee' | 'appServiceFeeAddress' | 'refundAddress'
 >;
 
-export type MintActionDetails = Mint & {
+export type MintActionDetails = RuneMint & {
   repeats: number;
   runeSize: number;
   destinationAddress: string;
@@ -111,7 +114,6 @@ const parseSummaryWithBurnRuneScript = async (
   network: NetworkType,
 ): Promise<RuneSummary> => {
   const runeClient = getRunesClient(network);
-
   const runeInputs = await extractRuneInputs(context, summary);
 
   const inputsHadRunes = runeInputs.length > 0;
@@ -135,15 +137,16 @@ const parseSummaryWithBurnRuneScript = async (
     }
 
     return acc;
-  }, {} as Record<string, Omit<Burn, 'divisibility' | 'symbol' | 'inscriptionId'>>);
+  }, {} as Record<string, Omit<RuneBurn, 'runeId' | 'divisibility' | 'symbol' | 'inscriptionId'>>);
 
-  const embellishedBurns: Burn[] = [];
+  const embellishedBurns: RuneBurn[] = [];
 
   for (const burn of Object.values(burns)) {
     const runeInfo = await runeClient.getRuneInfo(burn.runeName);
 
     embellishedBurns.push({
       ...burn,
+      runeId: runeInfo?.id || '',
       divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
       symbol: runeInfo?.entry.symbol || '',
       inscriptionId: runeInfo?.parent || '',
@@ -155,6 +158,7 @@ const parseSummaryWithBurnRuneScript = async (
     receipts: [],
     transfers: [],
     burns: embellishedBurns,
+    outputMapping: {},
   };
 };
 
@@ -166,12 +170,12 @@ const parseSummaryWithRuneScript = async (
   const runeOp = summary.runeOp;
 
   const runeClient = getRunesClient(network);
-  const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
   const runeInputs = await extractRuneInputs(context, summary);
+  const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
 
   const inputsHadRunes = runeInputs.filter((r) => r.isUserAddress).length > 0;
 
-  const burns: Burn[] = [];
+  const burns: RuneBurn[] = [];
 
   // calculate initial unallocated balance without mint
   const unallocatedBalance = runeInputs.reduce((acc, input) => {
@@ -192,7 +196,7 @@ const parseSummaryWithRuneScript = async (
   }, {} as Record<string, { amount: bigint; sourceAddresses: Set<string> }>);
 
   // parse mint and add to unallocated balance if valid
-  let mint: Mint | undefined = undefined;
+  let mint: RuneMint | undefined = undefined;
   if (runeOp?.Runestone?.mint) {
     const runeInfo = await runeClient.getRuneInfo(runeOp.Runestone.mint);
 
@@ -203,6 +207,7 @@ const parseSummaryWithRuneScript = async (
 
       mint = {
         runeName,
+        runeId: runeInfo.id,
         amount: mintAmount,
         runeIsOpen,
         runeIsMintable: runeInfo.mintable,
@@ -226,6 +231,7 @@ const parseSummaryWithRuneScript = async (
       // rune being minted does not exist or is not open
       mint = {
         runeName: runeInfo?.entry.spaced_rune || '',
+        runeId: runeInfo?.id || '',
         amount: 0n,
         divisibility: 0,
         symbol: runeInfo?.entry.symbol || '',
@@ -238,8 +244,8 @@ const parseSummaryWithRuneScript = async (
 
   // start compiling transfers and receipts
   type PartialTransfer = Omit<
-    Transfer,
-    'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol' | 'inscriptionId'
+    RuneTransfer,
+    'runeId' | 'hasSufficientBalance' | 'destinationAddresses' | 'divisibility' | 'symbol' | 'inscriptionId'
   >;
 
   const transfersByRuneAndAddress = runeInputs
@@ -250,9 +256,7 @@ const parseSummaryWithRuneScript = async (
       for (const runeName in input.balances) {
         const balance = BigInt(input.balances[runeName].toString());
 
-        if (!(runeName in acc)) {
-          acc[runeName] = {};
-        }
+        acc[runeName] ||= {};
 
         if (!(inputAddress in acc[runeName])) {
           acc[runeName][inputAddress] = {
@@ -326,6 +330,7 @@ const parseSummaryWithRuneScript = async (
 
         burns.push({
           runeName,
+          runeId: runeInfo.id,
           amount: amountToTransfer,
           sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
           divisibility: runeInfo.entry.divisibility.toNumber(),
@@ -467,6 +472,7 @@ const parseSummaryWithRuneScript = async (
           burns.push({
             runeName,
             amount,
+            runeId: runeInfo.id,
             sourceAddresses: sourceAddresses.filter((a) => a !== 'mint'),
             divisibility: runeInfo.entry.divisibility.toNumber(),
             symbol: runeInfo.entry.symbol,
@@ -478,31 +484,45 @@ const parseSummaryWithRuneScript = async (
   }
 
   // generate receipts and add destination addresses
-  const receipts: Receipt[] = [];
+  const receipts: RuneReceipt[] = [];
   const runeRecipients: Record<string, string[]> = {};
   const userReceiptRuneAmounts = {} as Record<string, Record<string, bigint>>;
+
+  const outputMapping: Record<number, (RuneBase & { destinationAddress: string })[]> = {};
 
   for (const i in allocated) {
     const index = Number(i);
     const summaryOutput = summary.outputs[index];
 
-    if (summaryOutput.type !== 'address') {
-      throw new Error('Something went wrong while parsing the runeOp. All allocated outputs should be addresses.');
+    if (summaryOutput.type === 'script') {
+      throw new Error('Something went wrong while parsing the runeOp. All allocated outputs should be non-script.');
     }
 
     const output = allocated[index];
+
+    outputMapping[index] = [];
 
     for (const runeName in output) {
       const amount = output[runeName].amount;
       const sourceAddresses = output[runeName].sourceAddresses;
       const destinationAddress = output[runeName].destinationAddress;
 
-      runeRecipients[runeName] = runeRecipients[runeName] || [];
+      runeRecipients[runeName] ||= [];
       runeRecipients[runeName].push(destinationAddress);
 
-      if (userAddresses.has(destinationAddress)) {
-        const runeInfo = await runeClient.getRuneInfo(runeName);
+      const runeInfo = await runeClient.getRuneInfo(runeName);
 
+      outputMapping[index].push({
+        runeName,
+        amount,
+        destinationAddress,
+        divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
+        runeId: runeInfo?.id || '',
+        symbol: runeInfo?.entry.symbol || '',
+        inscriptionId: runeInfo?.parent || '',
+      });
+
+      if (userAddresses.has(destinationAddress)) {
         // we only show receipts if we are sending to another address or if we transfer between payment and ordinals
         // otherwise, transfers are just change and there is no need to show them
         if (sourceAddresses.length !== 1 || sourceAddresses[0] !== destinationAddress) {
@@ -511,6 +531,7 @@ const parseSummaryWithRuneScript = async (
             destinationAddress,
             runeName,
             amount,
+            runeId: runeInfo?.id || '',
             divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
             symbol: runeInfo?.entry.symbol || '',
             inscriptionId: runeInfo?.parent || '',
@@ -532,22 +553,17 @@ const parseSummaryWithRuneScript = async (
     return acc;
   }, {} as Record<string, bigint>);
 
-  const transfers: Transfer[] = [];
+  const transfers: RuneTransfer[] = [];
 
   for (const [runeName, addressTransfers] of Object.entries(transfersByRuneAndAddress)) {
     for (const [sourceAddress, transfer] of Object.entries(addressTransfers)) {
       const runeInfo = await runeClient.getRuneInfo(runeName);
 
       const amount = BigInt(
-        bigUtils
-          .max(
-            transfer.amount - (userReceiptRuneAmounts[sourceAddress]?.[runeName] ?? 0n) - (burnt[runeName] ?? 0n),
-            0n,
-          )
-          .toString(10),
+        transfer.amount - (userReceiptRuneAmounts[sourceAddress]?.[runeName] ?? 0n) - (burnt[runeName] ?? 0n),
       );
 
-      if (amount === 0n) {
+      if (amount <= 0n) {
         continue;
       }
 
@@ -556,6 +572,7 @@ const parseSummaryWithRuneScript = async (
         destinationAddresses: runeRecipients[runeName].filter((a) => a !== sourceAddress) || [],
         runeName,
         amount,
+        runeId: runeInfo?.id || '',
         divisibility: runeInfo?.entry.divisibility.toNumber() || 0,
         symbol: runeInfo?.entry.symbol || '',
         inscriptionId: runeInfo?.parent || '',
@@ -570,6 +587,7 @@ const parseSummaryWithRuneScript = async (
     receipts,
     transfers,
     burns,
+    outputMapping,
   };
 };
 
@@ -581,6 +599,15 @@ export const parseSummaryForRunes = async (
   if ((summary.runeOp?.Cenotaph?.flaws ?? 0) > 0) {
     return parseSummaryWithBurnRuneScript(context, summary, network);
   }
-
   return parseSummaryWithRuneScript(context, summary, network);
+};
+
+export const marketplaceRuneDashboardUrl = (rune: FungibleToken, marketplace: Marketplace): string => {
+  const marketplaceToUrl: { [key in Marketplace]: string } = {
+    'Magic Eden': `https://magiceden.io/runes/${rune.name}`,
+    Unisat: `https://unisat.io/runes/market?tick=${rune.name}`,
+    OKX: `https://www.okx.com/web3/marketplace/runes/token/${rune.name}/${rune.principal}`,
+  };
+
+  return marketplaceToUrl[marketplace];
 };

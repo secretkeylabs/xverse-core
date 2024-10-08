@@ -1,4 +1,4 @@
-import { BaseToken } from '../shared';
+import { BaseToken } from '../../fungibleTokens';
 
 export interface Coin extends BaseToken {
   id?: number;

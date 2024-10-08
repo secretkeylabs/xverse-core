@@ -24,11 +24,9 @@ export async function getNftDetail(
 export async function getNftsCollectionData(collectionId: string): Promise<NftCollectionData | undefined> {
   try {
     const apiUrl = `${GAMMA_COLLECTION_API}/${collectionId}?include=floorItem`;
-
     const response = await axios.get<NftCollectionData>(apiUrl, {
       timeout: API_TIMEOUT_MILLI,
     });
-
     return response.data;
   } catch (error) {
     return undefined;

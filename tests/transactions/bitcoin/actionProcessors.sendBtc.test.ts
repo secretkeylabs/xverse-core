@@ -24,6 +24,11 @@ describe('applySendBtcActionsAndFee', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
   });
 
   it('throws on insufficient balance for action', async () => {

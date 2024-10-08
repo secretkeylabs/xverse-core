@@ -12,14 +12,18 @@ import { SeedVault } from '../../seedVault';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
-import { InputToSign } from '../psbt';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
 
+export type InputToSign = {
+  address: string;
+  signingIndexes: Array<number>;
+  sigHash?: number;
+};
+
 export type SignOptions = {
   ledgerTransport?: Transport;
-  allowedSigHash?: btc.SigHash[];
   inputsToSign?: InputToSign[];
 };
 
@@ -185,23 +189,39 @@ export abstract class AddressContext {
     const signIndexes: Record<number, btc.SigHash[] | undefined> = {};
 
     if (options.inputsToSign) {
+      // This is the path use by sats-connect for external parties wanting to sign a transaction
       for (const inputToSign of options.inputsToSign) {
         if (inputToSign.address === this._address) {
           inputToSign.signingIndexes.forEach((index) => {
             if (signIndexes[index]) {
               throw new Error(`Duplicate signing index ${index} for address ${this._address}`);
             }
+            const input = transaction.getInput(index);
 
-            signIndexes[index] = inputToSign.sigHash ? [inputToSign.sigHash] : undefined;
+            signIndexes[index] = undefined;
+            if (input.sighashType !== undefined) {
+              signIndexes[index] = [input.sighashType];
+            }
           });
         }
       }
     } else {
+      // This is the internal path used by the wallet to sign transactions
       for (let i = 0; i < transaction.inputsLength; i++) {
         const input = transaction.getInput(i);
 
-        if (areByteArraysEqual(input.witnessUtxo?.script, witnessScript)) {
-          signIndexes[i] = options.allowedSigHash;
+        const witnessLockingScript = input.witnessUtxo?.script;
+        const matchesWitnessUtxo = areByteArraysEqual(witnessLockingScript, witnessScript);
+
+        const nonWitnessLockingScript =
+          (input.index !== undefined && input.nonWitnessUtxo?.outputs[input.index]?.script) || undefined;
+        const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, witnessScript);
+
+        if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
+          signIndexes[i] = undefined;
+          if (input.sighashType !== undefined) {
+            signIndexes[i] = [input.sighashType];
+          }
         }
       }
     }
@@ -661,8 +681,23 @@ export class TransactionContext {
     return {};
   }
 
-  addOutputAddress(transaction: btc.Transaction, address: string, amount: bigint): void {
+  addOutputAddress(
+    transaction: btc.Transaction,
+    address: string,
+    amount: bigint,
+  ): { script: string[]; scriptHex: string } {
     transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+
+    const output = transaction.getOutput(transaction.outputsLength - 1);
+
+    if (!output.script) {
+      throw new Error('Output script is undefined');
+    }
+
+    const script = btc.Script.decode(output.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`));
+    const scriptHex = hex.encode(output.script);
+
+    return { script, scriptHex };
   }
 
   async signTransaction(transaction: btc.Transaction, options: SignOptions): Promise<void> {

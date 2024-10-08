@@ -1,4 +1,5 @@
 import { StacksMainnet, StacksNetwork } from '@stacks/network';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 import {
   AddressHashMode,
   AddressVersion,
@@ -32,6 +33,7 @@ import {
   estimateContractDeploy,
   estimateContractFunctionCall,
   estimateTransaction,
+  estimateTransactionByteLength,
   estimateTransfer,
   getNonce as fetchNewNonce,
   hexToCV,
@@ -44,7 +46,9 @@ import {
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
+import axios from 'axios';
 import BigNumber from 'bignumber.js';
+import { FeeEstimation, getMempoolFeePriorities } from '../api';
 import { PostConditionsOptions, SettingsNetwork, StxMempoolTransactionData } from '../types';
 import {
   LatestNonceResponse,
@@ -55,7 +59,6 @@ import {
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import axios from 'axios';
 
 export interface StacksRecipient {
   address: string;
@@ -244,7 +247,7 @@ export async function generateUnsignedContractCall(
     publicKey,
     network,
     postConditions: postConditions,
-    postConditionMode: postConditionMode ?? 1,
+    postConditionMode: postConditionMode ?? PostConditionMode.Deny,
     anchorMode: anchorMode ? anchorMode : AnchorMode.Any,
     sponsored: sponsored,
   };
@@ -275,6 +278,63 @@ export async function estimateContractCallFees(
     return fee;
   });
 }
+
+const getFallbackFees = (
+  transaction: StacksTransaction,
+  mempoolFees: MempoolFeePriorities,
+): [FeeEstimation, FeeEstimation, FeeEstimation] => {
+  if (!transaction || !transaction.payload) {
+    throw new Error('Invalid transaction object');
+  }
+
+  if (!mempoolFees) {
+    throw new Error('Invalid mempool fees object');
+  }
+
+  const { payloadType } = transaction.payload;
+
+  if (payloadType === PayloadType.ContractCall && mempoolFees.contract_call) {
+    return [
+      { fee: mempoolFees.contract_call.low_priority },
+      { fee: mempoolFees.contract_call.medium_priority },
+      { fee: mempoolFees.contract_call.high_priority },
+    ];
+  } else if (payloadType === PayloadType.TokenTransfer && mempoolFees.token_transfer) {
+    return [
+      { fee: mempoolFees.token_transfer.low_priority },
+      { fee: mempoolFees.token_transfer.medium_priority },
+      { fee: mempoolFees.token_transfer.high_priority },
+    ];
+  }
+  return [
+    { fee: mempoolFees.all.low_priority },
+    { fee: mempoolFees.all.medium_priority },
+    { fee: mempoolFees.all.high_priority },
+  ];
+};
+
+/**
+ * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
+ * {@link estimateTransaction} does not get an estimation due to the
+ * {NoEstimateAvailableError} error.
+ */
+export const estimateStacksTransactionWithFallback = async (
+  transaction: StacksTransaction,
+  network: StacksNetwork,
+): Promise<[FeeEstimation, FeeEstimation, FeeEstimation]> => {
+  try {
+    const estimatedLen = estimateTransactionByteLength(transaction);
+    const [slower, regular, faster] = await estimateTransaction(transaction.payload, estimatedLen, network);
+    return [slower, regular, faster];
+  } catch (error) {
+    const err = error.toString();
+    if (!err.includes('NoEstimateAvailable')) {
+      throw error;
+    }
+    const mempoolFees = await getMempoolFeePriorities(network);
+    return getFallbackFees(transaction, mempoolFees);
+  }
+};
 
 /**
  * generate fungible token transfer or nft transfer transaction
@@ -343,7 +403,7 @@ export async function generateUnsignedTransaction(unsginedTx: UnsignedStacksTran
     };
     unsignedTx = await generateUnsignedContractCall(unsignedContractCallParam);
 
-    const [slower, regular, faster] = await estimateTransaction(unsignedTx.payload, undefined, network);
+    const [slower, regular, faster] = await estimateStacksTransactionWithFallback(unsignedTx, network);
     unsignedTx.setFee(regular.fee);
 
     // bump nonce by number of pending transactions
@@ -470,6 +530,19 @@ export async function getLatestNonce(stxAddress: string, network: SettingsNetwor
   return axios.get<LatestNonceResponse>(apiUrl).then((response) => {
     return response.data;
   });
+}
+
+/**
+ * Suggests the next best nonce, taking into account any missing nonces.
+ */
+export async function nextBestNonce(stxAddress: string, network: SettingsNetwork): Promise<bigint> {
+  const nonceData = await getLatestNonce(stxAddress, network);
+
+  if (nonceData.detected_missing_nonces.length > 0) {
+    return BigInt(nonceData.detected_missing_nonces.at(-1) as number);
+  }
+
+  return BigInt(nonceData.possible_next_nonce);
 }
 
 export async function getRawTransaction(txId: string, network: SettingsNetwork): Promise<string> {

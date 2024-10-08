@@ -15,12 +15,12 @@ import {
   RuneMarketInfo,
   RuneSellRequest,
   RuneSellResponse,
-  runeTokenToFungibleToken,
   SubmitCancelOrderRequest,
   SubmitCancelOrderResponse,
   SubmitRuneSellRequest,
   SubmitRunesSellResponse,
 } from '../../types';
+import { runeTokenToFungibleToken } from '../../fungibleTokens';
 import { JSONBig } from '../../utils/bignumber';
 import { getXClientVersion } from '../../utils/xClientVersion';
 
@@ -93,8 +93,8 @@ class RunesApi {
 
   /**
    * Get the balance of all rune tokens an address has
-   * @param {string} address
-   * @param {boolean} includeUnconfirmed Set to true to include unconfirmed transactions
+   * @param address
+   * @param includeUnconfirmed Set to true to include unconfirmed transactions
    * in the balance (default is false)
    * @return {Promise<RuneBalance[]>}
    */
@@ -119,7 +119,7 @@ class RunesApi {
       return cachedRuneInfo;
     }
 
-    let response: AxiosResponse<Rune, any>;
+    let response: AxiosResponse<Rune, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     if (typeof runeNameOrId === 'bigint') {
       const blockHeight = runeNameOrId >> 16n;
@@ -141,8 +141,8 @@ class RunesApi {
 
   /**
    * Get rune details in fungible token format
-   * @param {string} address
-   * @param {boolean} includeUnconfirmed Set to true to include unconfirmed transactions
+   * @param address
+   * @param includeUnconfirmed Set to true to include unconfirmed transactions
    * in the balance (default is false)
    * @return {Promise<FungibleToken[]>}
    */

@@ -1,14 +1,15 @@
-import BigNumber from 'bignumber.js';
+import * as btc from '@scure/btc-signer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import xverseInscribeApi from '../../api/xverseInscribe';
-import { TransactionContext } from '../../transactions/bitcoin';
+import { ExtendedUtxo, TransactionContext } from '../../transactions/bitcoin';
+import { AddressContext } from '../../transactions/bitcoin/context';
 import { EnhancedTransaction } from '../../transactions/bitcoin/enhancedTransaction';
 import {
   ExecuteTransferProgressCodes,
   brc20TransferEstimateFees,
   brc20TransferExecute,
 } from '../../transactions/brc20';
-import { selectUtxosForSend, signNonOrdinalBtcSendTransaction } from '../../transactions/btc';
+import { addresses } from './bitcoin/helpers';
 
 vi.mock('../../api/xverseInscribe');
 vi.mock('../../api/esplora/esploraAPiProvider');
@@ -17,8 +18,23 @@ vi.mock('../../wallet');
 vi.mock('../../transactions/bitcoin/enhancedTransaction');
 
 describe('brc20TransferEstimateFees', () => {
+  const ordinalsAddress = {
+    constructUtxo: (utxo: any) => ({ utxo }),
+    addInput: (tx: btc.Transaction, extendedUtxo: ExtendedUtxo) =>
+      tx.addInput({
+        txid: extendedUtxo.utxo.txid,
+        index: extendedUtxo.utxo.vout,
+        witnessUtxo: {
+          amount: BigInt(extendedUtxo.utxo.value),
+          script: addresses[0].taprootP2.script,
+        },
+        tapInternalKey: addresses[0].taprootP2.tapInternalKey,
+      }),
+  } as unknown as AddressContext;
+
   const context = {
     network: 'Mainnet',
+    ordinalsAddress,
   } as TransactionContext;
 
   beforeEach(() => {
@@ -31,23 +47,11 @@ describe('brc20TransferEstimateFees', () => {
     const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
     const mockedFeeRate = 12;
 
-    vi.mocked(signNonOrdinalBtcSendTransaction).mockResolvedValueOnce({
-      tx: { vsize: 150 },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use this field in this function
-    } as any);
-
     vi.mocked(xverseInscribeApi.getBrc20TransferFees).mockResolvedValue({
       chainFee: 1080,
       serviceFee: 2000,
       inscriptionValue: 1000,
       vSize: 150,
-    });
-
-    vi.mocked(selectUtxosForSend).mockReturnValueOnce({
-      change: 2070,
-      fee: 1070,
-      feeRate: 12,
-      selectedUtxos: [],
     });
 
     vi.mocked(EnhancedTransaction).mockImplementationOnce(
@@ -71,12 +75,12 @@ describe('brc20TransferEstimateFees', () => {
     );
 
     expect(result).toEqual({
-      commitValue: 1070 + 1080 + 2000 + 1800 + 1000,
+      commitValue: 1070 + 1080 + 2000 + 1332 + 1000,
       valueBreakdown: {
         commitChainFee: 1070,
         revealChainFee: 1080,
         revealServiceFee: 2000,
-        transferChainFee: 1800,
+        transferChainFee: 1332,
         transferUtxoValue: 1000,
       },
     });
@@ -87,13 +91,68 @@ describe('brc20TransferEstimateFees', () => {
       mockedRevealAddress,
       mockedFeeRate,
       'Mainnet',
-      2800,
+      2332,
+      undefined,
+    );
+  });
+
+  it('should estimate 5 byte BRC20 transfer fees correctly', async () => {
+    const mockedTick = 'FR8NK';
+    const mockedAmount = 10;
+    const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
+    const mockedFeeRate = 12;
+
+    vi.mocked(xverseInscribeApi.getBrc20TransferFees).mockResolvedValue({
+      chainFee: 1080,
+      serviceFee: 2000,
+      inscriptionValue: 1000,
+      vSize: 150,
+    });
+
+    vi.mocked(EnhancedTransaction).mockImplementationOnce(
+      () =>
+        ({
+          getSummary: async () =>
+            ({
+              fee: 1070,
+            } as any),
+        } as any),
+    );
+
+    const result = await brc20TransferEstimateFees(
+      {
+        tick: mockedTick,
+        amount: mockedAmount,
+        revealAddress: mockedRevealAddress,
+        feeRate: mockedFeeRate,
+      },
+      context,
+    );
+
+    expect(result).toEqual({
+      commitValue: 1070 + 1080 + 2000 + 1332 + 1000,
+      valueBreakdown: {
+        commitChainFee: 1070,
+        revealChainFee: 1080,
+        revealServiceFee: 2000,
+        transferChainFee: 1332,
+        transferUtxoValue: 1000,
+      },
+    });
+
+    expect(xverseInscribeApi.getBrc20TransferFees).toHaveBeenCalledWith(
+      mockedTick,
+      mockedAmount,
+      mockedRevealAddress,
+      mockedFeeRate,
+      'Mainnet',
+      2332,
       undefined,
     );
   });
 
   it('should throw on invalid tick', async () => {
-    const mockedTick = 'TICKs';
+    const mockedTick = 'TICKss';
     const mockedAmount = 10;
     const mockedRevealAddress = 'bc1pyzfhlkq29sylwlv72ve52w8mn7hclefzhyay3dxh32r0322yx6uqajvr3y';
     const mockedFeeRate = 12;
@@ -108,7 +167,7 @@ describe('brc20TransferEstimateFees', () => {
         },
         context,
       ),
-    ).rejects.toThrow('Invalid tick; should be 4 characters long');
+    ).rejects.toThrow('Invalid tick; should be 4 or 5 bytes long');
   });
 
   it('should throw on invalid amount', async () => {
@@ -153,13 +212,23 @@ describe('brc20TransferEstimateFees', () => {
 describe('brc20TransferExecute', () => {
   const context = {
     ordinalsAddress: {
-      constructUtxo: vi.fn(),
-      addInput: vi.fn(),
+      constructUtxo: (utxo: any) => ({ utxo }),
+      addInput: (tx: btc.Transaction, extendedUtxo: ExtendedUtxo) =>
+        tx.addInput({
+          txid: extendedUtxo.utxo.txid,
+          index: extendedUtxo.utxo.vout,
+          witnessUtxo: {
+            amount: BigInt(extendedUtxo.utxo.value),
+            script: addresses[0].taprootP2.script,
+          },
+          tapInternalKey: addresses[0].taprootP2.tapInternalKey,
+        }),
     } as any,
-    addOutputAddress: vi.fn() as any,
-    signTransaction: vi.fn() as any,
+    addOutputAddress: (tx: btc.Transaction, recipient: string, amount: bigint) =>
+      tx.addOutputAddress(recipient, amount),
+    signTransaction: (tx: btc.Transaction) => tx.sign(addresses[0].taprootSigner),
     network: 'Mainnet',
-  } as TransactionContext;
+  } as unknown as TransactionContext;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -168,15 +237,10 @@ describe('brc20TransferExecute', () => {
   it('should execute BRC20 transfer correctly', async () => {
     const mockedTick = 'TICK';
     const mockedAmount = 10;
-    const mockedRevealAddress = 'reveal_address';
-    const mockedCommitAddress = 'commit_address';
-    const mockedRecipientAddress = 'recipient_address';
+    const mockedRevealAddress = addresses[0].taproot;
+    const mockedCommitAddress = addresses[1].taproot;
+    const mockedRecipientAddress = addresses[2].taproot;
     const mockedFeeRate = 12;
-
-    vi.mocked(signNonOrdinalBtcSendTransaction).mockResolvedValue({
-      tx: { vsize: 150 },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use this field in this function
-    } as any);
 
     vi.mocked(xverseInscribeApi.createBrc20TransferOrder).mockResolvedValueOnce({
       commitAddress: mockedCommitAddress,
@@ -184,19 +248,22 @@ describe('brc20TransferExecute', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- we only use these 2 fields in this function
     } as any);
 
+    const mockedRevealTxnId = '0000000000000000000000000000000000000000000000000000000000000002';
+    const mockedCommitTxnId = '0000000000000000000000000000000000000000000000000000000000000002';
+    const mockedTransferTxnId = '0000000000000000000000000000000000000000000000000000000000000002';
     vi.mocked(xverseInscribeApi.executeBrc20Order).mockResolvedValueOnce({
-      revealTransactionId: 'revealId',
+      revealTransactionId: mockedRevealTxnId,
       revealUTXOVOut: 0,
       revealUTXOValue: 3000,
     });
 
     vi.mocked(xverseInscribeApi.finalizeBrc20TransferOrder).mockResolvedValueOnce({
-      revealTransactionId: 'revealId',
-      commitTransactionId: 'commitId',
-      transferTransactionId: 'transferId',
+      revealTransactionId: mockedRevealTxnId,
+      commitTransactionId: mockedCommitTxnId,
+      transferTransactionId: mockedTransferTxnId,
     });
 
-    const getTransactionHexAndId = vi.fn().mockResolvedValueOnce({ hex: 'commit_hex', txid: 'commit_id' });
+    const getTransactionHexAndId = vi.fn().mockResolvedValueOnce({ hex: 'commit_hex', txid: mockedCommitTxnId });
     vi.mocked(EnhancedTransaction).mockImplementationOnce(
       () =>
         ({
@@ -234,31 +301,13 @@ describe('brc20TransferExecute', () => {
           break;
 
         case ExecuteTransferProgressCodes.CreatingCommitTransaction:
-          expect(signNonOrdinalBtcSendTransaction).toHaveBeenCalledTimes(1);
-          expect(signNonOrdinalBtcSendTransaction).toHaveBeenCalledWith(
-            mockedRecipientAddress,
-            [
-              {
-                address: mockedRevealAddress,
-                status: { confirmed: false },
-                txid: '0000000000000000000000000000000000000000000000000000000000000001',
-                vout: 0,
-                value: 1000,
-              },
-            ],
-            0,
-            'action action action action action action action action action action action action',
-            'Mainnet',
-            new BigNumber(1000),
-          );
-
           expect(xverseInscribeApi.createBrc20TransferOrder).toHaveBeenCalledWith(
             mockedTick,
             mockedAmount,
             mockedRevealAddress,
             mockedFeeRate,
             'Mainnet',
-            1000 + 150 * mockedFeeRate,
+            1000 + 111 * mockedFeeRate,
           );
           break;
 
@@ -283,9 +332,9 @@ describe('brc20TransferExecute', () => {
     } while (!done);
 
     expect(result).toEqual({
-      revealTransactionId: 'revealId',
-      commitTransactionId: 'commitId',
-      transferTransactionId: 'transferId',
+      revealTransactionId: mockedRevealTxnId,
+      commitTransactionId: mockedCommitTxnId,
+      transferTransactionId: mockedTransferTxnId,
     });
   });
 });

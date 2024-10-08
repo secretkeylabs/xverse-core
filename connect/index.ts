@@ -1,5 +1,5 @@
 export * from './auth';
-export * from './bip322Signature';
-export * from './signature';
+export * from './messageSigning';
+export * from './stacksMessageSigning';
 export * from './transactionRequest';
 export * from './manifest';

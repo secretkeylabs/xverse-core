@@ -1,4 +1,4 @@
-import { TransactionContext } from './context';
+import { TransactionContext, type InputToSign } from './context';
 import { createTransactionContext } from './contextFactory';
 import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
@@ -9,6 +9,7 @@ import {
   EnhancedOutput,
   IOInscription,
   IOSatribute,
+  PsbtSummary,
   SendBtcAction,
   SendUtxoAction,
   SplitUtxoAction,
@@ -20,15 +21,21 @@ import {
   TransactionSummary,
 } from './types';
 
-const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a UTXO to be split
+// Note: OG ordinals collections like OMB are inscribed on 10k sat utxos,
+// and we prefer to preserve these.
+const SPLIT_UTXO_MIN_SIZE = 10000; // threshold to determine if we split the UTXO at all
+const SPLIT_UTXO_MIN_VALUE = 1500; // the minimum value for a sat range to be split
+
 const DUST_VALUE = 546; // the value of an inscription we prefer to use
 
-export { ActionType, EnhancedPsbt, EnhancedTransaction, ExtendedUtxo, TransactionContext, createTransactionContext };
+export { ActionType, createTransactionContext, EnhancedPsbt, EnhancedTransaction, ExtendedUtxo, TransactionContext };
 export type {
   EnhancedInput,
   EnhancedOutput,
+  InputToSign,
   IOInscription,
   IOSatribute,
+  PsbtSummary,
   SendBtcAction,
   SendUtxoAction,
   SplitUtxoAction,
@@ -179,7 +186,9 @@ export const sendOrdinals = async (
 };
 
 /**
- * @deprecated Not deprecated, but in beta. Needs tests. Do not use until tested.
+ * Sends specific inscriptions or sats to specific recipients
+ * If the UTXO has more sats on it than dust before or after the specified sats to send, then it
+ * will split the UTXO and send the specified sats to the recipient and the rest back to the original address
  * send inscription
  * send multiple inscription to 1 recipient
  * send multiple inscription to multiple recipients
@@ -266,13 +275,12 @@ export const sendOrdinalsWithSplit = async (
 
     const utxoBundleData = await extendedUtxo.getBundleData();
 
-    // If there is only 1 special sat range in the utxo and it's value is less than the minimum value for a split utxo
-    // then we can just send the utxo
+    // If there is only 1 or no special sat ranges in the utxo and it's value is less than
+    // the minimum value for a split utxo then we can just send the utxo
     if (
-      utxoBundleData?.sat_ranges &&
-      utxoBundleData?.sat_ranges.length <= 1 &&
+      (!utxoBundleData?.sat_ranges || utxoBundleData?.sat_ranges.length <= 1) &&
       recipientCollection.length === 1 &&
-      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_VALUE + DUST_VALUE
+      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_SIZE + DUST_VALUE
     ) {
       actions.push({
         type: ActionType.SEND_UTXO,
@@ -306,11 +314,12 @@ export const sendOrdinalsWithSplit = async (
         }
         if (currentOffset.min < SPLIT_UTXO_MIN_VALUE) {
           currentOffset.min = 0;
+          currentOffset.max = Math.min(currentOffset.max, SPLIT_UTXO_MIN_VALUE);
         }
       } else {
         currentOffset.min = Math.min(currentOffset.max - DUST_VALUE, currentOffset.offset);
 
-        if (currentOffset.min > previousOffset.max) {
+        if (currentOffset.min < previousOffset.max) {
           previousOffset.max = currentOffset.min;
         }
       }

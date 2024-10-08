@@ -127,11 +127,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -141,9 +143,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
     };
 
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
@@ -153,6 +159,7 @@ describe('parseSummaryForRunes', () => {
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -161,11 +168,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -175,9 +184,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -199,6 +212,7 @@ describe('parseSummaryForRunes', () => {
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -207,11 +221,13 @@ describe('parseSummaryForRunes', () => {
       inputs: [
         {
           extendedUtxo: {
+            address: 'ordinalsAddress',
             hasRunes: () => false,
             getRuneBalances: () => {},
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -221,9 +237,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -241,6 +261,7 @@ describe('parseSummaryForRunes', () => {
         divisibility: 0,
         symbol: '',
         inscriptionId: '',
+        runeId: '',
         runeIsMintable: false,
         runeIsOpen: false,
         runeName: '',
@@ -248,6 +269,7 @@ describe('parseSummaryForRunes', () => {
       transfers: [],
       receipts: [],
       burns: [],
+      outputMapping: {},
     });
   });
 
@@ -264,6 +286,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -279,9 +302,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
     };
 
     const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
@@ -296,11 +323,25 @@ describe('parseSummaryForRunes', () => {
           destinationAddresses: ['recipient1'],
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           hasSufficientBalance: true,
         },
       ],
       receipts: [],
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -317,6 +358,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -332,9 +374,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Cenotaph: {
           flaws: 1,
@@ -353,10 +399,12 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           runeName: 'DUMMYRUNE',
           sourceAddresses: ['ordinalsAddress'],
         },
       ],
+      outputMapping: {},
     });
   });
 
@@ -373,6 +421,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -388,9 +437,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -416,11 +469,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100n,
           divisibility: 0,
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           symbol: 'A',
           runeName: 'DUMMYRUNE',
           sourceAddresses: ['ordinalsAddress'],
         },
       ],
+      outputMapping: {},
     });
   });
 
@@ -437,6 +492,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -452,9 +508,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(1),
@@ -476,6 +536,19 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -492,6 +565,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -507,6 +581,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -514,9 +590,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(2),
@@ -542,6 +622,7 @@ describe('parseSummaryForRunes', () => {
           amount: 50n,
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           divisibility: 0,
           hasSufficientBalance: true,
         },
@@ -552,6 +633,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'paymentAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           divisibility: 0,
           runeName: 'DUMMYRUNE',
           sourceAddresses: ['ordinalsAddress'],
@@ -559,6 +641,30 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 50n,
+            destinationAddress: 'paymentAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 50n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -575,6 +681,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -590,9 +697,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -617,6 +728,7 @@ describe('parseSummaryForRunes', () => {
           amount: 100n,
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           divisibility: 0,
           hasSufficientBalance: true,
         },
@@ -627,6 +739,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
           divisibility: 0,
           runeName: 'DUMMYRUNE',
           sourceAddresses: ['paymentAddress'],
@@ -634,6 +747,19 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -651,6 +777,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -663,6 +790,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -678,6 +806,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -685,6 +815,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -692,9 +824,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(3),
@@ -732,6 +868,7 @@ describe('parseSummaryForRunes', () => {
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
         },
         {
           amount: 1500n,
@@ -739,6 +876,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -747,6 +885,247 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
+    });
+  });
+
+  it('parses send with separateTransfersOnNoExternalInputs flag and external inputs correctly', async () => {
+    const summary: PsbtSummary = {
+      inputs: [
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE: BigNumber(1000),
+              DUMMYRUNE2: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+        {
+          extendedUtxo: {
+            address: 'ordinalsAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({
+              DUMMYRUNE2: BigNumber(1000),
+              DUMMYRUNE3: BigNumber(1000),
+            }),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+        {
+          extendedUtxo: {
+            address: 'otherAddress',
+            hasRunes: () => true,
+            getRuneBalances: () => ({}),
+          } as any,
+          inscriptions: [],
+          satributes: [],
+          walletWillSign: true,
+        },
+      ],
+      outputs: [
+        {
+          type: 'script',
+          scriptHex: '6a4c4d52554e450',
+          script: ['RETURN', '4c4d52554e450'],
+          amount: 0,
+        },
+        {
+          type: 'address',
+          address: 'recipient1',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
+        },
+        {
+          type: 'address',
+          address: 'recipient2',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
+        },
+        {
+          type: 'address',
+          address: 'ordinalsAddress',
+          amount: 100,
+          inscriptions: [],
+          satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
+        },
+      ],
+      hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
+      runeOp: {
+        Runestone: {
+          pointer: BigNumber(3),
+          edicts: [
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(1),
+            },
+            {
+              id: '1:1',
+              amount: BigNumber(500),
+              output: BigNumber(2),
+            },
+            {
+              id: '2:2',
+              amount: BigNumber(1500),
+              output: BigNumber(2),
+            },
+          ],
+        },
+      },
+    };
+
+    const runes = await parseSummaryForRunes(context, summary, 'Mainnet');
+    expect(runes).toEqual({
+      inputsHadRunes: true,
+      transfers: [
+        {
+          amount: 1000n,
+          destinationAddresses: ['recipient1', 'recipient2'],
+          divisibility: 0,
+          hasSufficientBalance: true,
+          runeName: 'DUMMYRUNE',
+          runeId: '1:1',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'A',
+          inscriptionId: 'AINSCRIPTIONID',
+        },
+        {
+          amount: 1500n,
+          destinationAddresses: ['recipient2'],
+          divisibility: 1,
+          hasSufficientBalance: true,
+          runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
+          sourceAddress: 'ordinalsAddress',
+          symbol: 'B',
+          inscriptionId: '',
+        },
+      ],
+      receipts: [],
+      mint: undefined,
+      burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -764,6 +1143,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -775,6 +1155,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -786,6 +1167,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -801,6 +1183,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -808,6 +1192,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -815,6 +1201,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -822,9 +1210,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(4),
@@ -867,6 +1259,7 @@ describe('parseSummaryForRunes', () => {
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
+          runeId: '1:1',
         },
         {
           amount: 2000n,
@@ -874,6 +1267,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -885,6 +1279,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           divisibility: 38,
           runeName: 'DUMMYRUNE3',
+          runeId: '3:3',
           sourceAddresses: ['sender1'],
           symbol: 'C',
           inscriptionId: '',
@@ -892,6 +1287,61 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 1500n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+        '4': [
+          {
+            amount: 500n,
+            destinationAddress: 'changeAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -909,6 +1359,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -920,6 +1371,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -931,6 +1383,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -946,6 +1399,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -953,6 +1408,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -960,9 +1417,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(3),
@@ -992,6 +1453,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -1003,6 +1465,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           divisibility: 38,
           runeName: 'DUMMYRUNE3',
+          runeId: '3:3',
           sourceAddresses: ['otherAddress'],
           symbol: 'C',
           inscriptionId: '',
@@ -1010,6 +1473,50 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+        '2': [
+          {
+            amount: 1500n,
+            destinationAddress: 'otherAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+        '3': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -1026,6 +1533,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1041,9 +1549,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '1:1',
@@ -1062,6 +1574,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           divisibility: 0,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddresses: [],
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1073,10 +1586,33 @@ describe('parseSummaryForRunes', () => {
         runeIsMintable: true,
         runeIsOpen: true,
         runeName: 'DUMMYRUNE',
+        runeId: '1:1',
         symbol: 'A',
         inscriptionId: 'AINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 10000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1093,6 +1629,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1108,6 +1645,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1115,9 +1654,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '1:1',
@@ -1148,6 +1691,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -1159,6 +1703,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           divisibility: 0,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddresses: [],
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1170,10 +1715,53 @@ describe('parseSummaryForRunes', () => {
         runeIsMintable: true,
         runeIsOpen: true,
         runeName: 'DUMMYRUNE',
+        runeId: '1:1',
         symbol: 'A',
         inscriptionId: 'AINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 500n,
+            destinationAddress: 'recipient1',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 9000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1190,6 +1778,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1205,9 +1794,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           mint: '4:4',
@@ -1227,10 +1820,24 @@ describe('parseSummaryForRunes', () => {
         runeIsMintable: false,
         runeIsOpen: true,
         runeName: 'DUMMYRUNE4',
+        runeId: '4:4',
         symbol: 'D',
         inscriptionId: 'DINSCRIPTIONID',
       },
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+        ],
+      },
     });
   });
 
@@ -1247,6 +1854,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1262,9 +1870,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1288,6 +1900,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: false,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1296,6 +1909,19 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1312,6 +1938,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1327,9 +1954,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1353,6 +1984,7 @@ describe('parseSummaryForRunes', () => {
           destinationAddress: 'ordinalsAddress',
           divisibility: 0,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddresses: ['senderAddress'],
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1360,6 +1992,19 @@ describe('parseSummaryForRunes', () => {
       ],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1376,6 +2021,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1391,9 +2037,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1417,6 +2067,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1425,6 +2076,19 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 10000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1441,6 +2105,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1456,6 +2121,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1463,6 +2130,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1470,6 +2139,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1477,9 +2148,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [
@@ -1503,6 +2178,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1511,6 +2187,52 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '3': [
+          {
+            amount: 2501n,
+            destinationAddress: 'recipient3',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '4': [
+          {
+            amount: 2500n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1527,6 +2249,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1542,6 +2265,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1549,6 +2274,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1556,6 +2283,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
         {
           type: 'address',
@@ -1563,9 +2292,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0160',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(4),
@@ -1590,6 +2323,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1598,6 +2332,52 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '2': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '3': [
+          {
+            amount: 100n,
+            destinationAddress: 'recipient3',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+        '4': [
+          {
+            amount: 9703n,
+            destinationAddress: 'ordinalsAddress',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+        ],
+      },
     });
   });
 
@@ -1615,6 +2395,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1627,6 +2408,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1642,6 +2424,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1649,6 +2433,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1656,9 +2442,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           pointer: BigNumber(2),
@@ -1677,6 +2467,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1687,6 +2478,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -1697,6 +2489,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 38,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE3',
+          runeId: '3:3',
           sourceAddress: 'ordinalsAddress',
           symbol: 'C',
           inscriptionId: '',
@@ -1705,6 +2498,37 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '2': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient2',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 2000n,
+            destinationAddress: 'recipient2',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient2',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -1722,6 +2546,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1734,6 +2559,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1749,6 +2575,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0157',
         },
         {
           type: 'address',
@@ -1756,6 +2584,8 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0158',
         },
         {
           type: 'address',
@@ -1763,9 +2593,13 @@ describe('parseSummaryForRunes', () => {
           amount: 100,
           inscriptions: [],
           satributes: [],
+          script: ['CHECKSIG'],
+          scriptHex: 'ac0159',
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [],
@@ -1783,6 +2617,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 0,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           sourceAddress: 'ordinalsAddress',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
@@ -1793,6 +2628,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 1,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           sourceAddress: 'ordinalsAddress',
           symbol: 'B',
           inscriptionId: '',
@@ -1803,6 +2639,7 @@ describe('parseSummaryForRunes', () => {
           divisibility: 38,
           hasSufficientBalance: true,
           runeName: 'DUMMYRUNE3',
+          runeId: '3:3',
           sourceAddress: 'ordinalsAddress',
           symbol: 'C',
           inscriptionId: '',
@@ -1811,6 +2648,37 @@ describe('parseSummaryForRunes', () => {
       receipts: [],
       mint: undefined,
       burns: [],
+      outputMapping: {
+        '1': [
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 0,
+            inscriptionId: 'AINSCRIPTIONID',
+            runeId: '1:1',
+            runeName: 'DUMMYRUNE',
+            symbol: 'A',
+          },
+          {
+            amount: 2000n,
+            destinationAddress: 'recipient1',
+            divisibility: 1,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE2',
+            runeId: '2:2',
+            symbol: 'B',
+          },
+          {
+            amount: 1000n,
+            destinationAddress: 'recipient1',
+            divisibility: 38,
+            inscriptionId: '',
+            runeName: 'DUMMYRUNE3',
+            runeId: '3:3',
+            symbol: 'C',
+          },
+        ],
+      },
     });
   });
 
@@ -1828,6 +2696,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
         {
           extendedUtxo: {
@@ -1840,6 +2709,7 @@ describe('parseSummaryForRunes', () => {
           } as any,
           inscriptions: [],
           satributes: [],
+          walletWillSign: true,
         },
       ],
       outputs: [
@@ -1851,6 +2721,8 @@ describe('parseSummaryForRunes', () => {
         },
       ],
       hasSigHashNone: false,
+      hasSigHashSingle: false,
+      isFinal: true,
       runeOp: {
         Runestone: {
           edicts: [],
@@ -1864,11 +2736,13 @@ describe('parseSummaryForRunes', () => {
       transfers: [],
       receipts: [],
       mint: undefined,
+      outputMapping: {},
       burns: [
         {
           amount: 1000n,
           divisibility: 0,
           runeName: 'DUMMYRUNE',
+          runeId: '1:1',
           symbol: 'A',
           inscriptionId: 'AINSCRIPTIONID',
           sourceAddresses: ['ordinalsAddress'],
@@ -1877,6 +2751,7 @@ describe('parseSummaryForRunes', () => {
           amount: 2000n,
           divisibility: 1,
           runeName: 'DUMMYRUNE2',
+          runeId: '2:2',
           symbol: 'B',
           inscriptionId: '',
           sourceAddresses: ['ordinalsAddress'],
@@ -1885,6 +2760,7 @@ describe('parseSummaryForRunes', () => {
           amount: 1000n,
           divisibility: 38,
           runeName: 'DUMMYRUNE3',
+          runeId: '3:3',
           symbol: 'C',
           inscriptionId: '',
           sourceAddresses: ['ordinalsAddress'],

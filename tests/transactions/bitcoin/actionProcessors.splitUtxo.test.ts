@@ -104,6 +104,10 @@ describe('applySplitUtxoActions', () => {
       extendedUtxo: { outpoint: 'f00d:0', utxo: { value: 1000 } },
       addressContext,
     });
+    context.addOutputAddress.mockResolvedValueOnce({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
     const transaction = { inputsLength: 0 };
 
     await expect(() =>
@@ -127,6 +131,10 @@ describe('applySplitUtxoActions', () => {
     context.getUtxo.mockResolvedValueOnce({
       extendedUtxo: dummyExtendedUtxo,
       addressContext,
+    });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
     });
     const transaction = { inputsLength: 0 };
 
@@ -187,6 +195,10 @@ describe('applySplitUtxoActions', () => {
     context.getUtxo.mockResolvedValueOnce({
       extendedUtxo: dummyExtendedUtxo2,
       addressContext,
+    });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
     });
     const transaction = { inputsLength: 0 };
 
@@ -274,6 +286,10 @@ describe('applySplitUtxoActions', () => {
       extendedUtxo: dummyExtendedUtxo2,
       addressContext,
     });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
+    });
     const transaction = { inputsLength: 0 };
 
     const { inputs, outputs } = await applySplitUtxoActions(context as any, {}, transaction as any, {}, [
@@ -354,6 +370,10 @@ describe('applySplitUtxoActions', () => {
     context.getUtxo.mockResolvedValueOnce({
       extendedUtxo: dummyExtendedUtxo2,
       addressContext,
+    });
+    context.addOutputAddress.mockResolvedValue({
+      script: ['DUMMY_SCRIPT'],
+      scriptHex: 'DUMMY_SCRIPT_HEX',
     });
     const transaction = { inputsLength: 0 };
 

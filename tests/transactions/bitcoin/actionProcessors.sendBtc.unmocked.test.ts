@@ -107,6 +107,11 @@ describe('applySendBtcActionsAndFee', () => {
 
     context.addOutputAddress.mockImplementation((tx, address, amount) => {
       tx.addOutputAddress(address, amount);
+
+      return {
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
+      };
     });
   });
 
@@ -133,6 +138,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 17900,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(2100n);
@@ -159,6 +166,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: addresses[1].nestedSegwit,
         amount: 17900,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(2100n);
@@ -190,11 +199,15 @@ describe('applySendBtcActionsAndFee', () => {
         address: addresses[1].nativeSegwit,
         amount: 300000,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
       {
         address: paymentAddress,
         amount: 5860,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(4140n);
@@ -245,21 +258,29 @@ describe('applySendBtcActionsAndFee', () => {
         address: addresses[1].nativeSegwit,
         amount: 200000,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
       {
         address: addresses[1].nativeSegwit,
         amount: 50000,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
       {
         address: addresses[1].taproot,
         amount: 50000,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
       {
         address: paymentAddress,
         amount: 5120,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(4880n);
@@ -282,6 +303,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 5860,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(4140n);
@@ -306,6 +329,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 5860,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(4140n);
@@ -332,6 +357,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 37220,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(2780n);
@@ -363,6 +390,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 37220,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(2780n);
@@ -382,6 +411,8 @@ describe('applySendBtcActionsAndFee', () => {
         address: paymentAddress,
         amount: 25860,
         type: 'address',
+        script: ['DUMMY_SCRIPT'],
+        scriptHex: 'DUMMY_SCRIPT_HEX',
       },
     ]);
     expect(actualFee).toEqual(4140n);

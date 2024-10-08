@@ -6,14 +6,14 @@ import { UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from '../../api/ordinals';
 
 import BigNumber from 'bignumber.js';
-import { StorageAdapter, UtxoRuneEntry } from '../../types';
+import { ExtendedStorageAdapter, UtxoRuneEntry } from '../../types';
 import { JSONBig } from '../../utils/bignumber';
 
 vi.mock('../../api/ordinals');
 
 describe('UtxoCache', () => {
   let utxoCache: UtxoCache;
-  let mockStorageAdapter: StorageAdapter;
+  let mockStorageAdapter: ExtendedStorageAdapter;
   let mockCache: UtxoCacheStruct;
 
   beforeEach(() => {
@@ -51,6 +51,7 @@ describe('UtxoCache', () => {
       get: vi.fn(),
       set: vi.fn(),
       remove: vi.fn(),
+      getAllKeys: vi.fn(),
     };
     utxoCache = new UtxoCache({
       cacheStorageController: mockStorageAdapter,

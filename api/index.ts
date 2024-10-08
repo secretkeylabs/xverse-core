@@ -10,3 +10,4 @@ export * from './stacks';
 export * from './utxoCache';
 export * from './xverse';
 export * from './ordinalsService';
+export * from './stacksApi';

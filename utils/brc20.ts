@@ -17,6 +17,8 @@ export type Brc20Definition = {
 
 const utf8ByteSize = (str: string) => new Blob([str]).size;
 
+export const isValidTick = (ticker: string): boolean => utf8ByteSize(ticker) >= 4 && utf8ByteSize(ticker) <= 5;
+
 // brc-20 protocol
 // - p (protocol): brc-20
 // - op (operation): deploy
@@ -57,8 +59,7 @@ export const getBrc20Details = (content?: string, contentType?: string): undefin
     const isValidDeploy =
       parsedContent.op === 'deploy' &&
       isValidFields(parsedFields, deployRequiredFields, deployOptionalFields) &&
-      utf8ByteSize(parsedContent.tick) >= 4 &&
-      utf8ByteSize(parsedContent.tick) <= 5 &&
+      isValidTick(parsedContent.tick) &&
       isNumber(parsedContent.max) &&
       (!parsedContent.lim || isNumber(parsedContent.lim)) &&
       (!parsedContent.dec || isNumber(parsedContent.dec));
@@ -66,15 +67,13 @@ export const getBrc20Details = (content?: string, contentType?: string): undefin
     const isValidMint =
       parsedContent.op === 'mint' &&
       isValidFields(parsedFields, mintRequiredFields) &&
-      utf8ByteSize(parsedContent.tick) >= 4 &&
-      utf8ByteSize(parsedContent.tick) <= 5 &&
+      isValidTick(parsedContent.tick) &&
       isNumber(parsedContent.amt);
 
     const isValidTransfer =
       parsedContent.op === 'transfer' &&
       isValidFields(parsedFields, transferRequiredFields) &&
-      utf8ByteSize(parsedContent.tick) >= 4 &&
-      utf8ByteSize(parsedContent.tick) <= 5 &&
+      isValidTick(parsedContent.tick) &&
       isNumber(parsedContent.amt);
 
     if (!isValidDeploy && !isValidMint && !isValidTransfer) {

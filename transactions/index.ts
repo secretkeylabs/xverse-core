@@ -1,6 +1,6 @@
 export * as btcTransaction from './bitcoin';
+export type { InputToSign } from './bitcoin'; // exporting for backwards compatibility
 export * from './brc20';
-export * from './btc';
 export {
   createContractCallPromises,
   createDeployContractRequest,
@@ -11,7 +11,6 @@ export {
   hexStringToBuffer,
 } from './helper';
 export * from './inscriptionMint';
-export * from './psbt';
 export * from './rbf';
 export { default as rbf } from './rbf';
 export * as runesTransaction from './runes';

@@ -1,6 +1,7 @@
 import * as btc from '@scure/btc-signer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
+import { ExtendedUtxo } from '../../../transactions/bitcoin';
 import {
   LedgerP2trAddressContext,
   LedgerP2wpkhAddressContext,
@@ -11,7 +12,6 @@ import {
 } from '../../../transactions/bitcoin/context';
 import { createTransactionContext } from '../../../transactions/bitcoin/contextFactory';
 import { TestAddressContext, addresses } from './helpers';
-import { ExtendedUtxo } from '../../../transactions/bitcoin';
 
 vi.mock('../../../api/esplora/esploraAPiProvider');
 
@@ -223,11 +223,22 @@ describe('TransactionContext', () => {
       const context = new TransactionContext('Mainnet', paymentAddressContext, paymentAddressContext);
 
       const dummyTransaction = {
+        outputsLength: 6,
+        getOutput: vi.fn(),
         addOutputAddress: vi.fn(),
       } as any;
 
-      context.addOutputAddress(dummyTransaction, 'bob', 1000n);
+      dummyTransaction.getOutput.mockReturnValueOnce({ script: new Uint8Array([0x6a, 0x01, 0x5a]) });
 
+      const result = context.addOutputAddress(dummyTransaction, 'bob', 1000n);
+
+      expect(result).toEqual({
+        script: ['RETURN', '5a'],
+        scriptHex: '6a015a',
+      });
+
+      expect(dummyTransaction.getOutput).toHaveBeenCalledTimes(1);
+      expect(dummyTransaction.getOutput).toHaveBeenCalledWith(5);
       expect(dummyTransaction.addOutputAddress).toHaveBeenCalledTimes(1);
       expect(dummyTransaction.addOutputAddress).toHaveBeenCalledWith('bob', 1000n, btc.NETWORK);
     });
@@ -244,11 +255,22 @@ describe('TransactionContext', () => {
       const context = new TransactionContext('Testnet', paymentAddressContext, paymentAddressContext);
 
       const dummyTransaction = {
+        outputsLength: 1,
+        getOutput: vi.fn(),
         addOutputAddress: vi.fn(),
       } as any;
 
-      context.addOutputAddress(dummyTransaction, 'bob', 1000n);
+      dummyTransaction.getOutput.mockReturnValueOnce({ script: new Uint8Array([0x02, 0x5a, 0x69]) });
 
+      const result = context.addOutputAddress(dummyTransaction, 'bob', 1000n);
+
+      expect(result).toEqual({
+        script: ['5a69'],
+        scriptHex: '025a69',
+      });
+
+      expect(dummyTransaction.getOutput).toHaveBeenCalledTimes(1);
+      expect(dummyTransaction.getOutput).toHaveBeenCalledWith(0);
       expect(dummyTransaction.addOutputAddress).toHaveBeenCalledTimes(1);
       expect(dummyTransaction.addOutputAddress).toHaveBeenCalledWith('bob', 1000n, btc.TEST_NETWORK);
     });

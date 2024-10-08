@@ -15,6 +15,7 @@ export {
 } from './constant';
 export * from './currency';
 export * from './encryption';
+export * from './fungibleTokens';
 export * from './gaia';
 export * from './hooks';
 export * from './ledger';

@@ -2,12 +2,15 @@ import { hex } from '@scure/base';
 import { BigNumber } from 'bignumber.js';
 import { getRunesClient } from '../api';
 import { DEFAULT_DUST_VALUE } from '../constant';
+import { Edict } from '../types';
 import { processPromisesBatch } from '../utils/promises';
 import { ActionType, EnhancedTransaction, ExtendedUtxo, TransactionContext, TransactionOptions } from './bitcoin';
 import { Action } from './bitcoin/types';
 
-const getUtxosWithRuneBalance = async (extendedUtxos: ExtendedUtxo[], runeName: string) => {
-  const runeUtxosRaw = await processPromisesBatch(extendedUtxos, 20, async (utxo) => {
+const getUtxosWithRuneBalance = async (extendedUtxos: ExtendedUtxo[], runeName: string, utxosToSkip: Set<string>) => {
+  const filteredUtxos = extendedUtxos.filter((utxo) => !utxosToSkip.has(utxo.outpoint));
+
+  const runeUtxosRaw = await processPromisesBatch(filteredUtxos, 20, async (utxo) => {
     const balance = await utxo.getRuneBalance(runeName);
     return {
       utxo,
@@ -26,76 +29,102 @@ const getUtxosWithRuneBalance = async (extendedUtxos: ExtendedUtxo[], runeName: 
   return runeUtxos;
 };
 
-export const sendRunes = async (
+type RuneRecipient = {
+  runeName: string;
+  toAddress: string;
+  /* Amount should be in coin units without divisibility applied, hence the bigint */
+  amount: bigint;
+};
+export const sendManyRunes = async (
   context: TransactionContext,
-  runeName: string,
-  toAddress: string,
-  amount: bigint,
+  recipients: RuneRecipient[],
   feeRate: number,
   options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'allowUnknownOutputs'>,
 ) => {
-  if (amount <= 0) {
+  if (recipients.some((r) => r.amount <= 0)) {
     throw new Error('Amount must be positive');
   }
 
-  // we use bigint for the amount type to make it explicit that this function requires the individual coin units
-  // rather than the decimal amount
-  const amountBigNumber = BigNumber(amount.toString());
+  const runeTotalsToSend = recipients.reduce((acc, { runeName, amount }) => {
+    acc[runeName] = BigNumber(acc[runeName] ?? 0).plus(amount.toString());
+    return acc;
+  }, {} as Record<string, BigNumber>);
 
-  const runesApi = getRunesClient(context.network);
+  const allocatedRunes: Record<string, BigNumber> = {};
 
   const ordinalsUtxos = await context.ordinalsAddress.getUtxos();
+  const selectedOutpoints = new Set<string>();
 
-  // get only utxos with positive balance of desired rune
-  const runeUtxos = await getUtxosWithRuneBalance(ordinalsUtxos, runeName);
+  for (const [runeName, totalToSend] of Object.entries(runeTotalsToSend)) {
+    // get only utxos with positive balance of desired rune
+    const runeUtxos = await getUtxosWithRuneBalance(ordinalsUtxos, runeName, selectedOutpoints);
 
-  // sort in desc order of balance
-  runeUtxos.sort((a, b) => {
-    const diff = b.balance.minus(a.balance);
-    if (diff.gt(0)) return 1;
-    if (diff.lt(0)) return -1;
-    return 0;
-  });
+    // sort in desc order of balance
+    runeUtxos.sort((a, b) => {
+      const diff = b.balance.minus(a.balance);
+      if (diff.gt(0)) return 1;
+      if (diff.lt(0)) return -1;
+      return 0;
+    });
 
-  // get enough utxos to cover the amount
-  const totalBalances: Record<string, BigNumber> = {};
-  const selectedOutpoints: string[] = [];
+    for (const { utxo } of runeUtxos) {
+      const utxoBundle = await utxo.getBundleData();
 
-  for (const { utxo } of runeUtxos) {
-    const utxoBundle = await utxo.getBundleData();
+      for (const [rune, runeDetails] of utxoBundle?.runes ?? []) {
+        allocatedRunes[rune] = BigNumber(allocatedRunes[rune] ?? 0).plus(runeDetails.amount);
+      }
 
-    for (const [rune, runeDetails] of utxoBundle?.runes ?? []) {
-      totalBalances[rune] = BigNumber(totalBalances[rune] ?? 0).plus(runeDetails.amount);
+      selectedOutpoints.add(utxo.outpoint);
+
+      if (allocatedRunes[runeName].gte(totalToSend)) {
+        break;
+      }
     }
 
-    selectedOutpoints.push(utxo.outpoint);
-
-    if (totalBalances[runeName].gte(amountBigNumber)) {
-      break;
+    if (allocatedRunes[runeName].lt(totalToSend)) {
+      throw new Error(`Not enough runes to send for ${runeName}`);
     }
-  }
-
-  if (totalBalances[runeName].lt(amountBigNumber)) {
-    throw new Error('Not enough runes to send');
   }
 
   // calculate if there is change
   // There will be change if there are other ticker balances on the input UTXOs or if the balance of the ticker
   // is greater than the amount being sent
-  const numberOfRuneTickersInUtxos = Object.keys(totalBalances).length;
-  const tickerBalanceGreaterThanSendAmount = totalBalances[runeName].gt(amountBigNumber);
-  const hasChange = numberOfRuneTickersInUtxos > 1 || tickerBalanceGreaterThanSendAmount;
+  const numberOfRuneTickersInUtxos = Object.keys(allocatedRunes).length;
+  const numberOfRunesToSend = Object.keys(runeTotalsToSend).length;
+  const tickerBalanceGreaterThanSendAmount = Object.entries(runeTotalsToSend).some(([runeName, amountToSend]) =>
+    allocatedRunes[runeName].gt(amountToSend),
+  );
+  const hasChange = numberOfRuneTickersInUtxos > numberOfRunesToSend || tickerBalanceGreaterThanSendAmount;
+
+  const runesApi = getRunesClient(context.network);
 
   // create txn with required rune utxos as input
-  const runeMetadata = await runesApi.getRuneInfo(runeName);
+  const sendActions: Action[] = [];
+  const edicts: Edict[] = [];
 
-  if (!runeMetadata) {
-    throw new Error('Rune not found');
+  for (const recipient of recipients) {
+    const runeMetadata = await runesApi.getRuneInfo(recipient.runeName);
+
+    if (!runeMetadata) {
+      throw new Error('Rune not found');
+    }
+
+    sendActions.push({
+      type: ActionType.SEND_BTC,
+      toAddress: recipient.toAddress,
+      amount: DEFAULT_DUST_VALUE,
+      combinable: false,
+    });
+    edicts.push({
+      id: runeMetadata.id,
+      amount: BigNumber(recipient.amount.toString()),
+      output: BigNumber(sendActions.length),
+    });
   }
 
   const transferScript = await runesApi.getEncodedScriptHex({
-    edicts: [{ id: runeMetadata.id, amount: amountBigNumber, output: BigNumber(1) }],
-    pointer: hasChange ? 2 : undefined,
+    edicts,
+    pointer: hasChange ? sendActions.length + 1 : undefined,
   });
 
   const actions: Action[] = [
@@ -103,12 +132,7 @@ export const sendRunes = async (
       type: ActionType.SCRIPT,
       script: hex.decode(transferScript),
     },
-    {
-      type: ActionType.SEND_BTC,
-      toAddress: toAddress,
-      amount: DEFAULT_DUST_VALUE,
-      combinable: false,
-    },
+    ...sendActions,
   ];
 
   if (hasChange) {
@@ -122,11 +146,23 @@ export const sendRunes = async (
 
   const transaction = new EnhancedTransaction(context, actions, feeRate, {
     ...options,
-    forceIncludeOutpointList: selectedOutpoints,
+    forceIncludeOutpointList: [...selectedOutpoints],
     allowUnknownOutputs: true,
   });
 
   return transaction;
+};
+
+/** @deprecated - use sendManyRunes with single recipient instead */
+export const sendRunes = async (
+  context: TransactionContext,
+  runeName: string,
+  toAddress: string,
+  amount: bigint,
+  feeRate: number,
+  options?: Omit<TransactionOptions, 'forceIncludeOutpointList' | 'allowUnknownOutputs'>,
+) => {
+  return sendManyRunes(context, [{ runeName, toAddress, amount }], feeRate, options);
 };
 
 export const recoverRunes = async (

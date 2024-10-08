@@ -3,8 +3,7 @@ import * as btc from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
-import { InputToSign } from '../psbt';
-import { TransactionContext } from './context';
+import { InputToSign, TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
@@ -17,17 +16,18 @@ import {
   TransactionFeeOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
+import { estimateVSize } from './utils/transactionVsizeEstimator';
 
-type ParsedOutputMetadata =
-  | { address: string; script?: undefined; type?: undefined }
-  | { address?: undefined; script: string[]; scriptHex: string; type?: undefined }
+type ParsedOutputMetadata = { script: string[]; scriptHex: string } & (
+  | { address: string; type?: undefined }
+  | { address?: undefined; type?: undefined }
   | {
       address?: undefined;
-      script?: undefined;
       pubKeys: string[];
       type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
       m: number;
-    };
+    }
+);
 
 export class EnhancedPsbt {
   private readonly _context!: TransactionContext;
@@ -37,7 +37,7 @@ export class EnhancedPsbt {
   private readonly _inputsToSign?: InputToSign[];
 
   // TODO: Try and make this non-nullable by computing it in the constructor
-  private readonly _inputsToSignMap?: Record<number, { address: string; sigHash?: number }[]>;
+  private readonly _inputsToSignMap?: Record<number, { address: string }[]>;
 
   private readonly _isSigHashAll?: boolean;
 
@@ -64,10 +64,10 @@ export class EnhancedPsbt {
             this._inputsToSignMap[inputIndex] = [];
           }
 
-          this._inputsToSignMap[inputIndex].push({ address: input.address, sigHash: input.sigHash });
+          this._inputsToSignMap[inputIndex].push({ address: input.address });
 
           const txnInput = txn.getInput(inputIndex);
-          const sigHashToCheck = txnInput.sighashType ?? input.sigHash ?? btc.SigHash.DEFAULT;
+          const sigHashToCheck = txnInput.sighashType ?? btc.SigHash.DEFAULT;
 
           // we need to do check for single first as it's value is 3 while none is 2 and all is 1
           if ((sigHashToCheck & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
@@ -111,11 +111,16 @@ export class EnhancedPsbt {
       };
     }
 
+    const script = btc.Script.decode(output.script).map((i) => (i instanceof Uint8Array ? hex.encode(i) : `${i}`));
+    const scriptHex = hex.encode(output.script);
+
     if (outputScript.type === 'pk') {
       //for script outputs
       return {
         type: 'pk',
         pubKeys: [hex.encode(outputScript.pubkey)],
+        script,
+        scriptHex,
         m: 1,
       };
     }
@@ -124,6 +129,8 @@ export class EnhancedPsbt {
       return {
         type: outputScript.type,
         pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        script,
+        scriptHex,
         m: outputScript.m,
       };
     }
@@ -132,11 +139,17 @@ export class EnhancedPsbt {
       return {
         type: outputScript.type,
         pubKeys: outputScript.pubkeys.map((pk) => hex.encode(pk)),
+        script,
+        scriptHex,
         m: outputScript.pubkeys.length,
       };
     }
 
-    return { address: btc.Address(btcNetwork).encode(outputScript) };
+    return {
+      address: btc.Address(btcNetwork).encode(outputScript),
+      script,
+      scriptHex,
+    };
   }
 
   getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
@@ -181,7 +194,7 @@ export class EnhancedPsbt {
         throw new Error(`Could not parse input ${inputIndex}`);
       }
 
-      const sigHash = this._inputsToSignMap?.[inputIndex]?.[0]?.sigHash ?? inputRaw.sighashType;
+      const sigHash = inputRaw.sighashType;
       inputs.push({
         extendedUtxo: inputExtendedUtxo,
         sigHash,
@@ -230,7 +243,7 @@ export class EnhancedPsbt {
       const outputMetadata = this.parseAddressFromOutput(transaction, outputIndex);
       const outputRaw = transaction.getOutput(outputIndex);
 
-      if (outputMetadata.script !== undefined) {
+      if (outputMetadata.type === undefined && outputMetadata.address === undefined) {
         outputs.push({
           type: 'script',
           script: outputMetadata.script,
@@ -263,6 +276,8 @@ export class EnhancedPsbt {
         outputs.push({
           type: 'address',
           address: outputMetadata.address,
+          script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           amount: Number(amount),
           inscriptions,
           satributes,
@@ -270,6 +285,8 @@ export class EnhancedPsbt {
       } else {
         outputs.push({
           type: outputMetadata.type,
+          script: outputMetadata.script,
+          scriptHex: outputMetadata.scriptHex,
           pubKeys: outputMetadata.pubKeys,
           amount: Number(amount),
           inscriptions,
@@ -312,14 +329,28 @@ export class EnhancedPsbt {
     const runesClient = getRunesClient(this._context.network);
     const runeOp = hasScriptOutput ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
 
+    const isFinal = isSigHashAll;
+    let feeRate: number | undefined = undefined;
+
+    if (isFinal && feeOutput) {
+      // if the transaction is final, we can calculate the fee rate by estimating the size of the transaction
+      try {
+        const txnSize = estimateVSize(transaction);
+        feeRate = feeOutput.amount / txnSize;
+      } catch (e) {
+        // if we can't estimate the size, we can't calculate the fee rate, so we just ignore it
+      }
+    }
+
     return {
       inputs: enhancedInputs,
       outputs,
       feeOutput,
       hasSigHashNone,
       hasSigHashSingle,
-      isFinal: isSigHashAll,
+      isFinal,
       runeOp,
+      feeRate,
     };
   }
 

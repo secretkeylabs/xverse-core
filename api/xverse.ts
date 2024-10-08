@@ -14,19 +14,52 @@ import {
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
+  CollectionsListFilters,
+  CreateRuneListingCancellationRequest,
+  CreateRuneListingCancellationResponse,
+  CreateRuneListingRequest,
+  CreateRuneListingResponse,
   DappSectionData,
+  ExecuteOrderRequest,
+  ExecuteOrderResponse,
+  ExecuteStxOrderRequest,
+  ExecuteStxOrderResponse,
+  ExecuteUtxoOrderRequest,
+  ExecuteUtxoOrderResponse,
+  GetDestinationTokensRequest,
+  GetDestinationTokensResponse,
+  GetListedUtxosRequest,
+  GetListedUtxosResponse,
+  GetQuotesRequest,
+  GetQuotesResponse,
+  GetRuneMarketDataRequest,
+  GetSourceTokensRequest,
+  GetUtxosRequest,
+  GetUtxosResponse,
   Inscription,
   InscriptionInCollectionsList,
+  ListingRuneMarketInfo,
   NetworkType,
   NotificationBanner,
   OrdinalInfo,
+  PlaceOrderRequest,
+  PlaceOrderResponse,
+  PlaceStxOrderRequest,
+  PlaceStxOrderResponse,
+  PlaceUtxoOrderRequest,
+  PlaceUtxoOrderResponse,
   SignedUrlResponse,
   SimplePriceResponse,
   SponsorInfoResponse,
   SponsorTransactionResponse,
   StackerInfo,
   StackingPoolInfo,
+  SubmitRuneListingCancellationRequest,
+  SubmitRuneListingCancellationResponse,
+  SubmitRuneListingRequest,
+  SubmitRuneListingResponse,
   SupportedCurrency,
+  TokenBasic,
   TokenFiatRateResponse,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
@@ -50,22 +83,22 @@ class XverseApi {
     this.network = network;
   }
 
-  async fetchBtcFeeRate(): Promise<BtcFeeResponse> {
+  fetchBtcFeeRate = async (): Promise<BtcFeeResponse> => {
     const response = await this.client.get('/v1/fees/btc');
     return response.data;
-  }
+  };
 
-  async fetchStxToBtcRate(): Promise<BigNumber> {
+  fetchStxToBtcRate = async (): Promise<BigNumber> => {
     const response = await this.client.get('/v1/prices/stx/btc', { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.stxBtcRate.toString());
-  }
+  };
 
-  async fetchBtcToCurrencyRate({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> {
+  fetchBtcToCurrencyRate = async ({ fiatCurrency }: { fiatCurrency: SupportedCurrency }): Promise<BigNumber> => {
     const response = await this.client.get(`/v1/prices/btc/${fiatCurrency}`, { timeout: API_TIMEOUT_MILLI });
     return new BigNumber(response.data.btcFiatRate.toString());
-  }
+  };
 
-  async fetchTokenFiateRate(ft: string, fiatCurrency: string): Promise<BigNumber> {
+  fetchTokenFiateRate = async (ft: string, fiatCurrency: string): Promise<BigNumber> => {
     const url = `/v1/prices/${ft}/${fiatCurrency}`;
 
     return this.client
@@ -76,22 +109,22 @@ class XverseApi {
       .catch(() => {
         return new BigNumber(0);
       });
-  }
+  };
 
-  async getCoinsInfo(contractids: string[], fiatCurrency: string): Promise<CoinsResponse> {
-    const response = await this.client.post<CoinsResponse>('/v1/coins', {
+  getSip10Tokens = async (contractids: string[], fiatCurrency: string): Promise<CoinsResponse> => {
+    const response = await this.client.post<CoinsResponse>('/v1/sip10/tokens', {
       currency: fiatCurrency,
       coins: JSON.stringify(contractids),
     });
     return response.data;
-  }
+  };
 
   /**
    * get BRC-20 supported tokens with the fiat rate
    * @param tickers provided to get the fiat rate along with supported tokens
    * @param fiatCurrency
    */
-  async getBrc20Tokens(tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> {
+  getBrc20Tokens = async (tickers: string[], fiatCurrency: string): Promise<Brc20TokensResponse> => {
     const response = await this.client.get<Brc20TokensResponse>('/v1/brc20/tokens', {
       params: {
         currency: fiatCurrency,
@@ -99,7 +132,7 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
   /**
    * get rune fiat rate data
@@ -107,7 +140,7 @@ class XverseApi {
    * @param fiatCurrency
    * @deprecated use getRuneFiatRatesByRuneIds instead
    */
-  async getRuneFiatRates(runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
+  getRuneFiatRates = async (runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> => {
     const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
       params: {
         currency: fiatCurrency,
@@ -115,120 +148,137 @@ class XverseApi {
       },
     });
     return response.data;
-  }
+  };
 
   /**
    * get rune tx history for a given address and rune
    * @param address ordinal address
-   * @param rune e.g.LFG•ROCKET•RUNE
+   * @param runeName e.g.LFG•ROCKET•RUNE
+   * @param offset
+   * @param limit
    */
-  async getRuneTxHistory(
+  getRuneTxHistory = async (
     address: string,
     runeName: string,
     offset: number,
     limit: number,
-  ): Promise<APIGetRunesActivityForAddressResponse> {
+  ): Promise<APIGetRunesActivityForAddressResponse> => {
     const response = await this.client.get<APIGetRunesActivityForAddressResponse>(
       `/v1/address/${address}/rune/${runeName}?offset=${offset}&limit=${limit}`,
     );
     return response.data;
-  }
+  };
 
-  async fetchAppInfo(): Promise<AppInfo> {
+  fetchAppInfo = async (): Promise<AppInfo> => {
     const response = await this.client.get<AppInfo>('/v1/info');
     return response.data;
-  }
+  };
 
-  async fetchStackingPoolInfo(): Promise<StackingPoolInfo> {
+  fetchStackingPoolInfo = async (): Promise<StackingPoolInfo> => {
     const response = await this.client.get<StackingPoolInfo>(`/v1/pool/info?pool_version=5`);
     return response.data;
-  }
+  };
 
-  async fetchPoolStackerInfo(stxAddress: string): Promise<StackerInfo> {
+  fetchPoolStackerInfo = async (stxAddress: string): Promise<StackerInfo> => {
     const response = await this.client.get<StackerInfo>(`/v1/pool/${stxAddress}/status`);
     return response.data;
-  }
+  };
 
-  async getMoonPaySignedUrl(unsignedUrl: string): Promise<SignedUrlResponse> {
+  getMoonPaySignedUrl = async (unsignedUrl: string): Promise<SignedUrlResponse> => {
     const response = await this.client.post<SignedUrlResponse>('/v1/sign-url', {
       url: unsignedUrl,
     });
     return response.data;
-  }
+  };
 
-  async getBinanceSignature(srcData: string): Promise<SignedUrlResponse> {
+  getBinanceSignature = async (srcData: string): Promise<SignedUrlResponse> => {
     const response = await this.client.post<SignedUrlResponse>('/v1/binance/sign', {
       url: srcData,
     });
     return response.data;
-  }
+  };
 
-  async getOrdinalInfo(ordinalId: string): Promise<OrdinalInfo> {
+  getOrdinalInfo = async (ordinalId: string): Promise<OrdinalInfo> => {
     const response = await this.client.get(`/v1/ordinals/${ordinalId}`);
     return response.data;
-  }
+  };
 
-  async getErc721Metadata(tokenContract: string, tokenId: string): Promise<string> {
+  getErc721Metadata = async (tokenContract: string, tokenId: string): Promise<string> => {
     const response = await this.client.get(`/v1/eth/${tokenContract}/${tokenId}`);
     return response.data;
-  }
+  };
 
-  async getCollections(address: string, offset?: number, limit?: number): Promise<CollectionsList> {
+  /**
+   * Get inscription collections by address
+   * @param address ordinal address
+   * @param offset
+   * @param limit
+   * @param filters options to star/hide certain collectibleIds or inscriptionIds
+   */
+  getCollections = async (
+    address: string,
+    offset?: number,
+    limit?: number,
+    filters?: CollectionsListFilters,
+  ): Promise<CollectionsList> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
       params: {
         limit,
         offset,
+        filters,
       },
     });
     return response.data;
-  }
+  };
 
-  async getCollectionMarketData(collectionId: string): Promise<CollectionMarketDataResponse> {
-    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
-    return response.data;
-  }
-
-  async getCollectionSpecificInscriptions(
+  getCollectionSpecificInscriptions = async (
     address: string,
     collectionId: string,
     offset?: number,
     limit?: number,
-  ): Promise<InscriptionInCollectionsList> {
+    filters?: CollectionsListFilters,
+  ): Promise<InscriptionInCollectionsList> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/collections/${collectionId}`, {
       params: {
         limit,
         offset,
+        filters,
       },
     });
     return response.data;
-  }
+  };
 
-  async getInscription(address: string, inscriptionId: string): Promise<Inscription> {
+  getCollectionMarketData = async (collectionId: string): Promise<CollectionMarketDataResponse> => {
+    const response = await this.client.get(`/v1/ordinals/collections/${collectionId}`);
+    return response.data;
+  };
+
+  getInscription = async (address: string, inscriptionId: string): Promise<Inscription> => {
     const response = await this.client.get(`/v1/address/${address}/ordinals/inscriptions/${inscriptionId}`);
     return response.data;
-  }
+  };
 
-  async getAppConfig() {
+  getAppConfig = async () => {
     const response = await this.client.get(`/v1/app-config`);
     return response;
-  }
+  };
 
-  async getFeaturedDapps(): Promise<DappSectionData[]> {
+  getFeaturedDapps = async (): Promise<DappSectionData[]> => {
     const response = await this.client.get(`/v2/featured/dapp`);
     return response.data.featuredDapp;
-  }
+  };
 
-  async getNotificationBanners(): Promise<NotificationBanner[]> {
+  getNotificationBanners = async (): Promise<NotificationBanner[]> => {
     const response = await this.client.get(`/v2/notification-banners`);
     return response.data.notificationBanners;
-  }
+  };
 
-  async getSpamTokensList() {
+  getSpamTokensList = async () => {
     const response = await this.client.get(`/v1/spam-tokens`);
     return response.data;
-  }
+  };
 
-  async getAppFeatures(context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) {
+  getAppFeatures = async (context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) => {
     const response = await this.client.post<
       AppFeaturesResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this is the axios default
@@ -236,7 +286,97 @@ class XverseApi {
       AppFeaturesBody
     >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
-  }
+  };
+
+  listings = {
+    getRuneMarketData: async (body: GetRuneMarketDataRequest): Promise<ListingRuneMarketInfo[]> => {
+      const response = await this.client.post(`/v1/listings/runes/market-data`, body);
+      return response.data;
+    },
+    getRuneSellOrder: async (body: CreateRuneListingRequest): Promise<CreateRuneListingResponse[]> => {
+      const response = await this.client.post<CreateRuneListingResponse[]>('/v1/listings/runes/create-order', body);
+      return response.data;
+    },
+    submitRuneSellOrder: async (body: SubmitRuneListingRequest[]): Promise<SubmitRuneListingResponse[]> => {
+      const response = await this.client.post<SubmitRuneListingResponse[]>('/v1/listings/runes/submit-order', body);
+      return response.data;
+    },
+    getListedUtxos: async (body: GetListedUtxosRequest): Promise<GetListedUtxosResponse> => {
+      const response = await this.client.post<GetListedUtxosResponse>('/v1/listings/runes/listed-utxos', body);
+      return response.data;
+    },
+    getRuneCancelOrder: async (
+      body: CreateRuneListingCancellationRequest,
+    ): Promise<CreateRuneListingCancellationResponse[]> => {
+      const response = await this.client.post<CreateRuneListingCancellationResponse[]>(
+        '/v1/listings/runes/create-cancellation',
+        body,
+      );
+      return response.data;
+    },
+    submitRuneCancelOrder: async (
+      body: SubmitRuneListingCancellationRequest,
+    ): Promise<SubmitRuneListingCancellationResponse[]> => {
+      const response = await this.client.post<SubmitRuneListingCancellationResponse[]>(
+        '/v1/listings/runes/submit-cancellation',
+        body,
+      );
+      return response.data;
+    },
+  };
+
+  swaps = {
+    /** Get the tokens that the user has which are supported by the swap services */
+    getSourceTokens: async (body: GetSourceTokensRequest): Promise<TokenBasic[]> => {
+      const response = await this.client.post<TokenBasic[]>('/v1/swaps/get-source-tokens', body);
+      return response.data;
+    },
+    /** Get the tokens that the user can swap to, depending on the tokens they have in their wallet */
+    getDestinationTokens: async (body: GetDestinationTokensRequest): Promise<GetDestinationTokensResponse> => {
+      const response = await this.client.post<GetDestinationTokensResponse>('/v1/swaps/get-destination-tokens', body);
+      return response.data;
+    },
+    /** Get quotes for a specific token swap */
+    getQuotes: async (body: GetQuotesRequest): Promise<GetQuotesResponse> => {
+      const response = await this.client.post<GetQuotesResponse>('/v1/swaps/get-quotes', body);
+      return response.data;
+    },
+    /** Get utxos for a swap pair from a specific provider */
+    getUtxos: async (body: GetUtxosRequest): Promise<GetUtxosResponse> => {
+      const response = await this.client.post<GetUtxosResponse>('/v1/swaps/get-utxos', body);
+      return response.data;
+    },
+    /** Place a swap order. This is for AMM providers. */
+    placeOrder: async (body: PlaceOrderRequest): Promise<PlaceOrderResponse> => {
+      const response = await this.client.post<PlaceOrderResponse>('/v1/swaps/place-order', body);
+      return response.data;
+    },
+    /** Execute a swap order. This is for AMM providers. */
+    executeOrder: async (body: ExecuteOrderRequest): Promise<ExecuteOrderResponse> => {
+      const response = await this.client.post<ExecuteOrderResponse>('/v1/swaps/execute-order', body);
+      return response.data;
+    },
+    /** Place a swap order. This is for STX providers. */
+    placeStxOrder: async (body: PlaceStxOrderRequest): Promise<PlaceStxOrderResponse> => {
+      const response = await this.client.post<PlaceStxOrderResponse>('/v1/swaps/place-stx-order', body);
+      return response.data;
+    },
+    /** Execute a swap order. This is for STX providers. */
+    executeStxOrder: async (body: ExecuteStxOrderRequest): Promise<ExecuteStxOrderResponse> => {
+      const response = await this.client.post<ExecuteStxOrderResponse>('/v1/swaps/execute-stx-order', body);
+      return response.data;
+    },
+    /** Place a swap order. This is for UTXO based providers. */
+    placeUtxoOrder: async (body: PlaceUtxoOrderRequest): Promise<PlaceUtxoOrderResponse> => {
+      const response = await this.client.post<PlaceUtxoOrderResponse>('/v1/swaps/place-utxo-order', body);
+      return response.data;
+    },
+    /** Execute a swap order. This is for UTXO based providers. */
+    executeUtxoOrder: async (body: ExecuteUtxoOrderRequest): Promise<ExecuteUtxoOrderResponse> => {
+      const response = await this.client.post<ExecuteUtxoOrderResponse>('/v1/swaps/execute-utxo-order', body);
+      return response.data;
+    },
+  };
 }
 
 const apiClients: Partial<Record<NetworkType, XverseApi>> = {};
@@ -288,7 +428,7 @@ export async function getCoinsInfo(
   fiatCurrency: string,
 ): Promise<CoinsResponse | null> {
   return getXverseApiClient(network)
-    .getCoinsInfo(contractids, fiatCurrency)
+    .getSip10Tokens(contractids, fiatCurrency)
     .catch(() => null);
 }
 
