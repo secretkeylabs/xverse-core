@@ -155,8 +155,8 @@ export function applySortAndCollectionsFilters(
     const orderedCollection = {
       ...collection,
       all_nfts: collection.all_nfts.sort((a, b) => {
-        const aStarred = starredCollectibleIds.indexOf(`${a.asset_identifier}::${a.identifier.tokenId}`);
-        const bStarred = starredCollectibleIds.indexOf(`${b.asset_identifier}::${b.identifier.tokenId}`);
+        const aStarred = starredCollectibleIds.indexOf(`${a.asset_identifier}:${a.identifier.tokenId}`);
+        const bStarred = starredCollectibleIds.indexOf(`${b.asset_identifier}:${b.identifier.tokenId}`);
         // Non-starred items have -1, so they should move to the right
         if (aStarred === -1) return 1;
         if (bStarred === -1) return -1;

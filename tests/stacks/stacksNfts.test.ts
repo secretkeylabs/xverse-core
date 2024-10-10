@@ -398,7 +398,7 @@ describe('applySortAndCollectionsFilters', () => {
   });
 
   it('should show starred NFTs inside a collection in front', () => {
-    const starredCollectibleIds = ['SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts::boom::13285'];
+    const starredCollectibleIds = ['SP497E7RX3233ATBS2AB9G4WTHB63X5PBSP5VGAQ.boom-nfts::boom:13285'];
     const result = applySortAndCollectionsFilters(mockStacksCollection, { starredCollectibleIds });
     expect(result).toStrictEqual(mockStarredItemInACollection);
   });
