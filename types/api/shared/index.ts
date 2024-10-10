@@ -73,4 +73,5 @@ export type FungibleToken = BaseToken & {
   runeSymbol?: string | null;
   runeInscriptionId?: string | null;
   protocol?: FungibleTokenProtocol;
+  priceChangePercentage24h?: string | null;
 };
