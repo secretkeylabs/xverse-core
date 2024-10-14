@@ -5,6 +5,7 @@ import { CoreError } from '../../utils/coreError';
 import { Transport } from '../../ledger';
 import { TransactionContext } from '../../transactions/bitcoin';
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
+import { TransportWebUSB } from '@keystonehq/hw-transport-webusb';
 
 type Props = {
   context: TransactionContext;
@@ -35,7 +36,7 @@ const useBrc20TransferExecute = (props: Props) => {
   const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
   const executeTransfer = useCallback(
-    (executeOptions?: { ledgerTransport?: Transport }) => {
+    (executeOptions?: { ledgerTransport?: Transport; keystoneTransport?: TransportWebUSB }) => {
       if (running) return;
 
       const innerProps = {
@@ -56,6 +57,7 @@ const useBrc20TransferExecute = (props: Props) => {
         try {
           const transferGenerator = await brc20TransferExecute(innerProps, context, {
             ledgerTransport: executeOptions?.ledgerTransport,
+            keystoneTransport: executeOptions?.keystoneTransport,
           });
 
           let done = false;

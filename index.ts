@@ -19,6 +19,7 @@ export * from './fungibleTokens';
 export * from './gaia';
 export * from './hooks';
 export * from './ledger';
+export * from './keystone';
 export * from './seedVault';
 export * from './stacking';
 export * from './stacksCollectible';

@@ -81,6 +81,8 @@ const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFPro
     p2btc = btc.p2sh(p2wpkh, network);
   } else if (wallet.accountType === 'ledger') {
     p2btc = btc.p2wpkh(publicKeyBuff, network);
+  } else if (wallet.accountType === 'keystone') {
+    p2btc = btc.p2wpkh(publicKeyBuff, network);
   } else {
     throw new Error('Unrecognised account type');
   }
@@ -160,6 +162,8 @@ class RbfTransaction {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
       p2btc = btc.p2sh(p2wpkh, network);
     } else if (options.accountType === 'ledger') {
+      p2btc = btc.p2wpkh(publicKeyBuff, network);
+    } else if (options.accountType === 'keystone') {
       p2btc = btc.p2wpkh(publicKeyBuff, network);
     } else {
       throw new Error('Unrecognised account type');

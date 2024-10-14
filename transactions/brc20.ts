@@ -8,12 +8,14 @@ import { isValidTick } from '../utils';
 import { CoreError } from '../utils/coreError';
 import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
+import { TransportWebUSB } from '@keystonehq/hw-transport-webusb';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
 
 export type SignOptions = {
   ledgerTransport?: Transport | undefined;
+  keystoneTransport?: TransportWebUSB | undefined;
 };
 
 export enum BRC20ErrorCode {
@@ -27,6 +29,7 @@ export enum BRC20ErrorCode {
   USER_REJECTED = 'USER_REJECTED',
   DEVICE_LOCKED = 'DEVICE_LOCKED',
   GENERAL_LEDGER_ERROR = 'GENERAL_LEDGER_ERROR',
+  GENERAL_KEYSTONE_ERROR = 'GENERAL_KEYSTONE_ERROR',
 }
 
 type EstimateProps = {
@@ -237,11 +240,17 @@ export async function* brc20TransferExecute(
     if (options.ledgerTransport && e instanceof Error && e.message.includes('denied by the user')) {
       throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
     }
+    if (options.keystoneTransport && e instanceof Error && e.message.includes('UR parsing rejected')) {
+      throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
+    }
     if (e instanceof Error && e.name === 'LockedDeviceError') {
       throw new CoreError('Ledger device locked', BRC20ErrorCode.DEVICE_LOCKED);
     }
     if (e instanceof Error && e.name === 'TransportStatusError') {
       throw new CoreError('Ledger error', BRC20ErrorCode.GENERAL_LEDGER_ERROR);
+    }
+    if (e instanceof Error && e.name === 'TransportError') {
+      throw new CoreError('Keystone error', BRC20ErrorCode.GENERAL_KEYSTONE_ERROR);
     }
     throw e;
   }
@@ -274,6 +283,9 @@ export async function* brc20TransferExecute(
     await context.signTransaction(transferTransaction, options);
   } catch (e) {
     if (options.ledgerTransport && e instanceof Error && e.message.includes('denied by the user')) {
+      throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
+    }
+    if (options.keystoneTransport && e instanceof Error && e.message.includes('UR parsing rejected')) {
       throw new CoreError('User rejected transaction', BRC20ErrorCode.USER_REJECTED);
     }
     throw e;

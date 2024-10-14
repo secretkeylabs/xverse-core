@@ -5,6 +5,8 @@ import { SeedVault } from '../../seedVault';
 import type { Account, AccountType, NetworkType } from '../../types';
 import {
   AddressContext,
+  KeystoneP2trAddressContext,
+  KeystoneP2wpkhAddressContext,
   LedgerP2trAddressContext,
   LedgerP2wpkhAddressContext,
   P2shAddressContext,
@@ -59,6 +61,31 @@ const createAddressContext = ({
       );
     } else {
       throw new Error(`Ledger support for this type of address not implemented: ${type}`);
+    }
+  } else if (accountType === 'keystone') {
+    if (type === AddressType.p2wpkh) {
+      return new KeystoneP2wpkhAddressContext(
+        address,
+        publicKey,
+        network,
+        accountIndex,
+        seedVault,
+        utxoCache,
+        esploraApiProvider,
+      );
+    }
+    if (type === AddressType.p2tr) {
+      return new KeystoneP2trAddressContext(
+        address,
+        publicKey,
+        network,
+        accountIndex,
+        seedVault,
+        utxoCache,
+        esploraApiProvider,
+      );
+    } else {
+      throw new Error(`Keystone support for this type of address not implemented: ${type}`);
     }
   }
 

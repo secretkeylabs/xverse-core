@@ -1,4 +1,4 @@
-export type AccountType = 'ledger' | 'software';
+export type AccountType = 'ledger' | 'keystone' | 'software';
 
 export interface Account {
   id: number;
@@ -9,6 +9,8 @@ export interface Account {
   stxPublicKey: string;
   btcPublicKey: string;
   ordinalsPublicKey: string;
+  btcXpub?: string;
+  ordinalsXpub?: string;
   bnsName?: string;
   accountType?: AccountType;
   accountName?: string;

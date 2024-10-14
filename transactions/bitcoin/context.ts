@@ -1,4 +1,5 @@
 import { base64, hex } from '@scure/base';
+import * as bitcoin from 'bitcoinjs-lib';
 import * as btc from '@scure/btc-signer';
 import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
@@ -9,12 +10,15 @@ import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
 import { Transport } from '../../ledger/types';
 import { SeedVault } from '../../seedVault';
-import { type NetworkType, type UTXO } from '../../types';
+import { Account, type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
 import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
+import { TransportWebUSB } from '@keystonehq/hw-transport-webusb';
+import { PartialSignature } from '@keystonehq/hw-app-bitcoin/lib/psbt';
+import Bitcoin from '@keystonehq/hw-app-bitcoin';
 
 export type InputToSign = {
   address: string;
@@ -24,6 +28,8 @@ export type InputToSign = {
 
 export type SignOptions = {
   ledgerTransport?: Transport;
+  keystoneTransport?: TransportWebUSB;
+  selectedAccount?: Account;
   inputsToSign?: InputToSign[];
 };
 
@@ -229,6 +235,30 @@ export abstract class AddressContext {
     return signIndexes;
   }
 
+  protected getChangeIndexes(
+    transaction: btc.Transaction,
+    witnessScript?: Uint8Array,
+  ): Record<number, btc.SigHash[] | undefined> {
+    const changeIndexes: Record<number, btc.SigHash[] | undefined> = {};
+
+    // This is the internal path used by the wallet to sign transactions
+    for (let i = 0; i < transaction.outputsLength; i++) {
+      const output = transaction.getOutput(i);
+
+      const witnessLockingScript = output.witnessScript;
+      const matchesWitnessUtxo = areByteArraysEqual(witnessLockingScript, witnessScript);
+
+      const nonWitnessLockingScript = output?.script || undefined;
+      const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, witnessScript);
+
+      if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
+        changeIndexes[i] = undefined;
+      }
+    }
+
+    return changeIndexes;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async prepareInputs(_transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     // no-op
@@ -431,6 +461,138 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
   }
 }
 
+export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+    super.addInput(transaction, extendedUtxo, options);
+
+    const utxoTxnHex = await extendedUtxo.hex;
+
+    if (utxoTxnHex) {
+      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+
+      transaction.updateInput(transaction.inputsLength - 1, {
+        nonWitnessUtxo,
+      });
+    }
+  }
+
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { selectedAccount } = options;
+
+    const masterFingerPrint = selectedAccount?.masterPubKey;
+
+    if (!masterFingerPrint) {
+      throw new Error('masterFingerPrint is required');
+    }
+
+    const inputDerivation = [
+      Buffer.from(this._publicKey, 'hex'),
+      {
+        path: btc.bip32Path(this.getDerivationPath()),
+        fingerprint: parseInt(masterFingerPrint, 16),
+      },
+    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateInput(+i, {
+        bip32Derivation: [inputDerivation],
+      });
+    }
+
+    const changeIndexes = this.getChangeIndexes(transaction, this._p2wpkh.script);
+
+    for (const i of Object.keys(changeIndexes)) {
+      const output = transaction.getOutput(+i);
+      if (output.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateOutput(+i, {
+        bip32Derivation: [inputDerivation],
+      });
+    }
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    if (Object.keys(signIndexes).length === 0) {
+      return;
+    }
+
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const keystoneBitcoin = new Bitcoin(keystoneTransport);
+
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+
+    const cleanedPsbtBase64 = this.cleanPsbtInputSig(psbtBase64);
+
+    const signatures = await keystoneBitcoin.signPsbt(cleanedPsbtBase64);
+
+    const cleanedSignatures = this.cleanPsbtSig(psbtBase64, signatures);
+
+    for (const signature of cleanedSignatures) {
+      transaction.updateInput(signature[0], {
+        partialSig: [[signature[1].pubkey, signature[1].signature]],
+      });
+    }
+  }
+
+  cleanPsbtInputSig(psbt: string) {
+    const path = 86;
+
+    const psbtObj = bitcoin.Psbt.fromBase64(psbt);
+    const clearInputs = psbtObj.data.inputs
+      .map((it, index) => {
+        const hasPath = [it.tapBip32Derivation, it.bip32Derivation]
+          .filter((f) => f)
+          .some((d) => d?.[0]?.path.startsWith(`m/${path}`));
+        if (hasPath) {
+          return null;
+        }
+        return index;
+      })
+      .filter((it) => it);
+    for (const index of Object.values(clearInputs)) {
+      psbtObj.data.inputs[index!].partialSig = [];
+    }
+
+    return psbtObj.toBase64();
+  }
+
+  cleanPsbtSig(psbtBase64: string, signatures: [number, PartialSignature][]) {
+    const results = [];
+    const path = 84;
+
+    const tx = bitcoin.Psbt.fromBase64(psbtBase64);
+    for (let i = 0; i < tx.txInputs.length; i++) {
+      const input = tx.data.inputs[i];
+
+      const hasPath = [input.tapBip32Derivation, input.bip32Derivation]
+        .filter((it) => it)
+        .some((d) => d?.[0]?.path?.startsWith(`m/${path}`));
+
+      if (!hasPath) {
+        continue;
+      }
+      results.push(signatures[i]);
+    }
+    return results;
+  }
+}
+
 export class P2trAddressContext extends AddressContext {
   protected _p2tr!: ReturnType<typeof btc.p2tr>;
 
@@ -586,6 +748,150 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
         tapKeySig: signature[1].signature,
       });
     }
+  }
+}
+
+export class KeystoneP2trAddressContext extends P2trAddressContext {
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+    super.addInput(transaction, extendedUtxo, options);
+
+    const utxoTxnHex = await extendedUtxo.hex;
+
+    if (utxoTxnHex) {
+      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+
+      transaction.updateInput(transaction.inputsLength - 1, {
+        nonWitnessUtxo,
+      });
+    }
+  }
+
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { selectedAccount } = options;
+
+    const masterFingerPrint = selectedAccount?.masterPubKey;
+
+    if (!masterFingerPrint) {
+      throw new Error('masterFingerPrint is required');
+    }
+
+    const inputDerivation = [
+      this._p2tr.tapInternalKey,
+      {
+        hashes: [],
+        der: {
+          path: btc.bip32Path(this.getDerivationPath()),
+          fingerprint: parseInt(masterFingerPrint, 16),
+        },
+      },
+    ] as [
+      Uint8Array,
+      {
+        hashes: Uint8Array[];
+        der: {
+          fingerprint: any;
+          path: any;
+        };
+      },
+    ];
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateInput(+i, {
+        tapBip32Derivation: [inputDerivation],
+      });
+    }
+
+    const changeIndexes = this.getChangeIndexes(transaction, this._p2tr.script);
+
+    for (const i of Object.keys(changeIndexes)) {
+      const output = transaction.getOutput(+i);
+      if (output.tapBip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateOutput(+i, {
+        tapBip32Derivation: [inputDerivation],
+      });
+    }
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    if (Object.keys(signIndexes).length === 0) {
+      return;
+    }
+
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const keystoneBitcoin = new Bitcoin(keystoneTransport);
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+
+    const cleanedPsbtBase64 = this.cleanPsbtInputSig(psbtBase64);
+
+    const signatures = await keystoneBitcoin.signPsbt(cleanedPsbtBase64);
+
+    const cleanedSignatures = this.cleanPsbtSig(psbtBase64, signatures);
+
+    for (const signature of cleanedSignatures) {
+      transaction.updateInput(signature[0], {
+        tapKeySig: signature[1].signature,
+      });
+    }
+  }
+
+  cleanPsbtInputSig(psbt: string) {
+    const path = 86;
+
+    const psbtObj = bitcoin.Psbt.fromBase64(psbt);
+    const clearInputs = psbtObj.data.inputs
+      .map((it, index) => {
+        const hasPath = [it.tapBip32Derivation, it.bip32Derivation]
+          .filter((f) => f)
+          .some((d) => d?.[0]?.path.startsWith(`m/${path}`));
+        if (hasPath) {
+          return null;
+        }
+        return index;
+      })
+      .filter((it) => it);
+    for (const index of Object.values(clearInputs)) {
+      psbtObj.data.inputs[index!].partialSig = [];
+    }
+
+    return psbtObj.toBase64();
+  }
+
+  cleanPsbtSig(psbt: string, signatures: [number, PartialSignature][]) {
+    const results = [];
+    const path = 86;
+
+    const tx = bitcoin.Psbt.fromBase64(psbt);
+
+    for (let i = 0; i < tx.txInputs.length; i++) {
+      const input = tx.data.inputs[i];
+
+      const hasPath = [input.tapBip32Derivation, input.bip32Derivation]
+        .filter((it) => it)
+        .some((d) => d?.[0]?.path?.startsWith(`m/${path}`));
+
+      if (!hasPath) {
+        continue;
+      }
+      results.push(signatures[i]);
+    }
+    return results;
   }
 }
 
