@@ -4,6 +4,7 @@ import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
 import * as bip39 from 'bip39';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
+import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../../account';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
@@ -11,7 +12,6 @@ import { Transport } from '../../ledger/types';
 import { SeedVault } from '../../seedVault';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
-import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../../wallet';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
@@ -290,7 +290,7 @@ export class P2shAddressContext extends AddressContext {
   }
 
   protected getDerivationPath(): string {
-    return getBitcoinDerivationPath({ index: this._accountIndex, network: this._network });
+    return getNestedSegwitDerivationPath({ index: this._accountIndex, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -343,7 +343,7 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 
   protected getDerivationPath(): string {
-    return getSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+    return getNativeSegwitDerivationPath({ index: this._accountIndex, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {

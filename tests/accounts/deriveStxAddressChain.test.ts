@@ -1,9 +1,9 @@
 /* eslint-disable max-len */
 import { ChainID } from '@stacks/transactions';
 import { describe, expect, it } from 'vitest';
+import { deriveStxAddressChain } from '../../account';
 import { bip32 } from '../../utils/bip32';
 import { ECPair } from '../../utils/ecpair';
-import { deriveStxAddressChain } from '../../wallet';
 import { ecPairToHexString } from '../../wallet/helper';
 
 describe('Unit tests', () => {

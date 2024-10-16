@@ -2,7 +2,7 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
 import { SeedVault } from '../../seedVault';
-import type { Account, AccountType, NetworkType } from '../../types';
+import type { Account, AccountType, BtcPaymentType, NetworkType } from '../../types';
 import {
   AddressContext,
   LedgerP2trAddressContext,
@@ -87,38 +87,43 @@ export type TransactionContextOptions = {
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   network: NetworkType;
+  btcPaymentAddressType: BtcPaymentType;
 };
 export const createTransactionContext = (options: TransactionContextOptions) => {
-  const { esploraApiProvider, account, seedVault, utxoCache, network } = options;
+  const { esploraApiProvider, account, seedVault, utxoCache, network, btcPaymentAddressType } = options;
 
   const accountIndex =
     !account.accountType || account.accountType === 'software' ? account.id : account.deviceAccountIndex;
   if (accountIndex === undefined) {
     throw new Error('Cannot identify the account index');
   }
-  const paymentAddress = createAddressContext({
+
+  const paymentAddress = btcPaymentAddressType === 'nested' ? account.btcAddresses.nested : account.btcAddresses.native;
+
+  if (!paymentAddress) {
+    throw new Error('Payment address not found');
+  }
+
+  const paymentAddressContext = createAddressContext({
     esploraApiProvider,
-    address: account.btcAddress,
-    publicKey: account.btcPublicKey,
+    address: paymentAddress.address,
+    publicKey: paymentAddress.publicKey,
     network,
     accountIndex,
     seedVault: seedVault,
     utxoCache: utxoCache,
     accountType: account.accountType,
   });
-  const ordinalsAddress =
-    account.btcAddress === account.ordinalsAddress
-      ? paymentAddress
-      : createAddressContext({
-          esploraApiProvider,
-          address: account.ordinalsAddress,
-          publicKey: account.ordinalsPublicKey,
-          network,
-          accountIndex,
-          seedVault: seedVault,
-          utxoCache: utxoCache,
-          accountType: account.accountType,
-        });
+  const ordinalsAddressContext = createAddressContext({
+    esploraApiProvider,
+    address: account.btcAddresses.taproot.address,
+    publicKey: account.btcAddresses.taproot.publicKey,
+    network,
+    accountIndex,
+    seedVault: seedVault,
+    utxoCache: utxoCache,
+    accountType: account.accountType,
+  });
 
-  return new TransactionContext(network, paymentAddress, ordinalsAddress);
+  return new TransactionContext(network, paymentAddressContext, ordinalsAddressContext);
 };

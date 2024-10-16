@@ -394,18 +394,29 @@ describe('createTransactionContext', () => {
       esploraApiProvider,
       account: {
         id: 0,
-        btcAddress: addresses[0].nestedSegwit,
-        btcPublicKey: addresses[0].nestedSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          nested: {
+            address: addresses[0].nestedSegwit,
+            publicKey: addresses[0].nestedSegwitPubKey,
+          },
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'nested',
     });
 
     expect(context.paymentAddress instanceof P2shAddressContext).toEqual(true);
@@ -418,47 +429,33 @@ describe('createTransactionContext', () => {
       esploraApiProvider,
       account: {
         id: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          nested: {
+            address: addresses[0].nestedSegwit,
+            publicKey: addresses[0].nestedSegwitPubKey,
+          },
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'native',
     });
 
     expect(context.paymentAddress instanceof P2wpkhAddressContext).toEqual(true);
     expect(context.ordinalsAddress instanceof P2trAddressContext).toEqual(true);
-  });
-
-  it('creates transaction context with correct addresses - p2wpkh + p2wpkh', () => {
-    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
-    const context = createTransactionContext({
-      esploraApiProvider,
-      account: {
-        id: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].nativeSegwit,
-        ordinalsPublicKey: addresses[0].nativeSegwitPubKey,
-        accountType: 'software',
-        stxAddress: '',
-        masterPubKey: '',
-        stxPublicKey: '',
-      },
-      network: 'Mainnet',
-      seedVault,
-      utxoCache,
-    });
-
-    expect(context.paymentAddress instanceof P2wpkhAddressContext).toEqual(true);
-    expect(context.ordinalsAddress instanceof P2wpkhAddressContext).toEqual(true);
-    expect(context.paymentAddress).toEqual(context.ordinalsAddress);
   });
 
   it('creates transaction context with correct addresses - ledger p2wpkh + p2tr', () => {
@@ -468,18 +465,25 @@ describe('createTransactionContext', () => {
       account: {
         id: 0,
         deviceAccountIndex: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'ledger',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'native',
     });
 
     expect(context.paymentAddress instanceof LedgerP2wpkhAddressContext).toEqual(true);

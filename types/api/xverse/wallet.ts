@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
-import { TransactionStatus, TransactionType, ContractCall, TransactionPostCondition } from '../shared';
 import { BIP32Interface } from 'bip32';
-import { TransactionData, StxMempoolTransactionData } from './transaction';
+import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared';
+import { StxMempoolTransactionData, TransactionData } from './transaction';
 
 export type StxAddressDataResponse = {
   balance: string;
