@@ -103,7 +103,7 @@ describe('BitcoinEsploraApiProvider', () => {
       const data = await api.httpGet(`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
 
       // expect the bitcoinApi to have been called once
-      expect(mockBitcoinApi.history.get.length).toEqual(1);
+      expect(mockBitcoinApi.history.get.length).toEqual(2);
 
       // expect the fallbackBitcoinApi to have been called once with the same url
       expect(mockFallbackBitcoinApi.history.get.length).toEqual(1);

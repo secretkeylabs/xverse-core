@@ -83,13 +83,8 @@ const getAddressBalanceAndHistory = async (btcClient: EsploraProvider, address: 
   };
 };
 
-const getBalancesAtIndex = async (
-  btcClient: EsploraProvider,
-  seedPhrase: string,
-  network: NetworkType,
-  idx: bigint,
-) => {
-  const account = await getAccountFromSeedPhrase({ mnemonic: seedPhrase, index: idx, network });
+const getBalancesAtIndex = async (btcClient: EsploraProvider, mnemonic: string, network: NetworkType, idx: bigint) => {
+  const account = await getAccountFromSeedPhrase({ mnemonic, index: idx, network });
 
   const [native, nested] = await Promise.all([
     getAddressBalanceAndHistory(btcClient, account.btcAddresses.native?.address),

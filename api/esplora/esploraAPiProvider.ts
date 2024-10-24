@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { BTC_BASE_URI_MAINNET, BTC_BASE_URI_SIGNET, BTC_BASE_URI_TESTNET } from '../../constant';
+import rateLimit from 'axios-rate-limit';
+import axiosRetry from 'axios-retry';
+import { XVERSE_BTC_BASE_URI_MAINNET, XVERSE_BTC_BASE_URI_SIGNET, XVERSE_BTC_BASE_URI_TESTNET } from '../../constant';
 import {
   Address,
   BtcAddressBalanceResponse,
@@ -31,13 +33,13 @@ export class BitcoinEsploraApiProvider {
     if (!baseURL) {
       switch (network) {
         case 'Mainnet':
-          baseURL = BTC_BASE_URI_MAINNET;
+          baseURL = XVERSE_BTC_BASE_URI_MAINNET;
           break;
         case 'Testnet':
-          baseURL = BTC_BASE_URI_TESTNET;
+          baseURL = XVERSE_BTC_BASE_URI_TESTNET;
           break;
         case 'Signet':
-          baseURL = BTC_BASE_URI_SIGNET;
+          baseURL = XVERSE_BTC_BASE_URI_SIGNET;
           break;
         default:
           throw new Error('Invalid network');
@@ -46,7 +48,14 @@ export class BitcoinEsploraApiProvider {
     const axiosConfig: AxiosRequestConfig = { baseURL };
 
     this._network = network;
-    this.bitcoinApi = axios.create(axiosConfig);
+    this.bitcoinApi = rateLimit(axios.create(axiosConfig), {
+      maxRPS: 10,
+    });
+
+    axiosRetry(this.bitcoinApi, {
+      retries: 1,
+      retryDelay: axiosRetry.exponentialDelay,
+    });
 
     if (fallbackUrl) {
       this.fallbackBitcoinApi = axios.create({ ...axiosConfig, baseURL: fallbackUrl });

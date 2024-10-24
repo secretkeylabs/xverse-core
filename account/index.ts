@@ -19,6 +19,7 @@ import {
   STX_PATH_WITHOUT_INDEX,
 } from '../constant';
 import { createWalletGaiaConfig, deriveWalletConfigKey, updateWalletConfig } from '../gaia';
+import { SeedVault } from '../seedVault';
 import { Account, BtcPaymentType, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair, ECPairInterface } from '../utils/ecpair';
@@ -193,12 +194,30 @@ export async function getAccountFromSeedPhrase({
   });
 }
 
+export async function getAccountFromSeedVault({
+  seedVault,
+  index,
+  network,
+}: {
+  seedVault: SeedVault;
+  index: bigint;
+  network: NetworkType;
+}): Promise<Account> {
+  const mnemonic = await seedVault.getSeed();
+
+  return getAccountFromSeedPhrase({
+    index,
+    network,
+    mnemonic,
+  });
+}
+
 export async function checkAccountActivity(
   account: Account,
   selectedNetwork: StacksNetwork,
   btcApi: EsploraApiProvider,
 ) {
-  // We check addresses one or 2 at a time to minimise API calls avoiding rate limiting
+  // We check addresses one at a time to minimise API calls avoiding rate limiting
   const addressHasActivity = async (addressToCheck: string | undefined) => {
     if (!addressToCheck) {
       return false;
@@ -213,13 +232,13 @@ export async function checkAccountActivity(
     return true;
   }
 
-  // then check payment addresses
-  const addressActivities = await Promise.all([
-    addressHasActivity(account.btcAddresses.nested?.address),
-    addressHasActivity(account.btcAddresses.native?.address),
-  ]);
+  // then check native
+  if (await addressHasActivity(account.btcAddresses.native?.address)) {
+    return true;
+  }
 
-  if (addressActivities.some(Boolean)) {
+  // then check nested
+  if (await addressHasActivity(account.btcAddresses.nested?.address)) {
     return true;
   }
 

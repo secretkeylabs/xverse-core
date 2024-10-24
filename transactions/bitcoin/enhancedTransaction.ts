@@ -1,6 +1,5 @@
 import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
 
-import EsploraClient from '../../api/esplora/esploraAPiProvider';
 import { getRunesClient } from '../../api/runes/provider';
 
 import {
@@ -207,8 +206,7 @@ export class EnhancedTransaction {
   async broadcast(options: CompilationOptions = {}) {
     const { hex: transactionHex, id } = await this.getTransactionHexAndId(options);
 
-    const esploraClient = new EsploraClient({ network: this._context.network });
-    await esploraClient.sendRawTransaction(transactionHex);
+    await this._context.btcClient.sendRawTransaction(transactionHex);
 
     return id;
   }

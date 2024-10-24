@@ -125,5 +125,5 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
     accountType: account.accountType,
   });
 
-  return new TransactionContext(network, paymentAddressContext, ordinalsAddressContext);
+  return new TransactionContext(network, esploraApiProvider, paymentAddressContext, ordinalsAddressContext);
 };

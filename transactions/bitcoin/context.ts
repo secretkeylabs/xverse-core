@@ -598,7 +598,14 @@ export class TransactionContext {
 
   private _addressList!: AddressContext[];
 
-  constructor(network: NetworkType, paymentAddressContext: AddressContext, ordinalsAddressContext: AddressContext) {
+  protected _btcClient!: EsploraProvider;
+
+  constructor(
+    network: NetworkType,
+    btcClient: EsploraProvider,
+    paymentAddressContext: AddressContext,
+    ordinalsAddressContext: AddressContext,
+  ) {
     this._paymentAddress = paymentAddressContext;
     this._ordinalsAddress = ordinalsAddressContext;
 
@@ -608,6 +615,7 @@ export class TransactionContext {
       this._addressList.push(this._ordinalsAddress);
     }
 
+    this._btcClient = btcClient;
     this._network = network;
   }
 
@@ -625,6 +633,10 @@ export class TransactionContext {
 
   get network(): NetworkType {
     return this._network;
+  }
+
+  get btcClient(): EsploraProvider {
+    return this._btcClient;
   }
 
   async getUtxo(outpoint: string): Promise<{ extendedUtxo?: ExtendedUtxo; addressContext?: AddressContext }> {

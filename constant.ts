@@ -31,12 +31,12 @@ export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
  * Network constants
  */
 // BTC
-export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
-export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
-export const BTC_BASE_URI_SIGNET = 'https://mempool.space/signet/api';
 export const XVERSE_BTC_BASE_URI_MAINNET = 'https://btc-1.xverse.app';
 export const XVERSE_BTC_BASE_URI_TESTNET = 'https://btc-testnet.xverse.app';
 export const XVERSE_BTC_BASE_URI_SIGNET = 'https://btc-signet.xverse.app';
+export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
+export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
+export const BTC_BASE_URI_SIGNET = 'https://mempool.space/signet/api';
 
 // STX
 export const HIRO_MAINNET_DEFAULT = 'https://api.hiro.so';
@@ -46,20 +46,20 @@ export const HIRO_TESTNET_DEFAULT = 'https://api.testnet.hiro.so';
 export const defaultMainnet: SettingsNetwork = {
   type: 'Mainnet',
   address: HIRO_MAINNET_DEFAULT,
-  btcApiUrl: BTC_BASE_URI_MAINNET,
-  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_MAINNET,
+  btcApiUrl: XVERSE_BTC_BASE_URI_MAINNET,
+  fallbackBtcApiUrl: BTC_BASE_URI_MAINNET,
 };
 export const defaultTestnet: SettingsNetwork = {
   type: 'Testnet',
   address: HIRO_TESTNET_DEFAULT,
-  btcApiUrl: BTC_BASE_URI_TESTNET,
-  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_TESTNET,
+  btcApiUrl: XVERSE_BTC_BASE_URI_TESTNET,
+  fallbackBtcApiUrl: BTC_BASE_URI_TESTNET,
 };
 export const defaultSignet: SettingsNetwork = {
   type: 'Signet',
   address: HIRO_TESTNET_DEFAULT,
-  btcApiUrl: BTC_BASE_URI_SIGNET,
-  fallbackBtcApiUrl: XVERSE_BTC_BASE_URI_SIGNET,
+  btcApiUrl: XVERSE_BTC_BASE_URI_SIGNET,
+  fallbackBtcApiUrl: BTC_BASE_URI_SIGNET,
 };
 export const initialNetworksList: SettingsNetwork[] = [
   { ...defaultMainnet },
