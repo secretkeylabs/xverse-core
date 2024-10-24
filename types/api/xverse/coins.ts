@@ -8,7 +8,6 @@ export interface Coin extends BaseToken {
   supported?: boolean;
   tokenFiatRate?: number | null;
   visible?: boolean;
-  priceChangePercentage24h?: string | null;
 }
 
 export interface SignedUrlResponse {
@@ -21,7 +20,6 @@ export interface Brc20Token extends BaseToken {
   ticker: string;
   supported: boolean;
   tokenFiatRate?: string;
-  priceChangePercentage24h?: string | null;
 }
 
 export type Brc20TokensResponse = Brc20Token[];

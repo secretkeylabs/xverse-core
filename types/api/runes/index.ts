@@ -108,6 +108,7 @@ export type RuneBalance = {
   inscriptionId: string | null;
   id: string;
   priceChangePercentage24h: number | null;
+  currentPrice: number | null;
 };
 
 export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
@@ -123,5 +124,6 @@ export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToke
   runeSymbol: runeBalance.symbol,
   runeInscriptionId: runeBalance.inscriptionId,
   protocol: 'runes',
-  priceChangePercentage24h: runeBalance.priceChangePercentage24h,
+  priceChangePercentage24h: runeBalance.priceChangePercentage24h?.toString(),
+  currentPrice: runeBalance.currentPrice?.toString(),
 });
