@@ -11,6 +11,7 @@ import {
   AppInfo,
   Brc20TokensResponse,
   BtcFeeResponse,
+  CoinsMarket,
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
@@ -271,6 +272,11 @@ class XverseApi {
   getNotificationBanners = async (): Promise<NotificationBanner[]> => {
     const response = await this.client.get(`/v2/notification-banners`);
     return response.data.notificationBanners;
+  };
+
+  getCoinsMarketData = async (ids: string[]): Promise<CoinsMarket[]> => {
+    const response = await this.client.get(`/coins-market-data?${ids.join(',')}`);
+    return response.data;
   };
 
   getSpamTokensList = async () => {
