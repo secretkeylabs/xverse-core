@@ -275,7 +275,7 @@ class XverseApi {
   };
 
   getCoinsMarketData = async (ids: string[]): Promise<CoinsMarket[]> => {
-    const response = await this.client.get(`/coins-market-data?${ids.join(',')}`);
+    const response = await this.client.get(`/v2/coins-market-data?ids=${ids.join(',')}`);
     return response.data;
   };
 
