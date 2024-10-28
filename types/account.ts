@@ -51,3 +51,9 @@ export type CoinsMarket = {
   roi: number;
   last_updated: string;
 };
+
+export type ExchangeRateList = {
+  [currency: string]: string;
+};
+
+export type ExchangeRateAvailableCurrencies = 'USD' | 'BTC' | 'STX';
