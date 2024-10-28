@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import rateLimit from 'axios-rate-limit';
 import axiosRetry from 'axios-retry';
 import { XVERSE_BTC_BASE_URI_MAINNET, XVERSE_BTC_BASE_URI_SIGNET, XVERSE_BTC_BASE_URI_TESTNET } from '../../constant';
 import {
@@ -12,6 +11,7 @@ import {
   TransactionOutspend,
   UTXO,
 } from '../../types';
+import { AxiosRateLimit } from '../../utils/axiosRateLimit';
 
 export interface EsploraApiProviderOptions {
   network: NetworkType;
@@ -22,7 +22,11 @@ export interface EsploraApiProviderOptions {
 export class BitcoinEsploraApiProvider {
   bitcoinApi: AxiosInstance;
 
+  rateLimiter: AxiosRateLimit;
+
   fallbackBitcoinApi?: AxiosInstance;
+
+  fallbackRateLimiter?: AxiosRateLimit;
 
   _network: NetworkType;
 
@@ -48,17 +52,30 @@ export class BitcoinEsploraApiProvider {
     const axiosConfig: AxiosRequestConfig = { baseURL };
 
     this._network = network;
-    this.bitcoinApi = rateLimit(axios.create(axiosConfig), {
+    this.bitcoinApi = axios.create(axiosConfig);
+
+    this.rateLimiter = new AxiosRateLimit(this.bitcoinApi, {
       maxRPS: 10,
     });
 
     axiosRetry(this.bitcoinApi, {
       retries: 1,
       retryDelay: axiosRetry.exponentialDelay,
+      retryCondition: (error) => {
+        if (error?.response?.status === 429 || (error?.response?.status ?? 0) >= 500) {
+          return true;
+        }
+        return false;
+      },
     });
 
     if (fallbackUrl) {
       this.fallbackBitcoinApi = axios.create({ ...axiosConfig, baseURL: fallbackUrl });
+
+      this.fallbackRateLimiter = new AxiosRateLimit(this.fallbackBitcoinApi, {
+        maxRPS: 10,
+      });
+
       this.bitcoinApi.interceptors.response.use(
         // if the request succeeds, we do nothing.
         (response) => response,
