@@ -94,7 +94,5 @@ export class AxiosRateLimit {
 
     this.timeslotRequests++;
     setTimeout(this.onRequestTimerMet, this.perMilliseconds);
-
-    this.timeslotRequests += 1;
   };
 }
