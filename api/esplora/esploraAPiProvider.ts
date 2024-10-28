@@ -60,11 +60,7 @@ export class BitcoinEsploraApiProvider {
       retries: 1,
       retryDelay: axiosRetry.exponentialDelay,
       retryCondition: (error) => {
-        if (
-          error?.code === 'ECONNABORTED' ||
-          error?.response?.status === 429 ||
-          (error?.response?.status ?? 0) >= 500
-        ) {
+        if (error?.response?.status === 429 || (error?.response?.status ?? 0) >= 500) {
           return true;
         }
         return false;
