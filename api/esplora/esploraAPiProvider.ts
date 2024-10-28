@@ -26,6 +26,8 @@ export class BitcoinEsploraApiProvider {
 
   fallbackBitcoinApi?: AxiosInstance;
 
+  fallbackRateLimiter?: AxiosRateLimit;
+
   _network: NetworkType;
 
   constructor(options: EsploraApiProviderOptions) {
@@ -69,6 +71,11 @@ export class BitcoinEsploraApiProvider {
 
     if (fallbackUrl) {
       this.fallbackBitcoinApi = axios.create({ ...axiosConfig, baseURL: fallbackUrl });
+
+      this.fallbackRateLimiter = new AxiosRateLimit(this.fallbackBitcoinApi, {
+        maxRPS: 10,
+      });
+
       this.bitcoinApi.interceptors.response.use(
         // if the request succeeds, we do nothing.
         (response) => response,
