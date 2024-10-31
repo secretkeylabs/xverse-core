@@ -11,3 +11,5 @@ export * from './runes';
 export * from './transactionSummary';
 export * from './xClientVersion';
 export { bip39, bs58 };
+
+export * from './safe';
