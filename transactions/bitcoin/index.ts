@@ -1,4 +1,4 @@
-import { TransactionContext } from './context';
+import { TransactionContext, type InputToSign } from './context';
 import { createTransactionContext } from './contextFactory';
 import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
@@ -32,6 +32,7 @@ export { ActionType, createTransactionContext, EnhancedPsbt, EnhancedTransaction
 export type {
   EnhancedInput,
   EnhancedOutput,
+  InputToSign,
   IOInscription,
   IOSatribute,
   PsbtSummary,

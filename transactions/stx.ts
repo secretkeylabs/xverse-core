@@ -1,4 +1,5 @@
 import { StacksMainnet, StacksNetwork } from '@stacks/network';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 import {
   AddressHashMode,
   AddressVersion,
@@ -45,7 +46,9 @@ import {
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
+import axios from 'axios';
 import BigNumber from 'bignumber.js';
+import { FeeEstimation, getMempoolFeePriorities } from '../api';
 import { PostConditionsOptions, SettingsNetwork, StxMempoolTransactionData } from '../types';
 import {
   LatestNonceResponse,
@@ -56,9 +59,6 @@ import {
 } from '../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../wallet/index';
 import { capStxFeeAtThreshold, getNewNonce, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import axios from 'axios';
-import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
-import { FeeEstimation, getMempoolFeePriorities } from '../api';
 
 export interface StacksRecipient {
   address: string;

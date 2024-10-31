@@ -13,12 +13,14 @@ import {
   standardPrincipalCV,
   TupleCV,
   tupleCV,
+  uintCV,
   UIntCV,
 } from '@stacks/transactions';
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import { API_TIMEOUT_MILLI } from '../constant';
 import {
+  Account,
   AccountAssetsListData,
   AddressToBnsResponse,
   CoinMetaData,
@@ -27,6 +29,7 @@ import {
   DelegationInfo,
   EsploraTransaction,
   FungibleToken,
+  NftData,
   NftEventsResponse,
   NftsListData,
   NonFungibleToken,
@@ -52,6 +55,7 @@ import {
   parseStxTransactionData,
 } from './helper';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
+import StacksApiProvider from './stacksApi';
 
 // TODO: these methods needs to be refactored
 // reference https://github.com/secretkeylabs/xverse-core/pull/217/files#r1298242728
@@ -234,7 +238,6 @@ export async function getFtData(stxAddress: string, network: StacksNetwork): Pro
     fungibleToken.assetName = key.substring(index + 2);
     fungibleToken.principal = key.substring(0, index);
     fungibleToken.protocol = 'stacks';
-    fungibleToken.visible = new BigNumber(fungibleToken.balance).gt(0);
     tokens.push(fungibleToken);
   }
   return tokens;
@@ -428,6 +431,14 @@ export async function getStacksInfo(network: string) {
     return undefined;
   }
 }
+
+export const isNftOwnedByAccount = async (nft: NftData, account: Account, stackApi: StacksApiProvider) => {
+  const assetIdentifier = `${nft.collection_contract_id}::${nft.asset_id}`;
+  const value = cvToHex(uintCV(nft.token_id.toString()));
+  const history = await stackApi.getNftHistory(assetIdentifier, value, 1);
+
+  return history.results[0]?.recipient === account.stxAddress;
+};
 
 export async function fetchDelegationState(stxAddress: string, network: StacksNetwork): Promise<DelegationInfo> {
   const poxContractAddress = 'SP000000000000000000002Q6VF78';

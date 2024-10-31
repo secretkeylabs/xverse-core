@@ -24,6 +24,8 @@ describe('TransactionContext', () => {
   });
 
   it('should create context with different addresses', () => {
+    const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
     const paymentAddressContext = new TestAddressContext(
       'p2wpkh',
       addresses[0].nestedSegwit,
@@ -31,6 +33,7 @@ describe('TransactionContext', () => {
       0,
       seedVault,
       utxoCache,
+      esploraProvider,
     );
     const ordinalsAddressContext = new TestAddressContext(
       'p2wpkh',
@@ -39,13 +42,16 @@ describe('TransactionContext', () => {
       0,
       seedVault,
       utxoCache,
+      esploraProvider,
     );
-    const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+    const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, ordinalsAddressContext);
     expect(context.paymentAddress).toStrictEqual(paymentAddressContext);
     expect(context.ordinalsAddress).toStrictEqual(ordinalsAddressContext);
   });
 
   it('should create context with same address', () => {
+    const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
     const addressContext = new TestAddressContext(
       'p2wpkh',
       addresses[0].nestedSegwit,
@@ -53,14 +59,17 @@ describe('TransactionContext', () => {
       0,
       seedVault,
       utxoCache,
+      esploraProvider,
     );
-    const context = new TransactionContext('Mainnet', addressContext, addressContext);
+    const context = new TransactionContext('Mainnet', esploraProvider, addressContext, addressContext);
     expect(context.paymentAddress).toStrictEqual(addressContext);
     expect(context.ordinalsAddress).toStrictEqual(addressContext);
   });
 
   describe('getUtxo', () => {
     it('getUtxo should check both addresses', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -68,6 +77,7 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
@@ -76,8 +86,9 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
-      const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, ordinalsAddressContext);
       const utxo = await context.getUtxo('bob');
       expect(utxo).toEqual({});
       expect(paymentAddressContext.getUtxo).toHaveBeenCalledTimes(1);
@@ -87,6 +98,8 @@ describe('TransactionContext', () => {
     });
 
     it('getUtxo should check one address only if found', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -94,6 +107,7 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
@@ -102,10 +116,11 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       paymentAddressContext.getUtxo.mockResolvedValueOnce({ txid: 'txid' });
 
-      const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, ordinalsAddressContext);
       const utxo = await context.getUtxo('bob');
       expect(utxo).toEqual({ addressContext: paymentAddressContext, extendedUtxo: { txid: 'txid' } });
       expect(paymentAddressContext.getUtxo).toHaveBeenCalledTimes(1);
@@ -114,6 +129,8 @@ describe('TransactionContext', () => {
     });
 
     it('getUtxo should run only once if payments and ordinals address are the same', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const addressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -121,9 +138,10 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
 
-      const context = new TransactionContext('Mainnet', addressContext, addressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, addressContext, addressContext);
       const utxo = await context.getUtxo('bob');
       expect(utxo).toEqual({});
       expect(addressContext.getUtxo).toHaveBeenCalledTimes(1);
@@ -133,6 +151,8 @@ describe('TransactionContext', () => {
 
   describe('getInscriptionUtxo', () => {
     it('getInscriptionUtxo should check both addresses', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -140,6 +160,7 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
@@ -148,11 +169,12 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       paymentAddressContext.getUtxos.mockResolvedValueOnce([]);
       ordinalsAddressContext.getUtxos.mockResolvedValueOnce([]);
 
-      const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, ordinalsAddressContext);
 
       const resp = await context.getInscriptionUtxo('bob');
 
@@ -162,6 +184,8 @@ describe('TransactionContext', () => {
     });
 
     it('getInscriptionUtxo should check only first address if found', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -169,6 +193,7 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       const ordinalsAddressContext = new TestAddressContext(
         'p2wpkh',
@@ -177,11 +202,12 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       const dummyExtendedUtxo = { getBundleData: () => ({ sat_ranges: [{ inscriptions: [{ id: 'bob' }] }] }) };
       paymentAddressContext.getUtxos.mockResolvedValueOnce([dummyExtendedUtxo]);
 
-      const context = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, ordinalsAddressContext);
 
       const resp = await context.getInscriptionUtxo('bob');
 
@@ -191,6 +217,8 @@ describe('TransactionContext', () => {
     });
 
     it('getInscriptionUtxo should call only once if addresses are the same', async () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -198,10 +226,11 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
       paymentAddressContext.getUtxos.mockResolvedValueOnce([]);
 
-      const context = new TransactionContext('Mainnet', paymentAddressContext, paymentAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, paymentAddressContext);
 
       const resp = await context.getInscriptionUtxo('bob');
 
@@ -212,6 +241,8 @@ describe('TransactionContext', () => {
 
   describe('addOutputAddress', () => {
     it('adds output address to the transaction with correct network - mainnet', () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -219,8 +250,9 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
-      const context = new TransactionContext('Mainnet', paymentAddressContext, paymentAddressContext);
+      const context = new TransactionContext('Mainnet', esploraProvider, paymentAddressContext, paymentAddressContext);
 
       const dummyTransaction = {
         outputsLength: 6,
@@ -244,6 +276,8 @@ describe('TransactionContext', () => {
     });
 
     it('adds output address to the transaction with correct network - testnet', () => {
+      const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
+
       const paymentAddressContext = new TestAddressContext(
         'p2wpkh',
         addresses[0].nestedSegwit,
@@ -251,8 +285,9 @@ describe('TransactionContext', () => {
         0,
         seedVault,
         utxoCache,
+        esploraProvider,
       );
-      const context = new TransactionContext('Testnet', paymentAddressContext, paymentAddressContext);
+      const context = new TransactionContext('Testnet', esploraProvider, paymentAddressContext, paymentAddressContext);
 
       const dummyTransaction = {
         outputsLength: 1,
@@ -394,18 +429,29 @@ describe('createTransactionContext', () => {
       esploraApiProvider,
       account: {
         id: 0,
-        btcAddress: addresses[0].nestedSegwit,
-        btcPublicKey: addresses[0].nestedSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          nested: {
+            address: addresses[0].nestedSegwit,
+            publicKey: addresses[0].nestedSegwitPubKey,
+          },
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'nested',
     });
 
     expect(context.paymentAddress instanceof P2shAddressContext).toEqual(true);
@@ -418,47 +464,33 @@ describe('createTransactionContext', () => {
       esploraApiProvider,
       account: {
         id: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'software',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          nested: {
+            address: addresses[0].nestedSegwit,
+            publicKey: addresses[0].nestedSegwitPubKey,
+          },
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'native',
     });
 
     expect(context.paymentAddress instanceof P2wpkhAddressContext).toEqual(true);
     expect(context.ordinalsAddress instanceof P2trAddressContext).toEqual(true);
-  });
-
-  it('creates transaction context with correct addresses - p2wpkh + p2wpkh', () => {
-    const esploraApiProvider = new EsploraProvider({ network: 'Mainnet' });
-    const context = createTransactionContext({
-      esploraApiProvider,
-      account: {
-        id: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].nativeSegwit,
-        ordinalsPublicKey: addresses[0].nativeSegwitPubKey,
-        accountType: 'software',
-        stxAddress: '',
-        masterPubKey: '',
-        stxPublicKey: '',
-      },
-      network: 'Mainnet',
-      seedVault,
-      utxoCache,
-    });
-
-    expect(context.paymentAddress instanceof P2wpkhAddressContext).toEqual(true);
-    expect(context.ordinalsAddress instanceof P2wpkhAddressContext).toEqual(true);
-    expect(context.paymentAddress).toEqual(context.ordinalsAddress);
   });
 
   it('creates transaction context with correct addresses - ledger p2wpkh + p2tr', () => {
@@ -468,18 +500,25 @@ describe('createTransactionContext', () => {
       account: {
         id: 0,
         deviceAccountIndex: 0,
-        btcAddress: addresses[0].nativeSegwit,
-        btcPublicKey: addresses[0].nativeSegwitPubKey,
-        ordinalsAddress: addresses[0].taproot,
-        ordinalsPublicKey: addresses[0].taprootPubKey,
         accountType: 'ledger',
         stxAddress: '',
         masterPubKey: '',
         stxPublicKey: '',
+        btcAddresses: {
+          native: {
+            address: addresses[0].nativeSegwit,
+            publicKey: addresses[0].nativeSegwitPubKey,
+          },
+          taproot: {
+            address: addresses[0].taproot,
+            publicKey: addresses[0].taprootPubKey,
+          },
+        },
       },
       network: 'Mainnet',
       seedVault,
       utxoCache,
+      btcPaymentAddressType: 'native',
     });
 
     expect(context.paymentAddress instanceof LedgerP2wpkhAddressContext).toEqual(true);

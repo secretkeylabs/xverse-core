@@ -1,26 +1,32 @@
 export type AccountType = 'ledger' | 'software';
 
-export interface Account {
-  id: number;
-  stxAddress: string;
-  btcAddress: string;
-  ordinalsAddress: string;
-  masterPubKey: string;
-  stxPublicKey: string;
-  btcPublicKey: string;
-  ordinalsPublicKey: string;
-  bnsName?: string;
-  accountType?: AccountType;
-  accountName?: string;
-  deviceAccountIndex?: number;
-}
+export type BtcPaymentType = 'nested' | 'native';
 
-export type NotificationBanner = {
-  id: string;
-  name: string;
-  url: string;
-  icon: string;
-  description: string;
+export type BtcAddressType = 'nested' | 'native' | 'taproot';
+
+export type BtcAddress = {
+  address: string;
+  publicKey: string;
+};
+
+export type AccountBtcAddresses = {
+  nested?: BtcAddress;
+  native?: BtcAddress;
+  taproot: BtcAddress;
+};
+
+export type Account = {
+  id: number;
+  deviceAccountIndex?: number;
+  masterPubKey: string;
+  accountType: AccountType;
+  accountName?: string;
+
+  stxAddress: string;
+  stxPublicKey: string;
+  bnsName?: string;
+
+  btcAddresses: AccountBtcAddresses;
 };
 
 export type CoinsMarket = {

@@ -4,14 +4,13 @@ import BigNumber from 'bignumber.js';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { Transport } from '../ledger';
 import { UTXO } from '../types';
+import { isValidTick } from '../utils';
 import { CoreError } from '../utils/coreError';
 import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
-import { signNonOrdinalBtcSendTransaction } from './btc';
-import { isValidTick } from '../utils';
+import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
-const DUMMY_SEEDPHRASE = 'action action action action action action action action action action action action';
 
 export type SignOptions = {
   ledgerTransport?: Transport | undefined;
@@ -93,26 +92,20 @@ export const brc20TransferEstimateFees = async (
       : 'tb1pelzrpv4y7y0z7pqt6p7qz42fc3zjkyatyg5hx803efx2ydqhdlkq3m6rmg';
 
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
-  const { tx } = await signNonOrdinalBtcSendTransaction(
-    dummyAddress,
-    [
-      {
-        address: revealAddress,
-        status: {
-          confirmed: false,
-        },
-        txid: '0000000000000000000000000000000000000000000000000000000000000001',
-        vout: 0,
-        value: FINAL_SATS_VALUE,
-      },
-    ],
-    0,
-    DUMMY_SEEDPHRASE,
-    context.network,
-    new BigNumber(1),
-  );
 
-  const transferFeeEstimate = tx.vsize * feeRate;
+  const tx = new btc.Transaction();
+  const dummyUtxo = await context.ordinalsAddress.constructUtxo({
+    status: {
+      confirmed: false,
+    },
+    txid: '0000000000000000000000000000000000000000000000000000000000000001',
+    vout: 0,
+    value: FINAL_SATS_VALUE,
+  });
+  context.ordinalsAddress.addInput(tx, dummyUtxo);
+  tx.addOutputAddress(dummyAddress, BigInt(FINAL_SATS_VALUE));
+
+  const transferFeeEstimate = estimateVSize(tx) * feeRate;
 
   const inscriptionValue = finalRecipientUtxoValue.plus(transferFeeEstimate);
 
@@ -191,26 +184,20 @@ export async function* brc20TransferExecute(
   yield ExecuteTransferProgressCodes.CreatingInscriptionOrder;
 
   const finalRecipientUtxoValue = new BigNumber(FINAL_SATS_VALUE);
-  const { tx } = await signNonOrdinalBtcSendTransaction(
-    recipientAddress,
-    [
-      {
-        address: revealAddress,
-        status: {
-          confirmed: false,
-        },
-        txid: '0000000000000000000000000000000000000000000000000000000000000001',
-        vout: 0,
-        value: FINAL_SATS_VALUE,
-      },
-    ],
-    0,
-    DUMMY_SEEDPHRASE,
-    context.network,
-    new BigNumber(1000),
-  );
 
-  const transferFeeEstimate = tx.vsize * feeRate;
+  const tx = new btc.Transaction();
+  const dummyUtxo = await context.ordinalsAddress.constructUtxo({
+    status: {
+      confirmed: false,
+    },
+    txid: '0000000000000000000000000000000000000000000000000000000000000001',
+    vout: 0,
+    value: FINAL_SATS_VALUE,
+  });
+  context.ordinalsAddress.addInput(tx, dummyUtxo);
+  tx.addOutputAddress(recipientAddress, BigInt(finalRecipientUtxoValue.toString()));
+
+  const transferFeeEstimate = estimateVSize(tx) * feeRate;
 
   const inscriptionValue = finalRecipientUtxoValue.plus(transferFeeEstimate);
 

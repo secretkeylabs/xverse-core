@@ -6,8 +6,8 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
 import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
+import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../account';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
-import { getSigningDerivationPath } from '../transactions/psbt';
 import { Account, MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { bip32 } from '../utils/bip32';
 
@@ -150,6 +150,43 @@ export const signMessageBip322 = async ({
   }
 };
 
+function getSigningDerivationPath(accounts: Array<Account>, address: string, network: NetworkType): string {
+  const { type } = getAddressInfo(address);
+
+  if (accounts.length <= 0) {
+    throw new Error('Invalid accounts list');
+  }
+
+  let path = '';
+
+  for (const account of accounts) {
+    if (type === 'p2sh') {
+      if (account.btcAddresses.nested?.address === address) {
+        path = getNestedSegwitDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else if (type === 'p2wpkh') {
+      if (account.btcAddresses.native?.address === address) {
+        path = getNativeSegwitDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else if (type === 'p2tr') {
+      if (account.btcAddresses.taproot.address === address) {
+        path = getTaprootDerivationPath({ index: BigInt(account.id), network });
+        break;
+      }
+    } else {
+      throw new Error('Unsupported address type');
+    }
+  }
+
+  if (path.length <= 0) {
+    throw new Error('Address not found');
+  }
+
+  return path;
+}
+
 interface SingMessageOptions {
   accounts: Account[];
   address: string;
@@ -183,7 +220,10 @@ export const signMessage = async ({
    */
   if (child.privateKey) {
     const protocolToUse =
-      protocol || (type === AddressType.p2sh ? MessageSigningProtocols.ECDSA : MessageSigningProtocols.BIP322);
+      protocol ||
+      (type === AddressType.p2sh || type === AddressType.p2wpkh
+        ? MessageSigningProtocols.ECDSA
+        : MessageSigningProtocols.BIP322);
 
     if (protocolToUse === MessageSigningProtocols.ECDSA) {
       if (type === AddressType.p2tr) {

@@ -3,8 +3,7 @@ import * as btc from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
-import { InputToSign } from '../psbt';
-import { TransactionContext } from './context';
+import { InputToSign, TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,

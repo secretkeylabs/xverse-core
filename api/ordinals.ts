@@ -155,7 +155,6 @@ export async function getOrdinalsFtBalance(network: NetworkType, address: string
             ticker: responseToken.ticker?.toUpperCase(),
             decimals: 0,
             image: '',
-            visible: true,
             supported: true,
             tokenFiatRate: null,
             protocol: 'brc-20',
@@ -198,7 +197,7 @@ export const isBrcTransferValid = (inscription: Inscription) => {
 };
 
 export const isOrdinalOwnedByAccount = (inscription: Inscription, account: Account) =>
-  inscription.address === account.ordinalsAddress;
+  inscription.address === account.btcAddresses.taproot.address;
 
 export const getAddressUtxoOrdinalBundles = async (
   network: NetworkType,

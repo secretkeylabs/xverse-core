@@ -89,7 +89,7 @@ export function getFiatEquivalent(
 }
 
 function removeHexPrefix(hexString: string): string {
-  if (hexString !== 'string') return hexString;
+  if (typeof hexString !== 'string') return hexString;
   return hexString.startsWith('0x') ? hexString.replace('0x', '') : hexString;
 }
 
@@ -148,7 +148,7 @@ export const createContractCallPromises = async (
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
   // Stacks isn't setup for testnet, so we default to mainnet
-  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getCoinsInfo(
+  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getSip10Tokens(
     ftContactAddresses,
     'USD',
   );

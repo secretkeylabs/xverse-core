@@ -1,8 +1,12 @@
-import { BtcTransactionData, EsploraTransaction } from '../types';
+import { Account, BtcPaymentType, BtcTransactionData, EsploraTransaction } from '../types';
 import EsploraApiProvider from './esplora/esploraAPiProvider';
 import { parseBtcTransactionData, parseOrdinalsBtcTransactions } from './helper';
 
 export async function fetchBtcOrdinalTransactions(ordinalsAddress: string, esploraProvider: EsploraApiProvider) {
+  if (!ordinalsAddress) {
+    return [];
+  }
+
   const transactions: BtcTransactionData[] = [];
   const txResponse: EsploraTransaction[] = await esploraProvider.getAddressTransactions(ordinalsAddress);
   txResponse.forEach((tx) => {
@@ -16,6 +20,10 @@ export async function fetchBtcPaymentTransactions(
   ordinalsAddress: string,
   esploraProvider: EsploraApiProvider,
 ) {
+  if (!btcAddress) {
+    return [];
+  }
+
   const transactions: BtcTransactionData[] = [];
   const txResponse: EsploraTransaction[] = await esploraProvider.getAddressTransactions(btcAddress);
   txResponse.forEach((tx) => {
@@ -25,18 +33,35 @@ export async function fetchBtcPaymentTransactions(
 }
 
 export async function fetchBtcTransactionsData(
-  btcAddress: string,
-  ordinalsAddress: string,
+  account: Account,
   esploraProvider: EsploraApiProvider,
   withOrdinals: boolean,
+  /** If not provided, both nested and native transactions will be fetched */
+  btcPaymentAddressType?: BtcPaymentType,
 ): Promise<BtcTransactionData[]> {
-  if (withOrdinals) {
-    const ordinalsTransactions = await fetchBtcOrdinalTransactions(ordinalsAddress, esploraProvider);
-    const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, esploraProvider);
-    return [...new Set([...paymentTransactions, ...ordinalsTransactions])];
+  const ordinalsAddress = account.btcAddresses?.taproot.address ?? '';
+  const transactionPromises: Promise<BtcTransactionData[]>[] = [];
+
+  if (btcPaymentAddressType === undefined || btcPaymentAddressType === 'nested') {
+    transactionPromises.push(
+      fetchBtcPaymentTransactions(account.btcAddresses.nested?.address ?? '', ordinalsAddress, esploraProvider),
+    );
   }
-  const paymentTransactions = await fetchBtcPaymentTransactions(btcAddress, ordinalsAddress, esploraProvider);
-  return paymentTransactions;
+
+  if (btcPaymentAddressType === undefined || btcPaymentAddressType === 'native') {
+    transactionPromises.push(
+      fetchBtcPaymentTransactions(account.btcAddresses.native?.address ?? '', ordinalsAddress, esploraProvider),
+    );
+  }
+
+  if (withOrdinals) {
+    transactionPromises.push(fetchBtcOrdinalTransactions(ordinalsAddress, esploraProvider));
+  }
+
+  const allTransactionResults = await Promise.all(transactionPromises);
+  const allTransactions = allTransactionResults.flat();
+
+  return allTransactions;
 }
 
 export async function fetchBtcTransaction(

@@ -15,6 +15,7 @@ export {
 } from './constant';
 export * from './currency';
 export * from './encryption';
+export * from './fungibleTokens';
 export * from './gaia';
 export * from './hooks';
 export * from './ledger';
@@ -25,3 +26,11 @@ export * from './transactions';
 export * from './types';
 export * from './utils';
 export * from './wallet';
+
+import { resources, utils, store } from './permissions';
+export const permissions = {
+  resources,
+  utils,
+  store,
+};
+export type * as Permissions from './permissions';

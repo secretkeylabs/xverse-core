@@ -1,3 +1,4 @@
 release.json
-pr-*.json
+pr*.json
 body.md
+releases.json
