@@ -9,6 +9,7 @@ export {
   getFiatEquivalent,
   getNewNonce,
   hexStringToBuffer,
+  capStxFeeAtThreshold,
 } from './helper';
 export * from './inscriptionMint';
 export * from './rbf';
