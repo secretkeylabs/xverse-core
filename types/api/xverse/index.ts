@@ -2,6 +2,7 @@ export * from './appConfig';
 export * from './appFeatures';
 export * from './coins';
 export * from './listings';
+export * from './misc';
 export * from './ordinals';
 export * from './runes';
 export * from './sponsor';

@@ -26,3 +26,11 @@ export * from './transactions';
 export * from './types';
 export * from './utils';
 export * from './wallet';
+
+import { resources, utils, store } from './permissions';
+export const permissions = {
+  resources,
+  utils,
+  store,
+};
+export type * as Permissions from './permissions';

@@ -51,8 +51,8 @@ export class TestAddressContext extends AddressContext {
     accountIndex: number,
     seedVault: SeedVault,
     utxoCache: UtxoCache,
+    esploraProvider: EsploraProvider,
   ) {
-    const esploraProvider = new EsploraProvider({ network: 'Mainnet' });
     super(type, address, publicKey, 'Mainnet', accountIndex, seedVault, utxoCache, esploraProvider);
   }
 

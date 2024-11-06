@@ -2,9 +2,9 @@ import { createSha2Hash } from '@stacks/encryption';
 import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
 import * as bip39 from 'bip39';
+import { deriveStxAddressChain } from '../account';
 import { GAIA_HUB_URL } from '../constant';
 import { bip32 } from '../utils/bip32';
-import { deriveStxAddressChain } from '../wallet';
 
 export type AuthRequest = {
   payload: {

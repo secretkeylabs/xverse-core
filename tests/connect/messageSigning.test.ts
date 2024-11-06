@@ -5,8 +5,8 @@ import { Verifier } from 'bip322-js';
 import { verify } from 'bitcoinjs-message';
 
 import { bip0322Hash, signMessage } from '../../connect/messageSigning';
-import { testSeed, walletAccounts } from '../mocks/restore.mock';
 import { MessageSigningProtocols } from '../../types';
+import { testSeed, walletAccounts } from '../mocks/restore.mock';
 
 describe('bip0322Hash', () => {
   it('should return the BIP0322 message hash', () => {
@@ -23,7 +23,7 @@ describe('Bip322 Signatures', () => {
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
-      address: walletAccounts[0].ordinalsAddress,
+      address: walletAccounts[0].btcAddresses.taproot.address,
       protocol: MessageSigningProtocols.BIP322,
       seedPhrase: testSeed,
     });
@@ -31,12 +31,16 @@ describe('Bip322 Signatures', () => {
     expect(signedMessage.signature.length).toBeGreaterThan(0);
 
     // positive test
-    const shouldBeValid = Verifier.verifySignature(walletAccounts[0].ordinalsAddress, message, signedMessage.signature);
+    const shouldBeValid = Verifier.verifySignature(
+      walletAccounts[0].btcAddresses.taproot.address,
+      message,
+      signedMessage.signature,
+    );
     expect(shouldBeValid).toEqual(true);
 
     // negative test
     const shouldBeInValid = Verifier.verifySignature(
-      walletAccounts[0].ordinalsAddress,
+      walletAccounts[0].btcAddresses.taproot.address,
       message + 'not my original message',
       signedMessage.signature,
     );
@@ -49,7 +53,7 @@ describe('Bip322 Signatures', () => {
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
-      address: walletAccounts[0].btcAddress,
+      address: walletAccounts[0].btcAddresses.nested.address,
       seedPhrase: testSeed,
       protocol: MessageSigningProtocols.BIP322,
     });
@@ -61,12 +65,16 @@ describe('Bip322 Signatures', () => {
     );
 
     // positive test
-    const shouldBeValid = Verifier.verifySignature(walletAccounts[0].btcAddress, message, signedMessage.signature);
+    const shouldBeValid = Verifier.verifySignature(
+      walletAccounts[0].btcAddresses.nested.address,
+      message,
+      signedMessage.signature,
+    );
     expect(shouldBeValid).toEqual(true);
 
     // negative test
     const shouldBeInValid = Verifier.verifySignature(
-      walletAccounts[0].btcAddress,
+      walletAccounts[0].btcAddresses.nested.address,
       message + 'not my original message',
       signedMessage.signature,
     );
@@ -94,7 +102,7 @@ describe('ECDSA Signatures', () => {
       message,
       accounts: walletAccounts,
       network: 'Mainnet',
-      address: walletAccounts[0].btcAddress,
+      address: walletAccounts[0].btcAddresses.nested.address,
       seedPhrase: testSeed,
       protocol: MessageSigningProtocols.ECDSA,
     });
@@ -106,12 +114,41 @@ describe('ECDSA Signatures', () => {
     );
 
     // positive test
-    const shouldBeValid = verify(message, walletAccounts[0].btcAddress, signedMessage.signature);
+    const shouldBeValid = verify(message, walletAccounts[0].btcAddresses.nested.address, signedMessage.signature);
     expect(shouldBeValid).toEqual(true);
     // negative test
     const shouldBeInValid = verify(
       message + 'not my original message',
-      walletAccounts[0].btcAddress,
+      walletAccounts[0].btcAddresses.nested.address,
+      signedMessage.signature,
+    );
+    expect(shouldBeInValid).toEqual(false);
+  });
+
+  it('generates a valid ECDSA signature for p2wpkh address', async () => {
+    const message = 'Hello world';
+    const signedMessage = await signMessage({
+      message,
+      accounts: walletAccounts,
+      network: 'Mainnet',
+      address: walletAccounts[0].btcAddresses.native.address,
+      seedPhrase: testSeed,
+      protocol: MessageSigningProtocols.ECDSA,
+    });
+    // Function generates a signature
+    expect(signedMessage.signature.length).toBeGreaterThan(0);
+    // Function generates the same signature
+    expect(signedMessage.signature).toEqual(
+      'KGIUZBfSMSKFPwmSrU7RkxYwkTwtmGqLdi6ZCKeSrLQFHQ9KgcyD7ofH+7djs0Qq+MRUwP6EmD0K4BzjpDC/4Mo=',
+    );
+
+    // positive test
+    const shouldBeValid = verify(message, walletAccounts[0].btcAddresses.native.address, signedMessage.signature);
+    expect(shouldBeValid).toEqual(true);
+    // negative test
+    const shouldBeInValid = verify(
+      message + 'not my original message',
+      walletAccounts[0].btcAddresses.native.address,
       signedMessage.signature,
     );
     expect(shouldBeInValid).toEqual(false);

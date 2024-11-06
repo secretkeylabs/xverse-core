@@ -3,8 +3,8 @@ import { makeAuthResponse } from '@stacks/wallet-sdk';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createAuthResponse } from '../../connect';
-import { testSeed } from '../mocks/restore.mock';
 import { GAIA_HUB_URL } from '../../constant';
+import { testSeed } from '../mocks/restore.mock';
 
 vi.mock('@stacks/wallet-sdk');
 

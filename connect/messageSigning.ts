@@ -6,10 +6,10 @@ import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
 import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
+import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../account';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { Account, MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { bip32 } from '../utils/bip32';
-import { getBitcoinDerivationPath, getSegwitDerivationPath, getTaprootDerivationPath } from '../wallet';
 
 /**
  *
@@ -161,17 +161,17 @@ function getSigningDerivationPath(accounts: Array<Account>, address: string, net
 
   for (const account of accounts) {
     if (type === 'p2sh') {
-      if (account.btcAddress === address) {
-        path = getBitcoinDerivationPath({ index: BigInt(account.id), network });
+      if (account.btcAddresses.nested?.address === address) {
+        path = getNestedSegwitDerivationPath({ index: BigInt(account.id), network });
         break;
       }
     } else if (type === 'p2wpkh') {
-      if (account.btcAddress === address) {
-        path = getSegwitDerivationPath({ index: BigInt(account.id), network });
+      if (account.btcAddresses.native?.address === address) {
+        path = getNativeSegwitDerivationPath({ index: BigInt(account.id), network });
         break;
       }
     } else if (type === 'p2tr') {
-      if (account.ordinalsAddress === address) {
+      if (account.btcAddresses.taproot.address === address) {
         path = getTaprootDerivationPath({ index: BigInt(account.id), network });
         break;
       }
@@ -220,7 +220,10 @@ export const signMessage = async ({
    */
   if (child.privateKey) {
     const protocolToUse =
-      protocol || (type === AddressType.p2sh ? MessageSigningProtocols.ECDSA : MessageSigningProtocols.BIP322);
+      protocol ||
+      (type === AddressType.p2sh || type === AddressType.p2wpkh
+        ? MessageSigningProtocols.ECDSA
+        : MessageSigningProtocols.BIP322);
 
     if (protocolToUse === MessageSigningProtocols.ECDSA) {
       if (type === AddressType.p2tr) {

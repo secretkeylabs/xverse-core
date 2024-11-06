@@ -89,7 +89,7 @@ export function getFiatEquivalent(
 }
 
 function removeHexPrefix(hexString: string): string {
-  if (hexString !== 'string') return hexString;
+  if (typeof hexString !== 'string') return hexString;
   return hexString.startsWith('0x') ? hexString.replace('0x', '') : hexString;
 }
 
