@@ -106,4 +106,6 @@ export type RuneBalance = {
   symbol: string;
   inscriptionId: string | null;
   id: string;
+  priceChangePercentage24h: number | null;
+  currentPrice: number | null;
 };

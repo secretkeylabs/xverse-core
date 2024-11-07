@@ -11,6 +11,7 @@ import {
   AppInfo,
   Brc20TokensResponse,
   BtcFeeResponse,
+  CoinsMarket,
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
@@ -20,6 +21,8 @@ import {
   CreateRuneListingRequest,
   CreateRuneListingResponse,
   DappSectionData,
+  ExchangeRateAvailableCurrencies,
+  ExchangeRateList,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
   ExecuteStxOrderRequest,
@@ -271,6 +274,16 @@ class XverseApi {
   getNotificationBanners = async (): Promise<NotificationBanner[]> => {
     const response = await this.client.get(`/v2/notification-banners`);
     return response.data.notificationBanners;
+  };
+
+  getCoinsMarketData = async (ids: string[]): Promise<CoinsMarket[]> => {
+    const response = await this.client.get(`/v2/coins-market-data?ids=${ids.join(',')}`);
+    return response.data;
+  };
+
+  getExchangeRate = async (currency: ExchangeRateAvailableCurrencies): Promise<ExchangeRateList> => {
+    const response = await this.client.get(`/v2/exchange-rate?currency=${currency}`);
+    return response.data;
   };
 
   getSpamTokensList = async () => {
