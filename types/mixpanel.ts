@@ -18,6 +18,9 @@ export enum AnalyticsEvents {
   SelectTokenToSwapTo = 'select_token_to_swap_to',
   ListRuneInitiated = 'list_rune_initiated',
   ListRuneSigned = 'list_rune_signed',
+  SetupWallet = 'setup_wallet',
+  BackupWallet = 'backup_wallet',
+  BackupWalletLater = 'backup_wallet_later',
 }
 
 type CommonProps = {
@@ -37,6 +40,21 @@ type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
 type SelectSwapTokenProps = {
   selectedToken: string;
   principal?: string;
+};
+
+type WalletBackupType = 'manual' | 'cloud';
+
+type SetupWalletProps = {
+  source: 'create' | 'restore';
+};
+
+type BackupWalletProps = {
+  source?: 'onboarding' | 'settings';
+  backupType: WalletBackupType;
+};
+
+type RestoreWalletProps = {
+  backupType: WalletBackupType;
 };
 
 export type AnalyticsEventProperties = {
@@ -65,4 +83,7 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.SignSwap]: QuoteSwapAmountProps;
   [AnalyticsEvents.SelectTokenToSwapFrom]: SelectSwapTokenProps;
   [AnalyticsEvents.SelectTokenToSwapTo]: SelectSwapTokenProps;
+  [AnalyticsEvents.SetupWallet]: SetupWalletProps;
+  [AnalyticsEvents.BackupWallet]: BackupWalletProps;
+  [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
 };
