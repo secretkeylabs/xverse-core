@@ -8,6 +8,7 @@ export enum FeatureId {
   CROSS_CHAIN_SWAPS = 'CROSS_CHAIN_SWAPS',
   STACKS_SWAPS = 'STACKS_SWAPS',
   PORTFOLIO_TRACKING = 'PORTFOLIO_TRACKING',
+  DYNAMIC_MOBILE_ICONS = 'DYNAMIC_MOBILE_ICONS',
 }
 export type AppFeaturesContext = {
   network: NetworkType;
