@@ -16,6 +16,7 @@ export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToke
   supported: true, // all runes are supported
   priceChangePercentage24h: runeBalance.priceChangePercentage24h?.toString(),
   currentPrice: runeBalance.currentPrice?.toString(),
+  isPromoted: runeBalance.isPromoted,
 });
 
 /**
@@ -39,12 +40,14 @@ export const getFungibleTokenStates = ({
   const isSpam = showSpamTokens ? false : !!spamTokens?.includes(fungibleToken.principal);
   const isUserEnabled = manageTokens?.[fungibleToken.principal]; // true=enabled, false=disabled, undefined=not set
   const isDefaultEnabled = fungibleToken.supported && hasBalance && !isSpam;
-  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && isDefaultEnabled);
-  const showToggle = isEnabled || (hasBalance && !isSpam);
+  const isPromoted = Boolean(fungibleToken.isPromoted);
+  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && (isDefaultEnabled || isPromoted));
+  const showToggle = isEnabled || ((hasBalance || isPromoted) && !isSpam);
 
   return {
     isSpam,
     isEnabled,
     showToggle,
+    isPromoted,
   };
 };
