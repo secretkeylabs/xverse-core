@@ -163,7 +163,7 @@ class RbfTransaction {
     if (btcAddressType === 'sh') {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
       p2btc = btc.p2sh(p2wpkh, network);
-    } else if (btcAddressType === 'pkh') {
+    } else if (btcAddressType === 'wpkh') {
       p2btc = btc.p2wpkh(publicKeyBuff, network);
     } else {
       throw new Error('Unrecognised account type');
@@ -200,7 +200,7 @@ class RbfTransaction {
         });
       } else if (areByteArraysEqual(witnessUtxoScript, p2btc.script)) {
         // input from payments address
-        // these are undefined for p2wpkh (ledger) addresses
+        // these are undefined for p2wpkh addresses
         tx.updateInput(tx.inputsLength - 1, {
           redeemScript: p2btc.redeemScript,
           witnessScript: p2btc.witnessScript,
