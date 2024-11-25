@@ -74,12 +74,14 @@ const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFPro
 
   const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
 
+  const btcAddressType = btc.Address(network).decode(wallet.btcAddress).type;
+
   let p2btc: btc.P2Ret;
   const publicKeyBuff = hex.decode(wallet.btcPublicKey);
-  if (wallet.accountType === 'software') {
+  if (btcAddressType === 'sh') {
     const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
     p2btc = btc.p2sh(p2wpkh, network);
-  } else if (wallet.accountType === 'ledger') {
+  } else if (btcAddressType === 'wpkh') {
     p2btc = btc.p2wpkh(publicKeyBuff, network);
   } else {
     throw new Error('Unrecognised account type');
@@ -154,12 +156,14 @@ class RbfTransaction {
 
     const network = options.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
 
+    const btcAddressType = btc.Address(network).decode(options.btcAddress).type;
+
     let p2btc: btc.P2Ret;
     const publicKeyBuff = hex.decode(options.btcPublicKey);
-    if (options.accountType === 'software') {
+    if (btcAddressType === 'sh') {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
       p2btc = btc.p2sh(p2wpkh, network);
-    } else if (options.accountType === 'ledger') {
+    } else if (btcAddressType === 'pkh') {
       p2btc = btc.p2wpkh(publicKeyBuff, network);
     } else {
       throw new Error('Unrecognised account type');
