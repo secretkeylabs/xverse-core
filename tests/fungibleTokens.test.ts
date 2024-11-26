@@ -59,7 +59,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -78,7 +78,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: false,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -97,7 +97,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: true,
         isEnabled: false,
         showToggle: false,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -116,7 +116,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: false,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -135,7 +135,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -154,7 +154,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -172,7 +172,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: true,
         isEnabled: true,
         showToggle: true,
-        isPromoted: false,
+        isTopToken: false,
       },
     },
     {
@@ -181,7 +181,7 @@ describe('getFungibleTokenStates', () => {
         fungibleToken: {
           ...runesToken,
           balance: '0',
-          isPromoted: true,
+          isTopToken: true,
         },
         manageTokens: {},
         spamTokens: [],
@@ -191,7 +191,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
-        isPromoted: true,
+        isTopToken: true,
       },
     },
   ].forEach(({ name, inputs, expected }) => {

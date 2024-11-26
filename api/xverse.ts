@@ -64,10 +64,14 @@ import {
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
+  TopRunesResponse,
+  TopTokens,
+  TopTokensResponse,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
+import { runeTokenToFungibleToken } from '../fungibleTokens';
 
 class XverseApi {
   private client: AxiosInstance;
@@ -289,6 +293,24 @@ class XverseApi {
   getSpamTokensList = async () => {
     const response = await this.client.get(`/v1/spam-tokens`);
     return response.data;
+  };
+
+  getTopTokens = async (): Promise<TopTokensResponse> => {
+    const response = await this.client.get<TopTokens>('/v1/top-tokens');
+    const topRunesTokens: TopRunesResponse = {};
+    for (const runeId in response.data.runes) {
+      const runeData = response.data.runes[runeId];
+      const runeBalance = {
+        ...runeData,
+        isTopToken: true,
+        priceChangePercentage24h: null,
+        currentPrice: null,
+      };
+      topRunesTokens[runeId] = runeTokenToFungibleToken(runeBalance);
+    }
+    return {
+      runes: topRunesTokens,
+    };
   };
 
   getAppFeatures = async (context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) => {

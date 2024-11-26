@@ -108,5 +108,4 @@ export type RuneBalance = {
   id: string;
   priceChangePercentage24h: number | null;
   currentPrice: number | null;
-  isPromoted?: boolean;
 };

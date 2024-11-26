@@ -1,4 +1,5 @@
-import { BaseToken } from '../../fungibleTokens';
+import { BaseToken, FungibleToken } from '../../fungibleTokens';
+import { RuneBalance } from '../runes';
 
 export interface Coin extends BaseToken {
   id?: number;
@@ -28,4 +29,16 @@ export type SimplePriceResponse = {
   [tokenId: string]: {
     [fiatCurrency: string]: number;
   };
+};
+
+type TopRunes = Record<RuneBalance['id'], Omit<RuneBalance, 'priceChangePercentage24h' | 'currentPrice'>>;
+
+export type TopTokens = {
+  runes: TopRunes;
+};
+
+export type TopRunesResponse = Record<FungibleToken['principal'], FungibleToken>;
+
+export type TopTokensResponse = {
+  runes: TopRunesResponse;
 };
