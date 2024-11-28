@@ -21,6 +21,8 @@ export interface Brc20Token extends BaseToken {
   ticker: string;
   supported: boolean;
   tokenFiatRate?: string;
+  priceChangePercentage24h?: string | null;
+  currentPrice?: string | null;
 }
 
 export type Brc20TokensResponse = Brc20Token[];
