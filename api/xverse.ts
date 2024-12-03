@@ -33,6 +33,8 @@ import {
   GetDestinationTokensResponse,
   GetListedUtxosRequest,
   GetListedUtxosResponse,
+  GetOrderHistoryRequest,
+  GetOrderHistoryResponse,
   GetQuotesRequest,
   GetQuotesResponse,
   GetRuneMarketDataRequest,
@@ -51,6 +53,8 @@ import {
   PlaceStxOrderResponse,
   PlaceUtxoOrderRequest,
   PlaceUtxoOrderResponse,
+  PlaceXcOrderRequest,
+  PlaceXcOrderResponse,
   SignedUrlResponse,
   SimplePriceResponse,
   SponsorInfoResponse,
@@ -409,6 +413,16 @@ class XverseApi {
     /** Execute a swap order. This is for UTXO based providers. */
     executeUtxoOrder: async (body: ExecuteUtxoOrderRequest): Promise<ExecuteUtxoOrderResponse> => {
       const response = await this.client.post<ExecuteUtxoOrderResponse>('/v1/swaps/execute-utxo-order', body);
+      return response.data;
+    },
+    /** Place a XC swap order. */
+    placeXcOrder: async (body: PlaceXcOrderRequest): Promise<PlaceXcOrderResponse> => {
+      const response = await this.client.post<PlaceXcOrderResponse>('/v1/swaps/place-xc-order', body);
+      return response.data;
+    },
+    /** Gets order history. This is for XC providers. */
+    getOrderHistory: async (body: GetOrderHistoryRequest): Promise<GetOrderHistoryResponse> => {
+      const response = await this.client.post<GetOrderHistoryResponse>('/v1/swaps/get-order-history', body);
       return response.data;
     },
   };

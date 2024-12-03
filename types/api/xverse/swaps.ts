@@ -1,4 +1,6 @@
-export type Protocol = 'runes' | 'brc20' | 'sip10' | 'btc' | 'stx';
+export type Protocol = 'runes' | 'brc20' | 'sip10' | 'btc' | 'stx' | 'eth' | 'sol';
+
+export type SupportedPlatforms = 'mobile' | 'extension' | 'portal';
 
 export type Provider = {
   code: string;
@@ -70,6 +72,16 @@ export type MarketUtxo = {
   price: string;
 };
 
+export type XcQuote = {
+  provider: Provider;
+  from: TokenBasic;
+  to: TokenBasic;
+  slippageSupported: boolean;
+  feeFlat: string;
+  feePercentage: string;
+  receiveAmount: string;
+};
+
 export type GetSourceTokensRequest = {
   /** a list of tokens that the user has in their wallet */
   userTokens: TokenBasic[];
@@ -80,8 +92,8 @@ export type GetSourceTokensRequest = {
 export type GetDestinationTokensRequest = {
   /** a list of tokens that the user has in their wallet */
   userTokens: TokenBasic[];
-  /** The protocol to swap to */
-  protocol: Protocol;
+  /** The protocol to swap to. If specified, filters based on available tokens from the protocol. */
+  protocol?: Protocol;
   /** the token that the user wants to swap from. If specified, this should be one of the userTokens. */
   from?: TokenBasic;
   /** a string which should be used to filter the destination tokens */
@@ -109,6 +121,8 @@ export type GetQuotesResponse = {
   utxo: UtxoQuote[];
   /** the list of quotes from STX providers */
   stx: StxQuote[];
+  /** the list of quotes from Cross Chain providers */
+  xc: XcQuote[];
 };
 
 export type GetUtxosRequest = {
@@ -189,6 +203,30 @@ export type PlaceStxOrderResponse = {
   orderId?: string;
   /** The transaction that the user needs to sign in order to execute the order */
   unsignedTransaction: string;
+};
+
+export type PlaceXcOrderRequest = {
+  /** the code of the provider whose quote is being used */
+  providerCode: string;
+  /** the base token that the user wants to swap from */
+  from: TokenBasic;
+  /** the counter token that the user wants to swap to */
+  to: TokenBasic;
+  /** Number as string. The amount of base tokens that the user wants to swap. */
+  sendAmount: string;
+  /** The Address that is sending the funds */
+  fromAddress: string;
+  /** The Address that is receiving the funds */
+  receiveAddress: string;
+};
+
+export type PlaceXcOrderResponse = {
+  /** The ID of the order. */
+  orderId: string;
+  /** Address for a user to send coins to. */
+  payinAddress: string;
+  /** Transacion status. Will always be `new` when the tx is created. Usually becomes `waiting` after */
+  status: XcTransactionStatus;
 };
 
 export type ExecuteOrderRequest = {
@@ -288,3 +326,60 @@ export type ExecuteUtxoOrderResponse = {
   /** The transaction ID of the executed swap */
   txid: string;
 };
+
+export type GetOrderHistoryRequest = {
+  /** the code of the provider whose quote is being used */
+  providerCode: string;
+  /** payin address. maximum length is 10 */
+  address?: string[];
+  /** payout address. maximum length is 10 */
+  payoutAddress: string[];
+};
+
+export type GetOrderHistoryResponse = {
+  /** The ID of the order */
+  id: string;
+  /** Time in timestamp format (microseconds) when the transaction was created */
+  createdAt: string;
+  /** Type of transaction. must be either float or fixed */
+  type: 'float' | 'fixed';
+  /** Number of confirmations */
+  payinConfirmations: string;
+  /** exchanged rate */
+  rate: string;
+  /** transaction status */
+  status: XcTransactionStatus;
+  /** Payin currency ticker */
+  currencyFrom: string;
+  /** Payout currency ticker */
+  currencyTo: string;
+  /** Address where the payment is being made */
+  payinAddress: string;
+  /** Address where the exchange result will be sent to. */
+  payoutAddress: string;
+  /** expected pay-in amount determined after placing order */
+  amountExpectedFrom: string;
+  /** expected pay-out amount determined after placing order */
+  amountExpectedTo: string;
+  /** Actual pay-in amount */
+  amountFrom: string;
+  /** Actual amount sent to `payoutAddress` */
+  amountTo: string;
+  /** Total fee in pay-out currency. */
+  fee: string;
+}[];
+
+export enum XcTransactionStatus {
+  New = 'new',
+  Waiting = 'waiting',
+  Confirming = 'confirming',
+  Exchanging = 'exchanging',
+  Sending = 'sending',
+  Finished = 'finished',
+  Failed = 'failed',
+  Refunded = 'refunded',
+  Hold = 'hold', // AML/KYC issues
+  Overdue = 'overdue', // floating rate tx not sent within timeframe
+  Expired = 'expired', // fixed rate tx not sent within timeframe
+  // Add other statuses as needed
+}
