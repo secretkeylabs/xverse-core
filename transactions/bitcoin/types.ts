@@ -98,6 +98,7 @@ export type TransactionSummary = {
 export type PSBTCompilationOptions = {
   ledgerTransport?: Transport;
   keystoneTransport?: TransportWebUSB;
+  selectedAccount?: Account;
   finalize?: boolean;
 };
 
