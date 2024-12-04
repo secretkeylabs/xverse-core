@@ -1,6 +1,4 @@
-export type Protocol = 'runes' | 'brc20' | 'sip10' | 'btc' | 'stx' | 'eth' | 'sol';
-
-export type SupportedPlatforms = 'mobile' | 'extension' | 'portal';
+export type Protocol = 'runes' | 'brc20' | 'sip10' | 'btc' | 'stx';
 
 export type Provider = {
   code: string;
