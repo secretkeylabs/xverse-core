@@ -205,7 +205,7 @@ export class UtxoCache {
 
       let offset = initialCache?.syncedOffset ?? 0;
       let totalCount = offset + 1;
-      let limit = 100;
+      let limit = 60;
       let xVersion = initialCache?.xVersion;
 
       while (offset < totalCount) {
@@ -242,7 +242,7 @@ export class UtxoCache {
           const cacheToStore: UtxoCacheStorage = {
             version: UtxoCache.VERSION,
             syncTime: Date.now(),
-            syncedOffset: offset,
+            syncedOffset: Math.min(offset, totalCount),
             syncComplete: offset >= totalCount,
             utxos,
             xVersion,

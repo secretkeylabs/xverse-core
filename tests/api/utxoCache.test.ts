@@ -238,6 +238,8 @@ describe('UtxoCache', () => {
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 5,
+        syncedOffset: 2,
+        syncComplete: true,
         utxos: {
           'txid1:0': mockUtxos[0],
           'txid2:0': mockUtxos[1],
