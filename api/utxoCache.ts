@@ -19,6 +19,8 @@ type UtxoCacheStorage<R extends BigNumber | number = BigNumber> = {
   version: number;
   xVersion: number;
   syncTime: number;
+  syncedOffset?: number;
+  syncComplete?: boolean;
   utxos: UtxoCacheStruct<R>;
 };
 
@@ -27,7 +29,7 @@ type UtxoCacheConfig = {
   network: NetworkType;
 };
 
-const CACHE_TTL = 1000 * 60 * 60 * 24 * 3; // 3 days
+const CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
 const UTXO_CACHE_KEY_PREFIX = 'utxoCache';
 
 export class UtxoCache {
@@ -111,10 +113,19 @@ export class UtxoCache {
     return cachedData;
   };
 
-  private _setAddressCache = async (address: string, addressCache: UtxoCacheStorage, lock = false): Promise<void> => {
+  private _setAddressCache = async (
+    address: string,
+    addressCache: UtxoCacheStorage | undefined,
+    lock = false,
+  ): Promise<void> => {
     const releaseWrite = lock ? await this._writeMutex.acquire() : undefined;
 
     try {
+      if (!addressCache) {
+        await this._cacheStorageController.remove(this._getAddressCacheStorageKey(address));
+        return;
+      }
+
       await this._cacheStorageController.set(
         this._getAddressCacheStorageKey(address),
         JSONBigOnDemand.stringify(addressCache),
@@ -152,31 +163,6 @@ export class UtxoCache {
     ]),
   });
 
-  private _getAddressUtxos = async (
-    address: string,
-  ): Promise<readonly [bundles: UtxoOrdinalBundle[], xVersion: number]> => {
-    let allData: UtxoOrdinalBundle[] = [];
-    let offset = 0;
-    let totalCount = 1;
-    let limit = 60;
-    let xVersion!: number;
-
-    while (offset < totalCount) {
-      const response = await getAddressUtxoOrdinalBundles(this._network, address, offset, limit, {
-        hideUnconfirmed: true,
-      });
-
-      const { results, total, limit: actualLimit, xVersion: serverXVersion } = response;
-      limit = actualLimit;
-      allData = allData.concat(results.map(this._mapUtxoApiBundleToBundle));
-      totalCount = total;
-      offset += limit;
-      xVersion = serverXVersion;
-    }
-
-    return [allData, xVersion] as const;
-  };
-
   private _getUtxo = async (
     txid: string,
     vout: number,
@@ -195,53 +181,88 @@ export class UtxoCache {
     }
   };
 
-  private _getAllUtxos = async (btcAddress: string, onlyConfirmed = true) => {
-    const [utxos, xVersion] = await this._getAddressUtxos(btcAddress);
-
-    const utxosObject: UtxoCacheStruct = utxos.reduce((acc, utxo) => {
-      if (onlyConfirmed && !utxo.block_height) {
-        return acc;
-      }
-
-      acc[`${utxo.txid}:${utxo.vout}`] = utxo;
-      return acc;
-    }, {} as UtxoCacheStruct);
-
-    return [utxosObject, xVersion] as const;
-  };
-
-  private _initCache = async (address: string): Promise<UtxoCacheStorage> => {
+  private _initCache = async (address: string, rebuild = false): Promise<void> => {
     const addressMutex = this._getAddressMutex(address);
 
     while (addressMutex.isLocked()) {
-      // another thread is already initialising the cache, wait for it to finish and return
-      await addressMutex.waitForUnlock();
-      const cache = await this._getAddressCache(address);
-      if (cache) {
-        // cache was initialised while we were waiting, return it
-        return cache;
-      }
-      // initialising the cache failed or the other thread was doing something else. We need to try again, but
-      // another thread might have moved on to building the cache already, so we need to check the state of the
-      // mutex again, hence, check the mutex lock state in a loop until we can acquire it
+      // another thread is already initialising the cache, so ignore this call
+      return;
+    }
+
+    if (rebuild) {
+      await this._setAddressCache(address, undefined, true);
     }
 
     const releaseInit = await addressMutex.acquire();
+    let shouldReInit = false;
     try {
-      const [utxos, xVersion] = await this._getAllUtxos(address);
+      const initialCache = await this._getAddressCache(address);
 
-      const cacheToStore: UtxoCacheStorage = {
-        version: UtxoCache.VERSION,
-        syncTime: Date.now(),
-        utxos,
-        xVersion,
-      };
+      if (initialCache?.syncComplete) {
+        // if the cache is already synced, we don't need to do anything
+        return;
+      }
 
-      await this._setAddressCache(address, cacheToStore, true);
+      let offset = initialCache?.syncedOffset ?? 0;
+      let totalCount = offset + 1;
+      let limit = 100;
+      let xVersion = initialCache?.xVersion;
 
-      return cacheToStore;
+      while (offset < totalCount) {
+        const response = await getAddressUtxoOrdinalBundles(this._network, address, offset, limit, {
+          hideUnconfirmed: true,
+        });
+
+        const { results, total, limit: actualLimit, xVersion: serverXVersion } = response;
+
+        if (xVersion && xVersion !== serverXVersion) {
+          // the server has a new version, so we need to resync
+          shouldReInit = true;
+          break;
+        }
+
+        limit = actualLimit;
+        totalCount = total;
+        offset += limit;
+        xVersion = serverXVersion;
+
+        const releaseWrite = await this._writeMutex.acquire();
+
+        try {
+          const currentCache = await this._getAddressCache(address);
+          const utxos = currentCache?.utxos ?? {};
+          const batchData = results.map(this._mapUtxoApiBundleToBundle);
+
+          batchData.forEach((utxo) => {
+            if (utxo.block_height) {
+              utxos[`${utxo.txid}:${utxo.vout}`] = utxo;
+            }
+          });
+
+          const cacheToStore: UtxoCacheStorage = {
+            version: UtxoCache.VERSION,
+            syncTime: Date.now(),
+            syncedOffset: offset,
+            syncComplete: offset >= totalCount,
+            utxos,
+            xVersion,
+          };
+
+          await this._setAddressCache(address, cacheToStore);
+        } catch (err) {
+          // if we fail to write, we bail on this init and let the next one try again
+          return;
+        } finally {
+          releaseWrite();
+        }
+      }
     } finally {
       releaseInit();
+    }
+
+    if (shouldReInit) {
+      // if we need to reinit, we need to clear the cache and reinit
+      await this._initCache(address, true);
     }
   };
 
@@ -256,32 +277,24 @@ export class UtxoCache {
       return utxo;
     }
 
-    const addressMutex = this._getAddressMutex(address);
-    while (addressMutex.isLocked()) {
-      // another thread is initialising the cache, wait for it to finish
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    // fire off init for the address and forget
+    this._initCache(address).catch(console.error);
 
     const cache = await this._getAddressCache(address);
 
-    // initialise cache if it doesn't exist
-    if (!cache) {
-      const { utxos } = await this._initCache(address);
-      return utxos[outpoint];
-    }
-
-    // if utxo in cache already, return it
-    if (outpoint in cache.utxos) {
+    if (cache && outpoint in cache.utxos) {
       return cache.utxos[outpoint];
     }
 
-    // if not, get it from the API and add it to the cache
     const [xVersion, bundle] = await this._getUtxo(txid, +vout);
 
-    if (cache.xVersion !== xVersion) {
-      // if server deployed update to satributes, the xVersion will be bumped, so we need to resync
-      await this._initCache(address);
-    } else if (bundle?.block_height) {
+    if (cache && cache.xVersion !== xVersion) {
+      // if server deployed update, the xVersion will be bumped, so we need to resync
+      // clear the cache and reinit
+      this._initCache(address, true).catch(console.error);
+    }
+
+    if (bundle?.block_height) {
       // we only want to store confirmed utxos in the cache
       await this._setCachedItem(address, outpoint, bundle);
     }
