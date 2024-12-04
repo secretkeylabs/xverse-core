@@ -78,6 +78,7 @@ export type XcQuote = {
   feeFlat: string;
   feePercentage: string;
   receiveAmount: string;
+  rate: string;
 };
 
 export type GetSourceTokensRequest = {
