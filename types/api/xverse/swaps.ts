@@ -330,10 +330,14 @@ export type ExecuteUtxoOrderResponse = {
 export type GetOrderHistoryRequest = {
   /** the code of the provider whose quote is being used */
   providerCode: string;
-  /** payin address. maximum length is 10 */
-  address?: string[];
   /** payout address. maximum length is 10 */
   payoutAddress: string[];
+  /** payin address. maximum length is 10 */
+  address?: string[];
+  /** Number of records to retrieve. The maximum limit is 100. By default, 10. */
+  limit?: number;
+  /** Records cursor. */
+  offset?: number;
 };
 
 export type GetOrderHistoryResponse = {
