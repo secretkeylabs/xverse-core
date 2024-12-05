@@ -297,8 +297,6 @@ export class UtxoCache {
           // check if quota is reached. If so, try clean up other caches and retry on next run
           if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
             await this._clearOldestCache();
-            shouldReInit = true;
-            return;
           }
           // if we fail to write for another reason, we bail on this init and let the next one try again
           return;
