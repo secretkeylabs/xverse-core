@@ -203,6 +203,11 @@ export class UtxoCache {
         return;
       }
 
+      if (initialCache?.syncedOffset && initialCache.syncedOffset > Object.values(initialCache.utxos).length) {
+        shouldReInit = true;
+        return;
+      }
+
       let offset = initialCache?.syncedOffset ?? 0;
       let totalCount = offset + 1;
       let limit = 60;
@@ -218,18 +223,19 @@ export class UtxoCache {
         if (xVersion && xVersion !== serverXVersion) {
           // the server has a new version, so we need to resync
           shouldReInit = true;
-          break;
+          return;
         }
-
-        limit = actualLimit;
-        totalCount = total;
-        offset += limit;
-        xVersion = serverXVersion;
 
         const releaseWrite = await this._writeMutex.acquire();
 
         try {
           const currentCache = await this._getAddressCache(address);
+
+          if (currentCache && currentCache.syncedOffset !== offset) {
+            // something isn't right, so we bail on this init and let the next one try again
+            return;
+          }
+
           const utxos = currentCache?.utxos ?? {};
           const batchData = results.map(this._mapUtxoApiBundleToBundle);
 
@@ -238,6 +244,11 @@ export class UtxoCache {
               utxos[`${utxo.txid}:${utxo.vout}`] = utxo;
             }
           });
+
+          limit = actualLimit;
+          totalCount = total;
+          offset += limit;
+          xVersion = serverXVersion;
 
           const cacheToStore: UtxoCacheStorage = {
             version: UtxoCache.VERSION,
@@ -258,11 +269,11 @@ export class UtxoCache {
       }
     } finally {
       releaseInit();
-    }
 
-    if (shouldReInit) {
-      // if we need to reinit, we need to clear the cache and reinit
-      await this._initCache(address, true);
+      if (shouldReInit) {
+        // if we need to reinit, we need to clear the cache and reinit
+        await this._initCache(address, true);
+      }
     }
   };
 
