@@ -184,7 +184,7 @@ export class UtxoCache {
   private _initCache = async (address: string, rebuild = false): Promise<void> => {
     const addressMutex = this._getAddressMutex(address);
 
-    while (addressMutex.isLocked()) {
+    if (addressMutex.isLocked()) {
       // another thread is already initialising the cache, so ignore this call
       return;
     }
@@ -311,5 +311,15 @@ export class UtxoCache {
     const utxoId = `${txid}:${vout}`;
 
     return this.getUtxoByOutpoint(utxoId, address, skipCache);
+  };
+
+  clearAllCaches = async (): Promise<void> => {
+    const keys = await this._cacheStorageController.getAllKeys();
+    const prefix = UTXO_CACHE_KEY_PREFIX;
+    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+
+    for (const cacheKey of cacheKeys) {
+      await this._cacheStorageController.remove(cacheKey);
+    }
   };
 }
