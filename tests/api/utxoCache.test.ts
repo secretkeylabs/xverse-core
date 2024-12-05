@@ -17,6 +17,8 @@ describe('UtxoCache', () => {
   let mockCache: UtxoCacheStruct;
 
   beforeEach(() => {
+    vi.resetAllMocks();
+
     mockCache = {
       'txid1:0': {
         txid: 'txid1',
@@ -51,7 +53,7 @@ describe('UtxoCache', () => {
       get: vi.fn(),
       set: vi.fn(),
       remove: vi.fn(),
-      getAllKeys: vi.fn(),
+      getAllKeys: vi.fn().mockResolvedValue([]),
     };
     utxoCache = new UtxoCache({
       cacheStorageController: mockStorageAdapter,
@@ -105,7 +107,11 @@ describe('UtxoCache', () => {
   });
 
   it('should initialise cache if it does not exist', async () => {
-    mockStorageAdapter.get = vi.fn().mockResolvedValueOnce(null);
+    let storedCache: string | null = null;
+    mockStorageAdapter.get = vi.fn().mockImplementation((_key) => storedCache);
+    mockStorageAdapter.set = vi.fn().mockImplementation((_key, value) => {
+      storedCache = value;
+    });
 
     const mockUtxos = [
       {
@@ -151,7 +157,10 @@ describe('UtxoCache', () => {
     });
     MockDate.set(0);
 
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[0], xVersion: 1 });
+
     const result = await utxoCache.getUtxo('txid1', 0, 'address1');
+    await new Promise(process.nextTick);
 
     expect(result).toEqual(mockUtxos[0]);
 
@@ -165,6 +174,21 @@ describe('UtxoCache', () => {
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 0,
+        syncedOffset: 1,
+        syncComplete: false,
+        utxos: {
+          'txid1:0': mockUtxos[0],
+        },
+        xVersion: 1,
+      }),
+    );
+    expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+      'utxoCache-Mainnet-address1',
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
+        syncTime: 0,
+        syncedOffset: 2,
+        syncComplete: true,
         utxos: {
           'txid1:0': mockUtxos[0],
           'txid2:0': mockUtxos[1],
@@ -293,6 +317,8 @@ describe('UtxoCache', () => {
       xVersion: 1,
     });
 
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[2], xVersion: 1 });
+
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
 
     expect(cachedValue).toEqual(mockUtxos[2]);
@@ -303,6 +329,8 @@ describe('UtxoCache', () => {
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: 5,
+        syncedOffset: 2,
+        syncComplete: true,
         utxos: {
           'txid1:0': mockUtxos[0],
           'txid2:0': mockUtxos[1],
@@ -358,6 +386,8 @@ describe('UtxoCache', () => {
       xVersion: 1,
     });
 
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[2], xVersion: 1 });
+
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
 
     expect(cachedValue).toEqual(mockUtxos[2]);
@@ -368,6 +398,8 @@ describe('UtxoCache', () => {
       JSONBig.stringify({
         version: UtxoCache.VERSION,
         syncTime: msInYear,
+        syncedOffset: 2,
+        syncComplete: true,
         utxos: {
           'txid1:0': mockUtxos[0],
           'txid2:0': mockUtxos[1],
