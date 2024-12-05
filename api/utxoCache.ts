@@ -204,6 +204,7 @@ export class UtxoCache {
       }
 
       if (initialCache?.syncedOffset && initialCache.syncedOffset > Object.values(initialCache.utxos).length) {
+        // something isn't right with the cache, so we bail on this init and let the next one try again
         shouldReInit = true;
         return;
       }
