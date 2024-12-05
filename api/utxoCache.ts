@@ -295,7 +295,7 @@ export class UtxoCache {
           await this._setAddressCache(address, cacheToStore);
         } catch (err) {
           // check if quota is reached. If so, try clean up other caches and retry on next run
-          if (this._cacheStorageController.isErrorQuotaExceeded?.('quota')) {
+          if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
             await this._clearOldestCache();
             shouldReInit = true;
             return;

@@ -7,5 +7,5 @@ export type StorageAdapter = {
 
 export type ExtendedStorageAdapter = StorageAdapter & {
   getAllKeys(): Promise<string[]> | string[];
-  isErrorQuotaExceeded?: (error: unknown) => boolean;
+  isErrorQuotaExceeded?: (error: Error) => boolean;
 };
