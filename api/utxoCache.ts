@@ -68,6 +68,38 @@ export class UtxoCache {
     }
   };
 
+  private _clearOldestCache = async (): Promise<void> => {
+    const keys = await this._cacheStorageController.getAllKeys();
+    const prefix = UTXO_CACHE_KEY_PREFIX;
+    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+    let oldestCacheTime: number | undefined;
+    let oldestCacheKey: string | undefined;
+
+    for (const cacheKey of cacheKeys) {
+      const cache = await this._getCacheDataByKey(cacheKey);
+
+      if (!cache) {
+        await this._cacheStorageController.remove(cacheKey);
+        continue;
+      }
+
+      if (!oldestCacheTime) {
+        oldestCacheTime = cache.syncTime;
+        oldestCacheKey = cacheKey;
+        continue;
+      }
+
+      if (cache.syncTime < oldestCacheTime) {
+        oldestCacheTime = cache.syncTime;
+        oldestCacheKey = cacheKey;
+      }
+    }
+
+    if (oldestCacheKey) {
+      await this._cacheStorageController.remove(oldestCacheKey);
+    }
+  };
+
   private _getAddressMutex = (address: string): Mutex => {
     if (!this._addressMutexes[address]) {
       this._addressMutexes[address] = new Mutex();
@@ -262,7 +294,13 @@ export class UtxoCache {
 
           await this._setAddressCache(address, cacheToStore);
         } catch (err) {
-          // if we fail to write, we bail on this init and let the next one try again
+          // check if quota is reached. If so, try clean up other caches and retry on next run
+          if (this._cacheStorageController.isErrorQuotaExceeded?.('quota')) {
+            await this._clearOldestCache();
+            shouldReInit = true;
+            return;
+          }
+          // if we fail to write for another reason, we bail on this init and let the next one try again
           return;
         } finally {
           releaseWrite();
