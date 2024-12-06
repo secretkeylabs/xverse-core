@@ -284,6 +284,7 @@ export class UtxoCache {
         true,
       );
 
+      let retrieved = 0;
       for (const id of newIds) {
         const [txid, vout] = id.split(':');
         const [xVersion, bundle] = await this._getUtxo(txid, Number(vout));
@@ -296,6 +297,19 @@ export class UtxoCache {
 
         if (bundle && bundle.block_height) {
           updatedUtxos[id] = bundle;
+        }
+
+        // store every 10th utxo to minimise the number of writes, but still maintain progress in case of failure
+        // or wallet closing
+        if (++retrieved % 10 === 0) {
+          await this._setAddressCache(
+            address,
+            {
+              ...cache,
+              utxos: updatedUtxos,
+            },
+            true,
+          );
         }
       }
 
@@ -335,7 +349,6 @@ export class UtxoCache {
       }
 
       const releaseWrite = await this._writeMutex.acquire();
-
       try {
         const currentCache = await this._getAddressCache(address);
 
