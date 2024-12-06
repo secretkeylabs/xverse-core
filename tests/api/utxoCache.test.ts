@@ -413,5 +413,74 @@ describe('UtxoCache', () => {
     );
   });
 
-  it('should re-sync cache if sync TTL expires', async () => {});
+  it('should try re-sync cache if sync TTL expires and fallback to init if fewer than 120 items in cache', async () => {
+    // this assumes the current resync time is 1 day
+    const msIn2Days = 1000 * 60 * 60 * 24 * 2;
+    MockDate.set(msIn2Days);
+
+    mockStorageAdapter.get = vi
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({ version: UtxoCache.VERSION, syncTime: 0, utxos: mockCache, xVersion: 1, syncComplete: true }),
+      );
+
+    const mockUtxos = [
+      {
+        txid: 'txid1',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+        runes: [],
+      },
+      {
+        txid: 'txid2',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+        runes: [],
+      },
+      {
+        txid: 'txid3',
+        vout: 0,
+        block_height: 123,
+        value: 456,
+        sat_ranges: [],
+        runes: [],
+      },
+    ];
+
+    vi.mocked(getAddressUtxoOrdinalBundles).mockResolvedValueOnce({
+      limit: 60,
+      offset: 0,
+      results: mockUtxos,
+      total: 2,
+      xVersion: 1,
+    });
+
+    vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[2], xVersion: 1 });
+
+    const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+    await new Promise(process.nextTick);
+
+    expect(cachedValue).toEqual(mockUtxos[2]);
+
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(mockStorageAdapter.set).toHaveBeenCalledWith(
+      'utxoCache-Mainnet-address1',
+      JSONBig.stringify({
+        version: UtxoCache.VERSION,
+        syncTime: msIn2Days,
+        syncedOffset: 2,
+        syncComplete: true,
+        utxos: {
+          'txid1:0': mockUtxos[0],
+          'txid2:0': mockUtxos[1],
+          'txid3:0': mockUtxos[2],
+        },
+        xVersion: 1,
+      }),
+    );
+  });
 });

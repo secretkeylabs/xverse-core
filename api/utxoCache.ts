@@ -235,12 +235,7 @@ export class UtxoCache {
   };
 
   /** This should only be called from the _syncCache function */
-  private _resyncCache = async (address: string): Promise<void> => {
-    const cache = await this._getAddressCache(address);
-    if (!cache) {
-      return;
-    }
-
+  private _resyncCache = async (address: string, cache: UtxoCacheStorage): Promise<void> => {
     try {
       const currentUtxoIds = new Set(Object.keys(cache.utxos));
 
@@ -417,9 +412,9 @@ export class UtxoCache {
         });
       }
 
-      if (initialCache.syncComplete && initialCache.syncTime + CACHE_RESYNC_TTL > Date.now()) {
+      if (initialCache.syncComplete && Date.now() - initialCache.syncTime > CACHE_RESYNC_TTL) {
         // if the cache is already synced, we don't need to initialise it, but we may want to resync it
-        return await this._resyncCache(address);
+        return await this._resyncCache(address, initialCache);
       }
 
       // cache is sufficiently up to date, so we don't need to do anything
