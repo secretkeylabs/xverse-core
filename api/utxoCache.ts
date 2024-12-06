@@ -159,6 +159,7 @@ export class UtxoCache {
     address: string,
     addressCache: UtxoCacheStorage | undefined,
     lock = false,
+    depth = 0,
   ): Promise<void> => {
     const releaseWrite = lock ? await this._writeMutex.acquire() : undefined;
 
@@ -172,6 +173,16 @@ export class UtxoCache {
         this._getAddressCacheStorageKey(address),
         JSONBigOnDemand.stringify(addressCache),
       );
+    } catch (err) {
+      // check if quota is reached. If so, try clean up other caches and retry on next run
+      if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
+        await this._clearOldestCache();
+
+        if (depth < 5) {
+          // try set again (with limit to avoid infinite loop) after we've cleared the oldest cache
+          await this._setAddressCache(address, addressCache, false, depth + 1);
+        }
+      }
     } finally {
       releaseWrite?.();
     }
@@ -363,12 +374,7 @@ export class UtxoCache {
 
         await this._setAddressCache(address, cacheToStore);
       } catch (err) {
-        // check if quota is reached. If so, try clean up other caches and retry on next run
-        if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
-          // TODO: move this to _setAddressCache
-          await this._clearOldestCache();
-        }
-        // if we fail to write for another reason, we bail on this init and let the next one try again
+        // on fail, we bail on this init and let the next one try again
         return;
       } finally {
         releaseWrite();
