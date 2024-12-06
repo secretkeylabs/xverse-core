@@ -249,6 +249,20 @@ export class UtxoCache {
       const carryThroughIds = cacheUtxoIds.filter((x) => utxoIdSet.has(x));
       const newIds = utxoIds.filter((x) => !cacheUtxoIdSet.has(x));
 
+      if (newIds.length === 0 && carryThroughIds.length === cacheUtxoIds.length) {
+        // if we have no new utxos and all the utxos we have are still valid, we
+        //  just re-set the sync time and don't need to do anything more
+        await this._setAddressCache(
+          address,
+          {
+            ...cache,
+            syncTime: Date.now(),
+          },
+          true,
+        );
+        return;
+      }
+
       const updatedUtxos: UtxoCacheStruct = {};
 
       for (const id of carryThroughIds) {
@@ -351,6 +365,7 @@ export class UtxoCache {
       } catch (err) {
         // check if quota is reached. If so, try clean up other caches and retry on next run
         if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
+          // TODO: move this to _setAddressCache
           await this._clearOldestCache();
         }
         // if we fail to write for another reason, we bail on this init and let the next one try again
