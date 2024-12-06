@@ -1,6 +1,7 @@
 import MockDate from 'mockdate';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import ElectrsProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache, UtxoCacheStruct } from '../../api/utxoCache';
 
 import { getAddressUtxoOrdinalBundles, getUtxoOrdinalBundle } from '../../api/ordinals';
@@ -15,6 +16,7 @@ describe('UtxoCache', () => {
   let utxoCache: UtxoCache;
   let mockStorageAdapter: ExtendedStorageAdapter;
   let mockCache: UtxoCacheStruct;
+  let mockElectrsApi: ElectrsProvider;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -55,9 +57,13 @@ describe('UtxoCache', () => {
       remove: vi.fn(),
       getAllKeys: vi.fn().mockResolvedValue([]),
     };
+    mockElectrsApi = {
+      getUnspentUtxos: vi.fn(),
+    } as any;
     utxoCache = new UtxoCache({
       cacheStorageController: mockStorageAdapter,
       network: 'Mainnet',
+      electrsApi: mockElectrsApi,
     });
   });
 
