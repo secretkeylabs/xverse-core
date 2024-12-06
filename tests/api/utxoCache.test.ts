@@ -252,6 +252,7 @@ describe('UtxoCache', () => {
     });
 
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+    await new Promise(process.nextTick);
 
     expect(cachedValue).toEqual(mockUtxo);
 
@@ -320,6 +321,7 @@ describe('UtxoCache', () => {
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[2], xVersion: 1 });
 
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+    await new Promise(process.nextTick);
 
     expect(cachedValue).toEqual(mockUtxos[2]);
 
@@ -389,6 +391,7 @@ describe('UtxoCache', () => {
     vi.mocked(getUtxoOrdinalBundle).mockResolvedValueOnce({ ...mockUtxos[2], xVersion: 1 });
 
     const cachedValue = await utxoCache.getUtxoByOutpoint('txid3:0', 'address1');
+    await new Promise(process.nextTick);
 
     expect(cachedValue).toEqual(mockUtxos[2]);
 

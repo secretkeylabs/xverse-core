@@ -420,10 +420,8 @@ export class UtxoCache {
 
     const cache = await this._getAddressCache(address);
 
-    // fire off init for the address and forget
-    this._syncCache(address, cache).catch(console.error);
-
     if (cache && outpoint in cache.utxos) {
+      this._syncCache(address, cache).catch(console.error);
       return cache.utxos[outpoint];
     }
 
@@ -434,9 +432,12 @@ export class UtxoCache {
       // clear the cache and reinit
       await this._clearExpiredCaches(xVersion);
       this._syncCache(address, undefined).catch(console.error);
-    } else if (bundle?.block_height) {
-      // we only want to store confirmed utxos in the cache
-      await this._setCachedItem(address, outpoint, bundle);
+    } else {
+      if (bundle?.block_height) {
+        // we only want to store confirmed utxos in the cache
+        await this._setCachedItem(address, outpoint, bundle);
+      }
+      this._syncCache(address, cache).catch(console.error);
     }
 
     return bundle;
