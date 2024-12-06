@@ -412,4 +412,6 @@ describe('UtxoCache', () => {
       }),
     );
   });
+
+  it('should re-sync cache if sync TTL expires', async () => {});
 });
