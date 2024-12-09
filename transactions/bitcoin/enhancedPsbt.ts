@@ -164,8 +164,13 @@ export class EnhancedPsbt {
     // otherwise, it will change after signing
     for (let i = 0; i < txn.inputsLength; i++) {
       const input = txn.getInput(i);
-      if (!input.witnessScript || input.redeemScript) {
+      if (!input.witnessUtxo) {
         // address is either not segwit or is wrapped segwit, so we can't extract the txn id
+        return undefined;
+      }
+      const outScript = btc.OutScript.decode(input.witnessUtxo.script);
+
+      if (!outScript || !new Set(['wsh', 'wpkh', 'tr', 'tr_ns', 'tr_ms']).has(outScript.type)) {
         return undefined;
       }
     }
