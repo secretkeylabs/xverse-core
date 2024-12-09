@@ -132,7 +132,12 @@ export abstract class AddressContext {
   // helper method to get an extended UTXO for another address
   async getExternalUtxo(outPoint: string): Promise<ExtendedUtxo | undefined> {
     const [txid, vout] = outPoint.split(':');
-    const tx = await this._esploraApiProvider.getTransaction(txid);
+    const tx = await this._esploraApiProvider.getTransaction(txid).catch((e) => {
+      if (isAxiosError(e) && e.response && e.response.status === 404) {
+        return undefined;
+      }
+      throw e;
+    });
 
     if (!tx) {
       return undefined;
