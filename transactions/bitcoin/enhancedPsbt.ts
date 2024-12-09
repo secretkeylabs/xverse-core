@@ -1,5 +1,7 @@
+import { sha256 } from '@noble/hashes/sha256';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { concatBytes } from 'micro-packed';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
@@ -150,6 +152,24 @@ export class EnhancedPsbt {
       script,
       scriptHex,
     };
+  }
+
+  getTxId(): string | undefined {
+    const txn = btc.Transaction.fromPSBT(this._psbt);
+    if (txn.isFinal) {
+      return txn.id;
+    }
+
+    // if all inputs are on addresses which have inputs send to the witness field, then we can extract the txn id
+    // otherwise, it will change after signing
+    for (let i = 0; i < txn.inputsLength; i++) {
+      const input = txn.getInput(i);
+      if (!input.witnessScript || input.redeemScript) {
+        // address is either not segwit or is wrapped segwit, so we can't extract the txn id
+        return undefined;
+      }
+    }
+    return hex.encode(sha256(sha256(concatBytes(txn.toBytes(false)))).reverse());
   }
 
   getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
