@@ -31,11 +31,6 @@ type UtxoCacheConfig = {
   electrsApi: BitcoinEsploraApiProvider;
 };
 
-const CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
-const CACHE_RESYNC_TTL = 1000 * 60 * 60 * 24 * 1; // 1 day
-const UTXO_CACHE_KEY_PREFIX = 'utxoCache';
-const ORDINAL_UTXO_QUERY_LIMIT = 60;
-
 export class UtxoCache {
   private readonly _cacheStorageController: ExtendedStorageAdapter;
 
@@ -49,6 +44,14 @@ export class UtxoCache {
 
   static readonly VERSION = 4;
 
+  static readonly UTXO_CACHE_KEY_PREFIX = 'utxoCache';
+
+  static readonly ORDINAL_UTXO_QUERY_LIMIT = 60;
+
+  static readonly CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
+
+  static readonly CACHE_RESYNC_TTL = 1000 * 60 * 60 * 24 * 1; // 1 day
+
   constructor(config: UtxoCacheConfig) {
     this._cacheStorageController = config.cacheStorageController;
     this._network = config.network;
@@ -56,12 +59,11 @@ export class UtxoCache {
   }
 
   private _getAddressCacheStorageKey = (address: string): string =>
-    `${UTXO_CACHE_KEY_PREFIX}-${this._network}-${address}`;
+    `${UtxoCache.UTXO_CACHE_KEY_PREFIX}-${this._network}-${address}`;
 
   private _clearExpiredCaches = async (newXVersion?: number): Promise<void> => {
     const keys = await this._cacheStorageController.getAllKeys();
-    const prefix = UTXO_CACHE_KEY_PREFIX;
-    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+    const cacheKeys = keys.filter((key) => key.startsWith(UtxoCache.UTXO_CACHE_KEY_PREFIX));
     const now = Date.now();
 
     for (const cacheKey of cacheKeys) {
@@ -69,7 +71,7 @@ export class UtxoCache {
 
       if (
         !cache ||
-        now - cache.syncTime > CACHE_TTL ||
+        now - cache.syncTime > UtxoCache.CACHE_TTL ||
         cache.version !== UtxoCache.VERSION ||
         (newXVersion !== undefined && cache.xVersion !== newXVersion)
       ) {
@@ -78,10 +80,9 @@ export class UtxoCache {
     }
   };
 
-  private _clearOldestCache = async (): Promise<void> => {
+  private _clearOldestCacheEntry = async (): Promise<void> => {
     const keys = await this._cacheStorageController.getAllKeys();
-    const prefix = UTXO_CACHE_KEY_PREFIX;
-    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+    const cacheKeys = keys.filter((key) => key.startsWith(UtxoCache.UTXO_CACHE_KEY_PREFIX));
     let oldestCacheTime: number | undefined;
     let oldestCacheKey: string | undefined;
 
@@ -146,7 +147,7 @@ export class UtxoCache {
     if (cachedData) {
       // check if cache TTL is expired or version is old
       const now = Date.now();
-      if (now - cachedData.syncTime > CACHE_TTL || cachedData.version !== UtxoCache.VERSION) {
+      if (now - cachedData.syncTime > UtxoCache.CACHE_TTL || cachedData.version !== UtxoCache.VERSION) {
         await this._cacheStorageController.remove(cacheKey);
         return undefined;
       }
@@ -176,7 +177,7 @@ export class UtxoCache {
     } catch (err) {
       // check if quota is reached. If so, try clean up other caches and retry on next run
       if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {
-        await this._clearOldestCache();
+        await this._clearOldestCacheEntry();
 
         if (depth < 5) {
           // try set again (with limit to avoid infinite loop) after we've cleared the oldest cache
@@ -239,7 +240,7 @@ export class UtxoCache {
     try {
       const currentUtxoIds = new Set(Object.keys(cache.utxos));
 
-      if (currentUtxoIds.size < ORDINAL_UTXO_QUERY_LIMIT * 2) {
+      if (currentUtxoIds.size < UtxoCache.ORDINAL_UTXO_QUERY_LIMIT * 2) {
         // if we have fewer than 2x the limit, we can just reinitialise
         this._setAddressCache(address, undefined, true);
         return await this._initCache(address);
@@ -332,7 +333,7 @@ export class UtxoCache {
   private _initCache = async (address: string, { startOffset = 0, startXVersion = -1 } = {}): Promise<void> => {
     let offset = startOffset;
     let totalCount = offset + 1;
-    let limit = ORDINAL_UTXO_QUERY_LIMIT;
+    let limit = UtxoCache.ORDINAL_UTXO_QUERY_LIMIT;
     let xVersion = startXVersion === -1 ? undefined : startXVersion;
 
     while (offset < totalCount) {
@@ -425,7 +426,7 @@ export class UtxoCache {
         });
       }
 
-      if (initialCache.syncComplete && Date.now() - initialCache.syncTime > CACHE_RESYNC_TTL) {
+      if (initialCache.syncComplete && Date.now() - initialCache.syncTime > UtxoCache.CACHE_RESYNC_TTL) {
         // if the cache is already synced, we don't need to initialise it, but we may want to resync it
         return await this._resyncCache(address, initialCache);
       }
@@ -485,8 +486,7 @@ export class UtxoCache {
 
   clearAllCaches = async (): Promise<void> => {
     const keys = await this._cacheStorageController.getAllKeys();
-    const prefix = UTXO_CACHE_KEY_PREFIX;
-    const cacheKeys = keys.filter((key) => key.startsWith(prefix));
+    const cacheKeys = keys.filter((key) => key.startsWith(UtxoCache.UTXO_CACHE_KEY_PREFIX));
 
     for (const cacheKey of cacheKeys) {
       await this._cacheStorageController.remove(cacheKey);
