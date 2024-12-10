@@ -46,10 +46,18 @@ const configureCacheForNetwork = (network: NetworkType): void => {
 const getRuneInfoFromCache = (runeNameOrId: string | bigint, network: NetworkType): Rune | undefined => {
   configureCacheForNetwork(network);
 
-  if (typeof runeNameOrId === 'bigint') {
-    return runeInfoCache.byId.get(runeNameOrId);
+  try {
+    if (typeof runeNameOrId === 'bigint') {
+      return runeInfoCache.byId.get(runeNameOrId);
+    } else if (/^[0-9]+:[0-9]+$/.test(runeNameOrId)) {
+      const [block, txIdx] = runeNameOrId.split(':').map((part) => BigInt(part));
+      const runeId = (block << 16n) + txIdx;
+      return runeInfoCache.byId.get(runeId);
+    }
+    return runeInfoCache.byName[runeNameOrId.toUpperCase()];
+  } catch (e) {
+    return undefined;
   }
-  return runeInfoCache.byName[runeNameOrId.toUpperCase()];
 };
 
 const setRuneInfoInCache = (runeInfo: Rune | undefined, network: NetworkType): void => {
