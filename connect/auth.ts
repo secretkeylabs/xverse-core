@@ -1,10 +1,10 @@
 import { createSha2Hash } from '@stacks/encryption';
-import { ChainID } from '@stacks/transactions';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
 import * as bip39 from 'bip39';
 import { deriveStxAddressChain } from '../account';
 import { GAIA_HUB_URL } from '../constant';
 import { bip32 } from '../utils/bip32';
+import { StacksMainnet } from '../types';
 
 export type AuthRequest = {
   payload: {
@@ -26,8 +26,7 @@ export async function createAuthResponse(
 ): Promise<string | undefined> {
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const chainID = ChainID.Mainnet;
-  const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
+  const deriveStxAddressKeychain = deriveStxAddressChain(StacksMainnet, BigInt(accountIndex));
 
   const { privateKey } = deriveStxAddressKeychain(rootNode);
 

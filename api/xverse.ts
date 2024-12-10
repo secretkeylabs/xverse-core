@@ -1,4 +1,4 @@
-import { StacksTransaction } from '@stacks/transactions';
+import { StacksTransactionWire } from '@stacks/transactions';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
@@ -542,16 +542,16 @@ export async function getBinaceSignature(network: NetworkType, srcData: string):
 /**
  * Return the sponsored signed transaction
  *
- * @param {StacksTransaction} signedTx
+ * @param {StacksTransactionWire} signedTx
  * @param {string} [sponsorHost] - optional host for stacks-transaction-sponsor fork
  * @returns {Promise<string>}
  * @throws {ApiResponseError} - if api responded with an error status
  */
-export async function sponsorTransaction(signedTx: StacksTransaction, sponsorHost?: string): Promise<string> {
+export async function sponsorTransaction(signedTx: StacksTransactionWire, sponsorHost?: string): Promise<string> {
   const url = `${sponsorHost ?? XVERSE_SPONSOR_URL}/v1/sponsor`;
 
   const data = {
-    tx: signedTx.serialize().toString(),
+    tx: signedTx.serialize(),
   };
 
   return axios

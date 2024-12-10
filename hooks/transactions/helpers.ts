@@ -1,16 +1,19 @@
 import { deserializeTransaction } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { RbfRecommendedFees, estimateStacksTransactionWithFallback, getRawTransaction, rbf } from '../../transactions';
+import { RbfRecommendedFees, rbf } from '../../transactions';
 import {
   AppInfo,
   RecommendedFeeResponse,
   SettingsNetwork,
   BtcTransactionData,
   StacksNetwork,
-  StacksTransaction,
+  StacksTransactionWire,
   StxTransactionData,
+  StacksMainnet,
 } from '../../types';
 import { microstacksToStx } from '../../currency';
+import { estimateStacksTransactionWithFallback } from '../../transactions/stacks/fees';
+import { getStacksApiClient } from '../../api';
 
 export type RbfData = {
   rbfTransaction?: InstanceType<typeof rbf.RbfTransaction>;
@@ -112,8 +115,9 @@ export const fetchStxRbfData = async (
   stxAvailableBalance: string,
 ): Promise<RbfData> => {
   const { fee } = transaction;
-  const txRaw: string = await getRawTransaction(transaction.txid, btcNetwork);
-  const unsignedTx: StacksTransaction = deserializeTransaction(txRaw);
+  const stacksApiClient = getStacksApiClient(stacksNetwork.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet');
+  const txRaw: string = await stacksApiClient.getRawTransaction(transaction.txid);
+  const unsignedTx: StacksTransactionWire = deserializeTransaction(txRaw);
   const feeEstimations = await estimateStacksTransactionWithFallback(unsignedTx, stacksNetwork);
 
   return calculateStxRbfData(fee, feeEstimations, appInfo, stxAvailableBalance);

@@ -14,18 +14,21 @@ import {
   cvToValue,
   MultiSigHashMode,
   PayloadType,
-  PostCondition,
   serializeCV,
-  serializePostCondition,
   SingleSigHashMode,
-  StacksTransaction,
+  StacksTransactionWire,
   getFee,
+  LengthPrefixedList,
+  serializePostConditionWire,
+  PostConditionWire,
+  PostCondition,
+  deserializePostConditionWire,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
-import { createContractCallPromises, generateUnsignedStxTokenTransferTransaction } from '../transactions';
-import { AppInfo, StxPendingTxData } from '../types';
-import { buf2hex } from '../utils/arrayBuffers';
+import { createContractCallPromises, generateUnsignedTx } from '../transactions';
+import { AppInfo } from '../types';
 import { STX_DECIMALS } from '../constant';
+import { bytesToHex } from '@noble/hashes/utils';
 
 export async function getContractCallPromises(
   payload: TransactionPayload,
@@ -79,7 +82,7 @@ export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; app
  * @param unsignedTx
  * @param appInfo
  */
-export const applyFeeMultiplier = (unsignedTx: StacksTransaction, appInfo: AppInfo | null) => {
+export const applyFeeMultiplier = (unsignedTx: StacksTransactionWire, appInfo: AppInfo | null) => {
   if (!appInfo) {
     return;
   }
@@ -95,17 +98,20 @@ export async function getTokenTransferRequest(
   stxPublicKey: string,
   feeMultipliers: AppInfo | null,
   network: StacksNetwork,
-  stxPendingTransactions?: StxPendingTxData,
   auth?: Authorization,
 ) {
-  const unsignedSendStxTx: StacksTransaction = await generateUnsignedStxTokenTransferTransaction(
-    recipient,
-    amount,
-    memo,
-    stxPendingTransactions?.pendingTransactions ?? [],
-    stxPublicKey,
-    network,
-  );
+  const unsignedSendStxTx: StacksTransactionWire = await generateUnsignedTx({
+    payload: {
+      txType: TransactionTypes.STXTransfer,
+      recipient,
+      memo,
+      amount,
+      network,
+      publicKey: stxPublicKey,
+    },
+    publicKey: stxPublicKey,
+    sponsored: auth?.authType === AuthType.Sponsored,
+  });
 
   applyFeeMultiplier(unsignedSendStxTx, feeMultipliers);
 
@@ -115,31 +121,37 @@ export async function getTokenTransferRequest(
   return unsignedSendStxTx;
 }
 
-export const isMultiSig = (tx: StacksTransaction): boolean => {
+export const isMultiSig = (tx: StacksTransactionWire): boolean => {
   const hashMode = tx.auth.spendingCondition.hashMode as MultiSigHashMode | SingleSigHashMode;
-  return hashMode === AddressHashMode.SerializeP2SH || hashMode === AddressHashMode.SerializeP2WSH ? true : false;
+  return hashMode === AddressHashMode.P2SH || hashMode === AddressHashMode.P2WSH ? true : false;
 };
 
 const cleanMemoString = (memo: string): string => memo.replace('\u0000', '');
 
-function encodePostConditions(postConditions: PostCondition[]) {
-  return postConditions.map((pc) => buf2hex(serializePostCondition(pc)));
-}
+// todo: remove this function
+// function encodePostConditions(postConditions: LengthPrefixedList): string[] {
+//   return postConditions.values.map((pc) =>
+//     serializePostConditionWire(deserializePostConditionWire(pc)),
+//   );
+// }
+
+// function encodePostConditions1(postConditions: string[]) {
+//   return postConditions.map(pc => bytesToHex(serializePostConditionWire(pc)));
+// }
 
 export const txPayloadToRequest = (
-  stacksTransaction: StacksTransaction,
+  stacksTransaction: StacksTransactionWire,
   stxAddress?: string,
   attachment?: string,
 ): Partial<TransactionPayload> => {
   const { payload, auth, postConditions, postConditionMode, anchorMode } = stacksTransaction;
-  const encodedPostConditions = encodePostConditions(postConditions.values as PostCondition[]);
   const transactionRequest: Partial<TransactionPayload> = {
     attachment,
     stxAddress,
     sponsored: auth.authType === AuthType.Sponsored,
     nonce: Number(auth.spendingCondition.nonce),
     fee: Number(auth.spendingCondition.fee),
-    postConditions: encodedPostConditions,
+    postConditions: stacksTransaction.postConditions.values as unknown as string[],
     postConditionMode: postConditionMode,
     anchorMode: anchorMode,
   };

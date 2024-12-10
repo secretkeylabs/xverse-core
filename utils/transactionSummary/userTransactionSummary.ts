@@ -2,11 +2,11 @@ import { PsbtSummary, TransactionContext, TransactionSummary } from '../../trans
 import { RuneSummary } from '../runes';
 import { combineInscriptionsAndSatributes, getAddressSummary } from './shared';
 import {
-  AggregatedOutputSummary,
-  BaseSummary,
-  TransferBundle,
-  TransferIOSummary,
-  UserTransactionSummary,
+  type AggregatedOutputSummary,
+  type BaseSummary,
+  type TransferBundle,
+  type TransferIOSummary,
+  type UserTransactionSummary,
 } from './types';
 
 const extractIOSummaries = (

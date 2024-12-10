@@ -2,7 +2,7 @@ import { NetworkType } from '../types';
 import { getStxPath, makeLedgerCompatibleUnsignedAuthResponsePayload, signStxJWTAuth } from './helper';
 import { LedgerErrors, LedgerStxJWTAuthProfile, Transport } from './types';
 import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
-import { StacksTransaction, AddressVersion } from '@stacks/transactions';
+import { StacksTransactionWire, AddressVersion } from '@stacks/transactions';
 import { addSignatureToStxTransaction } from './transaction';
 
 /**
@@ -56,7 +56,7 @@ export async function signLedgerStxTransaction({
   transport: Transport;
   transactionBuffer: Buffer;
   addressIndex: number;
-}): Promise<StacksTransaction> {
+}): Promise<StacksTransactionWire> {
   const appStacks = new StacksApp(transport);
   const path = getStxPath({ accountIndex: 0, addressIndex });
   const resp = await appStacks.sign(path, transactionBuffer);
