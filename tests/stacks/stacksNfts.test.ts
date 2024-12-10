@@ -1,4 +1,3 @@
-import { StacksMainnet } from '@stacks/network';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNftsData } from '../../api';
 import {
@@ -6,7 +5,7 @@ import {
   getAllNftContracts,
   organizeNftsIntoCollection,
 } from '../../stacksCollectible';
-import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
+import { NftCollectionData, NftEventsResponse, NonFungibleToken, StacksMainnet } from '../../types';
 import mockStacksCollection from '../mocks/stacks.collection.mock.json';
 import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
 import mockHiddenStacksCollection from '../mocks/stacks.collection.hidden.mock.json';
@@ -58,7 +57,7 @@ describe('getAllNftContracts', () => {
     };
 
     const address = 'SP3RW6BW9F5STYG2K8XS5EP5PM33E0DNQT4XEG864';
-    const network = new StacksMainnet();
+    const network = StacksMainnet;
     const maxLimit = 200;
     const totalItems = 3500; // Total should not be a multiple of the limit to test edge cases
     const expectedCalls = Math.ceil(totalItems / maxLimit);

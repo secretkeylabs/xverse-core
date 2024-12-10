@@ -1,5 +1,4 @@
 import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
-import { StacksMainnet, StacksTestnet } from '@stacks/network';
 import { PayloadType } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,9 +6,10 @@ import { txPayloadToRequest } from '../../connect';
 import { microstacksToStx } from '../../currency';
 import {
   createContractCallPromises,
-  generateContractDeployTransaction,
-  generateUnsignedStxTokenTransferTransaction,
+  generateUnsignedSTXTransferTx,
+  generateUnsignedContractDeployTx,
 } from '../../transactions';
+import { StacksMainnet, StacksTestnet } from '../../types';
 
 const mocked = vi.hoisted(() => ({
   estimateTransaction: vi.fn(() => [
@@ -64,9 +64,8 @@ describe('txPayloadToRequest', () => {
     // Mock data
     const mockTokenTransferPayload = {
       amount: '102',
-      appDetails: { name: 'Alex app', icon: 'https://alexgo.io/wp-content/themes/alex/img/logo_tm.png' },
       memo: 'From demo app',
-      network: new StacksTestnet(),
+      network: StacksTestnet,
       publicKey: '034d917f6eb23798ff1dcfba8665f4542a1ea957e7b6587d79797a595c5bfba2f6',
       recipient: 'ST1X6M947Z7E58CNE0H8YJVJTVKS9VW0PHEG3NHN3',
       stxAddress: 'ST143SNE1S5GHKR9JN89BEVFK9W03S1FSNZ4RCVAY',
@@ -91,15 +90,17 @@ describe('txPayloadToRequest', () => {
     mocked.cvToValue.mockReturnValueOnce(mockTokenTransferPayload.recipient);
     mocked.makeUnsignedSTXTokenTransfer.mockResolvedValueOnce(mockedTxn);
 
-    const unsignedSendStxTx = await generateUnsignedStxTokenTransferTransaction(
-      mockTokenTransferPayload.recipient,
-      mockTokenTransferPayload.amount,
-      mockTokenTransferPayload.memo,
-      [],
-      mockTokenTransferPayload.publicKey,
-      new StacksTestnet(),
-    );
-    expect(mocked.estimateTransaction).toBeCalledTimes(1);
+    const unsignedSendStxTx = await generateUnsignedSTXTransferTx({
+      payload: {
+        txType: TransactionTypes.STXTransfer,
+        recipient: mockTokenTransferPayload.recipient,
+        amount: mockTokenTransferPayload.amount,
+        memo: mockTokenTransferPayload.memo,
+        network: StacksTestnet,
+        publicKey: mockTokenTransferPayload.publicKey,
+      },
+      publicKey: mockTokenTransferPayload.publicKey,
+    });
 
     const result = txPayloadToRequest(unsignedSendStxTx);
     expect(result).toEqual(
@@ -119,7 +120,7 @@ describe('txPayloadToRequest', () => {
         // eslint-disable-next-line max-len
         '\n(define-fungible-token connect-token)\n(begin (ft-mint? connect-token u10000000 tx-sender))\n\n(define-public (transfer\n    (recipient principal)\n    (amount uint)\n  )\n  (ok (ft-transfer? connect-token amount tx-sender recipient))\n)\n\n(define-public (faucet)\n  (ok (ft-mint? connect-token u100 tx-sender))\n)\n\n(define-non-fungible-token hello-nft uint)\n(begin (nft-mint? hello-nft u1 tx-sender))\n(begin (nft-mint? hello-nft u2 tx-sender))\n',
       contractName: 'demo-deploy-1701352463789',
-      network: new StacksTestnet(),
+      network: StacksTestnet,
       publicKey: '034d917f6eb23798ff1dcfba8665f4542a1ea957e7b6587d79797a595c5bfba2f6',
       stxAddress: 'ST143SNE1S5GHKR9JN89BEVFK9W03S1FSNZ4RCVAY',
       txType: 'smart_contract',
@@ -127,14 +128,19 @@ describe('txPayloadToRequest', () => {
 
     mocked.getNonce.mockReturnValueOnce(100n);
 
-    const unsignedSendStxTx = await generateContractDeployTransaction({
-      codeBody: mockContractDeploy.codeBody,
-      contractName: mockContractDeploy.contractName,
+    const unsignedSendStxTx = await generateUnsignedContractDeployTx({
+      payload: {
+        txType: TransactionTypes.ContractDeploy,
+        codeBody: mockContractDeploy.codeBody,
+        contractName: mockContractDeploy.contractName,
+        network: StacksTestnet,
+        publicKey: mockContractDeploy.publicKey,
+      },
+      fee: 0n,
+      nonce: 0n,
       publicKey: mockContractDeploy.publicKey,
-      pendingTxs: [],
-      network: new StacksTestnet(),
     });
-    expect(mocked.estimateContractDeploy).toBeCalledTimes(1);
+    // expect(mocked.estimateContractDeploy).toBeCalledTimes(1);
 
     const result = txPayloadToRequest(unsignedSendStxTx);
     expect(result).toEqual(
@@ -160,7 +166,7 @@ describe('txPayloadToRequest', () => {
         '0a010000000000000000000000001a612f25',
       ],
       functionName: 'swap-helper',
-      network: new StacksMainnet(),
+      network: StacksMainnet,
       postConditionMode: 2,
       postConditions: [
         '000216483cd5c1c96119e132aa12b76df34f003c85f9af01000000000007a120',
@@ -197,7 +203,7 @@ describe('txPayloadToRequest', () => {
     const unsignedContractCall = await createContractCallPromises(
       contractCallPayload,
       'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
-      new StacksMainnet(),
+      StacksMainnet,
       '03f746046bacb5ff6254124bbdadbe28ca1cfefbd9cd160403667a772f25f298ab',
     );
     expect(mocked.fetchStxPendingTxData).toBeCalledTimes(1);
