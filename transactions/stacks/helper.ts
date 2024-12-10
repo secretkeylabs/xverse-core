@@ -1,61 +1,48 @@
 import { StacksNetwork } from '@stacks/network';
 import {
   addressToString,
-  AssetInfo,
   Authorization,
-  BytesReader,
-  createAssetInfo,
   deserializeCV,
-  deserializeStacksMessage,
-  FungibleConditionCode,
-  FungiblePostCondition,
-  getFee,
+  deserializePostConditionWire,
   hexToCV,
-  makeStandardFungiblePostCondition,
-  makeStandardNonFungiblePostCondition,
-  NonFungibleConditionCode,
   PostCondition,
   PostConditionType,
   setNonce,
-  StacksMessageType,
-  StacksTransaction,
+  Pc,
+  PostConditionWire,
+  FungiblePostConditionWire,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { fetchStxPendingTxData, getContractInterface, getXverseApiClient } from '../api';
-import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../currency';
-import { Coin, FeesMultipliers, FungibleToken, PostConditionsOptions, StxMempoolTransactionData } from '../types';
-import { generateContractDeployTransaction, generateUnsignedContractCall, getNonce } from './stx';
-
-export function getNewNonce(pendingTransactions: StxMempoolTransactionData[], currentNonce: bigint): bigint {
-  if ((pendingTransactions ?? []).length === 0) {
-    // handle case where account nonce is 0 and no pending transactions
-    return currentNonce;
-  }
-  const maxPendingNonce = Math.max(...(pendingTransactions ?? []).map((transaction) => transaction?.nonce));
-  if (maxPendingNonce >= currentNonce) {
-    return BigInt(maxPendingNonce + 1);
-  } else {
-    return currentNonce;
-  }
-}
+import { fetchStxPendingTxData, getContractInterface, getXverseApiClient } from '../../api';
+import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../../currency';
+import { Coin, FungibleToken, PostConditionsOptions } from '../../types';
+import { generateUnsignedContractCallTx, generateUnsignedTx } from './stx';
+import { getNewNonce, getNonce } from '.';
+import { ContractDeployPayload, ContractCallPayload, TransactionTypes } from '@stacks/connect';
+import { hexToBytes } from '@noble/hashes/utils';
 
 export function makeNonFungiblePostCondition(options: PostConditionsOptions): PostCondition {
   const { contractAddress, contractName, assetName, stxAddress, amount } = options;
 
-  const assetInfo: AssetInfo = createAssetInfo(contractAddress, contractName, assetName);
-  return makeStandardNonFungiblePostCondition(
-    stxAddress,
-    NonFungibleConditionCode.Sends,
-    assetInfo,
-    hexToCV(amount.toString()),
-  );
+  // const assetInfo: AssetWire = createAsset(contractAddress, contractName, assetName);
+
+  return Pc.principal(stxAddress)
+    .willSendAsset()
+    .nft(`${contractAddress}.${contractName}::${assetName}`, hexToCV(amount.toString()));
+
+  // return makeStandardNonFungiblePostCondition(
+  //   stxAddress,
+  //   NonFungibleConditionCode.Sends,
+  //   assetInfo,
+  //   hexToCV(amount.toString()),
+  // );
 }
 
 export function makeFungiblePostCondition(options: PostConditionsOptions): PostCondition {
   const { contractAddress, contractName, assetName, stxAddress, amount } = options;
 
-  const assetInfo = createAssetInfo(contractAddress, contractName, assetName);
-  return makeStandardFungiblePostCondition(stxAddress, FungibleConditionCode.Equal, BigInt(amount), assetInfo);
+  // const assetInfo = createAsset(contractAddress, contractName, assetName);
+  return Pc.principal(stxAddress).willSendEq(amount).ft(`${contractAddress}.${contractName}`, assetName);
 }
 
 export function getFiatEquivalent(
@@ -97,34 +84,37 @@ export function hexStringToBuffer(hex: string): Buffer {
   return Buffer.from(removeHexPrefix(hex), 'hex');
 }
 
-/**
- * extract function arguments and post conditions from browser transaction payload
- * @param payload
- * @returns
- */
-export const extractFromPayload = (payload: any) => {
-  const { functionArgs, postConditions } = payload;
-  const funcArgs = functionArgs?.map((arg: string) => deserializeCV(hexStringToBuffer(arg)));
+function isContractDeployPayload(
+  payload: ContractCallPayload | ContractDeployPayload,
+): payload is ContractDeployPayload {
+  return (payload as ContractDeployPayload).codeBody !== undefined;
+}
 
-  const postConds = Array.isArray(postConditions)
-    ? (postConditions?.map(
-        (arg: string) =>
-          deserializeStacksMessage(
-            new BytesReader(hexStringToBuffer(arg)),
-            StacksMessageType.PostCondition,
-          ) as PostCondition,
-      ) as PostCondition[])
-    : [];
+function isContractCallPayload(payload: ContractCallPayload | ContractDeployPayload): payload is ContractCallPayload {
+  return (payload as ContractCallPayload).functionName !== undefined;
+}
 
-  return { funcArgs, postConds };
+export const extractFromPayload = (payload: ContractCallPayload | ContractDeployPayload) => {
+  if (isContractCallPayload(payload)) {
+    const { functionArgs, postConditions } = payload;
+    const funcArgs = functionArgs.map((arg: string) => deserializeCV(hexToBytes(arg)));
+
+    return { funcArgs, postConditions: postConditions || [] };
+  } else if (isContractDeployPayload(payload)) {
+    return { funcArgs: [], postConditions: [] };
+  } else {
+    return { funcArgs: [], postConditions: [] };
+  }
 };
 
-export const getFTInfoFromPostConditions = (postConds: PostCondition[]) =>
+export const getFTInfoFromPostConditions = (postConds: PostConditionWire[]) =>
   (
-    postConds?.filter((postCond) => postCond.conditionType === PostConditionType.Fungible) as FungiblePostCondition[]
+    postConds?.filter(
+      (postCond) => postCond.conditionType === PostConditionType.Fungible,
+    ) as FungiblePostConditionWire[]
   )?.map(
-    (postCond: FungiblePostCondition) =>
-      `${addressToString(postCond.assetInfo.address)}.${postCond.assetInfo.contractName.content}`,
+    (postCond: FungiblePostConditionWire) =>
+      `${addressToString(postCond.asset.address)}.${postCond.asset.contractName.content}`,
   );
 
 /**
@@ -143,9 +133,8 @@ export const createContractCallPromises = async (
 ) => {
   const sponsored = payload?.sponsored;
   const { pendingTransactions } = await fetchStxPendingTxData(stxAddress, network);
-  const { funcArgs, postConds } = extractFromPayload(payload);
 
-  const ftContactAddresses = getFTInfoFromPostConditions(postConds);
+  const ftContactAddresses = getFTInfoFromPostConditions(payload.postConditions);
 
   // Stacks isn't setup for testnet, so we default to mainnet
   const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getSip10Tokens(
@@ -158,15 +147,23 @@ export const createContractCallPromises = async (
     contractAddress: payload.contractAddress,
     contractName: payload.contractName,
     functionName: payload.functionName,
-    functionArgs: funcArgs,
+    functionArgs: payload.functionArgs,
     network,
     nonce: undefined,
-    postConditions: postConds,
+    postConditions: payload.postConditions,
     sponsored,
     postConditionMode: payload.postConditionMode,
   };
 
-  const unSignedContractCall = await generateUnsignedContractCall(tx);
+  const unSignedContractCall = await generateUnsignedContractCallTx({
+    payload: {
+      txType: TransactionTypes.ContractCall,
+      ...tx,
+    },
+    fee: 0n,
+    nonce: 0n,
+    publicKey: stxPublicKey,
+  });
 
   const checkForPostConditionMessage = payload?.postConditionMode === 2 && payload?.postConditions?.length <= 0;
   const showPostConditionMessage = !!checkForPostConditionMessage;
@@ -192,29 +189,26 @@ export const createDeployContractRequest = async (
   payload: any,
   network: StacksNetwork,
   stxPublicKey: string,
-  feeMultipliers: FeesMultipliers,
-  walletAddress: string,
   auth?: Authorization,
 ) => {
   const { codeBody, contractName, postConditionMode } = payload;
-  const { postConds } = extractFromPayload(payload);
-  const postConditions = postConds;
   const sponsored = payload?.sponsored;
-  const { pendingTransactions } = await fetchStxPendingTxData(walletAddress, network);
-  const contractDeployTx = await generateContractDeployTransaction({
-    codeBody,
-    contractName,
-    postConditions,
-    postConditionMode,
-    pendingTxs: pendingTransactions,
+
+  const contractDeployTx = await generateUnsignedTx({
+    payload: {
+      txType: TransactionTypes.ContractDeploy,
+      codeBody,
+      contractName,
+      postConditions: payload.postConditions,
+      postConditionMode,
+      publicKey: stxPublicKey,
+      network,
+      sponsored,
+      fee: 0,
+    },
     publicKey: stxPublicKey,
-    network,
-    sponsored,
   });
-  const { fee } = contractDeployTx.auth.spendingCondition;
-  if (feeMultipliers) {
-    contractDeployTx.setFee(fee * BigInt(feeMultipliers.otherTxMultiplier));
-  }
+  console.log(contractDeployTx);
   if (auth) {
     contractDeployTx.auth = auth;
   }
@@ -225,12 +219,4 @@ export const createDeployContractRequest = async (
     contractName,
     sponsored,
   };
-};
-
-export const capStxFeeAtThreshold = async (unsignedTx: StacksTransaction, network: StacksNetwork) => {
-  const feeMultipliers = await getXverseApiClient(network.isMainnet() ? 'Mainnet' : 'Testnet').fetchAppInfo();
-  const fee = getFee(unsignedTx.auth);
-  if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
-    unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
-  }
 };

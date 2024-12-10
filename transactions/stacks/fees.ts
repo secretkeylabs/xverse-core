@@ -1,0 +1,85 @@
+import {
+  fetchFeeEstimateTransaction,
+  estimateTransactionByteLength,
+  getFee,
+  PayloadType,
+  StacksTransactionWire,
+  serializePayloadBytes,
+} from '@stacks/transactions';
+import { FeeEstimation, getMempoolFeePriorities, getXverseApiClient } from '../../api';
+import { StacksNetwork } from '@stacks/network';
+import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
+import { bytesToHex } from '@noble/hashes/utils';
+import { StacksMainnet } from '../../types';
+
+export const capStxFeeAtThreshold = async (unsignedTx: StacksTransactionWire, network: StacksNetwork) => {
+  const feeMultipliers = await getXverseApiClient(
+    network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
+  ).fetchAppInfo();
+  const fee = getFee(unsignedTx.auth);
+  if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
+    unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
+  }
+};
+
+const getFallbackFees = (
+  transaction: StacksTransactionWire,
+  mempoolFees: MempoolFeePriorities,
+): [FeeEstimation, FeeEstimation, FeeEstimation] => {
+  if (!transaction || !transaction.payload) {
+    throw new Error('Invalid transaction object');
+  }
+
+  if (!mempoolFees) {
+    throw new Error('Invalid mempool fees object');
+  }
+
+  const { payloadType } = transaction.payload;
+
+  if (payloadType === PayloadType.ContractCall && mempoolFees.contract_call) {
+    return [
+      { fee: mempoolFees.contract_call.low_priority },
+      { fee: mempoolFees.contract_call.medium_priority },
+      { fee: mempoolFees.contract_call.high_priority },
+    ];
+  } else if (payloadType === PayloadType.TokenTransfer && mempoolFees.token_transfer) {
+    return [
+      { fee: mempoolFees.token_transfer.low_priority },
+      { fee: mempoolFees.token_transfer.medium_priority },
+      { fee: mempoolFees.token_transfer.high_priority },
+    ];
+  }
+  return [
+    { fee: mempoolFees.all.low_priority },
+    { fee: mempoolFees.all.medium_priority },
+    { fee: mempoolFees.all.high_priority },
+  ];
+};
+
+/**
+ * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
+ * {@link estimateTransaction} does not get an estimation due to the
+ * {NoEstimateAvailableError} error.
+ */
+export const estimateStacksTransactionWithFallback = async (
+  transaction: StacksTransactionWire,
+  network: StacksNetwork,
+): Promise<[FeeEstimation, FeeEstimation, FeeEstimation]> => {
+  try {
+    const estimatedLen = estimateTransactionByteLength(transaction);
+
+    const [slower, regular, faster] = await fetchFeeEstimateTransaction({
+      payload: bytesToHex(serializePayloadBytes(transaction.payload)),
+      estimatedLength: estimatedLen,
+      network,
+    });
+    return [slower, regular, faster];
+  } catch (error) {
+    const err = error.toString();
+    if (!err.includes('NoEstimateAvailable')) {
+      throw error;
+    }
+    const mempoolFees = await getMempoolFeePriorities(network);
+    return getFallbackFees(transaction, mempoolFees);
+  }
+};
