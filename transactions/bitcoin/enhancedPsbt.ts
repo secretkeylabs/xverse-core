@@ -10,6 +10,7 @@ import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
   EnhancedOutput,
+  GetPSBTSummaryOptions,
   IOInscription,
   IOSatribute,
   InputMetadata,
@@ -177,25 +178,35 @@ export class EnhancedPsbt {
     return hex.encode(sha256(sha256(concatBytes(txn.toBytes(false)))).reverse());
   }
 
-  getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
-    const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
-    if (addressInput && addressInput.extendedUtxo) {
-      return addressInput.extendedUtxo;
-    } else {
-      const utxo: UTXO = {
-        txid: inputTxid,
-        vout: inputRaw.index!,
-        value: Number(inputRaw.witnessUtxo?.amount) || 0,
-        status: {
-          confirmed: false,
-        },
-        address: '',
-      };
-      return new ExtendedDummyUtxo(utxo, '');
+  private _getExtendedUtxoForInput = async (
+    inputRaw: btc.TransactionInput,
+    inputTxid: string,
+    knownEmptyTxids?: string[],
+  ) => {
+    if (knownEmptyTxids && !knownEmptyTxids.includes(inputTxid)) {
+      const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
+      if (addressInput && addressInput.extendedUtxo) {
+        return addressInput.extendedUtxo;
+      }
     }
+
+    const utxo: UTXO = {
+      txid: inputTxid,
+      vout: inputRaw.index!,
+      value: Number(inputRaw.witnessUtxo?.amount) || 0,
+      status: {
+        confirmed: false,
+      },
+      address: '',
+    };
+
+    return new ExtendedDummyUtxo(utxo, '');
   };
 
-  private async _extractInputMetadata(transaction: btc.Transaction): Promise<InputMetadata> {
+  private async _extractInputMetadata(
+    transaction: btc.Transaction,
+    knownEmptyTxids?: string[],
+  ): Promise<InputMetadata> {
     const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash }[] = [];
 
     let isSigHashAll = this._isSigHashAll ?? false;
@@ -213,7 +224,7 @@ export class EnhancedPsbt {
 
       const inputTxid = hex.encode(inputRaw.txid);
 
-      const inputExtendedUtxo = await this.getExtendedUtxoForInput(inputRaw, inputTxid);
+      const inputExtendedUtxo = await this._getExtendedUtxoForInput(inputRaw, inputTxid, knownEmptyTxids);
 
       if (!inputExtendedUtxo) {
         throw new Error(`Could not parse input ${inputIndex}`);
@@ -252,11 +263,12 @@ export class EnhancedPsbt {
     return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
   }
 
-  async getSummary(): Promise<PsbtSummary> {
+  async getSummary(options?: GetPSBTSummaryOptions): Promise<PsbtSummary> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
     const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
       transaction,
+      options?.knownEmptyTxids,
     );
     const outputs: EnhancedOutput[] = [];
 
