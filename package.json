@@ -34,7 +34,7 @@
     "@stacks/storage": "7.0.2",
     "@stacks/transactions": "7.0.2",
     "@stacks/wallet-sdk": "7.0.2",
-    "@tanstack/react-query": "^4.29.3",
+    "@tanstack/react-query": "4.29.3",
     "@zondax/ledger-stacks": "1.0.4",
     "async-mutex": "^0.4.0",
     "axios": "1.7.7",
@@ -81,7 +81,7 @@
     "@types/react": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^5.58.0",
     "@typescript-eslint/parser": "^5.58.0",
-    "@vitest/coverage-v8": "2.1.8",
+    "@vitest/coverage-v8": "1.6.0",
     "axios-mock-adapter": "^1.22.0",
     "bip322-js": "^1.1.0",
     "eslint": "^8.38.0",
@@ -98,12 +98,12 @@
     "rimraf": "^3.0.2",
     "ts-loader": "^9.4.1",
     "typescript": "^5.0.0",
-    "vitest": "2.1.8"
+    "vitest": "1.6.0"
   },
   "peerDependencies": {
     "bignumber.js": "9.1.2",
     "micro-packed": "0.5.3",
-    "react": ">18.0.0",
-    "react-dom": ">18.0.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   }
 }
