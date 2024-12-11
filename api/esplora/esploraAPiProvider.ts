@@ -1,6 +1,11 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import axiosRetry from 'axios-retry';
-import { XVERSE_BTC_BASE_URI_MAINNET, XVERSE_BTC_BASE_URI_SIGNET, XVERSE_BTC_BASE_URI_TESTNET } from '../../constant';
+import {
+  XVERSE_BTC_BASE_URI_MAINNET,
+  XVERSE_BTC_BASE_URI_REGTEST,
+  XVERSE_BTC_BASE_URI_SIGNET,
+  XVERSE_BTC_BASE_URI_TESTNET,
+} from '../../constant';
 import {
   Address,
   BtcAddressBalanceResponse,
@@ -44,6 +49,9 @@ export class BitcoinEsploraApiProvider {
           break;
         case 'Signet':
           baseURL = XVERSE_BTC_BASE_URI_SIGNET;
+          break;
+        case 'Regtest':
+          baseURL = XVERSE_BTC_BASE_URI_REGTEST;
           break;
         default:
           throw new Error('Invalid network');

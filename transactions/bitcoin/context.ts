@@ -12,6 +12,7 @@ import { Transport } from '../../ledger/types';
 import { SeedVault } from '../../seedVault';
 import { type NetworkType, type UTXO } from '../../types';
 import { bip32 } from '../../utils/bip32';
+import { getBtcNetwork, getBtcNetworkDefinition } from '../btcNetwork';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
@@ -257,9 +258,9 @@ export class P2shAddressContext extends AddressContext {
 
     const publicKeyBuff = hex.decode(publicKey);
 
-    const p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    const p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(network));
 
-    this._p2sh = btc.p2sh(p2wpkh, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    this._p2sh = btc.p2sh(p2wpkh, getBtcNetworkDefinition(network));
   }
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
@@ -314,7 +315,7 @@ export class P2wpkhAddressContext extends AddressContext {
 
     const publicKeyBuff = hex.decode(publicKey);
 
-    this._p2wpkh = btc.p2wpkh(publicKeyBuff, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    this._p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(network));
   }
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
@@ -447,15 +448,11 @@ export class P2trAddressContext extends AddressContext {
     const publicKeyBuff = hex.decode(publicKey);
 
     try {
-      this._p2tr = btc.p2tr(publicKeyBuff, undefined, network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+      this._p2tr = btc.p2tr(publicKeyBuff, undefined, getBtcNetworkDefinition(network));
     } catch (err) {
       if (err instanceof Error && err.message.includes('schnorr')) {
         // ledger gives us the non-schnorr pk, so we need to remove the first byte
-        this._p2tr = btc.p2tr(
-          publicKeyBuff.slice(1),
-          undefined,
-          network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK,
-        );
+        this._p2tr = btc.p2tr(publicKeyBuff.slice(1), undefined, getBtcNetworkDefinition(network));
       } else {
         throw err;
       }
@@ -698,7 +695,7 @@ export class TransactionContext {
     address: string,
     amount: bigint,
   ): { script: string[]; scriptHex: string } {
-    transaction.addOutputAddress(address, amount, this._network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK);
+    transaction.addOutputAddress(address, amount, getBtcNetworkDefinition(this._network));
 
     const output = transaction.getOutput(transaction.outputsLength - 1);
 

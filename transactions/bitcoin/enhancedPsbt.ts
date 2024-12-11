@@ -3,6 +3,7 @@ import * as btc from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
+import { getBtcNetwork, getBtcNetworkDefinition, isInscriptionsAndRunesCompatible } from '../btcNetwork';
 import { InputToSign, TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
@@ -101,7 +102,7 @@ export class EnhancedPsbt {
 
     const outputScript = btc.OutScript.decode(output.script);
 
-    const btcNetwork = this._context.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+    const btcNetwork = getBtcNetworkDefinition(this._context.network);
 
     if (outputScript.type === 'unknown') {
       //for script outputs
@@ -262,14 +263,16 @@ export class EnhancedPsbt {
       let satributes: IOSatribute[] = [];
 
       if (isSigHashAll) {
-        const extractedAssets = await extractOutputInscriptionsAndSatributes(
-          inputsExtendedUtxos,
-          currentOffset,
-          amount,
-        );
+        if (isInscriptionsAndRunesCompatible(this._context.network)) {
+          const extractedAssets = await extractOutputInscriptionsAndSatributes(
+            inputsExtendedUtxos,
+            currentOffset,
+            amount,
+          );
 
-        inscriptions = extractedAssets.inscriptions;
-        satributes = extractedAssets.satributes;
+          inscriptions = extractedAssets.inscriptions;
+          satributes = extractedAssets.satributes;
+        }
       }
 
       if (outputMetadata.address !== undefined) {

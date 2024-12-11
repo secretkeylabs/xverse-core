@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { OrdinalsApi } from '../api/ordinals/provider';
 import { API_TIMEOUT_MILLI, ORDINALS_URL, XVERSE_API_BASE_URL, XVERSE_INSCRIBE_URL } from '../constant';
+import { isInscriptionsAndRunesCompatible } from '../transactions/btcNetwork';
 import {
   Account,
   AddressBundleResponse,
@@ -215,6 +216,15 @@ export const getAddressUtxoOrdinalBundles = async (
     offset,
     limit,
   };
+  if (!isInscriptionsAndRunesCompatible(network)) {
+    return {
+      total: 0,
+      offset: 0,
+      limit: 0,
+      results: [],
+      xVersion: 0,
+    };
+  }
 
   if (options?.hideUnconfirmed) {
     params.hideUnconfirmed = 'true';

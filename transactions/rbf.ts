@@ -5,6 +5,7 @@ import { Transport } from '../ledger/types';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
+import { getBtcNetworkDefinition } from './btcNetwork';
 
 const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -72,7 +73,7 @@ const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFPro
     return false;
   }
 
-  const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+  const network = getBtcNetworkDefinition(wallet.network);
 
   const btcAddressType = btc.Address(network).decode(wallet.btcAddress).type;
 
@@ -154,7 +155,7 @@ class RbfTransaction {
       throw new Error('Not RBF enabled transaction');
     }
 
-    const network = options.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+    const network = getBtcNetworkDefinition(options.network);
 
     const btcAddressType = btc.Address(network).decode(options.btcAddress).type;
 

@@ -1,6 +1,7 @@
 import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api/runes/provider';
+import { isInscriptionsAndRunesCompatible } from '../btcNetwork';
 
 import {
   applyScriptActions,
@@ -15,6 +16,8 @@ import {
   ActionType,
   CompilationOptions,
   EnhancedInput,
+  IOInscription,
+  IOSatribute,
   TransactionFeeOutput,
   TransactionOptions,
   TransactionOutput,
@@ -140,7 +143,14 @@ export class EnhancedTransaction {
     let currentOffset = 0;
     for (const outputRaw of outputsRaw) {
       const amount = outputRaw.amount;
-      const { inscriptions, satributes } = await extractOutputInscriptionsAndSatributes(inputs, currentOffset, amount);
+
+      let inscriptions: IOInscription[] = [];
+      let satributes: IOSatribute[] = [];
+      if (isInscriptionsAndRunesCompatible(this._context.network)) {
+        const result = await extractOutputInscriptionsAndSatributes(inputs, currentOffset, amount);
+        inscriptions = result.inscriptions;
+        satributes = result.satributes;
+      }
 
       const output: TransactionOutput = { ...outputRaw, inscriptions, satributes };
       nonScriptOutputs.push(output);

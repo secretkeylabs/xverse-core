@@ -11,6 +11,7 @@ export {
   defaultMainnet,
   defaultSignet,
   defaultTestnet,
+  defaultRegtest,
   initialNetworksList,
 } from './constant';
 export * from './currency';
@@ -26,6 +27,7 @@ export * from './transactions';
 export * from './types';
 export * from './utils';
 export * from './wallet';
+export { getBtcNetwork, getBtcNetworkDefinition } from './transactions/btcNetwork';
 
 import { resources, utils, store } from './permissions';
 export const permissions = {

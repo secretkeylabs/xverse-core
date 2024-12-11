@@ -47,7 +47,12 @@ export function validateStxAddress({ stxAddress, network }: { stxAddress: string
 }
 
 export function validateBtcAddress({ btcAddress, network }: { btcAddress: string; network: NetworkType }): boolean {
-  const btcNetwork = network === 'Mainnet' ? btcAddressNetwork.mainnet : btcAddressNetwork.testnet;
+  const btcNetwork =
+    network === 'Mainnet'
+      ? btcAddressNetwork.mainnet
+      : network === 'Regtest'
+      ? btcAddressNetwork.regtest
+      : btcAddressNetwork.testnet;
   try {
     return validate(btcAddress, btcNetwork);
   } catch (error) {

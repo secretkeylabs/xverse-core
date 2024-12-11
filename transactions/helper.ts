@@ -147,11 +147,9 @@ export const createContractCallPromises = async (
 
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
-  // Stacks isn't setup for testnet, so we default to mainnet
-  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getSip10Tokens(
-    ftContactAddresses,
-    'USD',
-  );
+  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient(
+    network.isMainnet() ? 'Mainnet' : 'Testnet',
+  ).getSip10Tokens(ftContactAddresses, 'USD');
 
   const tx = {
     publicKey: stxPublicKey,

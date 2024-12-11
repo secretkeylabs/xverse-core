@@ -7,6 +7,7 @@
 import * as btc from '@scure/btc-signer';
 import * as P from 'micro-packed';
 import { NetworkType } from '../../../types';
+import { getBtcNetwork, getBtcNetworkDefinition } from '../../btcNetwork';
 
 const EMPTY_ARRAY = new Uint8Array();
 const SHA256_LEN_BYTES = 64;
@@ -175,7 +176,7 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
 }
 
 const getOutputScript = (output: btc.TransactionOutput, options: Options) => {
-  const NETWORK = options?.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+  const NETWORK = getBtcNetworkDefinition(options?.network);
   let script;
   if ('address' in output && typeof output.address === 'string') {
     script = btc.OutScript.encode(btc.Address(NETWORK).decode(output.address));
