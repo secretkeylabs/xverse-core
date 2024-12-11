@@ -33,6 +33,10 @@ const getTransactionChainSizeAndFee = async (esploraProvider: EsploraProvider, t
 
   const outspends = await esploraProvider.getTransactionOutspends(txid);
 
+  if (!outspends) {
+    throw new Error('Could not retrieve outspends for transaction.');
+  }
+
   for (const outspend of outspends) {
     if (!outspend.spent) {
       continue;

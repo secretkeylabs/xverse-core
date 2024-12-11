@@ -197,9 +197,12 @@ export class BitcoinEsploraApiProvider {
     };
   }
 
-  async getTransactionOutspends(txid: string): Promise<TransactionOutspend[]> {
-    // TODO: 404 return undefined
-    return this.httpGet<TransactionOutspend[]>(`/tx/${txid}/outspends`);
+  async getTransactionOutspends(txid: string): Promise<TransactionOutspend[] | undefined> {
+    const response = await this.bitcoinApi.get<TransactionOutspend[]>(`/tx/${txid}/outspends`, {
+      validateStatus: (status) => status >= 200 && (status < 300 || status === 404),
+    });
+    if (response.status === 404) return undefined;
+    return response.data;
   }
 
   async getLatestBlockHeight(): Promise<number> {

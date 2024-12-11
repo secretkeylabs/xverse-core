@@ -1,5 +1,7 @@
+import { sha256 } from '@noble/hashes/sha256';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { concatBytes } from 'micro-packed';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
@@ -9,6 +11,7 @@ import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
   EnhancedInput,
   EnhancedOutput,
+  GetPSBTSummaryOptions,
   IOInscription,
   IOSatribute,
   InputMetadata,
@@ -153,25 +156,58 @@ export class EnhancedPsbt {
     };
   }
 
-  getExtendedUtxoForInput = async (inputRaw: btc.TransactionInput, inputTxid: string) => {
-    const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
-    if (addressInput && addressInput.extendedUtxo) {
-      return addressInput.extendedUtxo;
-    } else {
-      const utxo: UTXO = {
-        txid: inputTxid,
-        vout: inputRaw.index!,
-        value: Number(inputRaw.witnessUtxo?.amount) || 0,
-        status: {
-          confirmed: false,
-        },
-        address: '',
-      };
-      return new ExtendedDummyUtxo(utxo, '');
+  getTxId(): string | undefined {
+    const txn = btc.Transaction.fromPSBT(this._psbt);
+    if (txn.isFinal) {
+      return txn.id;
     }
+
+    // if all inputs are on addresses which have inputs send to the witness field, then we can extract the txn id
+    // otherwise, it will change after signing
+    for (let i = 0; i < txn.inputsLength; i++) {
+      const input = txn.getInput(i);
+      if (!input.witnessUtxo) {
+        // address is either not segwit or is wrapped segwit, so we can't extract the txn id
+        return undefined;
+      }
+      const outScript = btc.OutScript.decode(input.witnessUtxo.script);
+
+      if (!outScript || !new Set(['wsh', 'wpkh', 'tr', 'tr_ns', 'tr_ms']).has(outScript.type)) {
+        return undefined;
+      }
+    }
+    return hex.encode(sha256(sha256(concatBytes(txn.toBytes(false)))).reverse());
+  }
+
+  private _getExtendedUtxoForInput = async (
+    inputRaw: btc.TransactionInput,
+    inputTxid: string,
+    knownEmptyTxids?: string[],
+  ) => {
+    if (knownEmptyTxids && !knownEmptyTxids.includes(inputTxid)) {
+      const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
+      if (addressInput && addressInput.extendedUtxo) {
+        return addressInput.extendedUtxo;
+      }
+    }
+
+    const utxo: UTXO = {
+      txid: inputTxid,
+      vout: inputRaw.index!,
+      value: Number(inputRaw.witnessUtxo?.amount) || 0,
+      status: {
+        confirmed: false,
+      },
+      address: '',
+    };
+
+    return new ExtendedDummyUtxo(utxo, '');
   };
 
-  private async _extractInputMetadata(transaction: btc.Transaction): Promise<InputMetadata> {
+  private async _extractInputMetadata(
+    transaction: btc.Transaction,
+    knownEmptyTxids?: string[],
+  ): Promise<InputMetadata> {
     const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash }[] = [];
 
     let isSigHashAll = this._isSigHashAll ?? false;
@@ -189,7 +225,7 @@ export class EnhancedPsbt {
 
       const inputTxid = hex.encode(inputRaw.txid);
 
-      const inputExtendedUtxo = await this.getExtendedUtxoForInput(inputRaw, inputTxid);
+      const inputExtendedUtxo = await this._getExtendedUtxoForInput(inputRaw, inputTxid, knownEmptyTxids);
 
       if (!inputExtendedUtxo) {
         throw new Error(`Could not parse input ${inputIndex}`);
@@ -228,11 +264,12 @@ export class EnhancedPsbt {
     return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
   }
 
-  async getSummary(): Promise<PsbtSummary> {
+  async getSummary(options?: GetPSBTSummaryOptions): Promise<PsbtSummary> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
     const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
       transaction,
+      options?.knownEmptyTxids,
     );
     const outputs: EnhancedOutput[] = [];
 
