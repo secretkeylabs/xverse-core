@@ -2,14 +2,14 @@ import { ContractCallPayload, TransactionTypes } from '@stacks/connect';
 import { PayloadType } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { txPayloadToRequest } from '../../connect';
-import { microstacksToStx } from '../../currency';
+import { microstacksToStx } from '../../../currency';
 import {
   createContractCallPromises,
   generateUnsignedSTXTransferTx,
   generateUnsignedContractDeployTx,
-} from '../../transactions';
-import { StacksMainnet, StacksTestnet } from '../../types';
+  txPayloadToRequest,
+} from '../../../transactions';
+import { StacksMainnet, StacksTestnet } from '../../../types';
 
 const mocked = vi.hoisted(() => ({
   estimateTransaction: vi.fn(() => [
@@ -44,13 +44,13 @@ vi.mock('@stacks/transactions', async () => ({
   addressToString: mocked.addressToString,
   serializeCV: mocked.serializeCV,
 }));
-vi.mock('../../api/xverse', () => ({
+vi.mock('../../../api/xverse.ts', () => ({
   getXverseApiClient: () => ({
     getSip10Tokens: mocked.getSip10Tokens,
     fetchAppInfo: mocked.fetchAppInfo,
   }),
 }));
-vi.mock('../../api/stacks', async () => ({
+vi.mock('../../../api/stacks', async () => ({
   fetchStxPendingTxData: mocked.fetchStxPendingTxData,
   getContractInterface: mocked.getContractInterface,
 }));
@@ -136,7 +136,7 @@ describe('txPayloadToRequest', () => {
         network: StacksTestnet,
         publicKey: mockContractDeploy.publicKey,
       },
-      fee: 0n,
+      fee: 0,
       nonce: 0n,
       publicKey: mockContractDeploy.publicKey,
     });
@@ -202,7 +202,6 @@ describe('txPayloadToRequest', () => {
 
     const unsignedContractCall = await createContractCallPromises(
       contractCallPayload,
-      'SP143SNE1S5GHKR9JN89BEVFK9W03S1FSNYC5SQMV',
       StacksMainnet,
       '03f746046bacb5ff6254124bbdadbe28ca1cfefbd9cd160403667a772f25f298ab',
     );

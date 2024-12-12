@@ -121,7 +121,6 @@ export async function getAccountFromRootNode({
   const stxAddress = address;
 
   const stxPublicKey = publicKeyToHex(privateKeyToPublic(privateKey));
-  // const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
 
   // BTC =================================================
   const masterPubKey = rootNode.publicKey.toString('hex');

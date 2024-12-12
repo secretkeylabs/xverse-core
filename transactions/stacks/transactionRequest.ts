@@ -7,88 +7,68 @@ import {
 } from '@stacks/connect';
 import { StacksNetwork } from '@stacks/network';
 import {
-  AddressHashMode,
   addressToString,
   Authorization,
   AuthType,
   cvToValue,
-  MultiSigHashMode,
   PayloadType,
   serializeCV,
-  SingleSigHashMode,
   StacksTransactionWire,
-  getFee,
-  LengthPrefixedList,
-  serializePostConditionWire,
-  PostConditionWire,
-  PostCondition,
-  deserializePostConditionWire,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
-import { createContractCallPromises, generateUnsignedTx } from '../transactions';
-import { AppInfo } from '../types';
-import { STX_DECIMALS } from '../constant';
-import { bytesToHex } from '@noble/hashes/utils';
+import {
+  applyFeeMultiplier,
+  extractFromPayload,
+  generateUnsignedTx,
+  getFTInfoFromPostConditions,
+  nextBestNonce,
+} from '..';
+import { AppInfo, Coin } from '../../types';
+import { STX_DECIMALS } from '../../constant';
+import { getContractInterface, getXverseApiClient } from '../../api';
 
-export async function getContractCallPromises(
-  payload: TransactionPayload,
-  stxAddress: string,
+/**
+ * processes data for contract call transaction
+ * @param payload
+ * @param stxAddress
+ * @param network
+ * @param stxPublicKey
+ * @returns all promises for contract call tranastion
+ */
+export const createContractCallPromises = async (
+  payload: ContractCallPayload,
   network: StacksNetwork,
   stxPublicKey: string,
   auth?: Authorization,
-) {
-  const [unSignedContractCall, contractInterface, coinsMetaData, showPostConditionMessage] =
-    await createContractCallPromises(payload, stxAddress, network, stxPublicKey);
+) => {
+  const { postConds } = extractFromPayload(payload);
+  const nonce = await nextBestNonce(payload.stxAddress!, network);
+  const ftContactAddresses = getFTInfoFromPostConditions(postConds);
+
+  // Stacks isn't setup for testnet, so we default to mainnet
+  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getSip10Tokens(
+    ftContactAddresses,
+    'USD',
+  );
+
+  const unSignedContractCall = await generateUnsignedTx({
+    payload: {
+      ...payload,
+    },
+    fee: auth?.spendingCondition.fee.toString() || '0',
+    nonce: auth?.spendingCondition.nonce || nonce,
+    publicKey: stxPublicKey,
+  });
   if (auth) {
     unSignedContractCall.auth = auth;
   }
-  return {
-    unSignedContractCall,
-    contractInterface,
-    coinsMetaData,
-    showPostConditionMessage,
-  };
-}
+  const checkForPostConditionMessage =
+    payload?.postConditionMode === 2 && payload?.postConditions && payload.postConditions.length <= 0;
+  const showPostConditionMessage = !!checkForPostConditionMessage;
 
-/**
- * stxFeeReducer - given initialFee, and appInfo (stacks fee multiplier and threshold config),
- * return the newFee
- * @param initialFee
- * @param appInfo
- * @returns newFee
- */
-export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; appInfo: AppInfo | null }): bigint => {
-  let newFee = initialFee;
+  const contractInterfacePromise = getContractInterface(payload.contractAddress, payload.contractName, network);
 
-  // apply multiplier
-  if (appInfo?.stxSendTxMultiplier && Number.isInteger(appInfo?.stxSendTxMultiplier)) {
-    newFee = newFee * BigInt(appInfo.stxSendTxMultiplier);
-  }
-
-  // cap the fee at thresholdHighStacksFee
-  if (
-    appInfo?.thresholdHighStacksFee &&
-    Number.isInteger(appInfo?.thresholdHighStacksFee) &&
-    newFee > BigInt(appInfo.thresholdHighStacksFee)
-  ) {
-    newFee = BigInt(appInfo.thresholdHighStacksFee);
-  }
-
-  return newFee;
-};
-
-/**
- * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
- * @param unsignedTx
- * @param appInfo
- */
-export const applyFeeMultiplier = (unsignedTx: StacksTransactionWire, appInfo: AppInfo | null) => {
-  if (!appInfo) {
-    return;
-  }
-
-  const newFee = stxFeeReducer({ initialFee: getFee(unsignedTx.auth), appInfo });
-  unsignedTx.setFee(newFee);
+  return Promise.all([unSignedContractCall, contractInterfacePromise, coinsMetaDataPromise, showPostConditionMessage]);
 };
 
 export async function getTokenTransferRequest(
@@ -111,6 +91,8 @@ export async function getTokenTransferRequest(
     },
     publicKey: stxPublicKey,
     sponsored: auth?.authType === AuthType.Sponsored,
+    fee: auth?.spendingCondition.fee.toString(),
+    nonce: auth?.spendingCondition.nonce,
   });
 
   applyFeeMultiplier(unsignedSendStxTx, feeMultipliers);
@@ -121,23 +103,7 @@ export async function getTokenTransferRequest(
   return unsignedSendStxTx;
 }
 
-export const isMultiSig = (tx: StacksTransactionWire): boolean => {
-  const hashMode = tx.auth.spendingCondition.hashMode as MultiSigHashMode | SingleSigHashMode;
-  return hashMode === AddressHashMode.P2SH || hashMode === AddressHashMode.P2WSH ? true : false;
-};
-
 const cleanMemoString = (memo: string): string => memo.replace('\u0000', '');
-
-// todo: remove this function
-// function encodePostConditions(postConditions: LengthPrefixedList): string[] {
-//   return postConditions.values.map((pc) =>
-//     serializePostConditionWire(deserializePostConditionWire(pc)),
-//   );
-// }
-
-// function encodePostConditions1(postConditions: string[]) {
-//   return postConditions.map(pc => bytesToHex(serializePostConditionWire(pc)));
-// }
 
 export const txPayloadToRequest = (
   stacksTransaction: StacksTransactionWire,
@@ -151,7 +117,7 @@ export const txPayloadToRequest = (
     sponsored: auth.authType === AuthType.Sponsored,
     nonce: Number(auth.spendingCondition.nonce),
     fee: Number(auth.spendingCondition.fee),
-    postConditions: stacksTransaction.postConditions.values as unknown as string[],
+    postConditions: postConditions.values as unknown as string[],
     postConditionMode: postConditionMode,
     anchorMode: anchorMode,
   };

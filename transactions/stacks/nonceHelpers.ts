@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { LatestNonceResponse, SettingsNetwork, StacksTransactionWire, StxMempoolTransactionData } from '../../types';
+import { LatestNonceResponse, StacksNetwork, StacksTransactionWire, StxMempoolTransactionData } from '../../types';
 
-export async function getLatestNonce(stxAddress: string, network: SettingsNetwork): Promise<LatestNonceResponse> {
-  const baseUrl = network.address;
+export async function getLatestNonce(stxAddress: string, network: StacksNetwork): Promise<LatestNonceResponse> {
+  const baseUrl = network.client.baseUrl;
   const apiUrl = `${baseUrl}/extended/v1/address/${stxAddress}/nonces`;
   return axios.get<LatestNonceResponse>(apiUrl).then((response) => {
     return response.data;
@@ -12,7 +12,7 @@ export async function getLatestNonce(stxAddress: string, network: SettingsNetwor
 /**
  * Suggests the next best nonce, taking into account any missing nonces.
  */
-export async function nextBestNonce(stxAddress: string, network: SettingsNetwork): Promise<bigint> {
+export async function nextBestNonce(stxAddress: string, network: StacksNetwork): Promise<bigint> {
   const nonceData = await getLatestNonce(stxAddress, network);
 
   if (nonceData.detected_missing_nonces.length > 0) {

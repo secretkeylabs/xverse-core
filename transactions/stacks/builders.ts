@@ -12,8 +12,6 @@ import {
   broadcastTransaction,
   bufferCVFromString,
   cvToHex,
-  deserializeCV,
-  fetchNonce,
   hexToCV,
   makeUnsignedContractCall,
   makeUnsignedContractDeploy,
@@ -26,6 +24,7 @@ import {
 import {
   ContractCallPayload as ConnectContractCallPayload,
   ContractDeployPayload as ConnectContractDeployPayload,
+  ConnectNetwork,
   STXTransferPayload as ConnectSTXTransferPayload,
   TransactionTypes,
 } from '@stacks/connect';
@@ -34,8 +33,8 @@ import { PostConditionsOptions, StacksMainnet, StacksNetwork, StacksTestnet } fr
 import { UnsignedStacksTransation } from '../../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../../wallet/index';
 import { extractFromPayload, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
-import { capStxFeeAtThreshold, estimateStacksTransactionWithFallback } from './fees';
-import { hexToBytes } from '@noble/hashes/utils';
+import { applyMultiplierAndCapFeeAtThreshold, estimateStacksTransactionWithFallback } from './fees';
+import { nextBestNonce } from './nonceHelpers';
 
 export interface StacksRecipient {
   address: string;
@@ -130,22 +129,16 @@ type UnsignedContractCallTxArgs = UnsignedTxArgs<ConnectContractCallPayload>;
  */
 export async function generateUnsignedContractCallTx(args: UnsignedContractCallTxArgs): Promise<StacksTransactionWire> {
   const { payload, publicKey, nonce, fee } = args;
-  const {
-    contractName,
-    contractAddress,
-    functionName,
-    sponsored,
-    postConditionMode,
-    network,
-    functionArgs,
-    postConditions,
-  } = payload;
+  const { contractName, contractAddress, functionName, sponsored, postConditionMode, network, postConditions } =
+    payload;
+
+  const { funcArgs } = extractFromPayload(payload);
 
   const txOptions: UnsignedContractCallOptions = {
     contractAddress,
     contractName,
     functionName,
-    functionArgs: functionArgs.map((arg: string) => deserializeCV(hexToBytes(arg))),
+    functionArgs: funcArgs,
     publicKey,
     fee,
     nonce,
@@ -251,8 +244,8 @@ export function generateUnsignedContractDeployTx(args: UnsignedContractDeployTxA
 interface UnsignedTxArgs<TxPayload> {
   payload: TxPayload;
   publicKey: string;
-  fee?: bigint;
-  nonce?: bigint;
+  fee?: number | string;
+  nonce?: number | bigint;
   sponsored?: boolean;
 }
 
@@ -260,10 +253,13 @@ export type GenerateUnsignedTransactionOptions = UnsignedTxArgs<
   ConnectContractCallPayload | ConnectSTXTransferPayload | ConnectContractDeployPayload
 >;
 
+export function isStacksNetwork(network: ConnectNetwork): network is StacksNetwork {
+  return (network as StacksNetwork).chainId !== undefined;
+}
+
 export async function generateUnsignedTx(options: GenerateUnsignedTransactionOptions): Promise<StacksTransactionWire> {
   const { payload, publicKey, nonce, fee } = options;
   const { network } = payload;
-
   let tx: StacksTransactionWire;
   switch (payload.txType) {
     case TransactionTypes.STXTransfer:
@@ -294,12 +290,21 @@ export async function generateUnsignedTx(options: GenerateUnsignedTransactionOpt
       throw new Error(`Invalid Transaction Type`);
   }
 
-  const txFee = await estimateStacksTransactionWithFallback(tx, network === 'mainnet' ? StacksMainnet : StacksTestnet);
-  tx.setFee(txFee[1].fee);
-  await capStxFeeAtThreshold(tx, network === 'mainnet' ? StacksMainnet : StacksTestnet);
-  const senderAddress = Address.fromPublicKey(publicKey, network === 'mainnet' ? StacksMainnet : StacksTestnet);
-  const txNonce = await fetchNonce({ address: senderAddress, network: network === 'mainnet' ? 'mainnet' : 'testnet' });
-  tx.setNonce(txNonce);
+  if (!network) {
+    throw new Error('Network is undefined');
+  }
+
+  if (!fee || fee === '0') {
+    const txFee = await estimateStacksTransactionWithFallback(tx, isStacksNetwork(network) ? network : StacksMainnet);
+    tx.setFee(txFee[1].fee);
+  }
+  await applyMultiplierAndCapFeeAtThreshold(tx, network === 'mainnet' ? StacksMainnet : StacksTestnet);
+
+  if (!nonce) {
+    const senderAddress = Address.fromPublicKey(publicKey, isStacksNetwork(network) ? network : StacksMainnet);
+    const txNonce = await nextBestNonce(senderAddress, isStacksNetwork(network) ? network : StacksMainnet);
+    tx.setNonce(txNonce);
+  }
 
   return tx;
 }

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as StacksTransactions from '@stacks/transactions';
 import { StacksNetwork } from '@stacks/network';
-import * as TransactionUtils from '../../transactions';
-import * as APIUtils from '../../api';
+import * as TransactionUtils from '../../../transactions';
+import * as APIUtils from '../../../api';
 import { TransactionTypes } from '@stacks/connect';
-import { walletAccounts } from '../mocks/restore.mock';
-import { StacksMainnet, StacksTestnet } from '../../types';
+import { walletAccounts } from '../../mocks/restore.mock';
+import { AppInfo, StacksMainnet, StacksTestnet } from '../../../types';
 
 vi.mock('./fees');
 vi.mock('@stacks/transactions');
@@ -13,6 +13,75 @@ vi.mock('@stacks/transactions');
 vi.mock('../../api');
 
 const mockNetwork = {} as StacksNetwork;
+
+describe('stxFeeReducer', () => {
+  [
+    {
+      name: 'returns initialFee when no appInfo',
+      inputs: { initialFee: BigInt(3), appInfo: null },
+      expectedFee: BigInt(3),
+    },
+    {
+      name: 'returns initialFee when no send multiplier and no threshold',
+      inputs: {
+        initialFee: BigInt(3),
+        appInfo: {
+          stxSendTxMultiplier: undefined,
+          thresholdHighStacksFee: undefined,
+        } as unknown as AppInfo,
+      },
+      expectedFee: BigInt(3),
+    },
+    {
+      name: 'returns fee with multiplier applied if under threshold',
+      inputs: {
+        initialFee: BigInt(1),
+        appInfo: {
+          stxSendTxMultiplier: 3,
+          thresholdHighStacksFee: 6,
+        } as unknown as AppInfo,
+      },
+      expectedFee: BigInt(3),
+    },
+    {
+      name: 'returns intialFee unmodified if multiplier is not an integer',
+      inputs: {
+        initialFee: BigInt(1),
+        appInfo: {
+          stxSendTxMultiplier: 0.5,
+          thresholdHighStacksFee: 6,
+        } as unknown as AppInfo,
+      },
+      expectedFee: BigInt(1),
+    },
+    {
+      name: 'returns threshold fee if initialFee is higher',
+      inputs: {
+        initialFee: BigInt(10),
+        appInfo: {
+          stxSendTxMultiplier: 1,
+          thresholdHighStacksFee: 6,
+        } as unknown as AppInfo,
+      },
+      expectedFee: BigInt(6),
+    },
+    {
+      name: 'returns threshold fee if fee after multiplier is higher',
+      inputs: {
+        initialFee: BigInt(2),
+        appInfo: {
+          stxSendTxMultiplier: 4,
+          thresholdHighStacksFee: 6,
+        } as unknown as AppInfo,
+      },
+      expectedFee: BigInt(6),
+    },
+  ].forEach(({ name, inputs, expectedFee }) => {
+    it(name, () => {
+      expect(TransactionUtils.stxFeeReducer(inputs)).toEqual(expectedFee);
+    });
+  });
+});
 
 describe('estimateStacksTransactionWithFallback', () => {
   beforeEach(() => {
@@ -31,7 +100,7 @@ describe('estimateStacksTransactionWithFallback', () => {
         txType: TransactionTypes.STXTransfer,
       },
       publicKey: walletAccounts[0].stxPublicKey,
-      fee: 0n,
+      fee: 0,
       nonce: 0n,
     });
     console.log('first transaction', transaction);
@@ -42,18 +111,14 @@ describe('estimateStacksTransactionWithFallback', () => {
       { fee: 300, fee_rate: 1 },
     ]);
 
-    const result = await TransactionUtils.estimateStacksTransactionWithFallback(mockTransaction, mockNetwork);
+    const result = await TransactionUtils.estimateStacksTransactionWithFallback(transaction, mockNetwork);
     expect(result).toEqual([
       { fee: 100, fee_rate: 1 },
       { fee: 200, fee_rate: 1 },
       { fee: 300, fee_rate: 1 },
     ]);
-    expect(StacksTransactions.estimateTransactionByteLength).toHaveBeenCalledWith(mockTransaction);
-    expect(StacksTransactions.fetchFeeEstimateTransaction).toHaveBeenCalledWith(
-      mockTransaction.payload,
-      100,
-      mockNetwork,
-    );
+    expect(StacksTransactions.estimateTransactionByteLength).toHaveBeenCalledWith(transaction);
+    expect(StacksTransactions.fetchFeeEstimateTransaction).toHaveBeenCalledWith(transaction.payload, 100, mockNetwork);
   });
 
   it('should return mempool fees for ContractCall when estimation fails', async () => {
@@ -85,7 +150,7 @@ describe('estimateStacksTransactionWithFallback', () => {
         postConditionMode: StacksTransactions.PostConditionMode.Allow,
       },
       publicKey: walletAccounts[0].stxPublicKey,
-      fee: 0n,
+      fee: 0,
       nonce: 1n,
     });
     vi.spyOn(StacksTransactions, 'fetchFeeEstimateTransaction').mockRejectedValueOnce(new Error('NoEstimateAvailable'));

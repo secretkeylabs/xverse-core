@@ -10,12 +10,57 @@ import { FeeEstimation, getMempoolFeePriorities, getXverseApiClient } from '../.
 import { StacksNetwork } from '@stacks/network';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 import { bytesToHex } from '@noble/hashes/utils';
-import { StacksMainnet } from '../../types';
+import { AppInfo, StacksMainnet } from '../../types';
 
-export const capStxFeeAtThreshold = async (unsignedTx: StacksTransactionWire, network: StacksNetwork) => {
+/**
+ * stxFeeReducer - given initialFee, and appInfo (stacks fee multiplier and threshold config),
+ * return the newFee
+ * @param initialFee
+ * @param appInfo
+ * @returns newFee
+ */
+export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; appInfo: AppInfo | null }): bigint => {
+  let newFee = initialFee;
+
+  // apply multiplier
+  if (appInfo?.stxSendTxMultiplier && Number.isInteger(appInfo?.stxSendTxMultiplier)) {
+    newFee = newFee * BigInt(appInfo.stxSendTxMultiplier);
+  }
+
+  // cap the fee at thresholdHighStacksFee
+  if (
+    appInfo?.thresholdHighStacksFee &&
+    Number.isInteger(appInfo?.thresholdHighStacksFee) &&
+    newFee > BigInt(appInfo.thresholdHighStacksFee)
+  ) {
+    newFee = BigInt(appInfo.thresholdHighStacksFee);
+  }
+
+  return newFee;
+};
+
+/**
+ * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
+ * @param unsignedTx
+ * @param appInfo
+ */
+export const applyFeeMultiplier = (unsignedTx: StacksTransactionWire, appInfo: AppInfo | null) => {
+  if (!appInfo) {
+    return;
+  }
+
+  const newFee = stxFeeReducer({ initialFee: getFee(unsignedTx.auth), appInfo });
+  unsignedTx.setFee(newFee);
+};
+
+export const applyMultiplierAndCapFeeAtThreshold = async (
+  unsignedTx: StacksTransactionWire,
+  network: StacksNetwork,
+) => {
   const feeMultipliers = await getXverseApiClient(
     network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
   ).fetchAppInfo();
+  applyFeeMultiplier(unsignedTx, feeMultipliers);
   const fee = getFee(unsignedTx.auth);
   if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
     unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));

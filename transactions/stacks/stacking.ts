@@ -1,7 +1,7 @@
 import { ClarityValue, contractPrincipalCV, cvToHex, noneCV, standardPrincipalCV, uintCV } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
 import { StacksNetwork, StacksTransactionWire, StxMempoolTransactionData } from '../../types';
-import { generateUnsignedTx } from './stx';
+import { generateUnsignedTx } from './builders';
 import { poxAddressToTuple } from '@stacks/stacking';
 import { getNewNonce, getNonce } from './nonceHelpers';
 import { estimateStacksTransactionWithFallback } from './fees';
