@@ -31,6 +31,50 @@ type UtxoCacheConfig = {
   electrsApi: BitcoinEsploraApiProvider;
 };
 
+// TODO: refactor below classes so the local cache manages the cache storage controller
+class LocalCache {
+  private _cache: Map<string, { value: UtxoCacheStorage; lastAccessed: number }> = new Map();
+
+  private static readonly MAX_CACHED_ITEMS = 3; // we store max 3 address caches in memory
+
+  get = (address: string): UtxoCacheStorage | undefined => {
+    const cache = this._cache.get(address);
+    if (!cache) {
+      return undefined;
+    }
+    cache.lastAccessed = Date.now();
+    return cache.value;
+  };
+
+  set = (address: string, value: UtxoCacheStorage): void => {
+    this._cache.set(address, { value, lastAccessed: Date.now() });
+
+    if (Object.values(this._cache).length > LocalCache.MAX_CACHED_ITEMS) {
+      this._clearOldestCacheEntry();
+    }
+  };
+
+  remove = (address: string): void => {
+    this._cache.delete(address);
+  };
+
+  private _clearOldestCacheEntry() {
+    let oldestKey: string | undefined;
+    let oldestTime: number | undefined;
+
+    for (const [key, cache] of this._cache.entries()) {
+      if (!oldestTime || cache.lastAccessed < oldestTime) {
+        oldestTime = cache.lastAccessed;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      this._cache.delete(oldestKey);
+    }
+  }
+}
+
 export class UtxoCache {
   private readonly _cacheStorageController: ExtendedStorageAdapter;
 
@@ -41,6 +85,8 @@ export class UtxoCache {
   private readonly _addressMutexes: { [address: string]: Mutex } = {};
 
   private readonly _writeMutex = new Mutex();
+
+  private readonly _localCache = new LocalCache();
 
   static readonly VERSION = 4;
 
@@ -141,6 +187,12 @@ export class UtxoCache {
   };
 
   private _getAddressCache = async (address: string): Promise<UtxoCacheStorage | undefined> => {
+    const inMemoryCache = this._localCache.get(address);
+
+    if (inMemoryCache) {
+      return inMemoryCache;
+    }
+
     const cacheKey = this._getAddressCacheStorageKey(address);
     const cachedData = await this._getCacheDataByKey(cacheKey);
 
@@ -151,6 +203,8 @@ export class UtxoCache {
         await this._cacheStorageController.remove(cacheKey);
         return undefined;
       }
+
+      this._localCache.set(address, cachedData);
     }
 
     return cachedData;
@@ -167,6 +221,7 @@ export class UtxoCache {
     try {
       if (!addressCache) {
         await this._cacheStorageController.remove(this._getAddressCacheStorageKey(address));
+        this._localCache.remove(address);
         return;
       }
 
@@ -174,6 +229,7 @@ export class UtxoCache {
         this._getAddressCacheStorageKey(address),
         JSONBigOnDemand.stringify(addressCache),
       );
+      this._localCache.set(address, addressCache);
     } catch (err) {
       // check if quota is reached. If so, try clean up other caches and retry on next run
       if (err instanceof Error && this._cacheStorageController.isErrorQuotaExceeded?.(err)) {

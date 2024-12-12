@@ -182,38 +182,44 @@ export const extractOutputInscriptionsAndSatributes = async (
       const inputBundleData = await input.getBundleData();
       const fromAddress = input.address;
 
-      const outputInscriptions = inputBundleData?.sat_ranges
-        .flatMap((s) =>
-          s.inscriptions.map((i) => ({
+      inputBundleData?.sat_ranges.forEach((s) => {
+        s.inscriptions.forEach((i) => {
+          const inscriptionEntry = {
             id: i.id,
             offset: runningOffset + s.offset - outputOffset,
             fromAddress,
             number: i.inscription_number,
             contentType: i.content_type,
-          })),
-        )
-        .filter((i) => i.offset >= 0 && i.offset < outputValue);
-
-      const outputSatributes = inputBundleData?.sat_ranges
-        .filter((s) => s.satributes.length > 0)
-        .map((s) => {
-          const min = Math.max(runningOffset + s.offset - outputOffset, 0);
-          const max = Math.min(
-            runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
-            outputValue,
-          );
-
-          return {
-            types: s.satributes,
-            amount: max - min,
-            offset: min,
-            fromAddress,
           };
-        })
-        .filter((i) => i.offset >= 0 && i.offset < outputValue && i.amount > 0);
 
-      inscriptions.push(...(outputInscriptions || []));
-      satributes.push(...(outputSatributes || []));
+          if (inscriptionEntry.offset >= 0 && inscriptionEntry.offset < outputValue) {
+            inscriptions.push(inscriptionEntry);
+          }
+        });
+      });
+
+      inputBundleData?.sat_ranges.forEach((s) => {
+        if (s.satributes.length === 0) {
+          return;
+        }
+
+        const min = Math.max(runningOffset + s.offset - outputOffset, 0);
+        const max = Math.min(
+          runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
+          outputValue,
+        );
+
+        const satributeEntry = {
+          types: s.satributes,
+          amount: max - min,
+          offset: min,
+          fromAddress,
+        };
+
+        if (satributeEntry.offset >= 0 && satributeEntry.offset < outputValue && satributeEntry.amount > 0) {
+          satributes.push(satributeEntry);
+        }
+      });
     }
 
     runningOffset += input.utxo.value;
