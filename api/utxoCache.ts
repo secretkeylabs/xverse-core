@@ -46,7 +46,7 @@ export class UtxoCache {
 
   static readonly UTXO_CACHE_KEY_PREFIX = 'utxoCache';
 
-  static readonly ORDINAL_UTXO_QUERY_LIMIT = 60;
+  static readonly ORDINAL_UTXO_QUERY_LIMIT = 500;
 
   static readonly CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days
 

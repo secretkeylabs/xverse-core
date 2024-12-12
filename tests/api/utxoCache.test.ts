@@ -172,7 +172,7 @@ describe('UtxoCache', () => {
 
     // should get all pages
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledTimes(2);
-    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 500, { hideUnconfirmed: true });
     expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 1, 1, { hideUnconfirmed: true });
 
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
@@ -263,7 +263,7 @@ describe('UtxoCache', () => {
     expect(cachedValue).toEqual(mockUtxo);
 
     expect(getUtxoOrdinalBundle).toHaveBeenCalledWith('Mainnet', 'txid3', 0);
-    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 500, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-Mainnet-address1',
       JSONBig.stringify({
@@ -331,7 +331,7 @@ describe('UtxoCache', () => {
 
     expect(cachedValue).toEqual(mockUtxos[2]);
 
-    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 500, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-Mainnet-address1',
       JSONBig.stringify({
@@ -401,7 +401,7 @@ describe('UtxoCache', () => {
 
     expect(cachedValue).toEqual(mockUtxos[2]);
 
-    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 500, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-Mainnet-address1',
       JSONBig.stringify({
@@ -472,7 +472,7 @@ describe('UtxoCache', () => {
 
     expect(cachedValue).toEqual(mockUtxos[2]);
 
-    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 60, { hideUnconfirmed: true });
+    expect(getAddressUtxoOrdinalBundles).toHaveBeenCalledWith('Mainnet', 'address1', 0, 500, { hideUnconfirmed: true });
     expect(mockStorageAdapter.set).toHaveBeenCalledWith(
       'utxoCache-Mainnet-address1',
       JSONBig.stringify({
