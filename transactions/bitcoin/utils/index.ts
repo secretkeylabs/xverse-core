@@ -1,3 +1,4 @@
+import * as btc from '@scure/btc-signer';
 import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../../types';
 import { TransactionContext } from '../context';
@@ -123,13 +124,30 @@ export const getTransactionVSize = (
     return transaction.vsize;
   }
 
-  const transactionCopy = transaction.clone();
-
   if (changeAddress) {
+    // transaction.clone does a PSBT serialize and parse, which is slow and done in a recursive way
+    // for large txns, it fails, so we rather rebuild the txn manually
+    const transactionCopy = new btc.Transaction({
+      allowUnknownOutputs: true,
+      allowLegacyWitnessUtxo: true,
+      allowUnknownInputs: true,
+    });
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      transactionCopy.addInput(input);
+    }
+
+    for (let i = 0; i < transaction.outputsLength; i++) {
+      const output = transaction.getOutput(i);
+      transactionCopy.addOutput(output);
+    }
+
     context.addOutputAddress(transactionCopy, changeAddress, change);
+    return estimateVSize(transactionCopy);
   }
 
-  return estimateVSize(transactionCopy);
+  return estimateVSize(transaction);
 };
 
 export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {

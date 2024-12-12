@@ -7,7 +7,7 @@
 import * as btc from '@scure/btc-signer';
 import * as P from 'micro-packed';
 import { NetworkType } from '../../../types';
-import { getBtcNetwork, getBtcNetworkDefinition } from '../../btcNetwork';
+import { getBtcNetworkDefinition } from '../../btcNetwork';
 
 const EMPTY_ARRAY = new Uint8Array();
 const SHA256_LEN_BYTES = 64;
