@@ -185,6 +185,7 @@ export async function signMessageLedger({
   protocol?: MessageSigningProtocols;
 }): Promise<SignedMessage> {
   const app = new AppClient(transport);
+  // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
   // if protocol isn't specified, we default to bip322 for both address types
   const protocolToSign = protocol || MessageSigningProtocols.BIP322;

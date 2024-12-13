@@ -2,7 +2,8 @@
 import { hashMessage } from '@stacks/encryption';
 import { AddressVersion, ChainID } from '@stacks/transactions';
 import * as bip39 from 'bip39';
-import { AddressType, Network as btcAddressNetwork, getAddressInfo, validate } from 'bitcoin-address-validation';
+import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
+import * as btc from '@scure/btc-signer';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
 import { deriveStxAddressChain, getAccountFromSeedPhrase } from '../account';
@@ -10,6 +11,7 @@ import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { ENTROPY_BYTES } from '../constant';
 import { Keychain, NetworkType } from '../types';
 import { bip32 } from '../utils/bip32';
+import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
 
 export * from './encryptionUtils';
 export { hashMessage };
@@ -47,14 +49,8 @@ export function validateStxAddress({ stxAddress, network }: { stxAddress: string
 }
 
 export function validateBtcAddress({ btcAddress, network }: { btcAddress: string; network: NetworkType }): boolean {
-  const btcNetwork =
-    network === 'Mainnet'
-      ? btcAddressNetwork.mainnet
-      : network === 'Regtest'
-      ? btcAddressNetwork.regtest
-      : btcAddressNetwork.testnet;
   try {
-    return validate(btcAddress, btcNetwork);
+    return btc.Address(getBtcNetworkDefinition(network)).decode(btcAddress).type !== 'unknown';
   } catch (error) {
     return false;
   }
@@ -62,6 +58,7 @@ export function validateBtcAddress({ btcAddress, network }: { btcAddress: string
 
 export function validateBtcAddressIsTaproot(btcAddress: string): boolean {
   try {
+    // TODO: switch to btc.Address.decode with a new core major version
     return getAddressInfo(btcAddress)?.type === AddressType.p2tr;
   } catch {
     return false;

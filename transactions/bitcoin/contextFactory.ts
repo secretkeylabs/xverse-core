@@ -33,6 +33,7 @@ const createAddressContext = ({
   utxoCache,
   accountType,
 }: CreateAddressContextProps): AddressContext => {
+  // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
 
   if (accountType === 'ledger') {
