@@ -45,7 +45,12 @@ export type SupportedCurrency =
   | 'PHP'
   | 'PKR'
   | 'ZAR'
-  | 'MXN';
+  | 'MXN'
+  | 'RON'
+  | 'GTQ'
+  | 'COP'
+  | 'DOP'
+  | 'PEN';
 
 export const currencySymbolMap: Record<SupportedCurrency, string> = {
   USD: '$',
@@ -76,4 +81,9 @@ export const currencySymbolMap: Record<SupportedCurrency, string> = {
   PKR: '₨', // Pakistani Rupee
   ZAR: 'R', // South African Rand
   MXN: '$', // Mexican Peso
+  RON: 'L', // Romanian Leu
+  GTQ: 'Q', // Guatemalan Quetzal
+  COP: '$', // Colombian Peso
+  DOP: '$', // Dominican Peso
+  PEN: 'S/', // Peruvian Sol
 };
