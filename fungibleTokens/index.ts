@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { type FungibleToken, type FungibleTokenStates, type RuneBalance } from '../types';
 
-export const runeTokenToFungibleToken = (runeBalance: RuneBalance & { isTopToken?: boolean }): FungibleToken => ({
+export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
   name: runeBalance.runeName,
   decimals: runeBalance.divisibility,
   principal: runeBalance.id,
@@ -16,7 +16,6 @@ export const runeTokenToFungibleToken = (runeBalance: RuneBalance & { isTopToken
   supported: true, // all runes are supported
   priceChangePercentage24h: runeBalance.priceChangePercentage24h?.toString(),
   currentPrice: runeBalance.currentPrice?.toString(),
-  isTopToken: runeBalance.isTopToken,
 });
 
 /**
