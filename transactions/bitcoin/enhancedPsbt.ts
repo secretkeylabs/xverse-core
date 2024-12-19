@@ -5,7 +5,7 @@ import { concatBytes } from 'micro-packed';
 
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
-import { getBtcNetwork, getBtcNetworkDefinition, isInscriptionsAndRunesCompatible } from '../btcNetwork';
+import { getBtcNetworkDefinition, isInscriptionsAndRunesCompatible } from '../btcNetwork';
 import { InputToSign, TransactionContext } from './context';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 import {
@@ -184,13 +184,14 @@ export class EnhancedPsbt {
     inputTxid: string,
     knownEmptyTxids?: string[],
   ) => {
-    if (knownEmptyTxids && !knownEmptyTxids.includes(inputTxid)) {
+    if (!knownEmptyTxids?.includes(inputTxid)) {
       const addressInput = await this._context.getUtxoFallbackToExternal(`${inputTxid}:${inputRaw.index}`);
       if (addressInput && addressInput.extendedUtxo) {
         return addressInput.extendedUtxo;
       }
     }
 
+    // we know this UTXO won't exist, so we create a dummy one
     const utxo: UTXO = {
       txid: inputTxid,
       vout: inputRaw.index!,
