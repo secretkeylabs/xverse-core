@@ -153,6 +153,10 @@ export type EnhancedInput = {
 };
 export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 
+export type GetPSBTSummaryOptions = {
+  knownEmptyTxids?: string[];
+};
+
 export type PsbtSummary = {
   inputs: EnhancedInput[];
   outputs: EnhancedOutput[];

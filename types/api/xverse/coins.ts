@@ -33,14 +33,18 @@ export type SimplePriceResponse = {
   };
 };
 
-type TopRunes = Record<RuneBalance['id'], Omit<RuneBalance, 'priceChangePercentage24h' | 'currentPrice'>>;
+type TopRunes = Record<RuneBalance['id'], RuneBalance>;
+
+export type PrincipalToFungibleToken = Record<FungibleToken['principal'], FungibleToken>;
 
 export type TopTokens = {
   runes: TopRunes;
+  stacks: PrincipalToFungibleToken;
+  'brc-20': PrincipalToFungibleToken;
 };
 
-export type TopRunesResponse = Record<FungibleToken['principal'], FungibleToken>;
-
 export type TopTokensResponse = {
-  runes: TopRunesResponse;
+  runes: PrincipalToFungibleToken;
+  stacks: PrincipalToFungibleToken;
+  'brc-20': PrincipalToFungibleToken;
 };

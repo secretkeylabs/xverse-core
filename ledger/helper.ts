@@ -47,7 +47,8 @@ export async function getMasterFingerPrint(transport: Transport): Promise<string
   @returns the public key in compressed format
 **/
 export function getPublicKeyFromXpubAtIndex(xpub: string, index: number, network: NetworkType): Buffer {
-  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
+  const btcNetwork =
+    network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet;
   const { publicKey } = bip32.fromBase58(xpub, btcNetwork).derivePath(`0/${index}`);
   return publicKey;
 }
@@ -71,7 +72,8 @@ export function getNativeSegwitAccountDataFromXpub(
   initEccLib(ecc);
 
   const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
-  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
+  const btcNetwork =
+    network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet;
   const p2wpkh = payments.p2wpkh({ pubkey: publicKey, network: btcNetwork });
   const address = p2wpkh.address;
 
@@ -164,7 +166,7 @@ export function getTaprootAccountDataFromXpub(
   const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
   const p2tr = payments.p2tr({
     internalPubkey: publicKey.slice(1),
-    network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,
+    network: network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet,
   });
 
   if (!p2tr.output || !p2tr.address || !p2tr.internalPubkey) {

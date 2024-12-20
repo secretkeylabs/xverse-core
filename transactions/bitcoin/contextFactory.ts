@@ -33,6 +33,7 @@ const createAddressContext = ({
   utxoCache,
   accountType,
 }: CreateAddressContextProps): AddressContext => {
+  // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
 
   if (accountType === 'ledger') {
@@ -110,8 +111,8 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
     publicKey: paymentAddress.publicKey,
     network,
     accountIndex,
-    seedVault: seedVault,
-    utxoCache: utxoCache,
+    seedVault,
+    utxoCache,
     accountType: account.accountType,
   });
   const ordinalsAddressContext = createAddressContext({
@@ -120,8 +121,8 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
     publicKey: account.btcAddresses.taproot.publicKey,
     network,
     accountIndex,
-    seedVault: seedVault,
-    utxoCache: utxoCache,
+    seedVault,
+    utxoCache,
     accountType: account.accountType,
   });
 

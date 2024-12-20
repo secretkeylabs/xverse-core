@@ -101,5 +101,12 @@ export const getFTInfoFromPostConditions = (postConds: PostConditionWire[]) =>
 
 export const isMultiSig = (tx: StacksTransactionWire): boolean => {
   const hashMode = tx.auth.spendingCondition.hashMode as MultiSigHashMode | SingleSigHashMode;
-  return hashMode === AddressHashMode.P2SH || hashMode === AddressHashMode.P2WSH ? true : false;
+  const multiSigHashModes = [
+    AddressHashMode.P2SH,
+    AddressHashMode.P2WSH,
+    AddressHashMode.P2SHNonSequential,
+    AddressHashMode.P2WSHNonSequential,
+  ];
+
+  return multiSigHashModes.includes(hashMode);
 };

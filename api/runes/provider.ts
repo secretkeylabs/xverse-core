@@ -1,5 +1,7 @@
+import { Mutex } from 'async-mutex';
 import axios, { AxiosAdapter, AxiosInstance, AxiosResponse } from 'axios';
 import { XVERSE_API_BASE_URL } from '../../constant';
+import { runeTokenToFungibleToken } from '../../fungibleTokens';
 import {
   Artifact,
   CancelOrderRequest,
@@ -11,16 +13,15 @@ import {
   NetworkType,
   Rune,
   RuneBalance,
-  SimplePriceResponse,
   RuneMarketInfo,
   RuneSellRequest,
   RuneSellResponse,
+  SimplePriceResponse,
   SubmitCancelOrderRequest,
   SubmitCancelOrderResponse,
   SubmitRuneSellRequest,
   SubmitRunesSellResponse,
 } from '../../types';
-import { runeTokenToFungibleToken } from '../../fungibleTokens';
 import { JSONBig } from '../../utils/bignumber';
 import { getXClientVersion } from '../../utils/xClientVersion';
 
@@ -31,6 +32,8 @@ const runeInfoCache = {
   byName: {} as Record<string, Rune>,
   byId: new Map<bigint, Rune>(),
 };
+
+const mutexStore: Record<string, Mutex> = {};
 
 const configureCacheForNetwork = (network: NetworkType): void => {
   if (runeInfoCache.network !== network) {
@@ -43,10 +46,18 @@ const configureCacheForNetwork = (network: NetworkType): void => {
 const getRuneInfoFromCache = (runeNameOrId: string | bigint, network: NetworkType): Rune | undefined => {
   configureCacheForNetwork(network);
 
-  if (typeof runeNameOrId === 'bigint') {
-    return runeInfoCache.byId.get(runeNameOrId);
+  try {
+    if (typeof runeNameOrId === 'bigint') {
+      return runeInfoCache.byId.get(runeNameOrId);
+    } else if (/^[0-9]+:[0-9]+$/.test(runeNameOrId)) {
+      const [block, txIdx] = runeNameOrId.split(':').map((part) => BigInt(part));
+      const runeId = (block << 16n) + txIdx;
+      return runeInfoCache.byId.get(runeId);
+    }
+    return runeInfoCache.byName[runeNameOrId.toUpperCase()];
+  } catch (e) {
+    return undefined;
   }
-  return runeInfoCache.byName[runeNameOrId.toUpperCase()];
 };
 
 const setRuneInfoInCache = (runeInfo: Rune | undefined, network: NetworkType): void => {
@@ -62,6 +73,13 @@ const setRuneInfoInCache = (runeInfo: Rune | undefined, network: NetworkType): v
 
   runeInfoCache.byName[runeInfo.entry.spaced_rune] = runeInfo;
   runeInfoCache.byId.set(runeId, runeInfo);
+};
+
+const getMutex = (key: string): Mutex => {
+  if (!mutexStore[key]) {
+    mutexStore[key] = new Mutex();
+  }
+  return mutexStore[key];
 };
 
 class RunesApi {
@@ -113,30 +131,41 @@ class RunesApi {
   async getRuneInfo(runeId: bigint): Promise<Rune | undefined>;
   async getRuneInfo(runeNameOrId: string): Promise<Rune | undefined>;
   async getRuneInfo(runeNameOrId: string | bigint): Promise<Rune | undefined> {
+    const mutex = getMutex(`runeInfo-${runeNameOrId}`);
+
+    if (mutex.isLocked()) {
+      await mutex.waitForUnlock();
+    }
+
     const cachedRuneInfo = getRuneInfoFromCache(runeNameOrId, this.network);
 
     if (cachedRuneInfo) {
       return cachedRuneInfo;
     }
 
-    let response: AxiosResponse<Rune, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const release = await mutex.acquire();
+    try {
+      let response: AxiosResponse<Rune, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    if (typeof runeNameOrId === 'bigint') {
-      const blockHeight = runeNameOrId >> 16n;
-      const txIdx = runeNameOrId - (blockHeight << 16n);
-      response = await this.clientBigNumber.get<Rune>(`/v1/runes/${blockHeight}:${txIdx}`, {
-        validateStatus: (status) => status === 200 || status === 404,
-      });
-    } else {
-      response = await this.clientBigNumber.get<Rune>(`/v1/runes/${runeNameOrId.toUpperCase()}`, {
-        validateStatus: (status) => status === 200 || status === 404,
-      });
+      if (typeof runeNameOrId === 'bigint') {
+        const blockHeight = runeNameOrId >> 16n;
+        const txIdx = runeNameOrId - (blockHeight << 16n);
+        response = await this.clientBigNumber.get<Rune>(`/v1/runes/${blockHeight}:${txIdx}`, {
+          validateStatus: (status) => status === 200 || status === 404,
+        });
+      } else {
+        response = await this.clientBigNumber.get<Rune>(`/v1/runes/${runeNameOrId.toUpperCase()}`, {
+          validateStatus: (status) => status === 200 || status === 404,
+        });
+      }
+
+      const runeInfo = response.status === 200 ? response.data : undefined;
+      setRuneInfoInCache(runeInfo, this.network);
+
+      return runeInfo;
+    } finally {
+      release();
     }
-
-    const runeInfo = response.status === 200 ? response.data : undefined;
-    setRuneInfoInCache(runeInfo, this.network);
-
-    return runeInfo;
   }
 
   /**

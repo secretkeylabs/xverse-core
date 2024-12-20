@@ -1,14 +1,10 @@
 import { StacksNetwork } from '@stacks/network';
 import {
-  BufferCV,
-  bufferCVFromString,
-  fetchCallReadOnlyFunction,
   ClarityType,
   cvToHex,
   cvToString,
   hexToCV,
   PrincipalCV,
-  ResponseCV,
   SomeCV,
   standardPrincipalCV,
   TupleCV,
@@ -22,7 +18,6 @@ import { API_TIMEOUT_MILLI } from '../constant';
 import {
   Account,
   AccountAssetsListData,
-  AddressToBnsResponse,
   CoinMetaData,
   ContractInterfaceResponse,
   CoreInfo,
@@ -34,6 +29,7 @@ import {
   NftsListData,
   NonFungibleToken,
   NonFungibleTokenOld,
+  StacksMainnet,
   StxAddressData,
   StxAddressDataResponse,
   StxMempoolResponse,
@@ -56,6 +52,8 @@ import {
 } from './helper';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 import StacksApiProvider from './stacksApi';
+import { safePromise } from '../utils';
+import { getOwner, getPrimaryName } from 'bns-v2-sdk';
 
 // TODO: these methods needs to be refactored
 // reference https://github.com/secretkeylabs/xverse-core/pull/217/files#r1298242728
@@ -332,61 +330,29 @@ export async function getContractInterface(
 }
 
 export async function getBnsName(stxAddress: string, network: StacksNetwork) {
-  try {
-    const apiUrl = `${network.client.baseUrl}/v1/addresses/stacks/${stxAddress}`;
-    const response = await axios.get<AddressToBnsResponse>(apiUrl, {
-      timeout: API_TIMEOUT_MILLI,
-    });
-    return response?.data?.names[0];
-  } catch (err) {
-    return undefined;
-  }
+  const [error, data] = await safePromise(
+    getPrimaryName({
+      address: stxAddress,
+      network: network.chainId === StacksMainnet.chainId ? 'mainnet' : 'testnet',
+    }),
+  );
+
+  if (error) return undefined;
+
+  return data ? `${data.name}.${data.namespace}` : undefined;
 }
 
-export async function fetchAddressOfBnsName(
-  bnsName: string,
-  stxAddress: string,
-  network: StacksNetwork,
-): Promise<string> {
-  try {
-    if (bnsName.includes('.')) {
-      const ns = bnsName.split('.');
-      const nameStr = ns[0];
-      const namespaceStr = ns[1] ?? '';
+export async function fetchAddressOfBnsName(bnsName: string, network: StacksNetwork): Promise<string> {
+  const [error, data] = await safePromise(
+    getOwner({
+      fullyQualifiedName: bnsName,
+      network: network.chainId === StacksMainnet.chainId ? 'mainnet' : 'testnet',
+    }),
+  );
 
-      const contractAddress = 'SP000000000000000000002Q6VF78';
-      const contractName = 'bns';
-      const functionName = 'name-resolve';
-      const senderAddress = stxAddress;
-      const namespace: BufferCV = bufferCVFromString(namespaceStr);
-      const name: BufferCV = bufferCVFromString(nameStr);
+  if (error) return '';
 
-      const options = {
-        contractAddress,
-        contractName,
-        functionName,
-        functionArgs: [namespace, name],
-        network,
-        senderAddress,
-      };
-
-      const responseCV = await fetchCallReadOnlyFunction(options);
-
-      if (responseCV.type === ClarityType.ResponseErr) {
-        return '';
-      } else {
-        const response = responseCV as ResponseCV;
-        const responseTupleCV = response.value as TupleCV;
-        const owner: PrincipalCV = responseTupleCV.value.owner as PrincipalCV;
-        const address = cvToString(owner);
-        return address;
-      }
-    } else {
-      return '';
-    }
-  } catch (err) {
-    return '';
-  }
+  return data ?? '';
 }
 
 export async function fetchStxPendingTxData(stxAddress: string, network: StacksNetwork): Promise<StxPendingTxData> {

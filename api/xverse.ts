@@ -68,7 +68,7 @@ import {
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
-  TopRunesResponse,
+  PrincipalToFungibleToken,
   TopTokens,
   TopTokensResponse,
 } from '../types';
@@ -301,18 +301,13 @@ class XverseApi {
 
   getTopTokens = async (): Promise<TopTokensResponse> => {
     const response = await this.client.get<TopTokens>('/v1/top-tokens');
-    const topRunesTokens: TopRunesResponse = {};
+    const topRunesTokens: PrincipalToFungibleToken = {};
     for (const runeId in response.data.runes) {
       const runeData = response.data.runes[runeId];
-      const runeBalance = {
-        ...runeData,
-        isTopToken: true,
-        priceChangePercentage24h: null,
-        currentPrice: null,
-      };
-      topRunesTokens[runeId] = runeTokenToFungibleToken(runeBalance);
+      topRunesTokens[runeId] = runeTokenToFungibleToken(runeData);
     }
     return {
+      ...response.data,
       runes: topRunesTokens,
     };
   };

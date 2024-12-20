@@ -23,7 +23,7 @@ import {
   getFTInfoFromPostConditions,
   nextBestNonce,
 } from '..';
-import { AppInfo, Coin } from '../../types';
+import { AppInfo, Coin, StacksMainnet } from '../../types';
 import { STX_DECIMALS } from '../../constant';
 import { getContractInterface, getXverseApiClient } from '../../api';
 
@@ -45,11 +45,9 @@ export const createContractCallPromises = async (
   const nonce = await nextBestNonce(payload.stxAddress!, network);
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
-  // Stacks isn't setup for testnet, so we default to mainnet
-  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient('Mainnet').getSip10Tokens(
-    ftContactAddresses,
-    'USD',
-  );
+  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient(
+    network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
+  ).getSip10Tokens(ftContactAddresses, 'USD');
 
   const unSignedContractCall = await generateUnsignedTx({
     payload: {

@@ -25,6 +25,7 @@ import {
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair, ECPairInterface } from '../utils/ecpair';
 import { GAIA_HUB_URL } from './../constant';
+import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
 
 function getStxDerivationPath(index: bigint) {
   return `${STX_PATH_WITHOUT_INDEX}${index.toString()}`;
@@ -124,7 +125,7 @@ export async function getAccountFromRootNode({
 
   // BTC =================================================
   const masterPubKey = rootNode.publicKey.toString('hex');
-  const btcNetwork = network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+  const btcNetwork = getBtcNetworkDefinition(network);
 
   // derive nested segwit btc address
   const nestedKeyPair = rootNode.derivePath(getNestedSegwitDerivationPath({ index, network }));
