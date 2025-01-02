@@ -16,13 +16,7 @@ import {
   StacksTransactionWire,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
-import {
-  applyFeeMultiplier,
-  extractFromPayload,
-  generateUnsignedTx,
-  getFTInfoFromPostConditions,
-  nextBestNonce,
-} from '..';
+import { extractFromPayload, generateUnsignedTx, getFTInfoFromPostConditions, nextBestNonce } from '..';
 import { AppInfo, Coin, StacksMainnet } from '../../types';
 import { STX_DECIMALS } from '../../constant';
 import { getContractInterface, getXverseApiClient } from '../../api';
@@ -92,8 +86,6 @@ export async function getTokenTransferRequest(
     fee: auth?.spendingCondition.fee.toString(),
     nonce: auth?.spendingCondition.nonce,
   });
-
-  applyFeeMultiplier(unsignedSendStxTx, feeMultipliers);
 
   if (auth) {
     unsignedSendStxTx.auth = auth;

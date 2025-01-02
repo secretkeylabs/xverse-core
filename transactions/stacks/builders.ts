@@ -99,12 +99,12 @@ export async function signMultiStxTransactions(
   }
 }
 
+type UnsignedStxTransferTxArgs = UnsignedTxArgs<ConnectSTXTransferPayload>;
+
 /**
  *  generate unsigned stx transfer transaction
  */
-type UnsignedStxTransferTxArgs = UnsignedTxArgs<ConnectSTXTransferPayload>;
-
-export function generateUnsignedSTXTransferTx(args: UnsignedStxTransferTxArgs) {
+const generateUnsignedSTXTransferTx = async (args: UnsignedStxTransferTxArgs) => {
   const { payload, publicKey, nonce, sponsored, fee } = args;
   const { recipient, memo, amount, network, anchorMode } = payload;
   const options = {
@@ -120,14 +120,14 @@ export function generateUnsignedSTXTransferTx(args: UnsignedStxTransferTxArgs) {
   };
 
   return makeUnsignedSTXTokenTransfer(options);
-}
+};
 
 type UnsignedContractCallTxArgs = UnsignedTxArgs<ConnectContractCallPayload>;
 
 /**
  * Constructs an unsigned smart contract call transaction
  */
-export async function generateUnsignedContractCallTx(args: UnsignedContractCallTxArgs): Promise<StacksTransactionWire> {
+const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs): Promise<StacksTransactionWire> => {
   const { payload, publicKey, nonce, fee } = args;
   const { contractName, contractAddress, functionName, sponsored, postConditionMode, network, postConditions } =
     payload;
@@ -148,7 +148,7 @@ export async function generateUnsignedContractCallTx(args: UnsignedContractCallT
     sponsored,
   };
   return makeUnsignedContractCall(txOptions);
-}
+};
 
 /**
  * generate fungible token transfer or nft transfer transaction
@@ -224,7 +224,7 @@ export async function generateUnsignedTokenTransferTransaction(
 
 type UnsignedContractDeployTxArgs = UnsignedTxArgs<ConnectContractDeployPayload>;
 
-export function generateUnsignedContractDeployTx(args: UnsignedContractDeployTxArgs) {
+const generateUnsignedContractDeployTx = async (args: UnsignedContractDeployTxArgs) => {
   const { payload, publicKey, nonce, fee } = args;
   const { contractName, codeBody, network, postConditionMode, anchorMode, postConditions } = payload;
   const options = {
@@ -239,7 +239,7 @@ export function generateUnsignedContractDeployTx(args: UnsignedContractDeployTxA
     network: network === 'mainnet' ? StacksMainnet : StacksTestnet,
   };
   return makeUnsignedContractDeploy(options);
-}
+};
 
 interface UnsignedTxArgs<TxPayload> {
   payload: TxPayload;
@@ -257,7 +257,9 @@ export function isStacksNetwork(network: ConnectNetwork): network is StacksNetwo
   return (network as StacksNetwork).chainId !== undefined;
 }
 
-export async function generateUnsignedTx(options: GenerateUnsignedTransactionOptions): Promise<StacksTransactionWire> {
+export const generateUnsignedTx = async (
+  options: GenerateUnsignedTransactionOptions,
+): Promise<StacksTransactionWire> => {
   const { payload, publicKey, nonce, fee } = options;
   const { network } = payload;
   let tx: StacksTransactionWire;
@@ -300,11 +302,11 @@ export async function generateUnsignedTx(options: GenerateUnsignedTransactionOpt
   }
   await applyMultiplierAndCapFeeAtThreshold(tx, network === 'mainnet' ? StacksMainnet : StacksTestnet);
 
-  if (!nonce) {
+  if (!nonce || nonce === 0) {
     const senderAddress = Address.fromPublicKey(publicKey, isStacksNetwork(network) ? network : StacksMainnet);
     const txNonce = await nextBestNonce(senderAddress, isStacksNetwork(network) ? network : StacksMainnet);
     tx.setNonce(txNonce);
   }
 
   return tx;
-}
+};

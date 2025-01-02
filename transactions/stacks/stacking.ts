@@ -1,10 +1,17 @@
-import { ClarityValue, contractPrincipalCV, cvToHex, noneCV, standardPrincipalCV, uintCV } from '@stacks/transactions';
+import {
+  ClarityValue,
+  contractPrincipalCV,
+  cvToHex,
+  getAddressFromPublicKey,
+  noneCV,
+  standardPrincipalCV,
+  uintCV,
+} from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
-import { StacksNetwork, StacksTransactionWire, StxMempoolTransactionData } from '../../types';
+import { StacksNetwork, StacksTransactionWire } from '../../types';
 import { generateUnsignedTx } from './builders';
 import { poxAddressToTuple } from '@stacks/stacking';
-import { getNewNonce, getNonce } from './nonceHelpers';
-import { estimateStacksTransactionWithFallback } from './fees';
+import { nextBestNonce } from './nonceHelpers';
 import { TransactionTypes } from '@stacks/connect';
 
 export async function generateUnsignedDelegateTransaction(
@@ -13,7 +20,6 @@ export async function generateUnsignedDelegateTransaction(
   poolAddress: string,
   poolContractAddress: string,
   poolContractName: string,
-  pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
   network: StacksNetwork,
   poolPoxAddress: string,
@@ -41,9 +47,7 @@ export async function generateUnsignedDelegateTransaction(
       postConditions: [],
     },
   });
-  const fee = await estimateStacksTransactionWithFallback(unsignedTx, network);
-  unsignedTx.setFee(fee[1].fee);
-  const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
+  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   unsignedTx.setNonce(nonce + 1n);
   return unsignedTx;
 }
@@ -51,7 +55,6 @@ export async function generateUnsignedDelegateTransaction(
 export async function generateUnsignedAllowContractCallerTransaction(
   poolAddress: string,
   poolContractName: string,
-  pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
   network: StacksNetwork,
   poxContractAddress: string,
@@ -70,17 +73,11 @@ export async function generateUnsignedAllowContractCallerTransaction(
       postConditions: [],
     },
   });
-  const fee = await estimateStacksTransactionWithFallback(unsignedTx, network);
-  unsignedTx.setFee(fee[1].fee);
-
-  const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-  unsignedTx.setNonce(nonce);
 
   return unsignedTx;
 }
 
 export async function generateUnsignedRevokeTransaction(
-  pendingTxs: StxMempoolTransactionData[],
   publicKey: string,
   network: StacksNetwork,
   poxContractAddress: string,
@@ -99,10 +96,6 @@ export async function generateUnsignedRevokeTransaction(
     },
     publicKey,
   });
-  const fee = await estimateStacksTransactionWithFallback(unsignedTx, network);
-  unsignedTx.setFee(fee[1].fee);
-  const nonce = getNewNonce(pendingTxs, getNonce(unsignedTx));
-  unsignedTx.setNonce(nonce);
 
   return unsignedTx;
 }

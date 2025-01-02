@@ -19,12 +19,26 @@ import { AppInfo, StacksMainnet } from '../../types';
  * @param appInfo
  * @returns newFee
  */
-export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; appInfo: AppInfo | null }): bigint => {
+export const stxFeeReducer = ({
+  initialFee,
+  appInfo,
+  txType,
+}: {
+  initialFee: bigint;
+  appInfo: AppInfo | null;
+  txType: PayloadType;
+}): bigint => {
   let newFee = initialFee;
 
+  const multiplier = appInfo
+    ? txType === PayloadType.ContractCall
+      ? appInfo.otherTxMultiplier
+      : appInfo.stxSendTxMultiplier
+    : 1;
+
   // apply multiplier
-  if (appInfo?.stxSendTxMultiplier && Number.isInteger(appInfo?.stxSendTxMultiplier)) {
-    newFee = newFee * BigInt(appInfo.stxSendTxMultiplier);
+  if (Number.isInteger(multiplier)) {
+    newFee = newFee * BigInt(multiplier);
   }
 
   // cap the fee at thresholdHighStacksFee
@@ -40,31 +54,23 @@ export const stxFeeReducer = ({ initialFee, appInfo }: { initialFee: bigint; app
 };
 
 /**
- * applyFeeMultiplier - modifies the param unsignedTx with stx fee multiplier
+ * applyMultiplierAndCapFeeAtThreshold - modifies the param unsignedTx with stx fee multiplier and fee cap
  * @param unsignedTx
  * @param appInfo
  */
-export const applyFeeMultiplier = (unsignedTx: StacksTransactionWire, appInfo: AppInfo | null) => {
-  if (!appInfo) {
-    return;
-  }
-
-  const newFee = stxFeeReducer({ initialFee: getFee(unsignedTx.auth), appInfo });
-  unsignedTx.setFee(newFee);
-};
-
 export const applyMultiplierAndCapFeeAtThreshold = async (
   unsignedTx: StacksTransactionWire,
   network: StacksNetwork,
 ) => {
-  const feeMultipliers = await getXverseApiClient(
+  const appInfo = await getXverseApiClient(
     network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
   ).fetchAppInfo();
-  applyFeeMultiplier(unsignedTx, feeMultipliers);
-  const fee = getFee(unsignedTx.auth);
-  if (feeMultipliers && fee > BigInt(feeMultipliers?.thresholdHighStacksFee)) {
-    unsignedTx.setFee(BigInt(feeMultipliers.thresholdHighStacksFee));
-  }
+  const newFee = stxFeeReducer({
+    initialFee: getFee(unsignedTx.auth),
+    appInfo,
+    txType: unsignedTx.payload.payloadType,
+  });
+  unsignedTx.setFee(newFee);
 };
 
 const getFallbackFees = (

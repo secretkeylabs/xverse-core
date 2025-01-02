@@ -3,12 +3,7 @@ import { PayloadType } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { microstacksToStx } from '../../../currency';
-import {
-  createContractCallPromises,
-  generateUnsignedSTXTransferTx,
-  generateUnsignedContractDeployTx,
-  txPayloadToRequest,
-} from '../../../transactions';
+import { createContractCallPromises, txPayloadToRequest, generateUnsignedTx } from '../../../transactions';
 import { StacksMainnet, StacksTestnet } from '../../../types';
 
 const mocked = vi.hoisted(() => ({
@@ -90,7 +85,7 @@ describe('txPayloadToRequest', () => {
     mocked.cvToValue.mockReturnValueOnce(mockTokenTransferPayload.recipient);
     mocked.makeUnsignedSTXTokenTransfer.mockResolvedValueOnce(mockedTxn);
 
-    const unsignedSendStxTx = await generateUnsignedSTXTransferTx({
+    const unsignedSendStxTx = await generateUnsignedTx({
       payload: {
         txType: TransactionTypes.STXTransfer,
         recipient: mockTokenTransferPayload.recipient,
@@ -128,7 +123,7 @@ describe('txPayloadToRequest', () => {
 
     mocked.getNonce.mockReturnValueOnce(100n);
 
-    const unsignedSendStxTx = await generateUnsignedContractDeployTx({
+    const unsignedSendStxTx = await generateUnsignedTx({
       payload: {
         txType: TransactionTypes.ContractDeploy,
         codeBody: mockContractDeploy.codeBody,

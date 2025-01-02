@@ -133,7 +133,7 @@ describe('estimateStacksTransactionWithFallback', () => {
       '0a010000000000000000000000001a612f25',
     ];
 
-    const transaction = await TransactionUtils.generateUnsignedContractCallTx({
+    const transaction = await TransactionUtils.generateUnsignedTx({
       payload: {
         txType: TransactionTypes.ContractCall,
         contractAddress,

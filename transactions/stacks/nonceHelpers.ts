@@ -26,6 +26,9 @@ export function getNonce(transaction: StacksTransactionWire): bigint {
   return transaction.auth.spendingCondition?.nonce ?? BigInt(0);
 }
 
+/**
+ * @deprecated Use {@link nextBestNonce} instead
+ */
 export function getNewNonce(pendingTransactions: StxMempoolTransactionData[], currentNonce: bigint): bigint {
   if ((pendingTransactions ?? []).length === 0) {
     // handle case where account nonce is 0 and no pending transactions
