@@ -57,6 +57,33 @@ type RestoreWalletProps = {
   backupType: WalletBackupType;
 };
 
+type TokenSelection = {
+  principal?: string;
+  selectedToken?: string;
+};
+
+type BaseSwapEvent = {
+  fromTokenUsdValue: string | number;
+  to?: string;
+  from?: string;
+  provider?: string;
+  toPrincipal?: string;
+  fromPrincipal?: string;
+};
+
+interface SwapAmountEvent extends BaseSwapEvent {
+  toTokenAmount?: string;
+  fromTokenAmount?: string;
+}
+
+interface SelectSwapQuoteEvent {
+  provider: string;
+  from: string;
+  to: string;
+  fromPrincipal?: string;
+  toPrincipal?: string;
+}
+
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
     link: string;
@@ -73,55 +100,13 @@ export type AnalyticsEventProperties = {
     repeat?: number;
     batch?: number;
   } & CommonProps;
-  [AnalyticsEvents.InitiateSwapFlow]: {
-    selectedToken?: string;
-    principal?: string;
-  };
-  [AnalyticsEvents.FetchSwapQuote]: {
-    toTokenAmount?: string;
-    fromTokenUsdValue: string | number;
-    fromTokenAmount?: string;
-    toPrincipal?: string;
-    fromPrincipal?: string;
-    to?: string;
-    from?: string;
-    provider?: string;
-  };
-  [AnalyticsEvents.SelectSwapQuote]: {
-    provider: string;
-    from: string;
-    to: string;
-    fromPrincipal?: string;
-    toPrincipal?: string;
-  };
-  [AnalyticsEvents.ConfirmSwap]: {
-    toTokenAmount?: string;
-    fromTokenUsdValue: string | number;
-    fromTokenAmount?: string;
-    toPrincipal?: string;
-    fromPrincipal?: string;
-    to?: string;
-    from?: string;
-    provider?: string;
-  };
-  [AnalyticsEvents.SignSwap]: {
-    toTokenAmount?: string;
-    fromTokenUsdValue: string | number;
-    fromTokenAmount?: string;
-    toPrincipal?: string;
-    fromPrincipal?: string;
-    to?: string;
-    from?: string;
-    provider?: string;
-  };
-  [AnalyticsEvents.SelectTokenToSwapFrom]: {
-    selectedToken: string;
-    principal?: string;
-  };
-  [AnalyticsEvents.SelectTokenToSwapTo]: {
-    selectedToken: string;
-    principal?: string;
-  };
+  [AnalyticsEvents.InitiateSwapFlow]: TokenSelection;
+  [AnalyticsEvents.FetchSwapQuote]: SwapAmountEvent;
+  [AnalyticsEvents.ConfirmSwap]: SwapAmountEvent;
+  [AnalyticsEvents.SignSwap]: SwapAmountEvent;
+  [AnalyticsEvents.SelectSwapQuote]: SelectSwapQuoteEvent;
+  [AnalyticsEvents.SelectTokenToSwapFrom]: TokenSelection;
+  [AnalyticsEvents.SelectTokenToSwapTo]: TokenSelection;
   [AnalyticsEvents.SetupWallet]: SetupWalletProps;
   [AnalyticsEvents.BackupWallet]: BackupWalletProps;
   [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
