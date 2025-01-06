@@ -58,6 +58,7 @@ import {
   PlaceUtxoOrderResponse,
   PlaceXcOrderRequest,
   PlaceXcOrderResponse,
+  PrincipalToFungibleToken,
   SignedUrlResponse,
   SimplePriceResponse,
   SponsorInfoResponse,
@@ -71,7 +72,6 @@ import {
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
-  PrincipalToFungibleToken,
   TopTokens,
   TopTokensResponse,
 } from '../types';
@@ -310,7 +310,7 @@ class XverseApi {
   };
 
   getHistoricalData = async (
-    id: string,
+    id: 'btc' | 'stx' | string,
     period: HistoricalDataParamsPeriod,
     exchangeRate = 1,
   ): Promise<HistoricalDataResponsePrices> => {
