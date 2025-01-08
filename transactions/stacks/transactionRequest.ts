@@ -10,15 +10,15 @@ import {
   addressToString,
   Authorization,
   AuthType,
+  cvToHex,
   cvToValue,
   getAddressFromPublicKey,
   PayloadType,
-  serializeCV,
   StacksTransactionWire,
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { extractFromPayload, generateUnsignedTx, getFTInfoFromPostConditions, nextBestNonce } from '..';
-import { AppInfo, Coin, StacksMainnet } from '../../types';
+import { Coin, StacksMainnet } from '../../types';
 import { STX_DECIMALS } from '../../constant';
 import { getContractInterface, getXverseApiClient } from '../../api';
 
@@ -65,36 +65,6 @@ export const createContractCallPromises = async (
   return Promise.all([unSignedContractCall, contractInterface, coinsMetaDataPromise, showPostConditionMessage]);
 };
 
-export async function getTokenTransferRequest(
-  recipient: string,
-  amount: string,
-  memo: string,
-  stxPublicKey: string,
-  feeMultipliers: AppInfo | null,
-  network: StacksNetwork,
-  auth?: Authorization,
-) {
-  const unsignedSendStxTx: StacksTransactionWire = await generateUnsignedTx({
-    payload: {
-      txType: TransactionTypes.STXTransfer,
-      recipient,
-      memo,
-      amount,
-      network,
-      publicKey: stxPublicKey,
-    },
-    publicKey: stxPublicKey,
-    sponsored: auth?.authType === AuthType.Sponsored,
-    fee: auth?.spendingCondition.fee.toString(),
-    nonce: auth?.spendingCondition.nonce,
-  });
-
-  if (auth) {
-    unsignedSendStxTx.auth = auth;
-  }
-  return unsignedSendStxTx;
-}
-
 const cleanMemoString = (memo: string): string => memo.replace('\u0000', '');
 
 export const txPayloadToRequest = (
@@ -132,7 +102,7 @@ export const txPayloadToRequest = (
         txType: TransactionTypes.ContractCall,
         contractName: payload.contractName.content,
         contractAddress: addressToString(payload.contractAddress),
-        functionArgs: payload.functionArgs.map((arg) => Buffer.from(serializeCV(arg)).toString('hex')),
+        functionArgs: payload.functionArgs.map((arg) => cvToHex(arg)),
         functionName: payload.functionName.content,
       };
       return contractCallPayload;

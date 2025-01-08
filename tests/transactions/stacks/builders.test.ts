@@ -78,7 +78,13 @@ describe('stxFeeReducer', () => {
     },
   ].forEach(({ name, inputs, expectedFee }) => {
     it(name, () => {
-      expect(TransactionUtils.stxFeeReducer(inputs)).toEqual(expectedFee);
+      expect(
+        TransactionUtils.stxFeeReducer({
+          initialFee: inputs.initialFee,
+          appInfo: inputs.appInfo,
+          txType: StacksTransactions.PayloadType.TokenTransfer,
+        }),
+      ).toEqual(expectedFee);
     });
   });
 });
