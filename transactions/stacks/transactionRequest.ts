@@ -11,6 +11,7 @@ import {
   Authorization,
   AuthType,
   cvToValue,
+  getAddressFromPublicKey,
   PayloadType,
   serializeCV,
   StacksTransactionWire,
@@ -36,7 +37,7 @@ export const createContractCallPromises = async (
   auth?: Authorization,
 ) => {
   const { postConds } = extractFromPayload(payload);
-  const nonce = await nextBestNonce(payload.stxAddress!, network);
+  const nonce = await nextBestNonce(getAddressFromPublicKey(stxPublicKey), network);
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
   const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient(
@@ -46,6 +47,7 @@ export const createContractCallPromises = async (
   const unSignedContractCall = await generateUnsignedTx({
     payload: {
       ...payload,
+      network,
     },
     fee: auth?.spendingCondition.fee.toString() || '0',
     nonce: auth?.spendingCondition.nonce || nonce,
@@ -58,9 +60,9 @@ export const createContractCallPromises = async (
     payload?.postConditionMode === 2 && payload?.postConditions && payload.postConditions.length <= 0;
   const showPostConditionMessage = !!checkForPostConditionMessage;
 
-  const contractInterfacePromise = getContractInterface(payload.contractAddress, payload.contractName, network);
+  const contractInterface = await getContractInterface(payload.contractAddress, payload.contractName, network);
 
-  return Promise.all([unSignedContractCall, contractInterfacePromise, coinsMetaDataPromise, showPostConditionMessage]);
+  return Promise.all([unSignedContractCall, contractInterface, coinsMetaDataPromise, showPostConditionMessage]);
 };
 
 export async function getTokenTransferRequest(

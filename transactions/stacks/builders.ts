@@ -30,9 +30,8 @@ import {
 } from '@stacks/connect';
 import BigNumber from 'bignumber.js';
 import { PostConditionsOptions, StacksMainnet, StacksNetwork, StacksTestnet } from '../../types';
-import { UnsignedStacksTransation } from '../../types/api/stacks/transaction';
 import { getStxAddressKeyChain } from '../../wallet/index';
-import { extractFromPayload, makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import { makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import { applyMultiplierAndCapFeeAtThreshold, estimateStacksTransactionWithFallback } from './fees';
 import { nextBestNonce } from './nonceHelpers';
 
@@ -114,9 +113,9 @@ const generateUnsignedSTXTransferTx = async (args: UnsignedStxTransferTxArgs) =>
     anchorMode: anchorMode ?? AnchorMode.Any,
     amount: BigInt(amount),
     nonce,
-    fee,
+    fee: fee ? BigInt(fee) : BigInt(0),
     sponsored,
-    network: network === 'mainnet' ? StacksMainnet : StacksTestnet,
+    network: network as StacksNetwork,
   };
 
   return makeUnsignedSTXTokenTransfer(options);
@@ -129,10 +128,18 @@ type UnsignedContractCallTxArgs = UnsignedTxArgs<ConnectContractCallPayload>;
  */
 const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs): Promise<StacksTransactionWire> => {
   const { payload, publicKey, nonce, fee } = args;
-  const { contractName, contractAddress, functionName, sponsored, postConditionMode, network, postConditions } =
-    payload;
+  const {
+    contractName,
+    contractAddress,
+    functionName,
+    sponsored,
+    postConditionMode,
+    network,
+    postConditions,
+    functionArgs,
+  } = payload;
 
-  const { funcArgs } = extractFromPayload(payload);
+  const funcArgs = functionArgs?.map((arg: string) => hexToCV(arg));
 
   const txOptions: UnsignedContractCallOptions = {
     contractAddress,
@@ -140,87 +147,15 @@ const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs):
     functionName,
     functionArgs: funcArgs,
     publicKey,
-    fee,
+    fee: fee ? BigInt(fee) : BigInt(0),
     nonce,
-    network: network === 'mainnet' ? StacksMainnet : StacksTestnet,
+    network: network as StacksNetwork,
     postConditions: postConditions ? postConditions.filter((pc): pc is PostCondition => typeof pc !== 'string') : [],
     postConditionMode: postConditionMode ?? PostConditionMode.Deny,
     sponsored,
   };
   return makeUnsignedContractCall(txOptions);
 };
-
-/**
- * generate fungible token transfer or nft transfer transaction
- * @param amount
- * @param senderAddress
- * @param recipientAddress
- * @param contractAddress
- * @param contractName
- * @param publicKey
- * @param network
- * @returns
- */
-export async function generateUnsignedTokenTransferTransaction(
-  unsignedTx: UnsignedStacksTransation,
-): Promise<StacksTransactionWire> {
-  const functionName = 'transfer';
-  let functionArgs: ClarityValue[];
-
-  const {
-    contractAddress,
-    contractName,
-    assetName,
-    senderAddress,
-    amount,
-    isNFT = false,
-    recipientAddress,
-    memo,
-    publicKey,
-    network,
-    sponsored,
-  } = unsignedTx;
-
-  const postConditionOptions: PostConditionsOptions = {
-    contractAddress,
-    contractName,
-    assetName,
-    stxAddress: senderAddress,
-    amount,
-  };
-
-  let postConditions: PostCondition[];
-  if (isNFT) {
-    postConditions = [makeNonFungiblePostCondition(postConditionOptions)];
-    functionArgs = [hexToCV(amount), standardPrincipalCV(senderAddress), standardPrincipalCV(recipientAddress)];
-  } else {
-    functionArgs = [uintCV(Number(amount)), standardPrincipalCV(senderAddress), standardPrincipalCV(recipientAddress)];
-    if (memo) {
-      functionArgs.push(memo !== '' ? someCV(bufferCVFromString(memo)) : noneCV());
-    } else {
-      functionArgs.push(noneCV());
-    }
-    postConditions = [makeFungiblePostCondition(postConditionOptions)];
-  }
-
-  const params: UnsignedContractCallTxArgs = {
-    publicKey,
-    sponsored,
-    payload: {
-      txType: TransactionTypes.ContractCall,
-      contractAddress,
-      contractName,
-      functionName,
-      publicKey,
-      functionArgs: functionArgs.map((arg) => cvToHex(arg)),
-      network,
-      nonce: undefined,
-      postConditions: postConditions,
-      sponsored,
-    },
-  };
-  return generateUnsignedContractCallTx(params);
-}
 
 type UnsignedContractDeployTxArgs = UnsignedTxArgs<ConnectContractDeployPayload>;
 
@@ -231,7 +166,7 @@ const generateUnsignedContractDeployTx = async (args: UnsignedContractDeployTxAr
     contractName,
     codeBody,
     nonce,
-    fee,
+    fee: fee ? BigInt(fee) : BigInt(0),
     publicKey,
     anchorMode: anchorMode ?? AnchorMode.Any,
     postConditionMode: postConditionMode || PostConditionMode.Deny,
@@ -310,3 +245,138 @@ export const generateUnsignedTx = async (
 
   return tx;
 };
+
+/**
+ * generate a sip10 token transfer transaction
+ */
+export async function generateUnsignedSip10TransferTransaction(options: {
+  publicKey: string;
+  network: StacksNetwork;
+  contractAddress: string;
+  contractName: string;
+  assetName: string;
+  amount: string;
+  senderAddress: string;
+  recipientAddress: string;
+  memo: string;
+  sponsored?: boolean;
+}): Promise<StacksTransactionWire> {
+  const {
+    contractAddress,
+    contractName,
+    assetName,
+    senderAddress,
+    amount,
+    recipientAddress,
+    memo,
+    publicKey,
+    network,
+    sponsored = false,
+  } = options;
+
+  const functionName = 'transfer';
+
+  const functionArgs: ClarityValue[] = [
+    uintCV(Number(amount)),
+    standardPrincipalCV(senderAddress),
+    standardPrincipalCV(recipientAddress),
+  ];
+
+  const postConditionOptions: PostConditionsOptions = {
+    contractAddress,
+    contractName,
+    assetName,
+    stxAddress: senderAddress,
+    amount,
+  };
+  const postConditions: PostCondition[] = [makeFungiblePostCondition(postConditionOptions)];
+
+  if (memo) {
+    functionArgs.push(memo !== '' ? someCV(bufferCVFromString(memo)) : noneCV());
+  } else {
+    functionArgs.push(noneCV());
+  }
+
+  const params: UnsignedContractCallTxArgs = {
+    publicKey,
+    sponsored,
+    nonce: 0,
+    fee: 0,
+    payload: {
+      txType: TransactionTypes.ContractCall,
+      contractAddress,
+      contractName,
+      functionName,
+      publicKey,
+      functionArgs: functionArgs.map((arg) => cvToHex(arg)),
+      network,
+      postConditions: postConditions,
+      sponsored,
+    },
+  };
+  return generateUnsignedTx(params);
+}
+
+/**
+ * generates a unsigned NFT transfer transaction
+ */
+export async function generateUnsignedNftTransferTransaction(options: {
+  contractAddress: string;
+  contractName: string;
+  assetName: string;
+  amount: string;
+  senderAddress: string;
+  recipientAddress: string;
+  publicKey: string;
+  network: StacksNetwork;
+  sponsored?: boolean;
+}): Promise<StacksTransactionWire> {
+  const {
+    contractAddress,
+    contractName,
+    assetName,
+    senderAddress,
+    amount,
+    recipientAddress,
+    publicKey,
+    network,
+    sponsored = false,
+  } = options;
+
+  const functionName = 'transfer';
+
+  const functionArgs: ClarityValue[] = [
+    hexToCV(amount),
+    standardPrincipalCV(senderAddress),
+    standardPrincipalCV(recipientAddress),
+  ];
+
+  const postConditionOptions: PostConditionsOptions = {
+    contractAddress,
+    contractName,
+    assetName,
+    stxAddress: senderAddress,
+    amount,
+  };
+
+  const postConditions: PostCondition[] = [makeNonFungiblePostCondition(postConditionOptions)];
+
+  const params: UnsignedContractCallTxArgs = {
+    publicKey,
+    sponsored,
+    nonce: 0,
+    fee: 0,
+    payload: {
+      txType: TransactionTypes.ContractCall,
+      contractAddress,
+      contractName,
+      functionName,
+      publicKey,
+      functionArgs: functionArgs.map((arg) => cvToHex(arg)),
+      network,
+      postConditions: postConditions,
+      sponsored,
+    },
+  };
+  return generateUnsignedTx(params);
+}
