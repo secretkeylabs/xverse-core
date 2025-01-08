@@ -107,6 +107,37 @@ const getFallbackFees = (
   ];
 };
 
+export const modifyRecommendedStxFees = (
+  baseFees: {
+    low: number;
+    medium: number;
+    high: number;
+  },
+  appInfo: AppInfo | undefined | null,
+  txType: PayloadType,
+): { low: number; medium: number; high: number } => {
+  const multiplier = appInfo
+    ? txType === PayloadType.ContractCall
+      ? appInfo.otherTxMultiplier
+      : appInfo.stxSendTxMultiplier
+    : 1;
+  const highCap = appInfo?.thresholdHighStacksFee;
+
+  let adjustedLow = Math.round(baseFees.low * multiplier);
+  let adjustedMedium = Math.round(baseFees.medium * multiplier);
+  let adjustedHigh = Math.round(baseFees.high * multiplier);
+
+  if (highCap && highCap < adjustedMedium) {
+    adjustedLow = adjustedLow < highCap ? adjustedLow : Math.round(highCap * 0.75);
+    adjustedMedium = highCap;
+    adjustedHigh = Math.round(highCap * 1.25);
+  } else if (highCap && highCap < adjustedHigh) {
+    adjustedHigh = highCap;
+  }
+
+  return { low: adjustedLow, medium: adjustedMedium, high: adjustedHigh };
+};
+
 /**
  * Estimates the fee using {@link getMempoolFeePriorities} as a fallback if
  * {@link estimateTransaction} does not get an estimation due to the
