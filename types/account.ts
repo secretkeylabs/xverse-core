@@ -63,3 +63,8 @@ export type ExchangeRateList = {
 };
 
 export type ExchangeRateAvailableCurrencies = 'USD' | 'BTC' | 'STX';
+
+export const HistoricalDataPeriods = ['1d', '1w', '1m', '1y'] as const;
+export type HistoricalDataParamsPeriod = (typeof HistoricalDataPeriods)[number];
+export type HistoricalDataResponsePrice = { x: number; y: number; tooltipLabel: string };
+export type HistoricalDataResponsePrices = HistoricalDataResponsePrice[];

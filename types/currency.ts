@@ -52,6 +52,7 @@ export type SupportedCurrency =
   | 'DOP'
   | 'PEN';
 
+// source: wikipedia
 export const currencySymbolMap: Record<SupportedCurrency, string> = {
   USD: '$',
   EUR: '€',
@@ -67,9 +68,9 @@ export const currencySymbolMap: Record<SupportedCurrency, string> = {
   RUB: '₽',
   AUD: '$',
   NGN: '₦', // Nigerian Naira
-  TRY: 'TL', // Turkish Lira
-  INR: '₨', // Indian Rupee
-  CHF: '₣', // Swiss Franc
+  TRY: '₺', // Turkish Lira
+  INR: '₹', // Indian Rupee
+  CHF: '₣r.', // Swiss Franc
   VND: '₫', // Vietnamese Dong
   PLN: 'zł', // Polish Zloty
   MYR: 'RM', // Malaysian Ringgit
@@ -81,7 +82,7 @@ export const currencySymbolMap: Record<SupportedCurrency, string> = {
   PKR: '₨', // Pakistani Rupee
   ZAR: 'R', // South African Rand
   MXN: '$', // Mexican Peso
-  RON: 'L', // Romanian Leu
+  RON: 'lei', // Romanian Leu
   GTQ: 'Q', // Guatemalan Quetzal
   COP: '$', // Colombian Peso
   DOP: '$', // Dominican Peso
