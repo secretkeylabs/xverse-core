@@ -544,6 +544,9 @@ export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
     const cleanedSignatures = this.cleanPsbtSig(psbtBase64, signatures);
 
     for (const signature of cleanedSignatures) {
+      if (!signature[1]) {
+        continue;
+      }
       transaction.updateInput(signature[0], {
         partialSig: [[signature[1].pubkey, signature[1].signature]],
       });
@@ -572,7 +575,7 @@ export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
     return psbtObj.toBase64();
   }
 
-  cleanPsbtSig(psbtBase64: string, signatures: [number, PartialSignature][]) {
+  cleanPsbtSig(psbtBase64: string, signatures: [number, PartialSignature | undefined][]) {
     const results = [];
     const path = 84;
 
@@ -845,6 +848,9 @@ export class KeystoneP2trAddressContext extends P2trAddressContext {
     const cleanedSignatures = this.cleanPsbtSig(psbtBase64, signatures);
 
     for (const signature of cleanedSignatures) {
+      if (!signature[1]) {
+        continue;
+      }
       transaction.updateInput(signature[0], {
         tapKeySig: signature[1].signature,
       });
@@ -873,7 +879,7 @@ export class KeystoneP2trAddressContext extends P2trAddressContext {
     return psbtObj.toBase64();
   }
 
-  cleanPsbtSig(psbt: string, signatures: [number, PartialSignature][]) {
+  cleanPsbtSig(psbt: string, signatures: [number, PartialSignature | undefined][]) {
     const results = [];
     const path = 86;
 

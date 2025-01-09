@@ -43,6 +43,9 @@ const createMessageSignature = async (
   psbtToSign.addOutput({ script: Buffer.from('6a', 'hex'), value: 0 });
   const signatures = await app.signPsbt(psbtToSign.toBase64());
   for (const signature of signatures) {
+    if (!signature[1]) {
+      continue;
+    }
     if (isSegwit) {
       psbtToSign.updateInput(signature[0], {
         partialSig: [signature[1]],
