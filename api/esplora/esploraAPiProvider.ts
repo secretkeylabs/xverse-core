@@ -5,6 +5,7 @@ import {
   XVERSE_BTC_BASE_URI_REGTEST,
   XVERSE_BTC_BASE_URI_SIGNET,
   XVERSE_BTC_BASE_URI_TESTNET,
+  XVERSE_BTC_BASE_URI_TESTNET4,
 } from '../../constant';
 import {
   Address,
@@ -46,6 +47,9 @@ export class BitcoinEsploraApiProvider {
           break;
         case 'Testnet':
           baseURL = XVERSE_BTC_BASE_URI_TESTNET;
+          break;
+        case 'Testnet4':
+          baseURL = XVERSE_BTC_BASE_URI_TESTNET4;
           break;
         case 'Signet':
           baseURL = XVERSE_BTC_BASE_URI_SIGNET;
