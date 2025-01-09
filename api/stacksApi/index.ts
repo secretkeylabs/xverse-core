@@ -7,6 +7,7 @@ const stacksNetworksMap: Record<NetworkType, StacksNetworkName> = {
   Mainnet: 'mainnet',
   Testnet: 'testnet',
   Signet: 'testnet',
+  Regtest: 'testnet', // stacks testnet uses regtest btc network
 };
 
 export const getStacksApiClient = (networkType: NetworkType): StacksApiProvider => {

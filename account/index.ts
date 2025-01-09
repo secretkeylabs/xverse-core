@@ -20,6 +20,7 @@ import {
 } from '../constant';
 import { createWalletGaiaConfig, deriveWalletConfigKey, updateWalletConfig } from '../gaia';
 import { SeedVault } from '../seedVault';
+import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
 import { Account, BtcPaymentType, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair, ECPairInterface } from '../utils/ecpair';
@@ -127,7 +128,7 @@ export async function getAccountFromRootNode({
 
   // BTC =================================================
   const masterPubKey = rootNode.publicKey.toString('hex');
-  const btcNetwork = network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+  const btcNetwork = getBtcNetworkDefinition(network);
 
   // derive nested segwit btc address
   const nestedKeyPair = rootNode.derivePath(getNestedSegwitDerivationPath({ index, network }));

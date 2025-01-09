@@ -10,6 +10,7 @@ export * from './ecpair';
 export * from './runes';
 export * from './transactionSummary';
 export * from './xClientVersion';
+export * from './numbersFormatting';
 export { bip39, bs58 };
 
 export * from './safe';

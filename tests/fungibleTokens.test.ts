@@ -59,6 +59,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
+        isTopToken: false,
       },
     },
     {
@@ -77,6 +78,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: false,
         showToggle: true,
+        isTopToken: false,
       },
     },
     {
@@ -95,6 +97,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: true,
         isEnabled: false,
         showToggle: false,
+        isTopToken: false,
       },
     },
     {
@@ -113,6 +116,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: false,
         showToggle: true,
+        isTopToken: false,
       },
     },
     {
@@ -131,6 +135,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
+        isTopToken: false,
       },
     },
     {
@@ -149,6 +154,7 @@ describe('getFungibleTokenStates', () => {
         isSpam: false,
         isEnabled: true,
         showToggle: true,
+        isTopToken: false,
       },
     },
     {
@@ -166,6 +172,26 @@ describe('getFungibleTokenStates', () => {
         isSpam: true,
         isEnabled: true,
         showToggle: true,
+        isTopToken: false,
+      },
+    },
+    {
+      name: 'should default to enabled if token is promoted and doesnt have settings on it',
+      inputs: {
+        fungibleToken: {
+          ...runesToken,
+          balance: '0',
+          isTopToken: true,
+        },
+        manageTokens: {},
+        spamTokens: [],
+        showSpamTokens: false,
+      },
+      expected: {
+        isSpam: false,
+        isEnabled: true,
+        showToggle: true,
+        isTopToken: true,
       },
     },
   ].forEach(({ name, inputs, expected }) => {

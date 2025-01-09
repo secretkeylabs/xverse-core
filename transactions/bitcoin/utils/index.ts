@@ -1,3 +1,4 @@
+import * as btc from '@scure/btc-signer';
 import { SigHash, Transaction } from '@scure/btc-signer';
 import { UTXO } from '../../../types';
 import { TransactionContext } from '../context';
@@ -123,13 +124,30 @@ export const getTransactionVSize = (
     return transaction.vsize;
   }
 
-  const transactionCopy = transaction.clone();
-
   if (changeAddress) {
+    // transaction.clone does a PSBT serialize and parse, which is slow and done in a recursive way
+    // for large txns, it fails, so we rather rebuild the txn manually
+    const transactionCopy = new btc.Transaction({
+      allowUnknownOutputs: true,
+      allowLegacyWitnessUtxo: true,
+      allowUnknownInputs: true,
+    });
+
+    for (let i = 0; i < transaction.inputsLength; i++) {
+      const input = transaction.getInput(i);
+      transactionCopy.addInput(input);
+    }
+
+    for (let i = 0; i < transaction.outputsLength; i++) {
+      const output = transaction.getOutput(i);
+      transactionCopy.addOutput(output);
+    }
+
     context.addOutputAddress(transactionCopy, changeAddress, change);
+    return estimateVSize(transactionCopy);
   }
 
-  return estimateVSize(transactionCopy);
+  return estimateVSize(transaction);
 };
 
 export const extractUsedOutpoints = (transaction: Transaction): Set<string> => {
@@ -164,38 +182,44 @@ export const extractOutputInscriptionsAndSatributes = async (
       const inputBundleData = await input.getBundleData();
       const fromAddress = input.address;
 
-      const outputInscriptions = inputBundleData?.sat_ranges
-        .flatMap((s) =>
-          s.inscriptions.map((i) => ({
+      inputBundleData?.sat_ranges.forEach((s) => {
+        s.inscriptions.forEach((i) => {
+          const inscriptionEntry = {
             id: i.id,
             offset: runningOffset + s.offset - outputOffset,
             fromAddress,
             number: i.inscription_number,
             contentType: i.content_type,
-          })),
-        )
-        .filter((i) => i.offset >= 0 && i.offset < outputValue);
-
-      const outputSatributes = inputBundleData?.sat_ranges
-        .filter((s) => s.satributes.length > 0)
-        .map((s) => {
-          const min = Math.max(runningOffset + s.offset - outputOffset, 0);
-          const max = Math.min(
-            runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
-            outputValue,
-          );
-
-          return {
-            types: s.satributes,
-            amount: max - min,
-            offset: min,
-            fromAddress,
           };
-        })
-        .filter((i) => i.offset >= 0 && i.offset < outputValue && i.amount > 0);
 
-      inscriptions.push(...(outputInscriptions || []));
-      satributes.push(...(outputSatributes || []));
+          if (inscriptionEntry.offset >= 0 && inscriptionEntry.offset < outputValue) {
+            inscriptions.push(inscriptionEntry);
+          }
+        });
+      });
+
+      inputBundleData?.sat_ranges.forEach((s) => {
+        if (s.satributes.length === 0) {
+          return;
+        }
+
+        const min = Math.max(runningOffset + s.offset - outputOffset, 0);
+        const max = Math.min(
+          runningOffset + s.offset + Number(BigInt(s.range.end) - BigInt(s.range.start)) - outputOffset,
+          outputValue,
+        );
+
+        const satributeEntry = {
+          types: s.satributes,
+          amount: max - min,
+          offset: min,
+          fromAddress,
+        };
+
+        if (satributeEntry.offset >= 0 && satributeEntry.offset < outputValue && satributeEntry.amount > 0) {
+          satributes.push(satributeEntry);
+        }
+      });
     }
 
     runningOffset += input.utxo.value;

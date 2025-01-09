@@ -5,6 +5,7 @@ import { Transport } from '../ledger/types';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
+import { getBtcNetworkDefinition } from './btcNetwork';
 
 const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -31,6 +32,10 @@ const getTransactionChainSizeAndFee = async (esploraProvider: EsploraProvider, t
   let fee = transaction.fee;
 
   const outspends = await esploraProvider.getTransactionOutspends(txid);
+
+  if (!outspends) {
+    throw new Error('Could not retrieve outspends for transaction.');
+  }
 
   for (const outspend of outspends) {
     if (!outspend.spent) {
@@ -72,14 +77,16 @@ const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFPro
     return false;
   }
 
-  const network = wallet.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+  const network = getBtcNetworkDefinition(wallet.network);
+
+  const btcAddressType = btc.Address(network).decode(wallet.btcAddress).type;
 
   let p2btc: btc.P2Ret;
   const publicKeyBuff = hex.decode(wallet.btcPublicKey);
-  if (wallet.accountType === 'software') {
+  if (btcAddressType === 'sh') {
     const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
     p2btc = btc.p2sh(p2wpkh, network);
-  } else if (wallet.accountType === 'ledger') {
+  } else if (btcAddressType === 'wpkh') {
     p2btc = btc.p2wpkh(publicKeyBuff, network);
   } else {
     throw new Error('Unrecognised account type');
@@ -152,14 +159,16 @@ class RbfTransaction {
       throw new Error('Not RBF enabled transaction');
     }
 
-    const network = options.network === 'Mainnet' ? btc.NETWORK : btc.TEST_NETWORK;
+    const network = getBtcNetworkDefinition(options.network);
+
+    const btcAddressType = btc.Address(network).decode(options.btcAddress).type;
 
     let p2btc: btc.P2Ret;
     const publicKeyBuff = hex.decode(options.btcPublicKey);
-    if (options.accountType === 'software') {
+    if (btcAddressType === 'sh') {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
       p2btc = btc.p2sh(p2wpkh, network);
-    } else if (options.accountType === 'ledger') {
+    } else if (btcAddressType === 'wpkh') {
       p2btc = btc.p2wpkh(publicKeyBuff, network);
     } else {
       throw new Error('Unrecognised account type');
@@ -196,7 +205,7 @@ class RbfTransaction {
         });
       } else if (areByteArraysEqual(witnessUtxoScript, p2btc.script)) {
         // input from payments address
-        // these are undefined for p2wpkh (ledger) addresses
+        // these are undefined for p2wpkh addresses
         tx.updateInput(tx.inputsLength - 1, {
           redeemScript: p2btc.redeemScript,
           witnessScript: p2btc.witnessScript,

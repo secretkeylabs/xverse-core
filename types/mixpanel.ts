@@ -18,6 +18,9 @@ export enum AnalyticsEvents {
   SelectTokenToSwapTo = 'select_token_to_swap_to',
   ListRuneInitiated = 'list_rune_initiated',
   ListRuneSigned = 'list_rune_signed',
+  SetupWallet = 'setup_wallet',
+  BackupWallet = 'backup_wallet',
+  BackupWalletLater = 'backup_wallet_later',
 }
 
 type CommonProps = {
@@ -39,6 +42,48 @@ type SelectSwapTokenProps = {
   principal?: string;
 };
 
+type WalletBackupType = 'manual' | 'cloud';
+
+type SetupWalletProps = {
+  source: 'create' | 'restore';
+};
+
+type BackupWalletProps = {
+  source?: 'onboarding' | 'settings';
+  backupType: WalletBackupType;
+};
+
+type RestoreWalletProps = {
+  backupType: WalletBackupType;
+};
+
+type TokenSelection = {
+  principal?: string;
+  selectedToken?: string;
+};
+
+type BaseSwapEvent = {
+  fromTokenUsdValue: string | number;
+  to?: string;
+  from?: string;
+  provider?: string;
+  toPrincipal?: string;
+  fromPrincipal?: string;
+};
+
+interface SwapAmountEvent extends BaseSwapEvent {
+  toTokenAmount?: string;
+  fromTokenAmount?: string;
+}
+
+interface SelectSwapQuoteEvent {
+  provider: string;
+  from: string;
+  to: string;
+  fromPrincipal?: string;
+  toPrincipal?: string;
+}
+
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
     link: string;
@@ -55,14 +100,14 @@ export type AnalyticsEventProperties = {
     repeat?: number;
     batch?: number;
   } & CommonProps;
-  [AnalyticsEvents.InitiateSwapFlow]: {
-    selectedToken?: string;
-    principal?: string;
-  };
-  [AnalyticsEvents.FetchSwapQuote]: FromToToken & FromToAmount;
-  [AnalyticsEvents.SelectSwapQuote]: QuoteSwapProps;
-  [AnalyticsEvents.ConfirmSwap]: QuoteSwapAmountProps;
-  [AnalyticsEvents.SignSwap]: QuoteSwapAmountProps;
-  [AnalyticsEvents.SelectTokenToSwapFrom]: SelectSwapTokenProps;
-  [AnalyticsEvents.SelectTokenToSwapTo]: SelectSwapTokenProps;
+  [AnalyticsEvents.InitiateSwapFlow]: TokenSelection;
+  [AnalyticsEvents.FetchSwapQuote]: SwapAmountEvent;
+  [AnalyticsEvents.ConfirmSwap]: SwapAmountEvent;
+  [AnalyticsEvents.SignSwap]: SwapAmountEvent;
+  [AnalyticsEvents.SelectSwapQuote]: SelectSwapQuoteEvent;
+  [AnalyticsEvents.SelectTokenToSwapFrom]: TokenSelection;
+  [AnalyticsEvents.SelectTokenToSwapTo]: TokenSelection;
+  [AnalyticsEvents.SetupWallet]: SetupWalletProps;
+  [AnalyticsEvents.BackupWallet]: BackupWalletProps;
+  [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
 };

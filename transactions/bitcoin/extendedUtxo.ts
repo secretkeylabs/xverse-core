@@ -19,8 +19,6 @@ export class ExtendedUtxo {
 
   private _isExternal!: boolean;
 
-  private _bundleData?: UtxoOrdinalBundle;
-
   get address(): string {
     return this._address;
   }
@@ -107,13 +105,8 @@ export class ExtendedUtxo {
   }
 
   async getBundleData(): Promise<UtxoOrdinalBundle | undefined> {
-    if (!this._bundleData) {
-      const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
-      if (bundleData) {
-        this._bundleData = bundleData;
-      }
-    }
-    return this._bundleData;
+    const bundleData = await this._utxoCache.getUtxoByOutpoint(this._outpoint, this._address, this._isExternal);
+    return bundleData;
   }
 
   /** Returns undefined if UTXO has not yet been indexed */

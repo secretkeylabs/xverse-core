@@ -151,6 +151,7 @@ export const signMessageBip322 = async ({
 };
 
 function getSigningDerivationPath(accounts: Array<Account>, address: string, network: NetworkType): string {
+  // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
 
   if (accounts.length <= 0) {
@@ -210,6 +211,7 @@ export const signMessage = async ({
   if (!accounts?.length) {
     throw new Error('a List of Accounts are required to derive the correct Private Key');
   }
+  // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
   const seed = await bip39.mnemonicToSeed(seedPhrase);
   const master = bip32.fromSeed(seed);

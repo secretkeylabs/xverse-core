@@ -273,15 +273,9 @@ export const sendOrdinalsWithSplit = async (
       throw new Error(`No utxo found for outpoint ${outpoint}`);
     }
 
-    const utxoBundleData = await extendedUtxo.getBundleData();
-
-    // If there is only 1 or no special sat ranges in the utxo and it's value is less than
-    // the minimum value for a split utxo then we can just send the utxo
-    if (
-      (!utxoBundleData?.sat_ranges || utxoBundleData?.sat_ranges.length <= 1) &&
-      recipientCollection.length === 1 &&
-      extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_SIZE + DUST_VALUE
-    ) {
+    // If the utxo's value is less than the minimum value for a split utxo and there is only 1 recipient
+    // then we can just send the utxo
+    if (recipientCollection.length === 1 && extendedUtxo.utxo.value <= SPLIT_UTXO_MIN_SIZE + DUST_VALUE) {
       actions.push({
         type: ActionType.SEND_UTXO,
         toAddress: recipientCollection[0].toAddress,

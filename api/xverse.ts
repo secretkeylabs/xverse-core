@@ -3,6 +3,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
 import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL, XVERSE_SPONSOR_URL } from '../constant';
+import { runeTokenToFungibleToken } from '../fungibleTokens';
 import {
   APIGetRunesActivityForAddressResponse,
   AppFeaturesBody,
@@ -11,6 +12,7 @@ import {
   AppInfo,
   Brc20TokensResponse,
   BtcFeeResponse,
+  CoinsMarket,
   CoinsResponse,
   CollectionMarketDataResponse,
   CollectionsList,
@@ -20,6 +22,8 @@ import {
   CreateRuneListingRequest,
   CreateRuneListingResponse,
   DappSectionData,
+  ExchangeRateAvailableCurrencies,
+  ExchangeRateList,
   ExecuteOrderRequest,
   ExecuteOrderResponse,
   ExecuteStxOrderRequest,
@@ -30,12 +34,16 @@ import {
   GetDestinationTokensResponse,
   GetListedUtxosRequest,
   GetListedUtxosResponse,
+  GetOrderHistoryRequest,
+  GetOrderHistoryResponse,
   GetQuotesRequest,
   GetQuotesResponse,
   GetRuneMarketDataRequest,
   GetSourceTokensRequest,
   GetUtxosRequest,
   GetUtxosResponse,
+  HistoricalDataParamsPeriod,
+  HistoricalDataResponsePrices,
   Inscription,
   InscriptionInCollectionsList,
   ListingRuneMarketInfo,
@@ -48,6 +56,9 @@ import {
   PlaceStxOrderResponse,
   PlaceUtxoOrderRequest,
   PlaceUtxoOrderResponse,
+  PlaceXcOrderRequest,
+  PlaceXcOrderResponse,
+  PrincipalToFungibleToken,
   SignedUrlResponse,
   SimplePriceResponse,
   SponsorInfoResponse,
@@ -61,10 +72,25 @@ import {
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
+  TopTokens,
+  TopTokensResponse,
 } from '../types';
 import { getXClientVersion } from '../utils/xClientVersion';
 import { handleAxiosError } from './error';
 import { fetchBtcOrdinalsData } from './ordinals';
+
+const produceHistoricalDataObject = (timestamp: number, price: number) => ({
+  x: timestamp,
+  y: price,
+  tooltipLabel: new Date(timestamp).toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }),
+});
 
 class XverseApi {
   private client: AxiosInstance;
@@ -273,9 +299,49 @@ class XverseApi {
     return response.data.notificationBanners;
   };
 
+  getCoinsMarketData = async (ids: string[]): Promise<CoinsMarket[]> => {
+    const response = await this.client.get(`/v2/coins-market-data?ids=${ids.join(',')}`);
+    return response.data;
+  };
+
+  getExchangeRate = async (currency: ExchangeRateAvailableCurrencies): Promise<ExchangeRateList> => {
+    const response = await this.client.get(`/v2/exchange-rate?currency=${currency}`);
+    return response.data;
+  };
+
+  getHistoricalData = async (
+    id: 'btc' | 'stx' | string,
+    period: HistoricalDataParamsPeriod,
+    exchangeRate = 1,
+  ): Promise<HistoricalDataResponsePrices> => {
+    const idMap: Record<string, string> = {
+      btc: 'bitcoin',
+      stx: 'stacks',
+    };
+    const formattedId = idMap[id.toLowerCase()] || id.toLowerCase();
+
+    const response = await this.client.get<[number, number][]>(
+      `/v2/historical-data?id=${formattedId}&period=${period}`,
+    );
+    return response.data.map(([timestamp, price]) => produceHistoricalDataObject(timestamp, price * exchangeRate));
+  };
+
   getSpamTokensList = async () => {
     const response = await this.client.get(`/v1/spam-tokens`);
     return response.data;
+  };
+
+  getTopTokens = async (): Promise<TopTokensResponse> => {
+    const response = await this.client.get<TopTokens>('/v1/top-tokens');
+    const topRunesTokens: PrincipalToFungibleToken = {};
+    for (const runeId in response.data.runes) {
+      const runeData = response.data.runes[runeId];
+      topRunesTokens[runeId] = runeTokenToFungibleToken(runeData);
+    }
+    return {
+      ...response.data,
+      runes: topRunesTokens,
+    };
   };
 
   getAppFeatures = async (context?: Partial<AppFeaturesContext>, headers?: Record<string, string>) => {
@@ -374,6 +440,16 @@ class XverseApi {
     /** Execute a swap order. This is for UTXO based providers. */
     executeUtxoOrder: async (body: ExecuteUtxoOrderRequest): Promise<ExecuteUtxoOrderResponse> => {
       const response = await this.client.post<ExecuteUtxoOrderResponse>('/v1/swaps/execute-utxo-order', body);
+      return response.data;
+    },
+    /** Place a XC swap order. */
+    placeXcOrder: async (body: PlaceXcOrderRequest): Promise<PlaceXcOrderResponse> => {
+      const response = await this.client.post<PlaceXcOrderResponse>('/v1/swaps/place-xc-order', body);
+      return response.data;
+    },
+    /** Gets order history. This is for XC providers. */
+    getOrderHistory: async (body: GetOrderHistoryRequest): Promise<GetOrderHistoryResponse> => {
+      const response = await this.client.post<GetOrderHistoryResponse>('/v1/swaps/get-order-history', body);
       return response.data;
     },
   };

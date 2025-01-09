@@ -477,9 +477,9 @@ describe('sendOrdinalsWithSplit', () => {
       contextMock,
       [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: ActionType.SEND_UTXO,
           toAddress: recipientAddress,
-          location: 'out:1:0',
+          outpoint: 'out:1',
         },
       ],
       2,
@@ -488,7 +488,7 @@ describe('sendOrdinalsWithSplit', () => {
     expect(transaction).toEqual(vi.mocked(EnhancedTransaction).mock.instances[0]);
   });
 
-  it('should generate correct transaction for sending inscriptions', async () => {
+  it('should not split if sending to single recipient and utxo value below split size', async () => {
     contextMock.getInscriptionUtxo.mockResolvedValueOnce({
       extendedUtxo: {
         outpoint: 'out:1',
@@ -527,9 +527,9 @@ describe('sendOrdinalsWithSplit', () => {
       contextMock,
       [
         {
-          type: ActionType.SPLIT_UTXO,
+          type: ActionType.SEND_UTXO,
           toAddress: recipientAddress,
-          location: 'out:1:0',
+          outpoint: 'out:1',
         },
       ],
       2,

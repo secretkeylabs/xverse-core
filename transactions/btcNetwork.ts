@@ -21,12 +21,39 @@ const bitcoinTestnet: BitcoinNetwork = {
   wif: 0xef,
 };
 
+const bitcoinRegtest: BitcoinNetwork = {
+  bech32: 'bcrt',
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0x80,
+};
+
 export const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
   Mainnet: bitcoinMainnet,
   Testnet: bitcoinTestnet,
   Signet: bitcoinTestnet,
+  Regtest: bitcoinRegtest,
 };
 
 export const getBtcNetwork = (networkType: NetworkType) => {
   return bitcoinNetworks[networkType];
+};
+
+export const getBtcNetworkDefinition = (networkType?: NetworkType) => {
+  switch (networkType) {
+    case 'Mainnet':
+      return bitcoinMainnet;
+    case 'Testnet':
+    case 'Signet':
+    case undefined:
+      return bitcoinTestnet;
+    case 'Regtest':
+      return bitcoinRegtest;
+    default:
+      throw new Error('Invalid network type');
+  }
+};
+
+export const isInscriptionsAndRunesCompatible = (networkType: NetworkType) => {
+  return networkType !== 'Regtest';
 };

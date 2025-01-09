@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { type RuneBalance, type FungibleToken, type FungibleTokenStates } from '../types';
+import { type FungibleToken, type FungibleTokenStates, type RuneBalance } from '../types';
 
 export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToken => ({
   name: runeBalance.runeName,
@@ -14,6 +14,8 @@ export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToke
   runeInscriptionId: runeBalance.inscriptionId,
   protocol: 'runes',
   supported: true, // all runes are supported
+  priceChangePercentage24h: runeBalance.priceChangePercentage24h?.toString(),
+  currentPrice: runeBalance.currentPrice?.toString(),
 });
 
 /**
@@ -37,12 +39,14 @@ export const getFungibleTokenStates = ({
   const isSpam = showSpamTokens ? false : !!spamTokens?.includes(fungibleToken.principal);
   const isUserEnabled = manageTokens?.[fungibleToken.principal]; // true=enabled, false=disabled, undefined=not set
   const isDefaultEnabled = fungibleToken.supported && hasBalance && !isSpam;
-  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && isDefaultEnabled);
-  const showToggle = isEnabled || (hasBalance && !isSpam);
+  const isTopToken = Boolean(fungibleToken.isTopToken);
+  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && (isDefaultEnabled || isTopToken));
+  const showToggle = isEnabled || ((hasBalance || isTopToken) && !isSpam);
 
   return {
     isSpam,
     isEnabled,
     showToggle,
+    isTopToken,
   };
 };

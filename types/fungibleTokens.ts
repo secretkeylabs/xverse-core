@@ -22,12 +22,16 @@ export type FungibleToken = BaseToken & {
   runeSymbol?: string | null;
   runeInscriptionId?: string | null;
   protocol?: FungibleTokenProtocol;
+  priceChangePercentage24h?: string | null;
+  currentPrice?: string | null;
+  isTopToken?: boolean;
 };
 
 export type FungibleTokenStates = {
   isSpam: boolean;
   isEnabled: boolean;
   showToggle: boolean;
+  isTopToken: boolean;
 };
 
 export type FungibleTokenWithStates = FungibleToken & FungibleTokenStates;
