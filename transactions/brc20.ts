@@ -3,7 +3,7 @@ import { CancelToken } from 'axios';
 import BigNumber from 'bignumber.js';
 import xverseInscribeApi from '../api/xverseInscribe';
 import { Transport } from '../ledger';
-import { UTXO } from '../types';
+import { Account, UTXO } from '../types';
 import { isValidTick } from '../utils';
 import { CoreError } from '../utils/coreError';
 import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
@@ -16,6 +16,7 @@ const FINAL_SATS_VALUE = 1000;
 export type SignOptions = {
   ledgerTransport?: Transport | undefined;
   keystoneTransport?: TransportWebUSB | undefined;
+  selectedAccount?: Account;
 };
 
 export enum BRC20ErrorCode {
