@@ -31,6 +31,7 @@ const bitcoinRegtest: BitcoinNetwork = {
 export const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
   Mainnet: bitcoinMainnet,
   Testnet: bitcoinTestnet,
+  Testnet4: bitcoinTestnet,
   Signet: bitcoinTestnet,
   Regtest: bitcoinRegtest,
 };
@@ -44,6 +45,7 @@ export const getBtcNetworkDefinition = (networkType?: NetworkType) => {
     case 'Mainnet':
       return bitcoinMainnet;
     case 'Testnet':
+    case 'Testnet4':
     case 'Signet':
     case undefined:
       return bitcoinTestnet;

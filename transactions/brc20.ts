@@ -8,6 +8,7 @@ import { isValidTick } from '../utils';
 import { CoreError } from '../utils/coreError';
 import { ActionType, EnhancedTransaction, TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
+import { getBtcNetworkDefinition } from './btcNetwork';
 
 // This is the value of the inscription output, which the final recipient of the inscription will receive.
 const FINAL_SATS_VALUE = 1000;
@@ -103,7 +104,7 @@ export const brc20TransferEstimateFees = async (
     value: FINAL_SATS_VALUE,
   });
   context.ordinalsAddress.addInput(tx, dummyUtxo);
-  tx.addOutputAddress(dummyAddress, BigInt(FINAL_SATS_VALUE));
+  tx.addOutputAddress(dummyAddress, BigInt(FINAL_SATS_VALUE), getBtcNetworkDefinition(context.network));
 
   const transferFeeEstimate = estimateVSize(tx) * feeRate;
 
@@ -195,7 +196,11 @@ export async function* brc20TransferExecute(
     value: FINAL_SATS_VALUE,
   });
   context.ordinalsAddress.addInput(tx, dummyUtxo);
-  tx.addOutputAddress(recipientAddress, BigInt(finalRecipientUtxoValue.toString()));
+  tx.addOutputAddress(
+    recipientAddress,
+    BigInt(finalRecipientUtxoValue.toString()),
+    getBtcNetworkDefinition(context.network),
+  );
 
   const transferFeeEstimate = estimateVSize(tx) * feeRate;
 

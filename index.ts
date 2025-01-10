@@ -11,6 +11,7 @@ export {
   defaultMainnet,
   defaultSignet,
   defaultTestnet,
+  defaultTestnet4,
   defaultRegtest,
   initialNetworksList,
 } from './constant';

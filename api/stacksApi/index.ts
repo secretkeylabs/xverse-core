@@ -6,6 +6,7 @@ const clients: Partial<Record<StacksNetworkName, StacksApiProvider>> = {};
 const stacksNetworksMap: Record<NetworkType, StacksNetworkName> = {
   Mainnet: 'mainnet',
   Testnet: 'testnet',
+  Testnet4: 'testnet',
   Signet: 'testnet',
   Regtest: 'testnet', // stacks testnet uses regtest btc network
 };
