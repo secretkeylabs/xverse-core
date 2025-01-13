@@ -107,16 +107,18 @@ export const calculateStxRbfData = async (
   };
 };
 
-export const fetchStxRbfData = async (
-  transaction: StxTransactionData,
-  btcNetwork: SettingsNetwork,
-  stacksNetwork: StacksNetwork,
-  appInfo: AppInfo | null,
-  stxAvailableBalance: string,
-): Promise<RbfData> => {
-  const { fee } = transaction;
+export type StxRbfArgs = {
+  transaction: StxTransactionData;
+  stacksNetwork: StacksNetwork;
+  appInfo: AppInfo | null;
+  stxAvailableBalance: string;
+};
+
+export const fetchStxRbfData = async (args: StxRbfArgs): Promise<RbfData> => {
+  const { transaction, stacksNetwork, appInfo, stxAvailableBalance } = args;
+  const { fee, txid } = transaction;
   const stacksApiClient = getStacksApiClient(stacksNetwork.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet');
-  const txRaw: string = await stacksApiClient.getRawTransaction(transaction.txid);
+  const txRaw: string = await stacksApiClient.getRawTransaction(txid);
   const unsignedTx: StacksTransactionWire = deserializeTransaction(txRaw);
   const feeEstimations = await estimateStacksTransactionWithFallback(unsignedTx, stacksNetwork);
 
