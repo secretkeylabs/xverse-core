@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { API_TIMEOUT_MILLI, HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../../constant';
-import { StacksNetwork, NftHistoryResponse } from '../../types';
+import { StacksNetwork, NftHistoryResponse, StacksMainnet } from '../../types';
 import {
   AccountDataResponse,
   AddressTransaction,
@@ -9,6 +9,7 @@ import {
   MempoolTransaction,
   MempoolTransactionListResponse,
   Transaction,
+  GetRawTransactionResult,
 } from '@stacks/stacks-blockchain-api-types';
 import BigNumber from 'bignumber.js';
 
@@ -26,10 +27,10 @@ export class StacksApiProvider {
 
   constructor(options: StacksApiProviderOptions) {
     const { network } = options;
-    let baseURL = network.coreApiUrl;
+    let baseURL = network.client.baseUrl;
 
     if (!baseURL) {
-      if (!network.isMainnet()) {
+      if (!(network.chainId === StacksMainnet.chainId)) {
         baseURL = HIRO_TESTNET_DEFAULT;
       }
       baseURL = HIRO_MAINNET_DEFAULT;
@@ -172,6 +173,11 @@ export class StacksApiProvider {
   getTransaction = async (txid: string): Promise<Transaction> => {
     const response = await this.httpGet<Transaction>(`/extended/v1/tx/${txid}`);
     return response;
+  };
+
+  getRawTransaction = async (txid: string): Promise<string> => {
+    const response = await this.httpGet<GetRawTransactionResult>(`/extended/v1/tx/${txid}/raw`);
+    return response.raw_tx;
   };
 
   getNftHistory = async (

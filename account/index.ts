@@ -1,14 +1,6 @@
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
-import { StacksNetwork } from '@stacks/network';
-import {
-  ChainID,
-  TransactionVersion,
-  createStacksPrivateKey,
-  getAddressFromPrivateKey,
-  getPublicKey,
-  publicKeyToString,
-} from '@stacks/transactions';
+import { getAddressFromPrivateKey, privateKeyToPublic, publicKeyToHex } from '@stacks/transactions';
 import * as bip39 from 'bip39';
 import { getBnsName, getConfirmedTransactions } from '../api';
 import EsploraApiProvider from '../api/esplora/esploraAPiProvider';
@@ -20,13 +12,22 @@ import {
 } from '../constant';
 import { createWalletGaiaConfig, deriveWalletConfigKey, updateWalletConfig } from '../gaia';
 import { SeedVault } from '../seedVault';
-import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
-import { Account, BtcPaymentType, NetworkType, SettingsNetwork, StxTransactionListData } from '../types';
+import {
+  Account,
+  BtcPaymentType,
+  NetworkType,
+  SettingsNetwork,
+  StxTransactionListData,
+  StacksNetwork,
+  StacksMainnet,
+  StacksTestnet,
+} from '../types';
 import { BIP32Interface, bip32 } from '../utils/bip32';
 import { ECPair, ECPairInterface } from '../utils/ecpair';
 import { GAIA_HUB_URL } from './../constant';
+import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
 
-function getStxDerivationPath(chain: ChainID, index: bigint) {
+function getStxDerivationPath(index: bigint) {
   return `${STX_PATH_WITHOUT_INDEX}${index.toString()}`;
 }
 
@@ -44,18 +45,17 @@ function ecPairToHexString(secretKey: ECPairInterface): string {
   }
 }
 
-export function deriveStxAddressChain(chain: ChainID, index = 0n) {
+export function deriveStxAddressChain(network: StacksNetwork, index = 0n) {
   return (rootNode: BIP32Interface) => {
-    const childKey = rootNode.derivePath(getStxDerivationPath(chain, index));
+    const childKey = rootNode.derivePath(getStxDerivationPath(index));
     if (!childKey.privateKey) {
       throw new Error('Unable to derive private key from `rootNode`, bip32 master keychain');
     }
     const ecPair = ECPair.fromPrivateKey(childKey.privateKey);
     const privateKey = ecPairToHexString(ecPair);
-    const txVersion = chain === ChainID.Mainnet ? TransactionVersion.Mainnet : TransactionVersion.Testnet;
     return {
       childKey,
-      address: getAddressFromPrivateKey(privateKey, txVersion),
+      address: getAddressFromPrivateKey(privateKey, network),
       privateKey,
     };
   };
@@ -116,15 +116,12 @@ export async function getAccountFromRootNode({
   rootNode: BIP32Interface;
 }): Promise<Account> {
   // STX =================================================
-  const deriveStxAddressKeychain = deriveStxAddressChain(
-    network === 'Mainnet' ? ChainID.Mainnet : ChainID.Testnet,
-    index,
-  );
+  const deriveStxAddressKeychain = deriveStxAddressChain(network === 'Mainnet' ? StacksMainnet : StacksTestnet, index);
 
-  const { address, privateKey } = await deriveStxAddressKeychain(rootNode);
+  const { address, privateKey } = deriveStxAddressKeychain(rootNode);
   const stxAddress = address;
 
-  const stxPublicKey = publicKeyToString(getPublicKey(createStacksPrivateKey(privateKey)));
+  const stxPublicKey = publicKeyToHex(privateKeyToPublic(privateKey));
 
   // BTC =================================================
   const masterPubKey = rootNode.publicKey.toString('hex');

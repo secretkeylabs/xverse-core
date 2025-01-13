@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { hashMessage } from '@stacks/encryption';
-import { AddressVersion, ChainID } from '@stacks/transactions';
+import { AddressVersion } from '@stacks/transactions';
 import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import * as btc from '@scure/btc-signer';
@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { deriveStxAddressChain, getAccountFromSeedPhrase } from '../account';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { ENTROPY_BYTES } from '../constant';
-import { Keychain, NetworkType } from '../types';
+import { type Keychain, type NetworkType, type StacksNetwork } from '../types';
 import { bip32 } from '../utils/bip32';
 import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
 
@@ -67,12 +67,12 @@ export function validateBtcAddressIsTaproot(btcAddress: string): boolean {
 
 export async function getStxAddressKeyChain(
   mnemonic: string,
-  chainID: ChainID,
+  network: StacksNetwork,
   accountIndex: number,
 ): Promise<Keychain> {
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const deriveStxAddressKeychain = deriveStxAddressChain(chainID, BigInt(accountIndex));
+  const deriveStxAddressKeychain = deriveStxAddressChain(network, BigInt(accountIndex));
   return deriveStxAddressKeychain(rootNode);
 }
 

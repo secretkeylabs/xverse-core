@@ -25,15 +25,15 @@
     "@scure/bip32": "1.4.0",
     "@scure/bip39": "1.3.0",
     "@scure/btc-signer": "1.2.1",
-    "@stacks/auth": "6.16.1",
-    "@stacks/connect": "7.7.1",
-    "@stacks/encryption": "6.16.1",
-    "@stacks/network": "6.16.0",
-    "@stacks/stacking": "6.16.1",
+    "@stacks/auth": "7.0.2",
+    "@stacks/connect": "7.9.0",
+    "@stacks/encryption": "7.0.2",
+    "@stacks/network": "7.0.2",
+    "@stacks/stacking": "7.0.2",
     "@stacks/stacks-blockchain-api-types": "7.14.1",
-    "@stacks/storage": "6.16.1",
-    "@stacks/transactions": "6.16.1",
-    "@stacks/wallet-sdk": "6.16.1",
+    "@stacks/storage": "7.0.2",
+    "@stacks/transactions": "7.0.2",
+    "@stacks/wallet-sdk": "7.0.2",
     "@tanstack/react-query": "4.29.3",
     "@zondax/ledger-stacks": "1.0.4",
     "async-mutex": "0.4.0",
@@ -102,9 +102,9 @@
     "vitest": "1.6.0"
   },
   "peerDependencies": {
-    "bignumber.js": "^9.0.0",
-    "micro-packed": ">0.5.0",
-    "react": ">18.0.0",
-    "react-dom": ">18.0.0"
+    "bignumber.js": "9.1.2",
+    "micro-packed": "0.5.3",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   }
 }

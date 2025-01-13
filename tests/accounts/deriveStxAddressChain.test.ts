@@ -1,10 +1,10 @@
 /* eslint-disable max-len */
-import { ChainID } from '@stacks/transactions';
 import { describe, expect, it } from 'vitest';
 import { deriveStxAddressChain } from '../../account';
 import { bip32 } from '../../utils/bip32';
 import { ECPair } from '../../utils/ecpair';
 import { ecPairToHexString } from '../../wallet/helper';
+import { StacksMainnet, StacksTestnet } from '../../types';
 
 describe('Unit tests', () => {
   describe('ecPairToHexString', () => {
@@ -32,20 +32,18 @@ describe('Unit tests', () => {
     );
 
     it('should derive Stacks address chain for mainnet', () => {
-      const chain = ChainID.Mainnet;
       const index = 0n;
 
-      const result = deriveStxAddressChain(chain, index)(rootNode);
+      const result = deriveStxAddressChain(StacksMainnet, index)(rootNode);
 
       expect(result.address).toEqual('SP2Z0K8AAXAWWGXRZN1BGPHY8QXHNGYV7D760NQWV');
       expect(result.privateKey).toEqual('b10393c8467727944413264495948c9c81229ac5796e910b53ad6b8e7093fbfb01');
     });
 
     it('should derive Stacks address chain for testnet', () => {
-      const chain = ChainID.Testnet;
       const index = 0n;
 
-      const result = deriveStxAddressChain(chain, index)(rootNode);
+      const result = deriveStxAddressChain(StacksTestnet, index)(rootNode);
 
       expect(result.address).toEqual('ST2Z0K8AAXAWWGXRZN1BGPHY8QXHNGYV7D7P5MJY2');
       expect(result.privateKey).toEqual('b10393c8467727944413264495948c9c81229ac5796e910b53ad6b8e7093fbfb01');

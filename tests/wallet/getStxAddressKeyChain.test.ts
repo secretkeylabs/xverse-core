@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ChainID } from '@stacks/transactions';
-
 import { getStxAddressKeyChain } from '../../wallet';
+import { StacksMainnet } from '../../types';
 
 describe('getStxAddressKeyChain', () => {
   const mnemonic = 'a test mnemonic';
-  const chainID = ChainID.Mainnet;
   const accountIndex = 0;
 
   beforeEach(() => {
@@ -14,7 +12,7 @@ describe('getStxAddressKeyChain', () => {
   });
 
   it('should derive the Stacks address keychain', async () => {
-    const result = await getStxAddressKeyChain(mnemonic, chainID, accountIndex);
+    const result = await getStxAddressKeyChain(mnemonic, StacksMainnet, accountIndex);
 
     expect(result).toEqual({
       childKey: expect.any(Object),

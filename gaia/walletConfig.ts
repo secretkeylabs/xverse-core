@@ -1,5 +1,4 @@
 import { decryptContent, encryptContent, getPublicKeyFromPrivate } from '@stacks/encryption';
-import { FetchFn, createFetchFn } from '@stacks/network';
 import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storage';
 import { BIP32Interface } from 'bip32';
 import { WALLET_CONFIG_PATH } from '../constant';
@@ -51,14 +50,12 @@ export const createWalletGaiaConfig = async ({
 export const fetchWalletConfig = async ({
   configPrivateKey,
   gaiaHubConfig,
-  fetchFn = createFetchFn(),
 }: {
   configPrivateKey: string;
   gaiaHubConfig: GaiaHubConfig;
-  fetchFn?: FetchFn;
 }) => {
   try {
-    const response = await fetchFn(`${gaiaHubConfig.url_prefix}${gaiaHubConfig.address}/wallet-config.json`);
+    const response = await fetch(`${gaiaHubConfig.url_prefix}${gaiaHubConfig.address}/wallet-config.json`);
     if (!response.ok) return null;
     const encrypted = await response.text();
     const configJSON = (await decryptContent(encrypted, {
@@ -115,15 +112,13 @@ export const getOrCreateWalletConfig = async ({
   walletAccounts,
   gaiaHubConfig,
   skipUpload,
-  fetchFn = createFetchFn(),
 }: {
   configPrivateKey: string;
   walletAccounts: Account[];
   gaiaHubConfig: GaiaHubConfig;
   skipUpload?: boolean;
-  fetchFn?: FetchFn;
 }): Promise<WalletConfig> => {
-  const config = await fetchWalletConfig({ configPrivateKey, gaiaHubConfig, fetchFn });
+  const config = await fetchWalletConfig({ configPrivateKey, gaiaHubConfig });
   if (config) return config;
   const newConfig = makeWalletConfig(walletAccounts);
   if (!skipUpload) {

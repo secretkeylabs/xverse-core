@@ -1,5 +1,5 @@
-import { StacksNetwork, StacksNetworkName } from '@stacks/network';
-import { NetworkType } from '../../types';
+import { StacksNetworkName } from '@stacks/network';
+import { NetworkType, StacksMainnet, StacksTestnet } from '../../types';
 import { StacksApiProvider } from './provider';
 
 const clients: Partial<Record<StacksNetworkName, StacksApiProvider>> = {};
@@ -15,7 +15,7 @@ export const getStacksApiClient = (networkType: NetworkType): StacksApiProvider 
   const networkName = stacksNetworksMap[networkType];
 
   if (!clients[networkName]) {
-    const network = StacksNetwork.fromNameOrNetwork(networkName);
+    const network = networkType === 'Mainnet' ? StacksMainnet : StacksTestnet;
     clients[networkName] = new StacksApiProvider({ network });
   }
 

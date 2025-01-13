@@ -1,22 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { StxTransactionData, SettingsNetwork, StacksNetwork, AppInfo } from '../../types';
-import { fetchStxRbfData } from './helpers';
+import { fetchStxRbfData, StxRbfArgs } from './helpers';
 
-type Props = {
-  transaction?: StxTransactionData;
-  btcNetwork: SettingsNetwork;
-  stacksNetwork: StacksNetwork;
-  appInfo: AppInfo | null;
-  stxAvailableBalance: string;
-};
-
-const useStxRbfTransactionData = ({ transaction, btcNetwork, stacksNetwork, appInfo, stxAvailableBalance }: Props) => {
+const useStxRbfTransactionData = ({ transaction, stacksNetwork, appInfo, stxAvailableBalance }: StxRbfArgs) => {
   const fetchRbfData = async () => {
     if (!transaction) {
       return;
     }
 
-    const stxRbfData = await fetchStxRbfData(transaction, btcNetwork, stacksNetwork, appInfo, stxAvailableBalance);
+    const stxRbfData = await fetchStxRbfData({ transaction, stacksNetwork, appInfo, stxAvailableBalance });
     return stxRbfData;
   };
 
