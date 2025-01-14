@@ -157,10 +157,6 @@ export const estimateStacksTransactionWithFallback = async (
     });
     return [slower, regular, faster];
   } catch (error) {
-    const err = error.toString();
-    if (!err.includes('NoEstimateAvailable')) {
-      throw error;
-    }
     const mempoolFees = await getMempoolFeePriorities(network);
     return getFallbackFees(transaction, mempoolFees);
   }

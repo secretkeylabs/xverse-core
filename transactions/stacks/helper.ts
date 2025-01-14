@@ -1,6 +1,5 @@
 import {
   addressToString,
-  deserializeCV,
   hexToCV,
   PostCondition,
   PostConditionType,
@@ -72,19 +71,28 @@ export function hexStringToBuffer(hex: string): Buffer {
   return Buffer.from(removeHexPrefix(hex), 'hex');
 }
 
+function isStringArray(arr: unknown[]): arr is string[] {
+  return arr.every((item) => typeof item === 'string');
+}
+
 export const extractFromPayload = (payload: any) => {
   const { functionArgs, postConditions } = payload;
-  const funcArgs = functionArgs?.map((arg: string) => deserializeCV(hexStringToBuffer(arg)));
+  const funcArgs = functionArgs?.map((arg: string) => hexToCV(arg));
 
-  const postConds = Array.isArray(postConditions)
-    ? (postConditions?.map(
-        (arg: string) =>
-          deserializeStacksWire(
-            new BytesReader(hexStringToBuffer(arg)),
-            StacksWireType.PostCondition,
-          ) as PostConditionWire,
-      ) as PostConditionWire[])
-    : [];
+  let postConds: PostConditionWire[] = [];
+
+  if (Array.isArray(postConditions)) {
+    if (isStringArray(postConditions)) {
+      postConds = postConditions.map((arg: string) => {
+        return deserializeStacksWire(
+          new BytesReader(hexStringToBuffer(arg)),
+          StacksWireType.PostCondition,
+        ) as PostConditionWire;
+      });
+    } else {
+      postConds = postConditions as PostConditionWire[];
+    }
+  }
 
   return { funcArgs, postConds };
 };
