@@ -69,6 +69,7 @@
       "eslint"
     ],
     "*.json": [
+      "node scripts/pin_all_deps.js",
       "prettier --write"
     ]
   },
