@@ -21,25 +21,16 @@ export enum AnalyticsEvents {
   SetupWallet = 'setup_wallet',
   BackupWallet = 'backup_wallet',
   BackupWalletLater = 'backup_wallet_later',
+  InitiateBuyFlow = 'initiate_buy_flow',
+  InitiateSendFlow = 'initiate_send_flow',
+  InitiateReceiveFlow = 'initiate_receive_flow',
+  VisitCollectiblesTab = 'visit_collectibles_tab',
+  VisitStackingTab = 'visit_stacking_tab',
+  VisitExplorePage = 'visit_explore_page',
 }
 
 type CommonProps = {
   wallet_type: AccountType;
-};
-
-type FromToAmount = { fromAmount: string; toAmount: string };
-
-type FromToToken = { from: string; to: string; fromPrincipal?: string; toPrincipal?: string };
-
-type QuoteSwapProps = FromToToken & {
-  provider: string;
-};
-
-type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
-
-type SelectSwapTokenProps = {
-  selectedToken: string;
-  principal?: string;
 };
 
 type WalletBackupType = 'manual' | 'cloud';
@@ -84,6 +75,9 @@ interface SelectSwapQuoteEvent {
   toPrincipal?: string;
 }
 
+type BaseInitiateFlowEvent = { source: 'dashboard' | 'token'; selectedToken: string };
+type InitiateFlowEventWithProtocol = BaseInitiateFlowEvent & { protocol: string; medium?: 'qr' | 'clipboard' };
+
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
     link: string;
@@ -110,4 +104,7 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.SetupWallet]: SetupWalletProps;
   [AnalyticsEvents.BackupWallet]: BackupWalletProps;
   [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
+  [AnalyticsEvents.InitiateBuyFlow]: BaseInitiateFlowEvent;
+  [AnalyticsEvents.InitiateSendFlow]: InitiateFlowEventWithProtocol;
+  [AnalyticsEvents.InitiateReceiveFlow]: InitiateFlowEventWithProtocol;
 };
