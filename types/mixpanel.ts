@@ -75,9 +75,6 @@ interface SelectSwapQuoteEvent {
   toPrincipal?: string;
 }
 
-type BaseInitiateFlowEvent = { source: 'dashboard' | 'token'; selectedToken: string };
-type InitiateFlowEventWithProtocol = BaseInitiateFlowEvent & { protocol: string; medium?: 'qr' | 'clipboard' };
-
 export type AnalyticsEventProperties = {
   [AnalyticsEvents.ClickApp]: {
     link: string;
@@ -104,7 +101,14 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.SetupWallet]: SetupWalletProps;
   [AnalyticsEvents.BackupWallet]: BackupWalletProps;
   [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
-  [AnalyticsEvents.InitiateBuyFlow]: BaseInitiateFlowEvent;
-  [AnalyticsEvents.InitiateSendFlow]: InitiateFlowEventWithProtocol;
-  [AnalyticsEvents.InitiateReceiveFlow]: InitiateFlowEventWithProtocol;
+  [AnalyticsEvents.InitiateBuyFlow]: { source: 'dashboard' | 'token' | 'send_stx' | 'send_btc'; selectedToken: string };
+  [AnalyticsEvents.InitiateSendFlow]: {
+    source: 'dashboard' | 'token' | 'send_stx' | 'send_btc' | 'send_brc20' | 'send_sip10';
+    selectedToken: string;
+  };
+  [AnalyticsEvents.InitiateReceiveFlow]: {
+    source: 'dashboard' | 'token' | 'send_stx' | 'send_btc' | 'collectibles';
+    addressType: 'stx' | 'btc_payment' | 'btc_ordinals';
+    selectedToken?: string;
+  };
 };
