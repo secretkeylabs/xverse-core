@@ -247,12 +247,10 @@ class XverseApi {
     limit?: number,
     filters?: CollectionsListFilters,
   ): Promise<CollectionsList> => {
-    const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
-      params: {
-        limit,
-        offset,
-        filters,
-      },
+    const response = await this.client.post(`/v2/address/${address}/ordinals/collections`, {
+      limit,
+      offset,
+      filters,
     });
     return response.data;
   };
