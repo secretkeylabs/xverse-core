@@ -1,7 +1,8 @@
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
-import { Transport } from '../ledger/types';
+import { KeystoneTransport } from '../keystone';
+import { LedgerTransport } from '../ledger';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
@@ -121,7 +122,8 @@ export type TierFees = {
 
 type CompileOptions = {
   feeRate: number;
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
   context: TransactionContext;
 };
 

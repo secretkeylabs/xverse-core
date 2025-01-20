@@ -1,5 +1,6 @@
 import * as btc from '@scure/btc-signer';
-import { Transport } from '../../ledger';
+import { KeystoneTransport } from '../../keystone';
+import { LedgerTransport } from '../../ledger';
 import { Artifact, RareSatsType } from '../../types';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
@@ -77,7 +78,8 @@ export type TransactionOptions = {
 
 export type CompilationOptions = {
   rbfEnabled?: boolean;
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
 };
 
 export type TransactionSummary = {
@@ -93,7 +95,8 @@ export type TransactionSummary = {
 };
 
 export type PSBTCompilationOptions = {
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
   finalize?: boolean;
 };
 

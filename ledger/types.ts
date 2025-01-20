@@ -1,6 +1,6 @@
-import AppClient from 'ledger-bitcoin';
+import Transport from '@ledgerhq/hw-transport';
 
-export type Transport = ConstructorParameters<typeof AppClient>[0];
+export type LedgerTransport = Transport;
 
 export type Bip32Derivation = {
   masterFingerprint: Buffer;

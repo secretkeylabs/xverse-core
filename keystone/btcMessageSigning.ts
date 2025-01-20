@@ -1,12 +1,13 @@
+import Bitcoin from '@keystonehq/hw-app-bitcoin';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { Psbt, Transaction } from 'bitcoinjs-lib';
-import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import { encode } from 'varuint-bitcoin';
 import { bip0322Hash } from '../connect';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
+import { Bip32Derivation, TapBip32Derivation } from './bip32Type';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
-import { Bip32Derivation, LedgerTransport, TapBip32Derivation } from './types';
+import { KeystoneTransport } from './types';
 
 const encodeVarString = (b: Buffer) => Buffer.concat([encode(b.byteLength), b]);
 const DUMMY_INPUT_HASH = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
@@ -15,8 +16,7 @@ const DUMMY_INPUT_SEQUENCE = 0;
 type PsbtInput = Parameters<Psbt['addInput']>[0];
 
 const createMessageSignature = async (
-  app: AppClient,
-  accountPolicy: DefaultWalletPolicy,
+  app: Bitcoin,
   message: string,
   witnessScript: Buffer,
   inputArgs: Pick<PsbtInput, 'bip32Derivation'> | Pick<PsbtInput, 'tapBip32Derivation' | 'tapInternalKey'>,
@@ -40,7 +40,7 @@ const createMessageSignature = async (
     ...inputArgs,
   });
   psbtToSign.addOutput({ script: Buffer.from('6a', 'hex'), value: 0 });
-  const signatures = await app.signPsbt(psbtToSign.toBase64(), accountPolicy, null);
+  const signatures = await app.signPsbt(psbtToSign.toBase64());
   for (const signature of signatures) {
     if (isSegwit) {
       psbtToSign.updateInput(signature[0], {
@@ -66,30 +66,32 @@ const createMessageSignature = async (
 const createSegwitBip322Signature = async ({
   message,
   app,
+  xpub,
   addressIndex,
   networkType,
 }: {
   message: string;
-  app: AppClient;
+  app: Bitcoin;
+  xpub?: string;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
   const coinType = getCoinType(networkType);
-  const masterFingerPrint = await app.getMasterFingerprint();
-  const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
-  const { publicKey, witnessScript } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, networkType);
+
+  if (!app.mfp) {
+    throw new Error('not found keystoneBitcoin mfp');
+  }
+  if (!xpub) {
+    throw new Error('not found keystone extendedPublicKey');
+  }
+  const { publicKey, witnessScript } = getNativeSegwitAccountDataFromXpub(xpub, addressIndex, networkType);
   const inputDerivation: Bip32Derivation = {
     path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
     pubkey: publicKey,
-    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
+    masterFingerprint: Buffer.from(app.mfp, 'hex'),
   };
-  const accountPolicy = new DefaultWalletPolicy(
-    'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
-  );
   return createMessageSignature(
     app,
-    accountPolicy,
     message,
     witnessScript,
     {
@@ -102,32 +104,34 @@ const createSegwitBip322Signature = async ({
 const createTaprootBip322Signature = async ({
   message,
   app,
+  xpub,
   addressIndex,
   networkType,
 }: {
   message: string;
-  app: AppClient;
+  app: Bitcoin;
+  xpub?: string;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
   const coinType = getCoinType(networkType);
-  const masterFingerPrint = await app.getMasterFingerprint();
-  const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
-  const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, networkType);
-  // Need to update input derivation path so the ledger can recognize the inputs to sign
+
+  if (!app.mfp) {
+    throw new Error('not found keystoneBitcoin mfp');
+  }
+  if (!xpub) {
+    throw new Error('not found keystone extendedPublicKey');
+  }
+
+  const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(xpub, addressIndex, networkType);
   const inputDerivation: TapBip32Derivation = {
     path: `${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
     pubkey: internalPubkey,
-    masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
+    masterFingerprint: Buffer.from(app.mfp, 'hex'),
     leafHashes: [],
   };
-  const accountPolicy = new DefaultWalletPolicy(
-    'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
-  );
   return createMessageSignature(
     app,
-    accountPolicy,
     message,
     taprootScript,
     {
@@ -138,23 +142,23 @@ const createTaprootBip322Signature = async ({
   );
 };
 
-export async function createNativeSegwitECDSA({
+async function createNativeSegwitECDSA({
   transport,
+  mfp,
   networkType,
   message,
   addressIndex,
 }: {
-  transport: LedgerTransport;
+  transport: KeystoneTransport;
+  mfp: string;
   networkType: NetworkType;
   message: string;
   addressIndex: number;
 }): Promise<SignedMessage> {
-  const app = new AppClient(transport);
+  const app = new Bitcoin(transport, mfp);
+
   const coinType = getCoinType(networkType);
-  const signature = await app.signMessage(
-    Buffer.from(message),
-    `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
-  );
+  const signature = await app.signMessage(message, `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`);
   return {
     signature,
     protocol: MessageSigningProtocols.ECDSA,
@@ -162,44 +166,51 @@ export async function createNativeSegwitECDSA({
 }
 
 /**
- * This function is used to sign an incoming BIP 322 message with the ledger
- * @param transport - the transport object with connected ledger device
+ * This function is used to sign an incoming BIP 322 message with the keystone
+ * @param transport - the transport object with connected keystone device
  * @param networkType - the network type (Mainnet or Testnet)
  * @param addressIndex - the index of the account address to sign with
  * @param message - the incoming message in string format to sign
  * @returns the signature in string (base64) format
  * */
-export async function signMessageLedger({
+export async function signMessageKeystone({
   transport,
   networkType,
   addressIndex,
   address,
   message,
   protocol,
+  mfp,
+  xpub,
 }: {
-  transport: LedgerTransport;
+  transport: KeystoneTransport;
   networkType: NetworkType;
   addressIndex: number;
   address: string;
   message: string;
   protocol?: MessageSigningProtocols;
+  mfp: string;
+  xpub: {
+    btc?: string;
+    ordinals?: string;
+  };
 }): Promise<SignedMessage> {
-  const app = new AppClient(transport);
-  // TODO: switch to btc.Address.decode
+  const app = new Bitcoin(transport, mfp);
   const { type } = getAddressInfo(address);
+
   // if protocol isn't specified, we default to bip322 for both address types
   const protocolToSign = protocol || MessageSigningProtocols.BIP322;
   if (protocolToSign === MessageSigningProtocols.ECDSA) {
     if (type === AddressType.p2tr) {
       throw new Error('ECDSA is not supported for Taproot Addresses');
     }
-    return createNativeSegwitECDSA({ transport, networkType, message, addressIndex });
+    return createNativeSegwitECDSA({ transport, mfp, networkType, message, addressIndex });
   }
   if (protocolToSign === MessageSigningProtocols.BIP322) {
     if (type === AddressType.p2tr) {
-      return createTaprootBip322Signature({ message, app, addressIndex, networkType });
+      return createTaprootBip322Signature({ message, app, xpub: xpub.ordinals, addressIndex, networkType });
     }
-    return createSegwitBip322Signature({ message, app, addressIndex, networkType });
+    return createSegwitBip322Signature({ message, app, xpub: xpub.btc, addressIndex, networkType });
   }
   throw new Error("Couldn't sign Message");
 }

@@ -1,4 +1,4 @@
-export type AccountType = 'ledger' | 'software';
+export type AccountType = 'ledger' | 'keystone' | 'software';
 
 export type BtcPaymentType = 'nested' | 'native';
 
@@ -7,6 +7,7 @@ export type BtcAddressType = 'nested' | 'native' | 'taproot';
 export type BtcAddress = {
   address: string;
   publicKey: string;
+  xpub?: string;
 };
 
 export type AccountBtcAddresses = {

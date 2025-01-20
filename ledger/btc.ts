@@ -2,7 +2,7 @@ import { AppClient, DefaultWalletPolicy } from 'ledger-bitcoin';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { NetworkType } from '../types';
 import { getCoinType, getPublicKeyFromXpubAtIndex } from './helper';
-import { Transport } from './types';
+import { LedgerTransport } from './types';
 
 /**
  * This function is used to get the native segwit account data from the ledger
@@ -20,7 +20,7 @@ export async function importNativeSegwitAccountFromLedger({
   addressIndex = 0,
   showAddress = false,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   network: NetworkType;
   accountIndex?: number;
   addressIndex?: number;
@@ -57,7 +57,7 @@ export async function importTaprootAccountFromLedger({
   addressIndex = 0,
   showAddress = false,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   network: NetworkType;
   accountIndex?: number;
   addressIndex?: number;

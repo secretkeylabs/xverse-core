@@ -9,7 +9,7 @@ import { AppClient } from 'ledger-bitcoin';
 import { uuid } from 'uuidv4';
 import { NetworkType } from '../types/network';
 import { bip32 } from '../utils/bip32';
-import { LedgerStxJWTAuthProfile, Transport } from './types';
+import { LedgerStxJWTAuthProfile, LedgerTransport } from './types';
 
 /**
  * This function is used to get the coin type depending on network type
@@ -33,7 +33,7 @@ export const getStxPath = ({ accountIndex, addressIndex }: { addressIndex: numbe
  * @param transport - the transport object with connected ledger device
  * @returns master key fingerprint as a string of 8 hexadecimal digits
  * */
-export async function getMasterFingerPrint(transport: Transport): Promise<string> {
+export async function getMasterFingerPrint(transport: LedgerTransport): Promise<string> {
   const app = new AppClient(transport);
   const masterFingerPrint = await app.getMasterFingerprint();
   return masterFingerPrint;
@@ -136,7 +136,7 @@ export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
  * @param payload - the payload to sign
  * @returns the signed JWT
  * */
-export async function signStxJWTAuth(transport: Transport, accountIndex: number, payload: string) {
+export async function signStxJWTAuth(transport: LedgerTransport, accountIndex: number, payload: string) {
   const appStacks = new StacksApp(transport);
   const response = await appStacks.sign_jwt(`m/888'/0'/${accountIndex}'`, payload);
 
