@@ -141,9 +141,10 @@ const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs):
   } = payload;
 
   const deserializedFunctionArgs = functionArgs?.map((arg: string) => hexToCV(arg));
-  const deserializedPostConditions = postConditions
-    ? (postConditions.map((pc) => (typeof pc === 'string' ? deserializePostConditionWire(pc) : pc)) as PostCondition[])
-    : [];
+  const deserializedPostConditions =
+    (postConditions?.map((pc) =>
+      typeof pc === 'string' ? deserializePostConditionWire(pc) : pc,
+    ) as PostCondition[]) ?? [];
 
   const txOptions: UnsignedContractCallOptions = {
     contractAddress,
