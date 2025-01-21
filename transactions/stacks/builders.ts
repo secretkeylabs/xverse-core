@@ -12,6 +12,7 @@ import {
   broadcastTransaction,
   bufferCVFromString,
   cvToHex,
+  deserializePostConditionWire,
   hexToCV,
   makeUnsignedContractCall,
   makeUnsignedContractDeploy,
@@ -139,21 +140,40 @@ const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs):
     functionArgs,
   } = payload;
 
-  const funcArgs = functionArgs?.map((arg: string) => hexToCV(arg));
+  const deserializedFunctionArgs = functionArgs?.map((arg: string) => hexToCV(arg));
+
+  /**
+   * Process post conditions for contract calls, handling two possible input formats:
+   * 1. Serialized strings: These are deserialized directly to PostConditionWire
+   * 2. PostCondition objects: These are passed through as-is
+   *
+   * This approach aligns with makeUnsignedContractCall's internal processing:
+   * ```
+   * const postConditions: PostConditionWire[] = options.postConditions.map(pc => {
+   *   if (typeof pc.type === 'string') return postConditionToWire(pc);
+   *   return pc;
+   * });
+   * ```
+   */
+  const deserializedPostConditions =
+    (postConditions?.map((pc) =>
+      typeof pc === 'string' ? deserializePostConditionWire(pc) : pc,
+    ) as PostCondition[]) ?? [];
 
   const txOptions: UnsignedContractCallOptions = {
     contractAddress,
     contractName,
     functionName,
-    functionArgs: funcArgs,
+    functionArgs: deserializedFunctionArgs,
     publicKey,
     fee: fee ? BigInt(fee) : BigInt(0),
     nonce,
     network: network as StacksNetwork,
-    postConditions: postConditions ? postConditions.filter((pc): pc is PostCondition => typeof pc !== 'string') : [],
+    postConditions: deserializedPostConditions,
     postConditionMode: postConditionMode ?? PostConditionMode.Deny,
     sponsored,
   };
+
   return makeUnsignedContractCall(txOptions);
 };
 
@@ -162,6 +182,9 @@ type UnsignedContractDeployTxArgs = UnsignedTxArgs<ConnectContractDeployPayload>
 const generateUnsignedContractDeployTx = async (args: UnsignedContractDeployTxArgs) => {
   const { payload, publicKey, nonce, fee } = args;
   const { contractName, codeBody, network, postConditionMode, anchorMode, postConditions } = payload;
+  const deserializedPostConditions = postConditions
+    ? (postConditions.map((pc) => (typeof pc === 'string' ? deserializePostConditionWire(pc) : pc)) as PostCondition[])
+    : [];
   const options = {
     contractName,
     codeBody,
@@ -170,7 +193,7 @@ const generateUnsignedContractDeployTx = async (args: UnsignedContractDeployTxAr
     publicKey,
     anchorMode: anchorMode ?? AnchorMode.Any,
     postConditionMode: postConditionMode || PostConditionMode.Deny,
-    postConditions: postConditions ? postConditions.filter((pc): pc is PostCondition => typeof pc !== 'string') : [],
+    postConditions: deserializedPostConditions,
     network: network === 'mainnet' ? StacksMainnet : StacksTestnet,
   };
   return makeUnsignedContractDeploy(options);

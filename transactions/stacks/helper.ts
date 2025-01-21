@@ -6,13 +6,11 @@ import {
   Pc,
   PostConditionWire,
   FungiblePostConditionWire,
-  BytesReader,
-  StacksWireType,
-  deserializeStacksWire,
   StacksTransactionWire,
   MultiSigHashMode,
   SingleSigHashMode,
   AddressHashMode,
+  deserializePostConditionWire,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
 import { btcToSats, getBtcFiatEquivalent, getStxFiatEquivalent, stxToMicrostacks } from '../../currency';
@@ -83,12 +81,7 @@ export const extractFromPayload = (payload: any) => {
 
   if (Array.isArray(postConditions)) {
     if (isStringArray(postConditions)) {
-      postConds = postConditions.map((arg: string) => {
-        return deserializeStacksWire(
-          new BytesReader(hexStringToBuffer(arg)),
-          StacksWireType.PostCondition,
-        ) as PostConditionWire;
-      });
+      postConds = postConditions.map((pc) => deserializePostConditionWire(pc));
     } else {
       postConds = postConditions as PostConditionWire[];
     }
