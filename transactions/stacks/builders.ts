@@ -141,6 +141,20 @@ const generateUnsignedContractCallTx = async (args: UnsignedContractCallTxArgs):
   } = payload;
 
   const deserializedFunctionArgs = functionArgs?.map((arg: string) => hexToCV(arg));
+
+  /**
+   * Process post conditions for contract calls, handling two possible input formats:
+   * 1. Serialized strings: These are deserialized directly to PostConditionWire
+   * 2. PostCondition objects: These are passed through as-is
+   *
+   * This approach aligns with makeUnsignedContractCall's internal processing:
+   * ```
+   * const postConditions: PostConditionWire[] = options.postConditions.map(pc => {
+   *   if (typeof pc.type === 'string') return postConditionToWire(pc);
+   *   return pc;
+   * });
+   * ```
+   */
   const deserializedPostConditions =
     (postConditions?.map((pc) =>
       typeof pc === 'string' ? deserializePostConditionWire(pc) : pc,
