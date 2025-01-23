@@ -1,8 +1,9 @@
-import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
+import { SigHash, Transaction } from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api/runes/provider';
 import { isInscriptionsAndRunesCompatible } from '../btcNetwork';
 
+import { TxOpts } from '@scure/btc-signer/transaction';
 import {
   applyScriptActions,
   applySendBtcActionsAndFee,

@@ -5,6 +5,9 @@
  */
 
 import * as btc from '@scure/btc-signer';
+import { TransactionInput, TransactionOutput } from '@scure/btc-signer/psbt';
+import { RawOutput, VarBytes } from '@scure/btc-signer/script';
+import { equalBytes } from '@scure/btc-signer/utils';
 import * as P from 'micro-packed';
 import { NetworkType } from '../../../types';
 import { getBtcNetworkDefinition } from '../../btcNetwork';
@@ -12,7 +15,11 @@ import { getBtcNetworkDefinition } from '../../btcNetwork';
 const EMPTY_ARRAY = new Uint8Array();
 const SHA256_LEN_BYTES = 64;
 
-function getPrevOut(input: btc.TransactionInput): P.UnwrapCoder<typeof btc.RawOutput> {
+type TapLeafScript = TransactionInput['tapLeafScript'];
+type TB = Parameters<typeof btc.TaprootControlBlock.encode>[0];
+const encodeTapBlock = (item: TB) => btc.TaprootControlBlock.encode(item);
+
+export function getPrevOut(input: TransactionInput): P.UnwrapCoder<typeof RawOutput> {
   if (input.nonWitnessUtxo) {
     if (input.index === undefined) throw new Error('Unknown input index');
     return input.nonWitnessUtxo.outputs[input.index];
@@ -20,7 +27,7 @@ function getPrevOut(input: btc.TransactionInput): P.UnwrapCoder<typeof btc.RawOu
   else throw new Error('Cannot find previous output info');
 }
 
-function getInputType(input: btc.TransactionInput) {
+function getInputType(input: TransactionInput) {
   let txType = 'legacy';
   let defaultSighash = btc.SigHash.ALL;
   const prevOut = getPrevOut(input);
@@ -73,7 +80,36 @@ function getInputType(input: btc.TransactionInput) {
   }
 }
 
-function estimateInput(input: btc.TransactionInput, opts: Options) {
+function iterLeafs(tapLeafScript: TapLeafScript, sigSize: number) {
+  if (!tapLeafScript || !tapLeafScript.length) throw new Error('no leafs');
+  const empty = () => new Uint8Array(sigSize);
+  // If user want to select specific leaf, which can signed,
+  // it is possible to remove all other leafs manually.
+  // Sort leafs by control block length.
+  const leafs = tapLeafScript.sort((a, b) => encodeTapBlock(a[0]).length - encodeTapBlock(b[0]).length);
+  for (const [cb, leafScript] of leafs) {
+    // Last byte is version
+    const script = leafScript.slice(0, -1);
+    const outs = btc.OutScript.decode(script);
+
+    const signatures: P.Bytes[] = [];
+    if (outs.type === 'tr_ms') {
+      const m = outs.m;
+      const n = outs.pubkeys.length - m;
+      for (let i = 0; i < m; i++) signatures.push(empty());
+      for (let i = 0; i < n; i++) signatures.push(P.EMPTY);
+    } else if (outs.type === 'tr_ns') {
+      outs.pubkeys.forEach(() => signatures.push(empty()));
+    } else {
+      throw new Error('Finalize: Unknown tapLeafScript');
+    }
+    // Witness is stack, so last element will be used first
+    return signatures.reverse().concat([script, encodeTapBlock(cb)]);
+  }
+  throw new Error('there was no witness');
+}
+
+function estimateInput(input: TransactionInput, opts: Options) {
   let script = EMPTY_ARRAY,
     witness: Uint8Array[] | undefined = undefined;
 
@@ -82,40 +118,13 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
   // schnorr sig is always 64 bytes. except for cases when sighash is not default!
   if (inputType.txType === 'taproot') {
     const SCHNORR_SIG_SIZE = !input.sighashType || input.sighashType === btc.SigHash.DEFAULT ? 64 : 65;
-
-    if (input.tapLeafScript) {
-      // If user want to select specific leaf (which can signed, it is possible to remove all other leafs manually);
-      // Sort leafs by control block length.
-      const leafs = input.tapLeafScript.sort(
-        (a, b) => btc.TaprootControlBlock.encode(a[0]).length - btc.TaprootControlBlock.encode(b[0]).length,
-      );
-      for (const [cb, leafScript] of leafs) {
-        // Last byte is version
-        const scriptElement = leafScript.slice(0, -1);
-        const outScript = btc.OutScript.decode(scriptElement);
-        const signatures: Uint8Array[] = [];
-        if (outScript.type === 'tr_ms') {
-          const m = outScript.m;
-          for (let i = 0; i < m; i++) signatures.push(new Uint8Array(SCHNORR_SIG_SIZE));
-          const n = outScript.pubkeys.length - m;
-          for (let i = 0; i < n; i++) signatures.push(EMPTY_ARRAY);
-        } else if (outScript.type === 'tr_ns') {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for (const pubkey of outScript.pubkeys) signatures.push(new Uint8Array(SCHNORR_SIG_SIZE));
-        } else {
-          if (opts.taprootSimpleSign) {
-            signatures.push(new Uint8Array(SCHNORR_SIG_SIZE));
-          } else {
-            // TODO: if custom tap script, then we need to sign it instead of using this estimator. e.g. inscriptions
-            throw new Error('Finalize: Unknown tapLeafScript');
-          }
-        }
-        // Witness is stack, so last element will be used first
-        witness = signatures.reverse().concat([scriptElement, btc.TaprootControlBlock.encode(cb)]);
-        break;
-      }
-    } else if (input.tapInternalKey && !P.equalBytes(input.tapInternalKey, btc.TAPROOT_UNSPENDABLE_KEY)) {
+    if (
+      (input.tapInternalKey && !equalBytes(input.tapInternalKey, btc.TAPROOT_UNSPENDABLE_KEY)) ||
+      opts.taprootSimpleSign
+    ) {
       witness = [new Uint8Array(SCHNORR_SIG_SIZE)];
+    } else if (input.tapLeafScript) {
+      witness = iterLeafs(input.tapLeafScript, SCHNORR_SIG_SIZE);
     } else throw new Error('estimateInput/taproot: unknown input');
   } else {
     const SIG_SIZE = 72; // Maximum size of signatures
@@ -162,7 +171,7 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
   let weight =
     32 * 4 + // prev txn id
     4 * 4 + // prev vout
-    4 * btc.VarBytes.encode(script).length + // script pubkey size
+    4 * VarBytes.encode(script).length + // script pubkey size
     4 * 4; // sequence
   let hasWitnesses = false;
 
@@ -175,7 +184,7 @@ function estimateInput(input: btc.TransactionInput, opts: Options) {
   return { weight, hasWitnesses };
 }
 
-const getOutputScript = (output: btc.TransactionOutput, options: Options) => {
+const getOutputScript = (output: TransactionOutput, options: Options) => {
   const NETWORK = getBtcNetworkDefinition(options?.network);
   let script;
   if ('address' in output && typeof output.address === 'string') {

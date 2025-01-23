@@ -1,8 +1,9 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
-import { concatBytes } from 'micro-packed';
+import { utils } from 'micro-packed';
 
+import { TransactionInput } from '@scure/btc-signer/psbt';
 import { getRunesClient } from '../../api';
 import { UTXO } from '../../types';
 import { getBtcNetworkDefinition, isInscriptionsAndRunesCompatible } from '../btcNetwork';
@@ -176,11 +177,11 @@ export class EnhancedPsbt {
         return undefined;
       }
     }
-    return hex.encode(sha256(sha256(concatBytes(txn.toBytes(false)))).reverse());
+    return hex.encode(sha256(sha256(utils.concatBytes(txn.toBytes(false)))).reverse());
   }
 
   private _getExtendedUtxoForInput = async (
-    inputRaw: btc.TransactionInput,
+    inputRaw: TransactionInput,
     inputTxid: string,
     knownEmptyTxids?: string[],
   ) => {
