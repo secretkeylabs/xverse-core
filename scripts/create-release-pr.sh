@@ -73,16 +73,6 @@ gh api \
   /repos/{owner}/{repo}/pulls/$PR_ID \
   -F 'body=@body.md'
 
-echo -e "\n--- Update PR to $BASE with label ---"
-
-RELEASE_ID=$(cat release.json | jq -r .id)
-gh api \
-  --method POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  /repos/{owner}/{repo}/issues/$PR_ID/labels \
-  -f "labels[]=RID_$RELEASE_ID"
-
 # clean up temp files
 # rm pr-$BASE.json
 
