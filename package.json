@@ -92,16 +92,17 @@
     "mockdate": "3.0.5",
     "nock": "13.5.4",
     "prettier": "2.8.7",
+    "process": "0.11.10",
     "rimraf": "3.0.2",
     "ts-loader": "9.4.2",
     "typescript": "5.6.2",
     "vitest": "1.6.0"
   },
   "peerDependencies": {
-    "@keystonehq/hw-transport-webusb": "~0.5.0",
-    "@ledgerhq/hw-transport": "^6.0.0",
-    "bignumber.js": "^9.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "@keystonehq/hw-transport-webusb": "0.5.1",
+    "@ledgerhq/hw-transport": "6.31.4",
+    "bignumber.js": "9.1.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
