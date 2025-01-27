@@ -170,6 +170,8 @@ export type PlaceOrderRequest = {
 export type PlaceOrderResponse = {
   /** The ID of the order. Should be sent with the execute request if defined. */
   orderId?: string;
+  /** If an identifier was passed in with the request, it should be returned here */
+  identifier?: unknown;
   /** The time in milliseconds at which the order expires. */
   expiresInMilliseconds: number | null;
   /** The PSBT that the user needs to sign in order to execute the order */
@@ -233,6 +235,8 @@ export type ExecuteOrderRequest = {
   providerCode: string;
   /** The ID of the order if it was returned with the place order response */
   orderId?: string;
+  /** If an identifier was passed in with the PlaceOrder, it should be sent here */
+  identifier?: unknown;
   /** The signed PSBT from the place order response */
   psbt: string;
   /** The user's btc address */
