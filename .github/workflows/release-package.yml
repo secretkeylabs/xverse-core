@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - develop
-    types: [ closed ]
+    types: [closed]
 
 jobs:
   publish-gpr:
@@ -14,8 +14,8 @@ jobs:
       packages: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
           registry-url: https://npm.pkg.github.com/
@@ -34,6 +34,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - uses: actions/checkout@v4
       - id: publish-linked-draft-release
         name: Publish linked draft release
         env:
@@ -41,7 +42,6 @@ jobs:
           PR_ID: ${{ github.event.pull_request.number }}
           SOURCE_BRANCH: ${{ github.head_ref }}
         run: |
-          cd scripts
           # find the target commitish of the latest release matching our tag
           TAG=$(echo $SOURCE_BRANCH | sed 's/release\/\(.*\)/\1/')
           gh api \
