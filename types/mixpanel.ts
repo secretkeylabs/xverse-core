@@ -22,6 +22,7 @@ export enum AnalyticsEvents {
   BackupWallet = 'backup_wallet',
   BackupWalletLater = 'backup_wallet_later',
   InitiateBuyFlow = 'initiate_buy_flow',
+  SelectBuyProvider = 'select_buy_provider',
   InitiateSendFlow = 'initiate_send_flow',
   InitiateReceiveFlow = 'initiate_receive_flow',
   VisitCollectiblesTab = 'visit_collectibles_tab',
@@ -110,5 +111,8 @@ export type AnalyticsEventProperties = {
     source: 'dashboard' | 'token' | 'send_stx' | 'send_btc' | 'collectibles';
     addressType: 'stx' | 'btc_payment' | 'btc_ordinals';
     selectedToken?: string;
+  };
+  [AnalyticsEvents.SelectBuyProvider]: {
+    provider: 'xverse_swaps' | 'moonpay' | 'transak' | 'paypal';
   };
 };
