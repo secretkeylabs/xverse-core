@@ -266,11 +266,9 @@ class RunesApi {
    * @param {string} fiatCurrency
    */
   async getRuneFiatRatesByRuneIds(runeIds: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> {
-    const response = await this.clientBigNumber.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
-      params: {
-        currency: fiatCurrency,
-        runeIds,
-      },
+    const response = await this.clientBigNumber.post<SimplePriceResponse>('/v2/runes/fiat-rates', {
+      currency: fiatCurrency,
+      runeIds,
     });
     return response.data;
   }

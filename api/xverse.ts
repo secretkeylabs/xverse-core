@@ -167,11 +167,9 @@ class XverseApi {
    * @deprecated use getRuneFiatRatesByRuneIds instead
    */
   getRuneFiatRates = async (runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> => {
-    const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
-      params: {
-        currency: fiatCurrency,
-        runeNames,
-      },
+    const response = await this.client.post<SimplePriceResponse>('/v2/runes/fiat-rates', {
+      currency: fiatCurrency,
+      runeNames,
     });
     return response.data;
   };
