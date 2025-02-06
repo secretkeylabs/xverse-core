@@ -74,6 +74,7 @@ export async function generateUnsignedAllowContractCallerTransaction(
     },
     publicKey,
     fee: 0,
+    nonce: 0,
   });
 
   return unsignedTx;
@@ -98,6 +99,7 @@ export async function generateUnsignedRevokeTransaction(
     },
     publicKey,
     fee: 0,
+    nonce: 0,
   });
 
   return unsignedTx;
