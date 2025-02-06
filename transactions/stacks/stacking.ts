@@ -34,6 +34,7 @@ export async function generateUnsignedDelegateTransaction(
     userRewardAddressTuple,
     noneCV(),
   ];
+  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
     payload: {
       txType: TransactionTypes.ContractCall,
@@ -47,9 +48,8 @@ export async function generateUnsignedDelegateTransaction(
     },
     publicKey,
     fee: 0,
+    nonce: nonce + 1n,
   });
-  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
-  unsignedTx.setNonce(nonce + 1n);
   return unsignedTx;
 }
 
@@ -61,6 +61,7 @@ export async function generateUnsignedAllowContractCallerTransaction(
   poxContractAddress: string,
   poxContractName: string,
 ): Promise<StacksTransactionWire> {
+  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
     payload: {
       txType: TransactionTypes.ContractCall,
@@ -74,7 +75,7 @@ export async function generateUnsignedAllowContractCallerTransaction(
     },
     publicKey,
     fee: 0,
-    nonce: 0,
+    nonce,
   });
 
   return unsignedTx;
