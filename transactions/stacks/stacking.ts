@@ -1,9 +1,9 @@
 import {
-  ClarityValue,
   contractPrincipalCV,
   cvToHex,
   getAddressFromPublicKey,
   noneCV,
+  someCV,
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
@@ -30,7 +30,7 @@ export async function generateUnsignedDelegateTransaction(
     uintCV(amount.toString()),
     standardPrincipalCV(poolAddress),
     noneCV(),
-    poolRewardAddressTuple,
+    someCV(poolRewardAddressTuple),
     userRewardAddressTuple,
     noneCV(),
   ];
@@ -42,7 +42,7 @@ export async function generateUnsignedDelegateTransaction(
       contractAddress: poolContractAddress,
       contractName: poolContractName,
       functionName: 'delegate-stx',
-      functionArgs: funcArgs.map((arg) => cvToHex(arg as ClarityValue)),
+      functionArgs: funcArgs.map((arg) => cvToHex(arg)),
       network,
       postConditions: [],
     },
