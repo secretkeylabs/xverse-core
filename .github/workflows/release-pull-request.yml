@@ -119,9 +119,10 @@ jobs:
           CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
 
       - id: publish
-        run: npm publish --tag pr
+        run: npm publish --tag pr-$PR_NUMBER
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          PR_NUMBER: ${{ github.event.number }}
 
       - id: published-version
         run: echo "version=$(npm pkg get version  | tr -d '"')" >> $GITHUB_OUTPUT
