@@ -27,6 +27,8 @@ export const STX_PATH_PURPOSE = `m/44'/5757'/`;
 
 export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 
+export const PAY_TO_ANCHOR_SCRIPT_HEX = '51024e73';
+
 /**
  * Network constants
  */

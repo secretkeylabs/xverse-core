@@ -365,6 +365,7 @@ describe('EnhancedTransaction summary', () => {
           }))
           .filter((s: any) => s.types.length > 0),
         walletWillSign: true,
+        isPayToAnchor: false,
       })),
       outputs: [
         {

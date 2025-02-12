@@ -126,7 +126,7 @@ export type TransactionOutput = {
 };
 
 export type TransactionPubKeyOutput = {
-  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns' | 'p2a';
   script: string[];
   scriptHex: string;
   pubKeys: string[];
@@ -153,6 +153,7 @@ export type EnhancedInput = {
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
   walletWillSign: boolean;
+  isPayToAnchor: boolean;
 };
 export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 
@@ -175,6 +176,7 @@ export type InputMetadata = {
   inputs: {
     extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
     sigHash?: btc.SigHash | undefined;
+    isPayToAnchor: boolean;
   }[];
   isSigHashAll: boolean;
   hasSigHashNone: boolean;

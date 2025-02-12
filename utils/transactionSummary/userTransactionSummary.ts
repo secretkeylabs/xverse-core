@@ -19,6 +19,7 @@ const extractIOSummaries = (
 
   for (const [idx, output] of summary.outputs.entries()) {
     if (output.type === 'script') {
+      destinationTransfers[output.scriptHex].btcSatsAmount += output.amount;
       // op_return outputs are not considered as destinations
       continue;
     }
