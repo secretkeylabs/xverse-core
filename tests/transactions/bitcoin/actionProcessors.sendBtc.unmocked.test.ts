@@ -4,7 +4,7 @@ import { ActionType } from '../../../transactions/bitcoin';
 import { applySendBtcActionsAndFee } from '../../../transactions/bitcoin/actionProcessors';
 import { addresses, rootKeyPair } from './helpers';
 
-const testP2WPKH = btc.p2wpkh(rootKeyPair.publicKey);
+const testP2WPKH = btc.p2wpkh(rootKeyPair.publicKey!);
 
 describe('applySendBtcActionsAndFee', () => {
   let transaction: btc.Transaction;

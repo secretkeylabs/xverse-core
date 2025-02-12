@@ -1,6 +1,6 @@
+import { HDKey } from '@scure/bip32';
 import { decryptContent, encryptContent, getPublicKeyFromPrivate } from '@stacks/encryption';
 import { GaiaHubConfig, connectToGaiaHub, uploadToGaiaHub } from '@stacks/storage';
-import { BIP32Interface } from 'bip32';
 import { WALLET_CONFIG_PATH } from '../constant';
 import { Account } from '../types';
 import { buf2hex } from '../utils/arrayBuffers';
@@ -27,13 +27,13 @@ export interface WalletConfig {
   };
 }
 
-export const deriveConfigPrivateKey = (rootNode: BIP32Interface): Uint8Array => {
-  const derivedConfigKey = rootNode.derivePath(WALLET_CONFIG_PATH).privateKey;
+export const deriveConfigPrivateKey = (rootNode: HDKey): Uint8Array => {
+  const derivedConfigKey = rootNode.derive(WALLET_CONFIG_PATH).privateKey;
   if (!derivedConfigKey) throw new TypeError('Unable to derive config key for wallet identities');
   return derivedConfigKey;
 };
 
-export async function deriveWalletConfigKey(rootNode: BIP32Interface): Promise<string> {
+export async function deriveWalletConfigKey(rootNode: HDKey): Promise<string> {
   return buf2hex(deriveConfigPrivateKey(rootNode));
 }
 

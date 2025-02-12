@@ -1,9 +1,9 @@
 export { networks } from 'bitcoinjs-lib';
 import * as ecc from '@bitcoinerlab/secp256k1';
 import Bitcoin from '@keystonehq/hw-app-bitcoin';
+import * as bip32 from '@scure/bip32';
 import { initEccLib, networks, payments } from 'bitcoinjs-lib';
 import { NetworkType } from '../types/network';
-import { bip32 } from '../utils';
 import { KeystoneTransport } from './types';
 
 export async function getMasterFingerPrintFromKeystone(transport: KeystoneTransport): Promise<string> {
@@ -26,10 +26,9 @@ export const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 
   @param network - the network type
   @returns the public key in compressed format
 **/
-export function getPublicKeyFromXpubAtIndex(xpub: string, index: number, network: NetworkType): Buffer {
-  const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
-  const { publicKey } = bip32.fromBase58(xpub, btcNetwork).derivePath(`0/${index}`);
-  return publicKey;
+export function getPublicKeyFromXpubAtIndex(xpub: string, index: number): Buffer {
+  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`0/${index}`);
+  return Buffer.from(publicKey!);
 }
 
 /**
@@ -50,7 +49,7 @@ export function getNativeSegwitAccountDataFromXpub(
 } {
   initEccLib(ecc);
 
-  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index);
   const btcNetwork = network === 'Mainnet' ? networks.bitcoin : networks.testnet;
   const p2wpkh = payments.p2wpkh({ pubkey: publicKey, network: btcNetwork });
   const address = p2wpkh.address;
@@ -89,7 +88,7 @@ export function getTaprootAccountDataFromXpub(
 } {
   initEccLib(ecc);
 
-  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index);
   const p2tr = payments.p2tr({
     internalPubkey: publicKey.slice(1),
     network: network === 'Mainnet' ? networks.bitcoin : networks.testnet,

@@ -3,7 +3,6 @@ import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
-import * as bip39 from 'bip39';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../../account';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
@@ -11,9 +10,8 @@ import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
 import { KeystoneTransport } from '../../keystone';
 import { LedgerTransport } from '../../ledger';
-import { SeedVault } from '../../seedVault';
 import { AccountType, type NetworkType, type UTXO } from '../../types';
-import { bip32 } from '../../utils/bip32';
+import { DerivationType, SeedVault, WalletId } from '../../vaults';
 import { getBtcNetworkDefinition } from '../btcNetwork';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
@@ -31,38 +29,52 @@ export type SignOptions = {
   inputsToSign?: InputToSign[];
 };
 
-export type AddressContextConstructorArgs = {
+type BaseAddressContextConstructorArgs = {
   esploraApiProvider: EsploraProvider;
   address: string;
   publicKey: string;
   network: NetworkType;
   accountIndex: number;
+  derivationType: DerivationType;
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   accountType?: AccountType;
+};
+
+type HardwareAddressContextConstructorArgs = BaseAddressContextConstructorArgs & {
+  accountType: 'ledger' | 'keystone';
   masterFingerprint?: string;
 };
 
+type SoftwareAddressContextConstructorArgs = BaseAddressContextConstructorArgs & {
+  accountType?: 'software';
+  walletId: WalletId;
+};
+
+export type AddressContextConstructorArgs =
+  | HardwareAddressContextConstructorArgs
+  | SoftwareAddressContextConstructorArgs;
+
 export abstract class AddressContext {
-  protected _type!: SupportedAddressType;
+  protected _type: SupportedAddressType;
 
-  protected _address!: string;
+  protected _address: string;
 
-  protected _publicKey!: string;
+  protected _publicKey: string;
 
-  protected _network!: NetworkType;
+  protected _network: NetworkType;
 
   private _utxos?: ExtendedUtxo[];
 
-  protected _seedVault!: SeedVault;
+  protected _seedVault: SeedVault;
 
-  protected _utxoCache!: UtxoCache;
+  protected _utxoCache: UtxoCache;
 
-  protected _accountIndex!: number;
+  protected _accountIndex: number;
 
-  protected _esploraApiProvider!: EsploraProvider;
+  protected _derivationType: DerivationType;
 
-  protected _masterFingerprint?: string;
+  protected _esploraApiProvider: EsploraProvider;
 
   protected _getUtxoMutex: Mutex = new Mutex();
 
@@ -74,8 +86,8 @@ export abstract class AddressContext {
     this._seedVault = args.seedVault;
     this._utxoCache = args.utxoCache;
     this._accountIndex = args.accountIndex;
+    this._derivationType = args.derivationType;
     this._esploraApiProvider = args.esploraApiProvider;
-    this._masterFingerprint = args.masterFingerprint;
   }
 
   get type(): SupportedAddressType {
@@ -190,13 +202,18 @@ export abstract class AddressContext {
     return extendedUtxo;
   }
 
-  protected async getPrivateKey(seedPhrase: string): Promise<string> {
-    const seed = await bip39.mnemonicToSeed(seedPhrase);
-    const master = bip32.fromSeed(seed);
+  protected getDerivationParams() {
+    return this._derivationType === 'account'
+      ? { accountIndex: this._accountIndex, index: 0n }
+      : { index: this._accountIndex, accountIndex: 0n };
+  }
 
-    const btcChild = master.derivePath(this.getDerivationPath());
+  protected async getPrivateKey(walletId: WalletId): Promise<Uint8Array> {
+    const { rootNode } = await this._seedVault.getWalletRootNode(walletId);
+
+    const btcChild = rootNode.derive(this.getDerivationPath());
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return btcChild.privateKey!.toString('hex');
+    return btcChild.privateKey!;
   }
 
   protected getSignIndexes(
@@ -277,8 +294,8 @@ export abstract class AddressContext {
   abstract signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void>;
 }
 
-export class P2shAddressContext extends AddressContext {
-  private _p2sh!: ReturnType<typeof btc.p2sh>;
+abstract class P2shAddressContext extends AddressContext {
+  protected _p2sh!: ReturnType<typeof btc.p2sh>;
 
   constructor(args: AddressContextConstructorArgs) {
     super('p2sh', args);
@@ -306,19 +323,9 @@ export class P2shAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getNestedSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getNestedSegwitDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -326,7 +333,26 @@ export class P2shAddressContext extends AddressContext {
   }
 }
 
-export class P2wpkhAddressContext extends AddressContext {
+export class SoftwareP2shAddressContext extends P2shAddressContext {
+  protected _walletId: WalletId;
+
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
+    }
+  }
+}
+
+abstract class P2wpkhAddressContext extends AddressContext {
   protected _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
 
   constructor(args: AddressContextConstructorArgs) {
@@ -351,19 +377,9 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getNativeSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getNativeSegwitDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -371,7 +387,34 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 }
 
+export class SoftwareP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _walletId: WalletId;
+
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
+    }
+  }
+}
+
 export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const { ledgerTransport } = options;
     if (!ledgerTransport) {
@@ -437,6 +480,14 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
 }
 
 export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const { keystoneTransport } = options;
     if (!keystoneTransport) {
@@ -535,7 +586,7 @@ export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
   }
 }
 
-export class P2trAddressContext extends AddressContext {
+abstract class P2trAddressContext extends AddressContext {
   protected _p2tr!: ReturnType<typeof btc.p2tr>;
 
   constructor(args: AddressContextConstructorArgs) {
@@ -569,19 +620,9 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getTaprootDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getTaprootDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -589,7 +630,34 @@ export class P2trAddressContext extends AddressContext {
   }
 }
 
+export class SoftwareP2trAddressContext extends P2trAddressContext {
+  protected _walletId: WalletId;
+
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
+    }
+  }
+}
+
 export class LedgerP2trAddressContext extends P2trAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const { ledgerTransport } = options;
     if (!ledgerTransport) {
@@ -667,6 +735,14 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
 }
 
 export class KeystoneP2trAddressContext extends P2trAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const { keystoneTransport } = options;
     if (!keystoneTransport) {

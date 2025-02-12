@@ -2,9 +2,8 @@ import * as ecc from '@bitcoinerlab/secp256k1';
 import Bitcoin from '@keystonehq/hw-app-bitcoin';
 import { sha256 } from '@noble/hashes/sha256';
 import { createBase58check } from '@scure/base';
-import { BIP32Interface } from 'bip32';
+import * as bip32 from '@scure/bip32';
 import { initEccLib, Network, networks, payments } from 'bitcoinjs-lib';
-import { bip32 } from '../utils';
 import { KeystoneTransport } from './types';
 
 const base58check = createBase58check(sha256);
@@ -34,11 +33,11 @@ function getPathForNetwork(bipType: number, accountIndex: number, network: Netwo
   }
 }
 
-function getNativeSegwitKeyAndAddress(root: BIP32Interface, { subPath = '0/0', network = defaultNetwork }) {
-  const child = root.derivePath(subPath);
+function getNativeSegwitKeyAndAddress(root: bip32.HDKey, { subPath = '0/0', network = defaultNetwork }) {
+  const child = root.derive(subPath);
 
   const { address, pubkey } = payments.p2wpkh({
-    pubkey: child.publicKey,
+    pubkey: Buffer.from(child.publicKey!),
     network,
   });
 
@@ -56,11 +55,11 @@ function getNativeSegwitKeyAndAddress(root: BIP32Interface, { subPath = '0/0', n
   };
 }
 
-function getTaprootPubkeyAndAddress(root: BIP32Interface, { subPath = '0/0', network = defaultNetwork }) {
-  const child = root.derivePath(subPath);
+function getTaprootPubkeyAndAddress(root: bip32.HDKey, { subPath = '0/0', network = defaultNetwork }) {
+  const child = root.derive(subPath);
 
-  const pubkey = child.publicKey;
-  const tweakedPubkey = ecc.xOnlyPointFromPoint(pubkey);
+  const pubkey = child.publicKey!;
+  const tweakedPubkey = ecc.xOnlyPointFromPoint(Buffer.from(pubkey));
 
   const { address } = payments.p2tr({
     internalPubkey: Buffer.from(tweakedPubkey),
@@ -97,7 +96,7 @@ export async function importNativeSegwitAccountFromKeystone({
 
   const nativeSegwitZpub = await bitcoin.getExtendedPublicKey(getPathForNetwork(84, accountIndex, network));
   const nativeSegwitXpub = convertZpubToXpub(nativeSegwitZpub, network);
-  const nativeSegwitRoot = bip32.fromBase58(nativeSegwitXpub, network);
+  const nativeSegwitRoot = bip32.HDKey.fromExtendedKey(nativeSegwitXpub);
   const nativeSegwit = getNativeSegwitKeyAndAddress(nativeSegwitRoot, { subPath: `0/${addressIndex}`, network });
 
   return {
@@ -116,7 +115,7 @@ export async function importTaprootAccountFromKeystone({
   const bitcoin = new Bitcoin(transport);
 
   const taprootXpub = await bitcoin.getExtendedPublicKey(getPathForNetwork(86, accountIndex, network));
-  const taprootRoot = bip32.fromBase58(taprootXpub, network);
+  const taprootRoot = bip32.HDKey.fromExtendedKey(taprootXpub);
   const taproot = getTaprootPubkeyAndAddress(taprootRoot, { subPath: `0/${addressIndex}`, network });
 
   return {

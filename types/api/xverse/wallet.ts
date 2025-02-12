@@ -1,5 +1,5 @@
+import { HDKey } from '@scure/bip32';
 import BigNumber from 'bignumber.js';
-import { BIP32Interface } from 'bip32';
 import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared';
 import { StxMempoolTransactionData, TransactionData } from './transaction';
 
@@ -61,7 +61,7 @@ export interface TokenFiatRateResponse {
 }
 
 export type Keychain = {
-  childKey: BIP32Interface;
+  childKey: HDKey;
   address: string;
   privateKey: string;
 };

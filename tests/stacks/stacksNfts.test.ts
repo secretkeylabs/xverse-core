@@ -6,11 +6,11 @@ import {
   organizeNftsIntoCollection,
 } from '../../stacksCollectible';
 import { NftCollectionData, NftEventsResponse, NonFungibleToken, StacksMainnet } from '../../types';
-import mockStacksCollection from '../mocks/stacks.collection.mock.json';
-import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
 import mockHiddenStacksCollection from '../mocks/stacks.collection.hidden.mock.json';
-import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
+import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
+import mockStacksCollection from '../mocks/stacks.collection.mock.json';
 import mockStarredItemInACollection from '../mocks/stacks.collection.starred.in.collection.mock.json';
+import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
 
 vi.mock('../../api/stacks', () => ({
   getNftsData: vi.fn(() => Promise.resolve({ results: [], total: 0, limit: 0, offset: 0 })),
@@ -25,6 +25,7 @@ describe('getAllNftContracts', () => {
       const results: NonFungibleToken[] = new Array(limit).fill(null).map((_, index) => ({
         asset_identifier: `asset-${offset + index}`,
         block_height: 3333,
+        identifier: { tokenId: `token-id-${offset + index}`, contractName: 'contract', contractAddress: 'conAddress' },
         value: {
           hex: `hex-${offset + index}`,
           repr: `repr-${offset + index}`,

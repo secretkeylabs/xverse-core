@@ -36,7 +36,7 @@ export async function importNativeSegwitAccountFromLedger({
     `[${masterFingerPrint}/84'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`,
   );
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
-  const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex);
 
   return { address, publicKey: publicKey.toString('hex') };
 }
@@ -73,7 +73,7 @@ export async function importTaprootAccountFromLedger({
     `[${masterFingerPrint}/86'/${btcNetwork}'/${accountIndex}']${extendedPublicKey}`,
   );
   const address = await app.getWalletAddress(accountPolicy, null, 0, addressIndex, showAddress);
-  const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(extendedPublicKey, addressIndex);
 
   return { address, publicKey: publicKey.toString('hex') };
 }

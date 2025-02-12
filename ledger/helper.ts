@@ -1,4 +1,5 @@
 import * as ecc from '@bitcoinerlab/secp256k1';
+import * as bip32 from '@scure/bip32';
 import { makeDIDFromAddress } from '@stacks/auth';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
 import StacksApp from '@zondax/ledger-stacks';
@@ -6,9 +7,7 @@ import base64url from 'base64url';
 import { initEccLib, networks, payments } from 'bitcoinjs-lib';
 import ecdsaFormat from 'ecdsa-sig-formatter';
 import { AppClient } from 'ledger-bitcoin';
-import { uuid } from 'uuidv4';
 import { NetworkType } from '../types/network';
-import { bip32 } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, LedgerTransport } from './types';
 
 /**
@@ -46,11 +45,9 @@ export async function getMasterFingerPrint(transport: LedgerTransport): Promise<
   @param network - the network type
   @returns the public key in compressed format
 **/
-export function getPublicKeyFromXpubAtIndex(xpub: string, index: number, network: NetworkType): Buffer {
-  const btcNetwork =
-    network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet;
-  const { publicKey } = bip32.fromBase58(xpub, btcNetwork).derivePath(`0/${index}`);
-  return publicKey;
+export function getPublicKeyFromXpubAtIndex(xpub: string, index: number): Buffer {
+  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`0/${index}`);
+  return Buffer.from(publicKey!);
 }
 
 /**
@@ -71,7 +68,7 @@ export function getNativeSegwitAccountDataFromXpub(
 } {
   initEccLib(ecc);
 
-  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index);
   const btcNetwork =
     network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet;
   const p2wpkh = payments.p2wpkh({ pubkey: publicKey, network: btcNetwork });
@@ -110,7 +107,7 @@ export async function makeLedgerCompatibleUnsignedAuthResponsePayload(
 
   const expiresAt = new Date().getTime() + 30 * 24 * 60 * 60 * 1000;
   const payload = {
-    jti: uuid(),
+    jti: crypto.randomUUID(),
     iat: Math.floor(new Date().getTime() / 1000), // JWT times are in seconds
     exp: Math.floor(expiresAt / 1000), // JWT times are in seconds
     iss: makeDIDFromAddress(address),
@@ -163,7 +160,7 @@ export function getTaprootAccountDataFromXpub(
 } {
   initEccLib(ecc);
 
-  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index, network);
+  const publicKey = getPublicKeyFromXpubAtIndex(xpub, index);
   const p2tr = payments.p2tr({
     internalPubkey: publicKey.slice(1),
     network: network === 'Mainnet' ? networks.bitcoin : network === 'Regtest' ? networks.regtest : networks.testnet,
