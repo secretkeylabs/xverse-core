@@ -3,7 +3,7 @@
   "version": "40.0.1",
   "description": "",
   "engines": {
-    "node": "^18.18.2"
+    "node": "^22.14.0"
   },
   "main": "dist/index.js",
   "scripts": {
