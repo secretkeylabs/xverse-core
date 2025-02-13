@@ -1,9 +1,9 @@
 import {
-  ClarityValue,
   contractPrincipalCV,
   cvToHex,
   getAddressFromPublicKey,
   noneCV,
+  someCV,
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
@@ -30,25 +30,26 @@ export async function generateUnsignedDelegateTransaction(
     uintCV(amount.toString()),
     standardPrincipalCV(poolAddress),
     noneCV(),
-    poolRewardAddressTuple,
+    someCV(poolRewardAddressTuple),
     userRewardAddressTuple,
     noneCV(),
   ];
+  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
-    publicKey,
     payload: {
       txType: TransactionTypes.ContractCall,
       publicKey,
       contractAddress: poolContractAddress,
       contractName: poolContractName,
       functionName: 'delegate-stx',
-      functionArgs: funcArgs.map((arg) => cvToHex(arg as ClarityValue)),
+      functionArgs: funcArgs.map((arg) => cvToHex(arg)),
       network,
       postConditions: [],
     },
+    publicKey,
+    fee: 0,
+    nonce: nonce + 1n,
   });
-  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
-  unsignedTx.setNonce(nonce + 1n);
   return unsignedTx;
 }
 
@@ -60,8 +61,8 @@ export async function generateUnsignedAllowContractCallerTransaction(
   poxContractAddress: string,
   poxContractName: string,
 ): Promise<StacksTransactionWire> {
+  const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
-    publicKey,
     payload: {
       txType: TransactionTypes.ContractCall,
       publicKey,
@@ -72,6 +73,9 @@ export async function generateUnsignedAllowContractCallerTransaction(
       network,
       postConditions: [],
     },
+    publicKey,
+    fee: 0,
+    nonce,
   });
 
   return unsignedTx;
@@ -95,6 +99,8 @@ export async function generateUnsignedRevokeTransaction(
       postConditions: [],
     },
     publicKey,
+    fee: 0,
+    nonce: 0,
   });
 
   return unsignedTx;
