@@ -167,11 +167,9 @@ class XverseApi {
    * @deprecated use getRuneFiatRatesByRuneIds instead
    */
   getRuneFiatRates = async (runeNames: string[] | string, fiatCurrency: string): Promise<SimplePriceResponse> => {
-    const response = await this.client.get<SimplePriceResponse>('/v1/runes/fiat-rates', {
-      params: {
-        currency: fiatCurrency,
-        runeNames,
-      },
+    const response = await this.client.post<SimplePriceResponse>('/v2/runes/fiat-rates', {
+      currency: fiatCurrency,
+      runeNames,
     });
     return response.data;
   };
@@ -247,12 +245,10 @@ class XverseApi {
     limit?: number,
     filters?: CollectionsListFilters,
   ): Promise<CollectionsList> => {
-    const response = await this.client.get(`/v1/address/${address}/ordinals/collections`, {
-      params: {
-        limit,
-        offset,
-        filters,
-      },
+    const response = await this.client.post(`/v2/address/${address}/ordinals/collections`, {
+      limit,
+      offset,
+      filters,
     });
     return response.data;
   };

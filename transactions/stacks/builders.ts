@@ -1,3 +1,11 @@
+import { HDKey } from '@scure/bip32';
+import {
+  ContractCallPayload as ConnectContractCallPayload,
+  ContractDeployPayload as ConnectContractDeployPayload,
+  ConnectNetwork,
+  STXTransferPayload as ConnectSTXTransferPayload,
+  TransactionTypes,
+} from '@stacks/connect';
 import {
   Address,
   AnchorMode,
@@ -22,18 +30,12 @@ import {
   standardPrincipalCV,
   uintCV,
 } from '@stacks/transactions';
-import {
-  ContractCallPayload as ConnectContractCallPayload,
-  ContractDeployPayload as ConnectContractDeployPayload,
-  ConnectNetwork,
-  STXTransferPayload as ConnectSTXTransferPayload,
-  TransactionTypes,
-} from '@stacks/connect';
 import BigNumber from 'bignumber.js';
+import { getStxAddressKeyChain } from '../../account';
 import { PostConditionsOptions, StacksMainnet, StacksNetwork, StacksTestnet } from '../../types';
-import { getStxAddressKeyChain } from '../../wallet/index';
-import { makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
+import { DerivationType } from '../../vaults';
 import { applyMultiplierAndCapFeeAtThreshold, estimateStacksTransactionWithFallback } from './fees';
+import { makeFungiblePostCondition, makeNonFungiblePostCondition } from './helper';
 import { nextBestNonce } from './nonceHelpers';
 
 export interface StacksRecipient {
@@ -43,12 +45,13 @@ export interface StacksRecipient {
 
 export async function signTransaction(
   unsignedTx: StacksTransactionWire,
-  seedPhrase: string,
+  rootNode: HDKey,
+  derivationType: DerivationType,
   accountIndex: number,
   network: StacksNetwork,
 ): Promise<StacksTransactionWire> {
   const tx = unsignedTx;
-  const { privateKey } = await getStxAddressKeyChain(seedPhrase, network, accountIndex);
+  const { privateKey } = await getStxAddressKeyChain(network, rootNode, derivationType, BigInt(accountIndex));
   const signer = new TransactionSigner(tx);
   signer.signOrigin(privateKey);
 
@@ -84,13 +87,13 @@ export async function signMultiStxTransactions(
   unsignedTxs: Array<StacksTransactionWire>,
   accountIndex: number,
   network: StacksNetwork,
-  seedPhrase: string,
+  rootNode: HDKey,
+  derivationType: DerivationType,
 ): Promise<Array<StacksTransactionWire>> {
   try {
     const signedTxPromises: Array<Promise<StacksTransactionWire>> = [];
-    const signingAccountIndex = accountIndex ?? 0;
     unsignedTxs.forEach((unsignedTx) => {
-      signedTxPromises.push(signTransaction(unsignedTx, seedPhrase, signingAccountIndex, network));
+      signedTxPromises.push(signTransaction(unsignedTx, rootNode, derivationType, accountIndex, network));
     });
 
     return await Promise.all(signedTxPromises);

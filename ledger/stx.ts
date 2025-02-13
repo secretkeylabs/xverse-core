@@ -1,9 +1,9 @@
+import { AddressVersion, StacksTransactionWire } from '@stacks/transactions';
+import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
 import { NetworkType } from '../types';
 import { getStxPath, makeLedgerCompatibleUnsignedAuthResponsePayload, signStxJWTAuth } from './helper';
-import { LedgerErrors, LedgerStxJWTAuthProfile, Transport } from './types';
-import StacksApp, { ResponseSign } from '@zondax/ledger-stacks';
-import { StacksTransactionWire, AddressVersion } from '@stacks/transactions';
 import { addSignatureToStxTransaction } from './transaction';
+import { LedgerErrors, LedgerStxJWTAuthProfile, LedgerTransport } from './types';
 
 /**
  * This function is used to get the stx account data from the ledger
@@ -21,7 +21,7 @@ export async function importStacksAccountFromLedger({
   addressIndex = 0,
   showAddress = false,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   network: NetworkType;
   accountIndex?: number;
   addressIndex?: number;
@@ -53,7 +53,7 @@ export async function signLedgerStxTransaction({
   transactionBuffer,
   addressIndex,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   transactionBuffer: Buffer;
   addressIndex: number;
 }): Promise<StacksTransactionWire> {
@@ -79,7 +79,7 @@ export async function signStxMessage({
   accountIndex = 0,
   addressIndex = 0,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   message: string;
   accountIndex?: number;
   addressIndex?: number;
@@ -103,7 +103,7 @@ export async function handleLedgerStxJWTAuth({
   addressIndex,
   profile,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   addressIndex: number;
   profile: LedgerStxJWTAuthProfile;
 }): Promise<string> {

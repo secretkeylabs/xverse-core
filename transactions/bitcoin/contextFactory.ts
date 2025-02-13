@@ -1,97 +1,80 @@
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
-import { SeedVault } from '../../seedVault';
-import type { Account, AccountType, BtcPaymentType, NetworkType } from '../../types';
+import type { Account, BtcPaymentType, NetworkType } from '../../types';
+import { DerivationType, SeedVault, WalletId } from '../../vaults';
 import {
   AddressContext,
+  AddressContextConstructorArgs,
+  KeystoneP2trAddressContext,
+  KeystoneP2wpkhAddressContext,
   LedgerP2trAddressContext,
   LedgerP2wpkhAddressContext,
-  P2shAddressContext,
-  P2trAddressContext,
-  P2wpkhAddressContext,
+  SoftwareP2shAddressContext,
+  SoftwareP2trAddressContext,
+  SoftwareP2wpkhAddressContext,
   TransactionContext,
 } from './context';
 
-type CreateAddressContextProps = {
-  esploraApiProvider: EsploraProvider;
-  address: string;
-  publicKey: string;
-  network: NetworkType;
-  accountIndex: number;
-  seedVault: SeedVault;
-  utxoCache: UtxoCache;
-  accountType?: AccountType;
-};
-const createAddressContext = ({
-  esploraApiProvider,
-  address,
-  publicKey,
-  network,
-  accountIndex,
-  seedVault,
-  utxoCache,
-  accountType,
-}: CreateAddressContextProps): AddressContext => {
+const createAddressContext = (contextConstructorArgs: AddressContextConstructorArgs): AddressContext => {
   // TODO: switch to btc.Address.decode
-  const { type } = getAddressInfo(address);
+  const { type } = getAddressInfo(contextConstructorArgs.address);
 
-  if (accountType === 'ledger') {
+  if (contextConstructorArgs.accountType === 'ledger') {
     if (type === AddressType.p2wpkh) {
-      return new LedgerP2wpkhAddressContext(
-        address,
-        publicKey,
-        network,
-        accountIndex,
-        seedVault,
-        utxoCache,
-        esploraApiProvider,
-      );
+      return new LedgerP2wpkhAddressContext(contextConstructorArgs);
     }
     if (type === AddressType.p2tr) {
-      return new LedgerP2trAddressContext(
-        address,
-        publicKey,
-        network,
-        accountIndex,
-        seedVault,
-        utxoCache,
-        esploraApiProvider,
-      );
+      return new LedgerP2trAddressContext(contextConstructorArgs);
     } else {
       throw new Error(`Ledger support for this type of address not implemented: ${type}`);
     }
+  } else if (contextConstructorArgs.accountType === 'keystone') {
+    if (type === AddressType.p2wpkh) {
+      return new KeystoneP2wpkhAddressContext(contextConstructorArgs);
+    }
+    if (type === AddressType.p2tr) {
+      return new KeystoneP2trAddressContext(contextConstructorArgs);
+    } else {
+      throw new Error(`Keystone support for this type of address not implemented: ${type}`);
+    }
+  } else if (!contextConstructorArgs.accountType || contextConstructorArgs.accountType === 'software') {
+    if (type === AddressType.p2sh) {
+      return new SoftwareP2shAddressContext(contextConstructorArgs);
+    } else if (type === AddressType.p2wpkh) {
+      return new SoftwareP2wpkhAddressContext(contextConstructorArgs);
+    } else if (type === AddressType.p2tr) {
+      return new SoftwareP2trAddressContext(contextConstructorArgs);
+    }
   }
 
-  if (type === AddressType.p2sh) {
-    return new P2shAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-  } else if (type === AddressType.p2wpkh) {
-    return new P2wpkhAddressContext(
-      address,
-      publicKey,
-      network,
-      accountIndex,
-      seedVault,
-      utxoCache,
-      esploraApiProvider,
-    );
-  } else if (type === AddressType.p2tr) {
-    return new P2trAddressContext(address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-  } else {
-    throw new Error('Unsupported payment address type');
-  }
+  throw new Error('Unsupported payment address type');
 };
 
 export type TransactionContextOptions = {
   esploraApiProvider: EsploraProvider;
   account: Account;
+  masterFingerprint?: string;
   seedVault: SeedVault;
   utxoCache: UtxoCache;
   network: NetworkType;
   btcPaymentAddressType: BtcPaymentType;
+  derivationType: DerivationType;
+  walletId?: WalletId;
 };
+
 export const createTransactionContext = (options: TransactionContextOptions) => {
-  const { esploraApiProvider, account, seedVault, utxoCache, network, btcPaymentAddressType } = options;
+  const {
+    esploraApiProvider,
+    account,
+    seedVault,
+    utxoCache,
+    network,
+    btcPaymentAddressType,
+    masterFingerprint,
+    walletId,
+    derivationType,
+  } = options;
 
   const accountIndex =
     !account.accountType || account.accountType === 'software' ? account.id : account.deviceAccountIndex;
@@ -105,26 +88,51 @@ export const createTransactionContext = (options: TransactionContextOptions) => 
     throw new Error('Payment address not found');
   }
 
-  const paymentAddressContext = createAddressContext({
-    esploraApiProvider,
-    address: paymentAddress.address,
-    publicKey: paymentAddress.publicKey,
-    network,
-    accountIndex,
-    seedVault,
-    utxoCache,
-    accountType: account.accountType,
-  });
-  const ordinalsAddressContext = createAddressContext({
-    esploraApiProvider,
-    address: account.btcAddresses.taproot.address,
-    publicKey: account.btcAddresses.taproot.publicKey,
-    network,
-    accountIndex,
-    seedVault,
-    utxoCache,
-    accountType: account.accountType,
-  });
+  const accountType = account.accountType;
+  const baseAddressContextArgs = { esploraApiProvider, network, derivationType, accountIndex, seedVault, utxoCache };
+  let paymentAddressContextArgs: AddressContextConstructorArgs;
+  let ordinalsAddressContextArgs: AddressContextConstructorArgs;
+
+  if (accountType === 'ledger' || accountType === 'keystone') {
+    paymentAddressContextArgs = {
+      ...baseAddressContextArgs,
+      address: paymentAddress.address,
+      publicKey: paymentAddress.publicKey,
+      accountType,
+      masterFingerprint,
+    };
+    ordinalsAddressContextArgs = {
+      ...baseAddressContextArgs,
+      address: account.btcAddresses.taproot.address,
+      publicKey: account.btcAddresses.taproot.publicKey,
+      accountType,
+      masterFingerprint,
+    };
+  } else if (!accountType || accountType === 'software') {
+    if (!walletId) {
+      throw new Error('WalletId is required for software account');
+    }
+
+    paymentAddressContextArgs = {
+      ...baseAddressContextArgs,
+      address: paymentAddress.address,
+      publicKey: paymentAddress.publicKey,
+      accountType,
+      walletId,
+    };
+    ordinalsAddressContextArgs = {
+      ...baseAddressContextArgs,
+      address: account.btcAddresses.taproot.address,
+      publicKey: account.btcAddresses.taproot.publicKey,
+      accountType,
+      walletId,
+    };
+  } else {
+    throw new Error('Unsupported account type');
+  }
+
+  const paymentAddressContext = createAddressContext(paymentAddressContextArgs);
+  const ordinalsAddressContext = createAddressContext(ordinalsAddressContextArgs);
 
   return new TransactionContext(network, esploraApiProvider, paymentAddressContext, ordinalsAddressContext);
 };

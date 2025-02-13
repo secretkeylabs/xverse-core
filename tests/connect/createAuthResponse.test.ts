@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createAuthResponse } from '../../connect';
 import { GAIA_HUB_URL } from '../../constant';
-import { testSeed } from '../mocks/restore.mock';
+import { testRootNode } from '../mocks/restore.mock';
 
 vi.mock('@stacks/wallet-sdk');
 
@@ -22,7 +22,7 @@ describe('createAuthResponse', () => {
       },
     };
 
-    const response = await createAuthResponse(testSeed, 0, authRequest);
+    const response = await createAuthResponse(testRootNode, 'index', 0, authRequest);
 
     expect(response).toEqual(mockResponse);
 

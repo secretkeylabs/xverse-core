@@ -235,6 +235,7 @@ export const extractOutputInscriptionsAndSatributes = async (
 export const mapInputToEnhancedInput = async (
   input: ExtendedUtxo | ExtendedDummyUtxo,
   walletWillSign: boolean,
+  isPayToAnchor: boolean,
   sigHash?: SigHash,
 ): Promise<EnhancedInput> => {
   const bundleData = await input.getBundleData();
@@ -267,5 +268,6 @@ export const mapInputToEnhancedInput = async (
     inscriptions,
     satributes,
     walletWillSign,
+    isPayToAnchor,
   };
 };

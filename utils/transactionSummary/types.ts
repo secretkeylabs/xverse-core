@@ -60,7 +60,7 @@ export type TransferBundle = {
 };
 
 export type TransferIOSummary = {
-  destinationType: 'address' | 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  destinationType: 'address' | 'pk' | 'ms' | 'tr_ms' | 'tr_ns' | 'p2a';
   address?: string;
   script: string[];
   scriptHex: string;

@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react';
-
-import { CoreError } from '../../utils/coreError';
-
-import { Transport } from '../../ledger';
+import { KeystoneTransport } from '../../keystone';
+import { LedgerTransport } from '../../ledger';
 import { TransactionContext } from '../../transactions/bitcoin';
 import { InscriptionErrorCode, inscriptionMintExecute } from '../../transactions/inscriptionMint';
+import { CoreError } from '../../utils/coreError';
 
 type Props = {
   context: TransactionContext;
@@ -36,7 +35,7 @@ const useInscriptionExecute = (props: Props) => {
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   const executeMint = useCallback(
-    (executeOptions?: { ledgerTransport?: Transport }) => {
+    (executeOptions?: { ledgerTransport?: LedgerTransport; keystoneTransport?: KeystoneTransport }) => {
       if (running || !!revealTransactionId) return;
 
       const innerProps = {
@@ -60,6 +59,7 @@ const useInscriptionExecute = (props: Props) => {
         try {
           const mintResult = await inscriptionMintExecute(innerProps, context, {
             ledgerTransport: executeOptions?.ledgerTransport,
+            keystoneTransport: executeOptions?.keystoneTransport,
           });
 
           setRevealTransactionId(mintResult);

@@ -1,26 +1,30 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
+import * as bip32 from '@scure/bip32';
+import * as bip39 from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
+import * as btc from '@scure/btc-signer';
 import { hashMessage } from '@stacks/encryption';
 import { AddressVersion } from '@stacks/transactions';
-import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
-import * as btc from '@scure/btc-signer';
 import { c32addressDecode } from 'c32check';
 import crypto from 'crypto';
-import { deriveStxAddressChain, getAccountFromSeedPhrase } from '../account';
+import { getAccountFromRootNode } from '../account';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { ENTROPY_BYTES } from '../constant';
-import { type Keychain, type NetworkType, type StacksNetwork } from '../types';
-import { bip32 } from '../utils/bip32';
 import { getBtcNetworkDefinition } from '../transactions/btcNetwork';
+import { type NetworkType } from '../types';
+import { DerivationType, WalletId } from '../vaults';
 
-export * from './encryptionUtils';
 export { hashMessage };
 
 export function generateMnemonic(): string {
   const entropy = crypto.randomBytes(ENTROPY_BYTES);
-  const mnemonic = bip39.entropyToMnemonic(entropy);
-
+  const mnemonic = bip39.entropyToMnemonic(entropy, wordlist);
   return mnemonic;
+}
+
+export async function mnemonicToRootNode(mnemonic: string): Promise<bip32.HDKey> {
+  const seed = await bip39.mnemonicToSeed(mnemonic);
+  return bip32.HDKey.fromMasterSeed(seed);
 }
 
 export function validateStxAddress({ stxAddress, network }: { stxAddress: string; network: NetworkType }) {
@@ -65,17 +69,6 @@ export function validateBtcAddressIsTaproot(btcAddress: string): boolean {
   }
 }
 
-export async function getStxAddressKeyChain(
-  mnemonic: string,
-  network: StacksNetwork,
-  accountIndex: number,
-): Promise<Keychain> {
-  const seed = await bip39.mnemonicToSeed(mnemonic);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const deriveStxAddressKeychain = deriveStxAddressChain(network, BigInt(accountIndex));
-  return deriveStxAddressKeychain(rootNode);
-}
-
 const getAddressBalanceAndHistory = async (btcClient: EsploraProvider, address: string | undefined) => {
   if (!address) return { balance: 0n, hasHistory: false };
   const addressData = await btcClient.getAddressData(address);
@@ -85,23 +78,34 @@ const getAddressBalanceAndHistory = async (btcClient: EsploraProvider, address: 
   };
 };
 
-const getBalancesAtIndex = async (btcClient: EsploraProvider, mnemonic: string, network: NetworkType, idx: bigint) => {
-  const account = await getAccountFromSeedPhrase({ mnemonic, index: idx, network });
+const getBalancesAtIndex = async (options: {
+  btcClient: EsploraProvider;
+  rootNode: bip32.HDKey;
+  walletId: WalletId;
+  network: NetworkType;
+  derivationType: DerivationType;
+  derivationIndex: bigint;
+}) => {
+  const account = await getAccountFromRootNode(options);
 
   const [native, nested] = await Promise.all([
-    getAddressBalanceAndHistory(btcClient, account.btcAddresses.native?.address),
-    getAddressBalanceAndHistory(btcClient, account.btcAddresses.nested?.address),
+    getAddressBalanceAndHistory(options.btcClient, account.btcAddresses.native?.address),
+    getAddressBalanceAndHistory(options.btcClient, account.btcAddresses.nested?.address),
   ]);
 
   return { native, nested };
 };
 
-export async function getPaymentAccountSummaryForSeedPhrase(
-  btcClient: EsploraProvider,
-  seedPhrase: string,
-  network: NetworkType,
-  limit: number,
-) {
+export async function getPaymentAccountSummary(options: {
+  btcClient: EsploraProvider;
+  rootNode: bip32.HDKey;
+  walletId: WalletId;
+  network: NetworkType;
+  limit: number;
+  derivationType: DerivationType;
+}) {
+  const { btcClient, rootNode, walletId, network, limit, derivationType } = options;
+
   const summary = {
     accountCount: 0n,
     nestedTotalSats: 0n,
@@ -113,7 +117,14 @@ export async function getPaymentAccountSummaryForSeedPhrase(
   let consecutiveEmptyAccounts = 0n;
 
   while (idx < limit) {
-    const balances = await getBalancesAtIndex(btcClient, seedPhrase, network, idx);
+    const balances = await getBalancesAtIndex({
+      btcClient,
+      rootNode,
+      walletId,
+      network,
+      derivationType,
+      derivationIndex: idx,
+    });
     summary.nativeTotalSats += balances.native.balance;
     summary.nestedTotalSats += balances.nested.balance;
 
@@ -132,7 +143,14 @@ export async function getPaymentAccountSummaryForSeedPhrase(
   }
 
   if (summary.accountCount >= limit) {
-    const outerBalances = await getBalancesAtIndex(btcClient, seedPhrase, network, idx);
+    const outerBalances = await getBalancesAtIndex({
+      btcClient,
+      rootNode,
+      walletId,
+      network,
+      derivationType,
+      derivationIndex: idx,
+    });
     summary.hasMoreAccounts = outerBalances.native.hasHistory || outerBalances.nested.hasHistory;
   }
 

@@ -1,18 +1,18 @@
+import Bitcoin from '@keystonehq/hw-app-bitcoin';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
 import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
-import * as bip39 from 'bip39';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../../account';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UtxoCache } from '../../api/utxoCache';
 import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../../constant';
-import { Transport } from '../../ledger/types';
-import { SeedVault } from '../../seedVault';
-import { type NetworkType, type UTXO } from '../../types';
-import { bip32 } from '../../utils/bip32';
-import { getBtcNetwork, getBtcNetworkDefinition } from '../btcNetwork';
+import { KeystoneTransport } from '../../keystone';
+import { LedgerTransport } from '../../ledger';
+import { AccountType, type NetworkType, type UTXO } from '../../types';
+import { DerivationType, SeedVault, WalletId } from '../../vaults';
+import { getBtcNetworkDefinition } from '../btcNetwork';
 import { ExtendedUtxo } from './extendedUtxo';
 import { CompilationOptions, SupportedAddressType } from './types';
 import { areByteArraysEqual } from './utils';
@@ -24,49 +24,70 @@ export type InputToSign = {
 };
 
 export type SignOptions = {
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
   inputsToSign?: InputToSign[];
 };
 
+type BaseAddressContextConstructorArgs = {
+  esploraApiProvider: EsploraProvider;
+  address: string;
+  publicKey: string;
+  network: NetworkType;
+  accountIndex: number;
+  derivationType: DerivationType;
+  seedVault: SeedVault;
+  utxoCache: UtxoCache;
+  accountType?: AccountType;
+};
+
+type HardwareAddressContextConstructorArgs = BaseAddressContextConstructorArgs & {
+  accountType: 'ledger' | 'keystone';
+  masterFingerprint?: string;
+};
+
+type SoftwareAddressContextConstructorArgs = BaseAddressContextConstructorArgs & {
+  accountType?: 'software';
+  walletId: WalletId;
+};
+
+export type AddressContextConstructorArgs =
+  | HardwareAddressContextConstructorArgs
+  | SoftwareAddressContextConstructorArgs;
+
 export abstract class AddressContext {
-  protected _type!: SupportedAddressType;
+  protected _type: SupportedAddressType;
 
-  protected _address!: string;
+  protected _address: string;
 
-  protected _publicKey!: string;
+  protected _publicKey: string;
 
-  protected _network!: NetworkType;
+  protected _network: NetworkType;
 
   private _utxos?: ExtendedUtxo[];
 
-  protected _seedVault!: SeedVault;
+  protected _seedVault: SeedVault;
 
-  protected _utxoCache!: UtxoCache;
+  protected _utxoCache: UtxoCache;
 
-  protected _accountIndex!: number;
+  protected _accountIndex: number;
 
-  protected _esploraApiProvider!: EsploraProvider;
+  protected _derivationType: DerivationType;
+
+  protected _esploraApiProvider: EsploraProvider;
 
   protected _getUtxoMutex: Mutex = new Mutex();
 
-  constructor(
-    type: SupportedAddressType,
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    this._type = type;
-    this._address = address;
-    this._publicKey = publicKey;
-    this._network = network;
-    this._seedVault = seedVault;
-    this._utxoCache = utxoCache;
-    this._accountIndex = accountIndex;
-    this._esploraApiProvider = esploraApiProvider;
+  constructor(addressType: SupportedAddressType, args: AddressContextConstructorArgs) {
+    this._type = addressType;
+    this._address = args.address;
+    this._publicKey = args.publicKey;
+    this._network = args.network;
+    this._seedVault = args.seedVault;
+    this._utxoCache = args.utxoCache;
+    this._accountIndex = args.accountIndex;
+    this._derivationType = args.derivationType;
+    this._esploraApiProvider = args.esploraApiProvider;
   }
 
   get type(): SupportedAddressType {
@@ -181,13 +202,18 @@ export abstract class AddressContext {
     return extendedUtxo;
   }
 
-  protected async getPrivateKey(seedPhrase: string): Promise<string> {
-    const seed = await bip39.mnemonicToSeed(seedPhrase);
-    const master = bip32.fromSeed(seed);
+  protected getDerivationParams() {
+    return this._derivationType === 'account'
+      ? { accountIndex: this._accountIndex, index: 0n }
+      : { index: this._accountIndex, accountIndex: 0n };
+  }
 
-    const btcChild = master.derivePath(this.getDerivationPath());
+  protected async getPrivateKey(walletId: WalletId): Promise<Uint8Array> {
+    const { rootNode } = await this._seedVault.getWalletRootNode(walletId);
+
+    const btcChild = rootNode.derive(this.getDerivationPath());
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return btcChild.privateKey!.toString('hex');
+    return btcChild.privateKey!;
   }
 
   protected getSignIndexes(
@@ -238,6 +264,24 @@ export abstract class AddressContext {
     return signIndexes;
   }
 
+  protected getChangeIndexes(transaction: btc.Transaction, lockingScript?: Uint8Array): number[] {
+    const changeIndexes: number[] = [];
+
+    // This is the internal path used by the wallet to sign transactions
+    for (let i = 0; i < transaction.outputsLength; i++) {
+      const output = transaction.getOutput(i);
+
+      const outputLockingScript = output?.script;
+      const outputIsLockedByLockingScript = areByteArraysEqual(outputLockingScript, lockingScript);
+
+      if (outputIsLockedByLockingScript) {
+        changeIndexes.push(i);
+      }
+    }
+
+    return changeIndexes;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by subclasses
   async prepareInputs(_transaction: btc.Transaction, _options: SignOptions): Promise<void> {
     // no-op
@@ -250,25 +294,17 @@ export abstract class AddressContext {
   abstract signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void>;
 }
 
-export class P2shAddressContext extends AddressContext {
-  private _p2sh!: ReturnType<typeof btc.p2sh>;
+abstract class P2shAddressContext extends AddressContext {
+  protected _p2sh!: ReturnType<typeof btc.p2sh>;
 
-  constructor(
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    super('p2sh', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
+  constructor(args: AddressContextConstructorArgs) {
+    super('p2sh', args);
 
-    const publicKeyBuff = hex.decode(publicKey);
+    const publicKeyBuff = hex.decode(this._publicKey);
 
-    const p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(network));
+    const p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(this._network));
 
-    this._p2sh = btc.p2sh(p2wpkh, getBtcNetworkDefinition(network));
+    this._p2sh = btc.p2sh(p2wpkh, getBtcNetworkDefinition(this._network));
   }
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
@@ -287,19 +323,9 @@ export class P2shAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getNestedSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getNestedSegwitDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -307,23 +333,34 @@ export class P2shAddressContext extends AddressContext {
   }
 }
 
-export class P2wpkhAddressContext extends AddressContext {
+export class SoftwareP2shAddressContext extends P2shAddressContext {
+  protected _walletId: WalletId;
+
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2sh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
+    }
+  }
+}
+
+abstract class P2wpkhAddressContext extends AddressContext {
   protected _p2wpkh!: ReturnType<typeof btc.p2wpkh>;
 
-  constructor(
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    super('p2wpkh', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
+  constructor(args: AddressContextConstructorArgs) {
+    super('p2wpkh', args);
 
-    const publicKeyBuff = hex.decode(publicKey);
+    const publicKeyBuff = hex.decode(this._publicKey);
 
-    this._p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(network));
+    this._p2wpkh = btc.p2wpkh(publicKeyBuff, getBtcNetworkDefinition(this._network));
   }
 
   async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
@@ -340,19 +377,9 @@ export class P2wpkhAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getNativeSegwitDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getNativeSegwitDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -360,19 +387,32 @@ export class P2wpkhAddressContext extends AddressContext {
   }
 }
 
-export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
-  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
-    super.addInput(transaction, extendedUtxo, options);
+export class SoftwareP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _walletId: WalletId;
 
-    const utxoTxnHex = await extendedUtxo.hex;
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
 
-    if (utxoTxnHex) {
-      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
 
-      transaction.updateInput(transaction.inputsLength - 1, {
-        nonWitnessUtxo,
-      });
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
     }
+  }
+}
+
+export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
@@ -381,8 +421,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    const app = new AppClient(ledgerTransport);
-    const masterFingerPrint = await app.getMasterFingerprint();
+    const masterFingerPrint = this._masterFingerprint ?? (await new AppClient(ledgerTransport).getMasterFingerprint());
 
     const inputDerivation = [
       Buffer.from(this._publicKey, 'hex'),
@@ -419,7 +458,7 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     }
 
     const app = new AppClient(ledgerTransport);
-    const masterFingerPrint = await app.getMasterFingerprint();
+    const masterFingerPrint = this._masterFingerprint ?? (await app.getMasterFingerprint());
     const coinType = this._network === 'Mainnet' ? 0 : 1;
     const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
 
@@ -440,27 +479,126 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
   }
 }
 
-export class P2trAddressContext extends AddressContext {
+export class KeystoneP2wpkhAddressContext extends P2wpkhAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const masterFingerPrint = this._masterFingerprint ?? (await new Bitcoin(keystoneTransport).getMasterFingerprint());
+
+    const inputDerivation = [
+      Buffer.from(this._publicKey, 'hex'),
+      {
+        path: btc.bip32Path(this.getDerivationPath()),
+        fingerprint: parseInt(masterFingerPrint, 16),
+      },
+    ] as [Uint8Array, { path: number[]; fingerprint: number }];
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateInput(+i, {
+        bip32Derivation: [inputDerivation],
+      });
+    }
+
+    const changeIndexes = this.getChangeIndexes(transaction, this._p2wpkh.script);
+
+    for (const i of changeIndexes) {
+      const output = transaction.getOutput(+i);
+      const bip32Derivation = output.bip32Derivation ?? [];
+      if (bip32Derivation.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      bip32Derivation.push(inputDerivation);
+
+      transaction.updateOutput(+i, {
+        bip32Derivation,
+      });
+    }
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2wpkh.script);
+
+    if (Object.keys(signIndexes).length === 0) {
+      return;
+    }
+
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const keystoneBitcoin = new Bitcoin(keystoneTransport);
+
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+
+    const cleanedPsbtBase64 = this.cleanPsbtInputSig(psbtBase64);
+
+    const signedPsbtBase64 = await keystoneBitcoin.signPsbtRaw(cleanedPsbtBase64);
+    const signedPsbt = btc.Transaction.fromPSBT(base64.decode(signedPsbtBase64));
+
+    for (const signIndex of Object.keys(signIndexes)) {
+      const input = signedPsbt.getInput(+signIndex);
+      const signature = input.partialSig?.[0];
+
+      if (!signature) {
+        throw new Error(`Signature not found for input ${signIndex}`);
+      }
+
+      const partialSig = input.partialSig ?? [];
+      partialSig.push(signature);
+
+      transaction.updateInput(+signIndex, {
+        partialSig,
+      });
+    }
+  }
+
+  cleanPsbtInputSig(psbtBase64: string) {
+    // Keystone will reject the PSBT if the partialSig is populated for transactions it needs to sign, so we clear them
+    const psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
+    for (let i = 0; i < psbt.inputsLength; i++) {
+      psbt.updateInput(i, {
+        partialSig: undefined,
+      });
+    }
+
+    return base64.encode(psbt.toPSBT());
+  }
+}
+
+abstract class P2trAddressContext extends AddressContext {
   protected _p2tr!: ReturnType<typeof btc.p2tr>;
 
-  constructor(
-    address: string,
-    publicKey: string,
-    network: NetworkType,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    esploraApiProvider: EsploraProvider,
-  ) {
-    super('p2tr', address, publicKey, network, accountIndex, seedVault, utxoCache, esploraApiProvider);
-    const publicKeyBuff = hex.decode(publicKey);
+  constructor(args: AddressContextConstructorArgs) {
+    super('p2tr', args);
+    const publicKeyBuff = hex.decode(this._publicKey);
 
     try {
-      this._p2tr = btc.p2tr(publicKeyBuff, undefined, getBtcNetworkDefinition(network));
+      this._p2tr = btc.p2tr(publicKeyBuff, undefined, getBtcNetworkDefinition(this._network));
     } catch (err) {
       if (err instanceof Error && err.message.includes('schnorr')) {
         // ledger gives us the non-schnorr pk, so we need to remove the first byte
-        this._p2tr = btc.p2tr(publicKeyBuff.slice(1), undefined, getBtcNetworkDefinition(network));
+        this._p2tr = btc.p2tr(publicKeyBuff.slice(1), undefined, getBtcNetworkDefinition(this._network));
       } else {
         throw err;
       }
@@ -482,19 +620,9 @@ export class P2trAddressContext extends AddressContext {
     });
   }
 
-  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
-    const seedPhrase = await this._seedVault.getSeed();
-    const privateKey = await this.getPrivateKey(seedPhrase);
-
-    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
-
-    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(hex.decode(privateKey), +i, allowedSigHash);
-    }
-  }
-
   protected getDerivationPath(): string {
-    return getTaprootDerivationPath({ index: this._accountIndex, network: this._network });
+    const derivationParams = this.getDerivationParams();
+    return getTaprootDerivationPath({ ...derivationParams, network: this._network });
   }
 
   getIOSizes(): { inputSize: number; outputSize: number } {
@@ -502,19 +630,32 @@ export class P2trAddressContext extends AddressContext {
   }
 }
 
-export class LedgerP2trAddressContext extends P2trAddressContext {
-  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
-    super.addInput(transaction, extendedUtxo, options);
+export class SoftwareP2trAddressContext extends P2trAddressContext {
+  protected _walletId: WalletId;
 
-    const utxoTxnHex = await extendedUtxo.hex;
+  constructor(args: SoftwareAddressContextConstructorArgs) {
+    super(args);
+    this._walletId = args.walletId;
+  }
 
-    if (utxoTxnHex) {
-      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const privateKey = await this.getPrivateKey(this._walletId);
 
-      transaction.updateInput(transaction.inputsLength - 1, {
-        nonWitnessUtxo,
-      });
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
+      transaction.signIdx(privateKey, +i, allowedSigHash);
     }
+  }
+}
+
+export class LedgerP2trAddressContext extends P2trAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
   }
 
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
@@ -523,8 +664,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
       throw new Error('Transport is required for Ledger signing');
     }
 
-    const app = new AppClient(ledgerTransport);
-    const masterFingerPrint = await app.getMasterFingerprint();
+    const masterFingerPrint = this._masterFingerprint ?? (await new AppClient(ledgerTransport).getMasterFingerprint());
 
     const inputDerivation = [
       this._p2tr.tapInternalKey,
@@ -573,7 +713,7 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
     }
 
     const app = new AppClient(ledgerTransport);
-    const masterFingerPrint = await app.getMasterFingerprint();
+    const masterFingerPrint = this._masterFingerprint ?? (await app.getMasterFingerprint());
     const coinType = this._network === 'Mainnet' ? 0 : 1;
     const extendedPublicKey = await app.getExtendedPubkey(`${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'`);
 
@@ -591,6 +731,121 @@ export class LedgerP2trAddressContext extends P2trAddressContext {
         tapKeySig: signature[1].signature,
       });
     }
+  }
+}
+
+export class KeystoneP2trAddressContext extends P2trAddressContext {
+  protected _masterFingerprint?: string;
+
+  constructor(args: HardwareAddressContextConstructorArgs) {
+    super(args);
+
+    this._masterFingerprint = args.masterFingerprint;
+  }
+
+  async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const masterFingerPrint = this._masterFingerprint ?? (await new Bitcoin(keystoneTransport).getMasterFingerprint());
+
+    const inputDerivation = [
+      this._p2tr.tapInternalKey,
+      {
+        hashes: [],
+        der: {
+          path: btc.bip32Path(this.getDerivationPath()),
+          fingerprint: parseInt(masterFingerPrint, 16),
+        },
+      },
+    ] as [
+      Uint8Array,
+      {
+        hashes: Uint8Array[];
+        der: {
+          fingerprint: any;
+          path: any;
+        };
+      },
+    ];
+
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    for (const i of Object.keys(signIndexes)) {
+      const input = transaction.getInput(+i);
+      if (input.bip32Derivation?.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      transaction.updateInput(+i, {
+        tapBip32Derivation: [inputDerivation],
+      });
+    }
+
+    const changeIndexes = this.getChangeIndexes(transaction, this._p2tr.script);
+
+    for (const i of changeIndexes) {
+      const output = transaction.getOutput(+i);
+      const tapBip32Derivation = output.tapBip32Derivation ?? [];
+      if (tapBip32Derivation.some((derivation) => areByteArraysEqual(derivation[0], inputDerivation[0]))) {
+        continue;
+      }
+
+      tapBip32Derivation.push(inputDerivation);
+
+      transaction.updateOutput(+i, {
+        tapBip32Derivation,
+      });
+    }
+  }
+
+  async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
+    const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
+
+    if (Object.keys(signIndexes).length === 0) {
+      return;
+    }
+
+    const { keystoneTransport } = options;
+    if (!keystoneTransport) {
+      throw new Error('keystoneTransport is required for Keystone signing');
+    }
+
+    const keystoneBitcoin = new Bitcoin(keystoneTransport);
+    const psbt = transaction.toPSBT(0);
+    const psbtBase64 = base64.encode(psbt);
+
+    const cleanedPsbtBase64 = this.cleanPsbtInputSig(psbtBase64);
+
+    const signedPsbtBase64 = await keystoneBitcoin.signPsbtRaw(cleanedPsbtBase64);
+    const signedPsbt = btc.Transaction.fromPSBT(base64.decode(signedPsbtBase64));
+
+    for (const signIndex of Object.keys(signIndexes)) {
+      const input = signedPsbt.getInput(+signIndex);
+      const signature = input.tapKeySig;
+
+      if (!signature) {
+        throw new Error(`Signature not found for input ${signIndex}`);
+      }
+
+      transaction.updateInput(+signIndex, {
+        tapKeySig: signature,
+      });
+    }
+  }
+
+  cleanPsbtInputSig(psbtBase64: string) {
+    // Keystone will reject the PSBT if the partialSig is populated for transactions it needs to sign, so we clear them
+    const psbt = btc.Transaction.fromPSBT(base64.decode(psbtBase64));
+    for (let i = 0; i < psbt.inputsLength; i++) {
+      psbt.updateInput(i, {
+        partialSig: undefined,
+      });
+    }
+
+    return base64.encode(psbt.toPSBT());
   }
 }
 

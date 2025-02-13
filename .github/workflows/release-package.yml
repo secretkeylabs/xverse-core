@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - develop
-    types: [ closed ]
+    types: [closed]
 
 jobs:
   publish-gpr:
@@ -14,10 +14,10 @@ jobs:
       packages: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           registry-url: https://npm.pkg.github.com/
       - run: |
           npm ci
@@ -34,15 +34,22 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - uses: actions/checkout@v4
       - id: publish-linked-draft-release
         name: Publish linked draft release
         env:
           GH_TOKEN: ${{ github.token }}
           PR_ID: ${{ github.event.pull_request.number }}
-          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ', ') }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
         run: |
-          # find the github release id from labels
-          RELEASE_ID=$(echo $PR_LABELS | sed 's/.*RID_\([^,]*\).*/\1/')
+          # find the target commitish of the latest release matching our tag
+          TAG=$(echo $SOURCE_BRANCH | sed 's/release\/\(.*\)/\1/')
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/{owner}/{repo}/releases > releases.json
+          TAG_RC=$(cat releases.json | jq -r ".[] | select(.tag_name | match(\"$TAG\")) | .tag_name" | head -1)
+          RELEASE_ID=$(cat releases.json | jq -r ".[] | select(.tag_name==\"$TAG_RC\") | .id")
           # publish the github release
           gh api \
             --method PATCH \

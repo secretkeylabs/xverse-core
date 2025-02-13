@@ -1,10 +1,11 @@
+import { hex } from '@scure/base';
+import * as bip32 from '@scure/bip32';
 import { createSha2Hash } from '@stacks/encryption';
 import { makeAuthResponse } from '@stacks/wallet-sdk';
-import * as bip39 from 'bip39';
-import { deriveStxAddressChain } from '../account';
+import { getStxAddressKeyChain } from '../account';
 import { GAIA_HUB_URL } from '../constant';
-import { bip32 } from '../utils/bip32';
 import { StacksMainnet } from '../types';
+import { DerivationType } from '../vaults';
 
 export type AuthRequest = {
   payload: {
@@ -19,28 +20,24 @@ export type AuthRequest = {
 };
 
 export async function createAuthResponse(
-  seedPhrase: string,
+  rootNode: bip32.HDKey,
+  derivationType: DerivationType,
   accountIndex: number,
   authRequest: AuthRequest,
   additionalData?: Record<string, any>,
 ): Promise<string | undefined> {
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const rootNode = bip32.fromSeed(Buffer.from(seed));
-  const deriveStxAddressKeychain = deriveStxAddressChain(StacksMainnet, BigInt(accountIndex));
+  const { privateKey } = getStxAddressKeyChain(StacksMainnet, rootNode, derivationType, BigInt(accountIndex));
 
-  const { privateKey } = deriveStxAddressKeychain(rootNode);
-
-  const identitiesKeychain = rootNode.derivePath(`m/888'/0'`);
-  const publicKeyHex = Buffer.from(identitiesKeychain.publicKey.toString('hex'));
+  const identitiesKeychain = rootNode.derive(`m/888'/0'`);
 
   const sha2Hash = await createSha2Hash();
 
-  const saltData = await sha2Hash.digest(publicKeyHex, 'sha256');
+  const saltData = await sha2Hash.digest(identitiesKeychain.publicKey!, 'sha256');
   const salt = saltData.toString();
 
-  const identityKeychain = identitiesKeychain.deriveHardened(0);
-  const dataPrivateKey = identityKeychain.privateKey?.toString('hex');
-  const appsKey = identityKeychain.deriveHardened(0).toBase58();
+  const identityKeychain = identitiesKeychain.deriveChild(bip32.HARDENED_OFFSET + 0);
+  const dataPrivateKey = identityKeychain.privateKey;
+  const appsKey = identityKeychain.deriveChild(bip32.HARDENED_OFFSET + 0).privateExtendedKey;
 
   if (!dataPrivateKey) {
     return;
@@ -57,7 +54,7 @@ export async function createAuthResponse(
       stxPrivateKey: privateKey,
       index: accountIndex,
       salt,
-      dataPrivateKey,
+      dataPrivateKey: hex.encode(dataPrivateKey),
       appsKey,
     },
     additionalData,

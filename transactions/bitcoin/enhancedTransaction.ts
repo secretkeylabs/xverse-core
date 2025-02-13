@@ -1,8 +1,9 @@
-import { SigHash, Transaction, TxOpts } from '@scure/btc-signer';
+import { SigHash, Transaction } from '@scure/btc-signer';
 
 import { getRunesClient } from '../../api/runes/provider';
 import { isInscriptionsAndRunesCompatible } from '../btcNetwork';
 
+import { TxOpts } from '@scure/btc-signer/transaction';
 import {
   applyScriptActions,
   applySendBtcActionsAndFee,
@@ -167,7 +168,7 @@ export class EnhancedTransaction {
     const { address, script, scriptHex, ...feeOutput } = nonScriptOutputs.pop()!;
 
     const enhancedInputs: EnhancedInput[] = await Promise.all(
-      inputs.map((i) => mapInputToEnhancedInput(i, true, SigHash.ALL)),
+      inputs.map((i) => mapInputToEnhancedInput(i, true, false, SigHash.ALL)),
     );
 
     return {

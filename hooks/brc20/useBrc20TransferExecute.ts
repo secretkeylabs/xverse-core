@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react';
-
-import { CoreError } from '../../utils/coreError';
-
-import { Transport } from '../../ledger';
+import { KeystoneTransport } from '../../keystone';
+import { LedgerTransport } from '../../ledger';
 import { TransactionContext } from '../../transactions/bitcoin';
 import { BRC20ErrorCode, ExecuteTransferProgressCodes, brc20TransferExecute } from '../../transactions/brc20';
+import { CoreError } from '../../utils/coreError';
 
 type Props = {
   context: TransactionContext;
@@ -35,7 +34,7 @@ const useBrc20TransferExecute = (props: Props) => {
   const [errorCode, setErrorCode] = useState<BRC20ErrorCode | undefined>();
 
   const executeTransfer = useCallback(
-    (executeOptions?: { ledgerTransport?: Transport }) => {
+    (executeOptions?: { ledgerTransport?: LedgerTransport; keystoneTransport?: KeystoneTransport }) => {
       if (running) return;
 
       const innerProps = {
@@ -56,6 +55,7 @@ const useBrc20TransferExecute = (props: Props) => {
         try {
           const transferGenerator = await brc20TransferExecute(innerProps, context, {
             ledgerTransport: executeOptions?.ledgerTransport,
+            keystoneTransport: executeOptions?.keystoneTransport,
           });
 
           let done = false;

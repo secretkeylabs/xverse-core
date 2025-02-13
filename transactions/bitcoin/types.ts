@@ -1,5 +1,6 @@
 import * as btc from '@scure/btc-signer';
-import { Transport } from '../../ledger';
+import { KeystoneTransport } from '../../keystone';
+import { LedgerTransport } from '../../ledger';
 import { Artifact, RareSatsType } from '../../types';
 import { ExtendedDummyUtxo, ExtendedUtxo } from './extendedUtxo';
 
@@ -77,7 +78,8 @@ export type TransactionOptions = {
 
 export type CompilationOptions = {
   rbfEnabled?: boolean;
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
 };
 
 export type TransactionSummary = {
@@ -93,7 +95,8 @@ export type TransactionSummary = {
 };
 
 export type PSBTCompilationOptions = {
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
   finalize?: boolean;
 };
 
@@ -123,7 +126,7 @@ export type TransactionOutput = {
 };
 
 export type TransactionPubKeyOutput = {
-  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns';
+  type: 'pk' | 'ms' | 'tr_ms' | 'tr_ns' | 'p2a';
   script: string[];
   scriptHex: string;
   pubKeys: string[];
@@ -150,6 +153,7 @@ export type EnhancedInput = {
   satributes: IOSatribute[];
   sigHash?: btc.SigHash | undefined;
   walletWillSign: boolean;
+  isPayToAnchor: boolean;
 };
 export type EnhancedOutput = TransactionOutput | TransactionPubKeyOutput | TransactionScriptOutput;
 
@@ -172,6 +176,7 @@ export type InputMetadata = {
   inputs: {
     extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo;
     sigHash?: btc.SigHash | undefined;
+    isPayToAnchor: boolean;
   }[];
   isSigHashAll: boolean;
   hasSigHashNone: boolean;

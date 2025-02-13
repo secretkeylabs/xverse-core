@@ -1,4 +1,6 @@
-export type AccountType = 'ledger' | 'software';
+import { WalletId } from '../vaults';
+
+export type AccountType = 'ledger' | 'keystone' | 'software';
 
 export type BtcPaymentType = 'nested' | 'native';
 
@@ -7,6 +9,7 @@ export type BtcAddressType = 'nested' | 'native' | 'taproot';
 export type BtcAddress = {
   address: string;
   publicKey: string;
+  xpub?: string;
 };
 
 export type AccountBtcAddresses = {
@@ -27,7 +30,16 @@ export type Account = {
   bnsName?: string;
 
   btcAddresses: AccountBtcAddresses;
-};
+} & (
+  | {
+      accountType: 'software';
+      walletId: WalletId;
+    }
+  | {
+      accountType: Exclude<AccountType, 'software'>;
+      walletId?: never;
+    }
+);
 
 export type CoinsMarket = {
   id: string;

@@ -3,11 +3,7 @@ import * as bip32 from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import * as btc from '@scure/btc-signer';
 import { vi } from 'vitest';
-import { UtxoCache } from '../../../api';
-import EsploraProvider from '../../../api/esplora/esploraAPiProvider';
-import { SeedVault } from '../../../seedVault';
 import { AddressContext } from '../../../transactions/bitcoin/context';
-import type { SupportedAddressType } from '../../../transactions/bitcoin/types';
 
 export const seedPhrase = 'action action action action action action action action action action action action';
 export const rootKeyPair = bip32.HDKey.fromMasterSeed(bip39.mnemonicToSeedSync(seedPhrase));
@@ -44,18 +40,6 @@ const createAddressItem = (index: number) => {
 export const addresses = [createAddressItem(0), createAddressItem(1), createAddressItem(2)];
 
 export class TestAddressContext extends AddressContext {
-  constructor(
-    type: SupportedAddressType,
-    address: string,
-    publicKey: string,
-    accountIndex: number,
-    seedVault: SeedVault,
-    utxoCache: UtxoCache,
-    esploraProvider: EsploraProvider,
-  ) {
-    super(type, address, publicKey, 'Mainnet', accountIndex, seedVault, utxoCache, esploraProvider);
-  }
-
   getUtxos = vi.fn();
 
   getCommonUtxos = vi.fn();

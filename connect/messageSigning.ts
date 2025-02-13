@@ -1,15 +1,14 @@
 import * as secp256k1 from '@noble/secp256k1';
 import { hex } from '@scure/base';
+import { HDKey } from '@scure/bip32';
 import * as btc from '@scure/btc-signer';
-import * as bip39 from 'bip39';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { crypto } from 'bitcoinjs-lib';
 import { magicHash, signAsync } from 'bitcoinjs-message';
 import { encode } from 'varuint-bitcoin';
 import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../account';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
-import { Account, MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
-import { bip32 } from '../utils/bip32';
+import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 
 /**
  *
@@ -29,7 +28,7 @@ function encodeVarString(b: Uint8Array) {
   return Buffer.concat([encode(b.byteLength), b]);
 }
 
-const getSigningPk = (type: AddressType, privateKey: string | Buffer) => {
+const getSigningPk = (type: AddressType, privateKey: Uint8Array) => {
   switch (type) {
     case AddressType.p2tr: {
       return secp256k1.schnorr.getPublicKey(privateKey);
@@ -68,10 +67,10 @@ export const legacyHash = (message: string) => magicHash(message);
 
 export const signMessageECDSA = async (
   message: string,
-  privateKey: Buffer,
+  privateKey: Uint8Array,
   addressType: AddressType.p2sh | AddressType.p2wpkh,
 ): Promise<SignedMessage> => {
-  const signature = await signAsync(message, privateKey, false, {
+  const signature = await signAsync(message, Buffer.from(privateKey), false, {
     segwitType: addressType === AddressType.p2sh ? 'p2sh(p2wpkh)' : 'p2wpkh',
   });
   return {
@@ -82,7 +81,7 @@ export const signMessageECDSA = async (
 
 type SignBip322Options = {
   message: string;
-  privateKey: Buffer;
+  privateKey: Uint8Array;
   addressType: AddressType;
   network: NetworkType;
 };
@@ -93,8 +92,7 @@ export const signMessageBip322 = async ({
   network,
   privateKey,
 }: SignBip322Options): Promise<SignedMessage> => {
-  const privateKeyHex = privateKey?.toString('hex');
-  const publicKey = getSigningPk(addressType, privateKeyHex);
+  const publicKey = getSigningPk(addressType, privateKey);
   const txScript = getSignerScript(addressType, publicKey, getBtcNetwork(network));
   const inputHash = hex.decode('0000000000000000000000000000000000000000000000000000000000000000');
   const txVersion = 0;
@@ -133,7 +131,7 @@ export const signMessageBip322 = async ({
     redeemScript: addressType === AddressType.p2sh ? txScript.redeemScript : Buffer.alloc(0),
   });
   txToSign.addOutput({ script: btc.Script.encode(['RETURN']), amount: BigInt(0) });
-  txToSign.sign(hex.decode(privateKeyHex));
+  txToSign.sign(privateKey);
   txToSign.finalize();
 
   // formulate-signature
@@ -150,50 +148,31 @@ export const signMessageBip322 = async ({
   }
 };
 
-function getSigningDerivationPath(accounts: Array<Account>, address: string, network: NetworkType): string {
-  // TODO: switch to btc.Address.decode
-  const { type } = getAddressInfo(address);
-
-  if (accounts.length <= 0) {
-    throw new Error('Invalid accounts list');
+function getSigningDerivationPath(
+  addressType: AddressType,
+  accountIndex: bigint,
+  index: bigint,
+  network: NetworkType,
+): string {
+  switch (addressType) {
+    case AddressType.p2sh:
+      return getNestedSegwitDerivationPath({ accountIndex, index, network });
+    case AddressType.p2wpkh:
+      return getNativeSegwitDerivationPath({ accountIndex, index, network });
+    case AddressType.p2tr:
+      return getTaprootDerivationPath({ accountIndex, index, network });
+    default:
+      throw new Error('Unsupported Address Type');
   }
-
-  let path = '';
-
-  for (const account of accounts) {
-    if (type === 'p2sh') {
-      if (account.btcAddresses.nested?.address === address) {
-        path = getNestedSegwitDerivationPath({ index: BigInt(account.id), network });
-        break;
-      }
-    } else if (type === 'p2wpkh') {
-      if (account.btcAddresses.native?.address === address) {
-        path = getNativeSegwitDerivationPath({ index: BigInt(account.id), network });
-        break;
-      }
-    } else if (type === 'p2tr') {
-      if (account.btcAddresses.taproot.address === address) {
-        path = getTaprootDerivationPath({ index: BigInt(account.id), network });
-        break;
-      }
-    } else {
-      throw new Error('Unsupported address type');
-    }
-  }
-
-  if (path.length <= 0) {
-    throw new Error('Address not found');
-  }
-
-  return path;
 }
 
 interface SingMessageOptions {
-  accounts: Account[];
+  accountIndex: bigint;
+  index: bigint;
   address: string;
   message: string;
   network: NetworkType;
-  seedPhrase: string;
+  rootNode: HDKey;
   protocol?: MessageSigningProtocols;
 }
 
@@ -201,22 +180,18 @@ export const signMessage = async ({
   address,
   message,
   network,
-  accounts,
-  seedPhrase,
+  accountIndex,
+  index,
+  rootNode,
   protocol,
 }: SingMessageOptions): Promise<SignedMessage> => {
   /**
    * Derive Private Key for signing
    */
-  if (!accounts?.length) {
-    throw new Error('a List of Accounts are required to derive the correct Private Key');
-  }
   // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  const master = bip32.fromSeed(seed);
-  const signingDerivationPath = getSigningDerivationPath(accounts, address, network);
-  const child = master.derivePath(signingDerivationPath);
+  const signingDerivationPath = getSigningDerivationPath(type, accountIndex, index, network);
+  const child = rootNode.derive(signingDerivationPath);
   /**
    * sing Message with Protocol
    */
