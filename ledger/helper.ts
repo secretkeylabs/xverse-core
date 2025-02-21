@@ -46,7 +46,7 @@ export async function getMasterFingerPrint(transport: LedgerTransport): Promise<
   @returns the public key in compressed format
 **/
 export function getPublicKeyFromXpubAtIndex(xpub: string, index: number): Buffer {
-  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`0/${index}`);
+  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`m/0/${index}`);
   return Buffer.from(publicKey!);
 }
 
