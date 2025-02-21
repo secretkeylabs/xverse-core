@@ -1,6 +1,7 @@
 import Bitcoin from '@keystonehq/hw-app-bitcoin';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { taprootTweakPrivKey } from '@scure/btc-signer/utils';
 import { Mutex } from 'async-mutex';
 import { isAxiosError } from 'axios';
 import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
@@ -219,7 +220,7 @@ export abstract class AddressContext {
   protected getSignIndexes(
     transaction: btc.Transaction,
     options: SignOptions,
-    witnessScript?: Uint8Array,
+    lockingScript?: Uint8Array,
   ): Record<number, btc.SigHash[] | undefined> {
     const signIndexes: Record<number, btc.SigHash[] | undefined> = {};
 
@@ -246,11 +247,11 @@ export abstract class AddressContext {
         const input = transaction.getInput(i);
 
         const witnessLockingScript = input.witnessUtxo?.script;
-        const matchesWitnessUtxo = areByteArraysEqual(witnessLockingScript, witnessScript);
+        const matchesWitnessUtxo = areByteArraysEqual(witnessLockingScript, lockingScript);
 
         const nonWitnessLockingScript =
           (input.index !== undefined && input.nonWitnessUtxo?.outputs[input.index]?.script) || undefined;
-        const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, witnessScript);
+        const matchesNonWitnessUtxo = areByteArraysEqual(nonWitnessLockingScript, lockingScript);
 
         if (matchesWitnessUtxo || matchesNonWitnessUtxo) {
           signIndexes[i] = undefined;
@@ -640,11 +641,25 @@ export class SoftwareP2trAddressContext extends P2trAddressContext {
 
   async signInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const privateKey = await this.getPrivateKey(this._walletId);
+    const tweakedPrivateKey = taprootTweakPrivKey(privateKey);
 
     const signIndexes = this.getSignIndexes(transaction, options, this._p2tr.script);
 
     for (const [i, allowedSigHash] of Object.entries(signIndexes)) {
-      transaction.signIdx(privateKey, +i, allowedSigHash);
+      try {
+        transaction.signIdx(privateKey, +i, allowedSigHash);
+      } catch (e) {
+        if (e.message !== 'No taproot scripts signed') {
+          throw e;
+        }
+
+        // couldn't sign with private key, try sign with tweaked key
+        try {
+          transaction.signIdx(tweakedPrivateKey, +i, allowedSigHash);
+        } catch {
+          throw e;
+        }
+      }
     }
   }
 }

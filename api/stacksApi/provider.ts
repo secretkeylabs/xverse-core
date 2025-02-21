@@ -1,17 +1,18 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { API_TIMEOUT_MILLI, HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../../constant';
-import { StacksNetwork, NftHistoryResponse, StacksMainnet } from '../../types';
 import {
   AccountDataResponse,
   AddressTransaction,
   AddressTransactionEventListResponse,
   AddressTransactionsV2ListResponse,
+  GetRawTransactionResult,
   MempoolTransaction,
   MempoolTransactionListResponse,
   Transaction,
-  GetRawTransactionResult,
 } from '@stacks/stacks-blockchain-api-types';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import BigNumber from 'bignumber.js';
+import { API_TIMEOUT_MILLI, HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../../constant';
+import { NftHistoryResponse, StacksMainnet, StacksNetwork } from '../../types';
+import { AxiosRateLimit } from '../../utils/axiosRateLimit';
 
 export interface StacksApiProviderOptions {
   network: StacksNetwork;
@@ -22,6 +23,8 @@ const OFFSET = 0;
 
 export class StacksApiProvider {
   StacksApi: AxiosInstance;
+
+  rateLimiter: AxiosRateLimit;
 
   _network: StacksNetwork;
 
@@ -39,6 +42,11 @@ export class StacksApiProvider {
 
     this._network = network;
     this.StacksApi = axios.create(axiosConfig);
+
+    // hiro has a max RPS of 50
+    this.rateLimiter = new AxiosRateLimit(this.StacksApi, {
+      maxRPS: 50,
+    });
   }
 
   private async httpGet<T>(

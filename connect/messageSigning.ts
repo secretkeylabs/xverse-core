@@ -9,6 +9,7 @@ import { encode } from 'varuint-bitcoin';
 import { getNativeSegwitDerivationPath, getNestedSegwitDerivationPath, getTaprootDerivationPath } from '../account';
 import { BitcoinNetwork, getBtcNetwork } from '../transactions/btcNetwork';
 import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
+import { DerivationType } from '../vaults';
 
 /**
  *
@@ -168,7 +169,7 @@ function getSigningDerivationPath(
 
 interface SingMessageOptions {
   accountIndex: bigint;
-  index: bigint;
+  derivationType: DerivationType;
   address: string;
   message: string;
   network: NetworkType;
@@ -181,7 +182,7 @@ export const signMessage = async ({
   message,
   network,
   accountIndex,
-  index,
+  derivationType,
   rootNode,
   protocol,
 }: SingMessageOptions): Promise<SignedMessage> => {
@@ -190,7 +191,10 @@ export const signMessage = async ({
    */
   // TODO: switch to btc.Address.decode
   const { type } = getAddressInfo(address);
-  const signingDerivationPath = getSigningDerivationPath(type, accountIndex, index, network);
+
+  const accountLevelIndex = derivationType === 'account' ? accountIndex : 0n;
+  const leafIndex = derivationType === 'index' ? accountIndex : 0n;
+  const signingDerivationPath = getSigningDerivationPath(type, accountLevelIndex, leafIndex, network);
   const child = rootNode.derive(signingDerivationPath);
   /**
    * sing Message with Protocol

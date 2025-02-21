@@ -22,7 +22,7 @@ describe('Bip322 Signatures', () => {
     const signedMessage = await signMessage({
       message,
       accountIndex: 0n,
-      index: 0n,
+      derivationType: 'index',
       network: 'Mainnet',
       address: walletAccounts[0].btcAddresses.taproot.address,
       protocol: MessageSigningProtocols.BIP322,
@@ -53,7 +53,7 @@ describe('Bip322 Signatures', () => {
     const signedMessage = await signMessage({
       message,
       accountIndex: 0n,
-      index: 0n,
+      derivationType: 'index',
       network: 'Mainnet',
       address: walletAccounts[0].btcAddresses.nested!.address,
       rootNode: testRootNode,
@@ -90,7 +90,7 @@ describe('ECDSA Signatures', () => {
     const signedMessage = await signMessage({
       message,
       accountIndex: 0n,
-      index: 0n,
+      derivationType: 'index',
       network: 'Mainnet',
       address: walletAccounts[0].btcAddresses.nested!.address,
       rootNode: testRootNode,
@@ -120,7 +120,7 @@ describe('ECDSA Signatures', () => {
     const signedMessage = await signMessage({
       message,
       accountIndex: 0n,
-      index: 0n,
+      derivationType: 'index',
       network: 'Mainnet',
       address: walletAccounts[0].btcAddresses.native!.address,
       rootNode: testRootNode,
