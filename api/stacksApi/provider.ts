@@ -67,7 +67,7 @@ export class StacksApiProvider {
     const apiUrl = `/extended/v1/address/${stxAddress}/balances`;
     const response = await this.httpGet<AddressBalanceResponse>(apiUrl);
     const stacksBalance = response.stx;
-    const availableBalance = new BigNumber(stacksBalance.balance);
+    const balance = new BigNumber(stacksBalance.balance);
     const lockedBalance = new BigNumber(stacksBalance.locked);
 
     // @stacks/stacks-blockchain-api-types latest version is missing these two properties
@@ -76,9 +76,9 @@ export class StacksApiProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const unconfirmedOutbound = new BigNumber((stacksBalance as any).pending_balance_outbound);
     return {
-      availableBalance,
+      availableBalance: balance.minus(lockedBalance),
       lockedBalance,
-      totalBalance: availableBalance.plus(lockedBalance).plus(unconfirmedInbound).minus(unconfirmedOutbound),
+      totalBalance: balance.plus(unconfirmedInbound).minus(unconfirmedOutbound),
     };
   };
 
