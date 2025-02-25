@@ -64,7 +64,7 @@ export class StacksApiProvider {
   }
 
   getAddressBalance = async (stxAddress: string) => {
-    const apiUrl = `/extended/v1/${stxAddress}/balances`;
+    const apiUrl = `/extended/v1/address/${stxAddress}/balances`;
     const response = await this.httpGet<AddressBalanceResponse>(apiUrl);
     const stacksBalance = response.stx;
     const availableBalance = new BigNumber(stacksBalance.balance);
