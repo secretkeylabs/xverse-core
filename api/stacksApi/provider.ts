@@ -76,7 +76,7 @@ export class StacksApiProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const unconfirmedOutbound = new BigNumber((stacksBalance as any).pending_balance_outbound);
     return {
-      availableBalance: balance.minus(lockedBalance),
+      availableBalance: balance.minus(lockedBalance).minus(unconfirmedOutbound),
       lockedBalance,
       totalBalance: balance.plus(unconfirmedInbound).minus(unconfirmedOutbound),
     };
