@@ -14,6 +14,7 @@ export type StxAddressData = {
   balance: BigNumber;
   availableBalance: BigNumber;
   locked: BigNumber;
+  nonce?: number;
   transactions: Array<TransactionData>;
   totalTransactions?: number;
 };
