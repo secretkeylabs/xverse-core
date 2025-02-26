@@ -1,4 +1,5 @@
 import {
+  AccountDataResponse,
   AddressBalanceResponse,
   AddressTransaction,
   AddressTransactionEventListResponse,
@@ -80,6 +81,12 @@ export class StacksApiProvider {
       lockedBalance,
       totalBalance: balance.plus(unconfirmedInbound).minus(unconfirmedOutbound),
     };
+  };
+
+  getAddressNonce = async (stxAddress: string) => {
+    const apiUrl = `/v2/accounts/${stxAddress}?proof=0`;
+    const response = await this.httpGet<AccountDataResponse>(apiUrl);
+    return response.nonce;
   };
 
   getAddressTransactions = async ({

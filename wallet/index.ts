@@ -81,7 +81,8 @@ const getBtcAddressBalanceAndHistory = async (btcClient: EsploraProvider, addres
 
 const getStxAddressBalanceAndHistory = async (stxClient: StacksApiProvider, address: string) => {
   const balance = await stxClient.getAddressBalance(address);
-  const hasHistory = balance.totalBalance.gt(0);
+  const nonce = await stxClient.getAddressNonce(address);
+  const hasHistory = balance.totalBalance.gt(0) || nonce > 0;
   return { balance: BigInt(balance.totalBalance.toString()), hasHistory };
 };
 
