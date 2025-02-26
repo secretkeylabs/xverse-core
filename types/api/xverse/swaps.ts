@@ -111,6 +111,8 @@ export type GetQuotesRequest = {
   to: TokenBasic;
   /** Number as string. The amount of base tokens that they want to swap. */
   amount: string;
+  /** The user's ordinals address for sats-terminal quotes*/
+  ordAddress?: string;
 };
 
 export type GetQuotesResponse = {
