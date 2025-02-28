@@ -1,5 +1,6 @@
 import {
   AccountDataResponse,
+  AddressBalanceResponse,
   AddressTransaction,
   AddressTransactionEventListResponse,
   AddressTransactionsV2ListResponse,
@@ -64,16 +65,28 @@ export class StacksApiProvider {
   }
 
   getAddressBalance = async (stxAddress: string) => {
+    const apiUrl = `/extended/v1/address/${stxAddress}/balances`;
+    const response = await this.httpGet<AddressBalanceResponse>(apiUrl);
+    const stacksBalance = response.stx;
+    const balance = new BigNumber(stacksBalance.balance);
+    const lockedBalance = new BigNumber(stacksBalance.locked);
+
+    // @stacks/stacks-blockchain-api-types latest version is missing these two properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unconfirmedInbound = new BigNumber((stacksBalance as any).pending_balance_inbound);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unconfirmedOutbound = new BigNumber((stacksBalance as any).pending_balance_outbound);
+    return {
+      availableBalance: balance.minus(lockedBalance).minus(unconfirmedOutbound),
+      lockedBalance,
+      totalBalance: balance.plus(unconfirmedInbound).minus(unconfirmedOutbound),
+    };
+  };
+
+  getAddressNonce = async (stxAddress: string) => {
     const apiUrl = `/v2/accounts/${stxAddress}?proof=0`;
     const response = await this.httpGet<AccountDataResponse>(apiUrl);
-    const availableBalance = new BigNumber(response.balance);
-    const lockedBalance = new BigNumber(response.locked);
-    return {
-      availableBalance,
-      lockedBalance,
-      totalBalance: availableBalance.plus(lockedBalance),
-      nonce: response.nonce,
-    };
+    return response.nonce;
   };
 
   getAddressTransactions = async ({
