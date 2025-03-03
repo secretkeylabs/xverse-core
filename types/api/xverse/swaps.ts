@@ -30,6 +30,7 @@ export type Token = TokenBasic & {
 
 export type Quote = {
   provider: Provider;
+  bestMarketplaceProvider?: Provider;
   from: TokenBasic;
   to: TokenBasic;
   slippageSupported: boolean;
