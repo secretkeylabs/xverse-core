@@ -11,11 +11,11 @@ export type EncryptionVaultData = {
 };
 
 export class EncryptionVault {
-  private readonly secureStorageAdapter: StorageAdapter;
+  private readonly sessionStorageAdapter: StorageAdapter;
 
   private readonly cryptoUtilsAdapter: CryptoUtilsAdapter;
 
-  private readonly commonStorageAdapter: StorageAdapter;
+  private readonly encryptedDataStorageAdapter: StorageAdapter;
 
   private readonly saveMutex = new Mutex();
 
@@ -25,9 +25,9 @@ export class EncryptionVault {
   };
 
   constructor(config: VaultConfig) {
-    this.secureStorageAdapter = config.secureStorageAdapter;
+    this.sessionStorageAdapter = config.sessionStorageAdapter;
     this.cryptoUtilsAdapter = config.cryptoUtilsAdapter;
-    this.commonStorageAdapter = config.commonStorageAdapter;
+    this.encryptedDataStorageAdapter = config.encryptedDataStorageAdapter;
   }
 
   initialise = async (password: string) => {
@@ -42,29 +42,58 @@ export class EncryptionVault {
     await this.getEncryptionKeysForData('data');
   };
 
+  initialiseWithHashAndSalt = async (passwordHash: string, salt: string) => {
+    const encryptionVaultData: EncryptionVaultData = {
+      seedEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
+      dataEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
+      dataSalt: await this.cryptoUtilsAdapter.generateRandomBytes(32),
+    };
+    await this.storeEncryptedKeysWithHashAndSalt(encryptionVaultData, passwordHash, salt);
+
+    // load data encryption keys into memory
+    await this.getEncryptionKeysForData('data');
+  };
+
   changePassword = async (password: string) => {
     const encryptionKeys = await this.getEncryptionKeys();
     await this.storeEncryptedKeys(encryptionKeys, password, true);
   };
 
-  unlockVault = async (password: string): Promise<void> => {
-    const encryptedKeys = await this.commonStorageAdapter.get(StorageKeys.encryptionVault);
-    const salt = await this.commonStorageAdapter.get(StorageKeys.passwordSalt);
+  unlockWithPasswordHash = async (passwordHash: string) => {
+    const encryptedKeys = await this.encryptedDataStorageAdapter.get(StorageKeys.encryptionVault);
+    if (!encryptedKeys) {
+      throw new Error('Encryption vault not initialised.');
+    }
+
+    try {
+      await this.cryptoUtilsAdapter.decrypt(encryptedKeys, passwordHash);
+      await this.sessionStorageAdapter.set(StorageKeys.passwordHash, passwordHash);
+
+      // load data encryption keys into memory
+      await this.getEncryptionKeysForData('data');
+    } catch {
+      throw new Error('Wrong password hash');
+    }
+  };
+
+  unlockVault = async (password: string, lockUnlockedVaultOnFailure: boolean): Promise<void> => {
+    const salt = await this.encryptedDataStorageAdapter.get(StorageKeys.passwordSalt);
+    const encryptedKeys = await this.encryptedDataStorageAdapter.get(StorageKeys.encryptionVault);
 
     if (salt && encryptedKeys) {
       try {
         const passwordHash = await this.cryptoUtilsAdapter.hash(password, salt);
-        await this.cryptoUtilsAdapter.decrypt(encryptedKeys, passwordHash);
-        await this.secureStorageAdapter.set(StorageKeys.passwordHash, passwordHash);
-
-        // load data encryption keys into memory
-        await this.getEncryptionKeysForData('data');
-      } catch (err) {
-        await this.lockVault();
+        await this.unlockWithPasswordHash(passwordHash);
+      } catch {
+        if (lockUnlockedVaultOnFailure) {
+          await this.lockVault();
+        }
         throw new Error('Wrong password');
       }
     } else {
-      await this.lockVault();
+      if (lockUnlockedVaultOnFailure) {
+        await this.lockVault();
+      }
       throw new Error('Empty vault');
     }
   };
@@ -73,23 +102,23 @@ export class EncryptionVault {
    * This will lock the encryption vault and the seed vault, but the key value vault will remain unlocked
    */
   softLockVault = async () => {
-    await this.secureStorageAdapter.remove(StorageKeys.passwordHash);
+    await this.sessionStorageAdapter.remove(StorageKeys.passwordHash);
   };
 
   lockVault = async () => {
-    await this.secureStorageAdapter.remove(StorageKeys.passwordHash);
-    await this.secureStorageAdapter.remove(StorageKeys.encryptionVaultDataKeys);
+    await this.sessionStorageAdapter.remove(StorageKeys.passwordHash);
+    await this.sessionStorageAdapter.remove(StorageKeys.encryptionVaultDataKeys);
     this.dataEncryptionKeys = undefined;
   };
 
   isVaultUnlocked = async () => {
-    const passwordHash = await this.secureStorageAdapter.get(StorageKeys.passwordHash);
+    const passwordHash = await this.sessionStorageAdapter.get(StorageKeys.passwordHash);
     return !!passwordHash;
   };
 
   isInitialised = async () => {
-    const encryptedKeys = await this.commonStorageAdapter.get(StorageKeys.encryptionVault);
-    const salt = await this.commonStorageAdapter.get(StorageKeys.passwordSalt);
+    const encryptedKeys = await this.encryptedDataStorageAdapter.get(StorageKeys.encryptionVault);
+    const salt = await this.encryptedDataStorageAdapter.get(StorageKeys.passwordSalt);
     return !!encryptedKeys && !!salt;
   };
 
@@ -123,7 +152,7 @@ export class EncryptionVault {
     if (encryptionKeyType === 'data') {
       if (!this.dataEncryptionKeys) {
         // check for cached dataEncryptionKeys in session storage
-        const dataEncryptionKeys = await this.secureStorageAdapter.get(StorageKeys.encryptionVaultDataKeys);
+        const dataEncryptionKeys = await this.sessionStorageAdapter.get(StorageKeys.encryptionVaultDataKeys);
         if (dataEncryptionKeys) {
           try {
             const parsedEncryptionKeys = JSON.parse(dataEncryptionKeys);
@@ -159,19 +188,19 @@ export class EncryptionVault {
     if (encryptionKeyType === 'data') {
       // we keep these in memory for faster access for low risk data items
       this.dataEncryptionKeys = result;
-      await this.secureStorageAdapter.set(StorageKeys.encryptionVaultDataKeys, JSON.stringify(result));
+      await this.sessionStorageAdapter.set(StorageKeys.encryptionVaultDataKeys, JSON.stringify(result));
     }
 
     return result;
   };
 
   private getEncryptionKeys = async (): Promise<EncryptionVaultData> => {
-    const encryptedKeys = await this.commonStorageAdapter.get(StorageKeys.encryptionVault);
+    const encryptedKeys = await this.encryptedDataStorageAdapter.get(StorageKeys.encryptionVault);
     if (!encryptedKeys) {
       throw new Error('Encryption vault not initialised.');
     }
 
-    const passwordHash = await this.secureStorageAdapter.get(StorageKeys.passwordHash);
+    const passwordHash = await this.sessionStorageAdapter.get(StorageKeys.passwordHash);
     if (!passwordHash) {
       throw new Error('Vault is locked.');
     }
@@ -211,9 +240,26 @@ export class EncryptionVault {
       const encryptedKeys = await this.cryptoUtilsAdapter.encrypt(serialisedData, passwordHash);
       if (!encryptedKeys) throw new Error('Key encryption failed');
 
-      await this.commonStorageAdapter.set(StorageKeys.passwordSalt, salt);
-      await this.commonStorageAdapter.set(StorageKeys.encryptionVault, encryptedKeys);
-      await this.secureStorageAdapter.set(StorageKeys.passwordHash, passwordHash);
+      await this.encryptedDataStorageAdapter.set(StorageKeys.passwordSalt, salt);
+      await this.encryptedDataStorageAdapter.set(StorageKeys.encryptionVault, encryptedKeys);
+      await this.sessionStorageAdapter.set(StorageKeys.passwordHash, passwordHash);
+    });
+  };
+
+  private storeEncryptedKeysWithHashAndSalt = async (data: EncryptionVaultData, passwordHash: string, salt: string) => {
+    await this.saveMutex.runExclusive(async () => {
+      const isInitialised = await this.isInitialised();
+      if (isInitialised) {
+        throw new Error('Vault already initialised');
+      }
+
+      const serialisedData = JSON.stringify(data);
+      const encryptedKeys = await this.cryptoUtilsAdapter.encrypt(serialisedData, passwordHash);
+      if (!encryptedKeys) throw new Error('Key encryption failed');
+
+      await this.encryptedDataStorageAdapter.set(StorageKeys.passwordSalt, salt);
+      await this.encryptedDataStorageAdapter.set(StorageKeys.encryptionVault, encryptedKeys);
+      await this.sessionStorageAdapter.set(StorageKeys.passwordHash, passwordHash);
     });
   };
 }

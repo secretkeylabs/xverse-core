@@ -9,5 +9,5 @@ export const StorageKeys = {
 
   seedVault: 'vault::seedVault',
 
-  keyValueVault: 'vault::keyValueVault',
+  keyValueVaultPrefix: 'vault::keyValueVault',
 };

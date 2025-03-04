@@ -5,7 +5,13 @@ import { StorageKeys } from '../../vaults/common';
 import { EncryptionVault } from '../../vaults/encryptionVault';
 
 describe('EncryptionVault', () => {
-  const secureStorageAdapter = {
+  const sessionStorageAdapter = {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    getAllKeys: vi.fn(),
+  };
+  const encryptedDataStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -24,23 +30,34 @@ describe('EncryptionVault', () => {
     generateRandomBytes: vi.fn(),
   };
   const config: VaultConfig = {
-    secureStorageAdapter,
-    cryptoUtilsAdapter,
+    sessionStorageAdapter,
+    encryptedDataStorageAdapter,
     commonStorageAdapter,
+    cryptoUtilsAdapter,
   };
 
   const encryptionVault = new EncryptionVault(config);
 
   function setupMocks() {
-    const secureStorage: Record<string, unknown> = {};
-    secureStorageAdapter.get.mockImplementation((key: string) => secureStorage[key]);
-    secureStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
-      secureStorage[key] = value;
+    const sessionStorage: Record<string, unknown> = {};
+    sessionStorageAdapter.get.mockImplementation((key: string) => sessionStorage[key]);
+    sessionStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
+      sessionStorage[key] = value;
     });
-    secureStorageAdapter.remove.mockImplementation((key: string) => {
-      delete secureStorage[key];
+    sessionStorageAdapter.remove.mockImplementation((key: string) => {
+      delete sessionStorage[key];
     });
-    secureStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(secureStorage));
+    sessionStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(sessionStorage));
+
+    const encryptedDataStorage: Record<string, unknown> = {};
+    encryptedDataStorageAdapter.get.mockImplementation((key: string) => encryptedDataStorage[key]);
+    encryptedDataStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
+      encryptedDataStorage[key] = value;
+    });
+    encryptedDataStorageAdapter.remove.mockImplementation((key: string) => {
+      delete encryptedDataStorage[key];
+    });
+    encryptedDataStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(encryptedDataStorage));
 
     const commonStorage: Record<string, unknown> = {};
     commonStorageAdapter.get.mockImplementation((key: string) => commonStorage[key]);
@@ -51,7 +68,6 @@ describe('EncryptionVault', () => {
       delete commonStorage[key];
     });
     commonStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(commonStorage));
-
     cryptoUtilsAdapter.encrypt.mockImplementation((data: string, hash: string) => {
       return `${hash}:::${data}`;
     });
@@ -80,12 +96,15 @@ describe('EncryptionVault', () => {
 
     await encryptionVault.initialise('UserPassword');
 
-    expect(secureStorageAdapter.set).toHaveBeenCalledWith(
+    expect(sessionStorageAdapter.set).toHaveBeenCalledWith(
       StorageKeys.passwordHash,
       `UserPassword:::00000000000000000000000000000003`,
     );
-    expect(commonStorageAdapter.set).toHaveBeenCalledWith(StorageKeys.passwordSalt, '00000000000000000000000000000003');
-    expect(commonStorageAdapter.set).toHaveBeenCalledWith(
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledWith(
+      StorageKeys.passwordSalt,
+      '00000000000000000000000000000003',
+    );
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledWith(
       StorageKeys.encryptionVault,
       'UserPassword:::00000000000000000000000000000003:::{"seedEncryptionKey":"00000000000000000000000000000000","dataEncryptionKey":"00000000000000000000000000000001","dataSalt":"00000000000000000000000000000002"}',
     );
@@ -102,12 +121,12 @@ describe('EncryptionVault', () => {
     expect(isInitialised).toBe(true);
 
     // ensure data keys are removed
-    expect(secureStorageAdapter.remove).toHaveBeenCalledWith(StorageKeys.encryptionVaultDataKeys);
+    expect(sessionStorageAdapter.remove).toHaveBeenCalledWith(StorageKeys.encryptionVaultDataKeys);
 
     isUnlocked = await encryptionVault.isVaultUnlocked();
     expect(isUnlocked).toBe(false);
 
-    await encryptionVault.unlockVault('UserPassword');
+    await encryptionVault.unlockVault('UserPassword', true);
 
     isUnlocked = await encryptionVault.isVaultUnlocked();
     expect(isUnlocked).toBe(true);
@@ -151,8 +170,8 @@ describe('EncryptionVault', () => {
 
     await encryptionVault.lockVault();
 
-    await expect(() => encryptionVault.unlockVault('UserPassword')).rejects.toThrow('Wrong password');
-    await encryptionVault.unlockVault('NewPassword');
+    await expect(() => encryptionVault.unlockVault('UserPassword', true)).rejects.toThrow('Wrong password');
+    await encryptionVault.unlockVault('NewPassword', true);
 
     isUnlocked = await encryptionVault.isVaultUnlocked();
     expect(isUnlocked).toBe(true);
@@ -172,7 +191,7 @@ describe('EncryptionVault', () => {
     const decryptedData = await encryptionVault.decrypt(encryptedData, 'data');
     expect(decryptedData).toBe('testData');
 
-    await expect(() => encryptionVault.unlockVault('wrongPassword')).rejects.toThrow('Wrong password');
+    await expect(() => encryptionVault.unlockVault('wrongPassword', true)).rejects.toThrow('Wrong password');
 
     isUnlocked = await encryptionVault.isVaultUnlocked();
     expect(isUnlocked).toBe(false);
@@ -183,7 +202,7 @@ describe('EncryptionVault', () => {
   it('unlock empty vault throws', async () => {
     setupMocks();
 
-    await expect(() => encryptionVault.unlockVault('password')).rejects.toThrow('Empty vault');
+    await expect(() => encryptionVault.unlockVault('password', true)).rejects.toThrow('Empty vault');
   });
 
   it('initialise intialised vault throws', async () => {

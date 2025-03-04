@@ -18,7 +18,7 @@ export class KeyValueVault {
     this.encryptionVault = encryptionVault;
   }
 
-  private getFullKey = (itemKey: string): string => `${StorageKeys.keyValueVault}::${itemKey}`;
+  private getFullKey = (itemKey: string): string => `${StorageKeys.keyValueVaultPrefix}::${itemKey}`;
 
   get = async <T>(key: KeyValueVaultKey): Promise<JSONCompatible<T> | undefined> => {
     const fullKey = this.getFullKey(key);
@@ -52,7 +52,7 @@ export class KeyValueVault {
     }
     const allStorageKeys = await this.commonStorageAdapter.getAllKeys();
 
-    const storedKeyValueVaultKeys = allStorageKeys.filter((key) => key.startsWith(StorageKeys.keyValueVault));
+    const storedKeyValueVaultKeys = allStorageKeys.filter((key) => key.startsWith(StorageKeys.keyValueVaultPrefix));
 
     for (const key of storedKeyValueVaultKeys) {
       await this.commonStorageAdapter.remove(key);
@@ -68,8 +68,8 @@ export class KeyValueVault {
     }
     const allStorageKeys = await this.commonStorageAdapter.getAllKeys();
 
-    const storedKeyValueVaultKeys = allStorageKeys.filter((key) => key.startsWith(StorageKeys.keyValueVault));
+    const storedKeyValueVaultKeys = allStorageKeys.filter((key) => key.startsWith(StorageKeys.keyValueVaultPrefix));
 
-    return storedKeyValueVaultKeys.map((key) => key.replace(`${StorageKeys.keyValueVault}::`, ''));
+    return storedKeyValueVaultKeys.map((key) => key.replace(`${StorageKeys.keyValueVaultPrefix}::`, ''));
   };
 }

@@ -4,7 +4,13 @@ import { EncryptionVault } from '../../vaults/encryptionVault';
 import { KeyValueVault } from '../../vaults/keyValueVault';
 
 describe('KeyValueVault', () => {
-  const secureStorageAdapter = {
+  const sessionStorageAdapter = {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    getAllKeys: vi.fn(),
+  };
+  const encryptedDataStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -23,9 +29,10 @@ describe('KeyValueVault', () => {
     generateRandomBytes: vi.fn(),
   };
   const config: VaultConfig = {
-    secureStorageAdapter,
-    cryptoUtilsAdapter,
+    sessionStorageAdapter,
+    encryptedDataStorageAdapter,
     commonStorageAdapter,
+    cryptoUtilsAdapter,
   };
 
   const encryptionVaultMock = {

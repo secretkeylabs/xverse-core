@@ -7,7 +7,13 @@ import { SeedVault } from '../../vaults/seedVault';
 import { testRootNode, testSeed, testSeedPhrase } from '../mocks/restore.mock';
 
 describe('SeedVault', () => {
-  const secureStorageAdapter = {
+  const sessionStorageAdapter = {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    getAllKeys: vi.fn(),
+  };
+  const encryptedDataStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -26,8 +32,9 @@ describe('SeedVault', () => {
     generateRandomBytes: vi.fn(),
   };
   const config: VaultConfig = {
-    secureStorageAdapter,
     cryptoUtilsAdapter,
+    sessionStorageAdapter,
+    encryptedDataStorageAdapter,
     commonStorageAdapter,
   };
 
@@ -38,15 +45,15 @@ describe('SeedVault', () => {
   const encryptionVault = encryptionVaultMock as unknown as EncryptionVault;
 
   function setupMocks() {
-    const commonStorage: Record<string, unknown> = {};
-    commonStorageAdapter.get.mockImplementation((key: string) => commonStorage[key]);
-    commonStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
-      commonStorage[key] = value;
+    const encryptedDataStorage: Record<string, unknown> = {};
+    encryptedDataStorageAdapter.get.mockImplementation((key: string) => encryptedDataStorage[key]);
+    encryptedDataStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
+      encryptedDataStorage[key] = value;
     });
-    commonStorageAdapter.remove.mockImplementation((key: string) => {
-      delete commonStorage[key];
+    encryptedDataStorageAdapter.remove.mockImplementation((key: string) => {
+      delete encryptedDataStorage[key];
     });
-    commonStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(commonStorage));
+    encryptedDataStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(encryptedDataStorage));
 
     encryptionVaultMock.encrypt.mockImplementation(async (data: unknown) => {
       const encrypted = JSON.stringify(data);
@@ -73,8 +80,8 @@ describe('SeedVault', () => {
     const walletId = await seedVault.storeWalletByMnemonic(testSeedPhrase, 'index');
 
     expect(encryptionVaultMock.encrypt).toHaveBeenCalledTimes(1);
-    expect(commonStorageAdapter.set).toHaveBeenCalledTimes(1);
-    expect(commonStorageAdapter.set).toHaveBeenCalledWith(
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledTimes(1);
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledWith(
       'vault::seedVault',
       `{"version":1,"wallets":{"${walletId}":{"keyType":"mnemonic","mnemonic":"${testSeedPhrase}","derivationType":"index"}},"primaryWalletId":"${walletId}"}`,
     );
@@ -113,8 +120,8 @@ describe('SeedVault', () => {
     const walletId = await seedVault.storeWalletBySeed(testSeed, 'index');
 
     expect(encryptionVaultMock.encrypt).toHaveBeenCalledTimes(1);
-    expect(commonStorageAdapter.set).toHaveBeenCalledTimes(1);
-    expect(commonStorageAdapter.set).toHaveBeenCalledWith(
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledTimes(1);
+    expect(encryptedDataStorageAdapter.set).toHaveBeenCalledWith(
       'vault::seedVault',
       `{"version":1,"wallets":{"${walletId}":{"keyType":"seed","seedBase64":"${base64.encode(
         testSeed,

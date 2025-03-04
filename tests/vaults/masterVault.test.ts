@@ -5,7 +5,13 @@ import { MasterVault, VaultConfig } from '../../vaults';
 import { testEntropy, testSeed, testSeedPhrase } from '../mocks/restore.mock';
 
 describe('MasterVault', () => {
-  const secureStorageAdapter = {
+  const sessionStorageAdapter = {
+    get: vi.fn(),
+    set: vi.fn(),
+    remove: vi.fn(),
+    getAllKeys: vi.fn(),
+  };
+  const encryptedDataStorageAdapter = {
     get: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
@@ -24,21 +30,32 @@ describe('MasterVault', () => {
     generateRandomBytes: vi.fn(),
   };
   const config: VaultConfig = {
-    secureStorageAdapter,
-    cryptoUtilsAdapter,
+    sessionStorageAdapter,
+    encryptedDataStorageAdapter,
     commonStorageAdapter,
+    cryptoUtilsAdapter,
   };
 
   function setupMocks() {
-    const secureStorage: Record<string, unknown> = {};
-    secureStorageAdapter.get.mockImplementation((key: string) => secureStorage[key]);
-    secureStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
-      secureStorage[key] = value;
+    const sessionStorage: Record<string, unknown> = {};
+    sessionStorageAdapter.get.mockImplementation((key: string) => sessionStorage[key]);
+    sessionStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
+      sessionStorage[key] = value;
     });
-    secureStorageAdapter.remove.mockImplementation((key: string) => {
-      delete secureStorage[key];
+    sessionStorageAdapter.remove.mockImplementation((key: string) => {
+      delete sessionStorage[key];
     });
-    secureStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(secureStorage));
+    sessionStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(sessionStorage));
+
+    const encryptedDataStorage: Record<string, unknown> = {};
+    encryptedDataStorageAdapter.get.mockImplementation((key: string) => encryptedDataStorage[key]);
+    encryptedDataStorageAdapter.set.mockImplementation((key: string, value: unknown) => {
+      encryptedDataStorage[key] = value;
+    });
+    encryptedDataStorageAdapter.remove.mockImplementation((key: string) => {
+      delete encryptedDataStorage[key];
+    });
+    encryptedDataStorageAdapter.getAllKeys.mockImplementation(() => Object.keys(encryptedDataStorage));
 
     const commonStorage: Record<string, unknown> = {};
     commonStorageAdapter.get.mockImplementation((key: string) => commonStorage[key]);
@@ -76,8 +93,8 @@ describe('MasterVault', () => {
   it('migrates from old seed vault', async () => {
     setupMocks();
 
-    commonStorageAdapter.set('passwordSalt', 'passwordSalt');
-    commonStorageAdapter.set('encryptedKey', `correctPassword:::passwordSalt:::${hex.encode(testEntropy)}`);
+    encryptedDataStorageAdapter.set('passwordSalt', 'passwordSalt');
+    encryptedDataStorageAdapter.set('encryptedKey', `correctPassword:::passwordSalt:::${hex.encode(testEntropy)}`);
 
     const vault = new MasterVault(config);
     expect(await vault.isInitialised()).toBe(true);
@@ -98,8 +115,8 @@ describe('MasterVault', () => {
       seedHex: hex.encode(testSeed),
     });
 
-    expect(commonStorageAdapter.remove).toHaveBeenCalledWith('passwordSalt');
-    expect(commonStorageAdapter.remove).toHaveBeenCalledWith('encryptedKey');
+    expect(encryptedDataStorageAdapter.remove).toHaveBeenCalledWith('passwordSalt');
+    expect(encryptedDataStorageAdapter.remove).toHaveBeenCalledWith('encryptedKey');
 
     await vault.lockVault();
     await vault.unlockVault('correctPassword');
@@ -121,9 +138,9 @@ describe('MasterVault', () => {
   it('halts if migration not run and new seed vault initialised', async () => {
     setupMocks();
 
-    commonStorageAdapter.set('passwordSalt', 'passwordSalt');
-    commonStorageAdapter.set('encryptedKey', `correctPassword:::passwordSalt:::${hex.encode(testEntropy)}`);
-    commonStorageAdapter.set('vault::seedVault', 'correctPassword:::passwordSalt:::encryptedSeedVaultData');
+    encryptedDataStorageAdapter.set('passwordSalt', 'passwordSalt');
+    encryptedDataStorageAdapter.set('encryptedKey', `correctPassword:::passwordSalt:::${hex.encode(testEntropy)}`);
+    encryptedDataStorageAdapter.set('vault::seedVault', 'correctPassword:::passwordSalt:::encryptedSeedVaultData');
 
     const vault = new MasterVault(config);
     expect(await vault.isInitialised()).toBe(true);
@@ -254,7 +271,29 @@ describe('MasterVault', () => {
     expect(await vault.KeyValueVault.get('addressBook::Mainnet')).toBe('value');
   });
 
-  it('locks if unlocked and unlock attempt with incorrect password', async () => {
+  it('lockUnlockedVaultOnFailure => true, locks if unlocked and unlock attempt with incorrect password', async () => {
+    setupMocks();
+
+    const vault = new MasterVault(config);
+    expect(await vault.isInitialised()).toBe(false);
+
+    await vault.initialise('password');
+    expect(await vault.isInitialised()).toBe(true);
+    expect(await vault.isVaultUnlocked()).toBe(true);
+
+    await vault.lockVault();
+    expect(await vault.isInitialised()).toBe(true);
+    expect(await vault.isVaultUnlocked()).toBe(false);
+
+    await vault.unlockVault('password');
+    expect(await vault.isVaultUnlocked()).toBe(true);
+
+    await expect(() => vault.unlockVault('password2', true)).rejects.toThrow('Wrong password');
+    expect(await vault.isInitialised()).toBe(true);
+    expect(await vault.isVaultUnlocked()).toBe(false);
+  });
+
+  it('lockUnlockedVaultOnFailure => false, remains unlocked if unlocked and unlock attempt with incorrect password', async () => {
     setupMocks();
 
     const vault = new MasterVault(config);
@@ -273,6 +312,6 @@ describe('MasterVault', () => {
 
     await expect(() => vault.unlockVault('password2')).rejects.toThrow('Wrong password');
     expect(await vault.isInitialised()).toBe(true);
-    expect(await vault.isVaultUnlocked()).toBe(false);
+    expect(await vault.isVaultUnlocked()).toBe(true);
   });
 });

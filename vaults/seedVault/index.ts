@@ -3,6 +3,7 @@ import * as bip32 from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { Mutex } from 'async-mutex';
+import crypto from 'crypto';
 import { StorageAdapter } from '../../types';
 import { StorageKeys } from '../common';
 import { EncryptionVault } from '../encryptionVault';
@@ -36,7 +37,7 @@ type VaultDataType = {
 
 /** This should not be used directly. Seed Vault should only be constructed via a MasterVault. */
 export class SeedVault {
-  private readonly commonStorageAdapter: StorageAdapter;
+  private readonly encryptedDataStorageAdapter: StorageAdapter;
 
   private readonly encryptionVault: EncryptionVault;
 
@@ -49,14 +50,14 @@ export class SeedVault {
   private migrationMutex = new Mutex();
 
   constructor(config: VaultConfig, encryptionVault: EncryptionVault) {
-    this.commonStorageAdapter = config.commonStorageAdapter;
+    this.encryptedDataStorageAdapter = config.encryptedDataStorageAdapter;
     this.encryptionVault = encryptionVault;
   }
 
   private getVaultData = async (): Promise<VaultDataType | undefined> => {
     await this.migrationMutex.waitForUnlock();
 
-    const encryptedData = await this.commonStorageAdapter.get(StorageKeys.seedVault);
+    const encryptedData = await this.encryptedDataStorageAdapter.get(StorageKeys.seedVault);
     if (!encryptedData) {
       return undefined;
     }
@@ -109,7 +110,7 @@ export class SeedVault {
       }
 
       const encryptedValue = await this.encryptionVault.encrypt<VaultDataType>(store, 'seed');
-      await this.commonStorageAdapter.set(StorageKeys.seedVault, encryptedValue);
+      await this.encryptedDataStorageAdapter.set(StorageKeys.seedVault, encryptedValue);
     });
   };
 
@@ -140,7 +141,7 @@ export class SeedVault {
   };
 
   isInitialised = async () => {
-    const value = await this.commonStorageAdapter.get(StorageKeys.seedVault);
+    const value = await this.encryptedDataStorageAdapter.get(StorageKeys.seedVault);
     return !!value;
   };
 

@@ -65,10 +65,29 @@ export class MasterVault {
 
   private initialiseInternal = async (password: string) => {
     await this.encryptionVault.initialise(password);
-    await this.config.commonStorageAdapter.set(StorageKeys.vaultVersion, MasterVault.Version.toString());
+    await this.config.encryptedDataStorageAdapter.set(StorageKeys.vaultVersion, MasterVault.Version.toString());
+  };
+
+  private initialiseInternalWithHashAndSalt = async (passwordHash: string, salt: string) => {
+    await this.encryptionVault.initialiseWithHashAndSalt(passwordHash, salt);
+    await this.config.encryptedDataStorageAdapter.set(StorageKeys.vaultVersion, MasterVault.Version.toString());
   };
 
   restoreVault = async () => {
+    if (await migrationController.hasMigrationFromOldSeedVault(this.config)) {
+      if (await migrationController.oldSeedVaultIsUnlocked(this.config)) {
+        await migrationController.migrateFromOldSeedVaultFromUnlocked(
+          this,
+          this.initialiseInternalWithHashAndSalt,
+          this.encryptionVault,
+          this.seedVault,
+          this.config,
+        );
+        await this.migrate();
+      }
+      return;
+    }
+
     if (!(await this.isVaultUnlocked())) {
       return;
     }
@@ -103,18 +122,25 @@ export class MasterVault {
     await this.encryptionVault.changePassword(newPassword);
   };
 
-  unlockVault = async (password: string): Promise<void> => {
+  /**
+   * Attempts to unlock the vault with the given password. If the vault is already unlocked,
+   * the password is checked to ensure it is correct.
+   * @param password - the password to use to unlock the vault
+   * @param lockUnlockedVaultOnFailure - if true, the vault will be locked if the password is incorrect and the vault
+   * was unlocked. If false, an unlocked vault will remain unlocked. (default: false)
+   */
+  unlockVault = async (password: string, lockUnlockedVaultOnFailure = false): Promise<void> => {
     await this.unlockMutex.waitForUnlock();
 
     if (await this.isVaultUnlocked()) {
       // Vault already unlocked. Ensure given password is correct
-      await this.encryptionVault.unlockVault(password);
+      await this.encryptionVault.unlockVault(password, lockUnlockedVaultOnFailure);
       return;
     }
 
     await this.unlockMutex.runExclusive(async () => {
       if (await migrationController.hasMigrationFromOldSeedVault(this.config)) {
-        await migrationController.migrateFromOldSeedVault(
+        await migrationController.migrateFromOldSeedVaultWithPassword(
           this,
           this.initialiseInternal,
           this.encryptionVault,
@@ -124,7 +150,7 @@ export class MasterVault {
         );
       }
 
-      await this.encryptionVault.unlockVault(password);
+      await this.encryptionVault.unlockVault(password, lockUnlockedVaultOnFailure);
       await this.migrate();
     });
   };
@@ -136,8 +162,8 @@ export class MasterVault {
 
   reset = async () => {
     for (const key of Object.values(StorageKeys)) {
-      await this.config.commonStorageAdapter.remove(key);
-      await this.config.secureStorageAdapter.remove(key);
+      await this.config.encryptedDataStorageAdapter.remove(key);
+      await this.config.sessionStorageAdapter.remove(key);
     }
 
     await this.keyValueVault.clear();
