@@ -3,7 +3,6 @@ import * as bip32 from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
 import { Mutex } from 'async-mutex';
-import crypto from 'crypto';
 import { StorageAdapter } from '../../types';
 import { StorageKeys } from '../common';
 import { EncryptionVault } from '../encryptionVault';
