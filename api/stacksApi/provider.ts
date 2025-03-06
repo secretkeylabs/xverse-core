@@ -73,9 +73,9 @@ export class StacksApiProvider {
 
     // @stacks/stacks-blockchain-api-types latest version is missing these two properties
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unconfirmedInbound = new BigNumber((stacksBalance as any).pending_balance_inbound);
+    const unconfirmedInbound = new BigNumber((stacksBalance as any)?.pending_balance_inbound || 0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unconfirmedOutbound = new BigNumber((stacksBalance as any).pending_balance_outbound);
+    const unconfirmedOutbound = new BigNumber((stacksBalance as any)?.pending_balance_outbound || 0);
     return {
       availableBalance: balance.minus(lockedBalance).minus(unconfirmedOutbound),
       lockedBalance,
