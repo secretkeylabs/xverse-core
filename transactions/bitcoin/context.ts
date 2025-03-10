@@ -416,6 +416,21 @@ export class LedgerP2wpkhAddressContext extends P2wpkhAddressContext {
     this._masterFingerprint = args.masterFingerprint;
   }
 
+  async addInput(transaction: btc.Transaction, extendedUtxo: ExtendedUtxo, options?: CompilationOptions) {
+    super.addInput(transaction, extendedUtxo, options);
+
+    // We add the non-witness UTXO below or Ledger will show an unknown inputs warning
+    const utxoTxnHex = await extendedUtxo.hex;
+
+    if (utxoTxnHex) {
+      const nonWitnessUtxo = Buffer.from(utxoTxnHex, 'hex');
+
+      transaction.updateInput(transaction.inputsLength - 1, {
+        nonWitnessUtxo,
+      });
+    }
+  }
+
   async prepareInputs(transaction: btc.Transaction, options: SignOptions): Promise<void> {
     const { ledgerTransport } = options;
     if (!ledgerTransport) {

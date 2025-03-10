@@ -5,6 +5,7 @@ import { createBase58check } from '@scure/base';
 import * as bip32 from '@scure/bip32';
 import { initEccLib, Network, networks, payments } from 'bitcoinjs-lib';
 import { NetworkType } from '../types';
+import { bip32Utils } from '../utils/bip32';
 import { KeystoneTransport } from './types';
 
 const base58check = createBase58check(sha256);
@@ -105,7 +106,7 @@ export async function importNativeSegwitAccountFromKeystone({
 
   const nativeSegwitZpub = await bitcoin.getExtendedPublicKey(getPathForNetwork(84, accountIndex, network));
   const nativeSegwitXpub = convertZpubToXpub(nativeSegwitZpub, network);
-  const nativeSegwitRoot = bip32.HDKey.fromExtendedKey(nativeSegwitXpub);
+  const nativeSegwitRoot = bip32Utils.fromExtendedKey(nativeSegwitXpub);
   const nativeSegwit = getNativeSegwitKeyAndAddress(nativeSegwitRoot, { subPath: `m/0/${addressIndex}`, network });
 
   return {
@@ -125,7 +126,7 @@ export async function importTaprootAccountFromKeystone({
   const bitcoin = new Bitcoin(transport);
 
   const taprootXpub = await bitcoin.getExtendedPublicKey(getPathForNetwork(86, accountIndex, network));
-  const taprootRoot = bip32.HDKey.fromExtendedKey(taprootXpub);
+  const taprootRoot = bip32Utils.fromExtendedKey(taprootXpub);
   const taproot = getTaprootPubkeyAndAddress(taprootRoot, { subPath: `m/0/${addressIndex}`, network });
 
   return {

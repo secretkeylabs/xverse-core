@@ -1,5 +1,4 @@
 import * as ecc from '@bitcoinerlab/secp256k1';
-import * as bip32 from '@scure/bip32';
 import { makeDIDFromAddress } from '@stacks/auth';
 import { publicKeyToBtcAddress } from '@stacks/encryption';
 import StacksApp from '@zondax/ledger-stacks';
@@ -8,6 +7,7 @@ import { initEccLib, networks, payments } from 'bitcoinjs-lib';
 import ecdsaFormat from 'ecdsa-sig-formatter';
 import { AppClient } from 'ledger-bitcoin';
 import { NetworkType } from '../types/network';
+import { bip32Utils } from '../utils/bip32';
 import { LedgerStxJWTAuthProfile, LedgerTransport } from './types';
 
 /**
@@ -46,7 +46,7 @@ export async function getMasterFingerPrint(transport: LedgerTransport): Promise<
   @returns the public key in compressed format
 **/
 export function getPublicKeyFromXpubAtIndex(xpub: string, index: number): Buffer {
-  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`m/0/${index}`);
+  const { publicKey } = bip32Utils.fromExtendedKey(xpub).derive(`m/0/${index}`);
   return Buffer.from(publicKey!);
 }
 

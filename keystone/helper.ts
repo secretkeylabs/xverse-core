@@ -1,9 +1,9 @@
 export { networks } from 'bitcoinjs-lib';
 import * as ecc from '@bitcoinerlab/secp256k1';
 import Bitcoin from '@keystonehq/hw-app-bitcoin';
-import * as bip32 from '@scure/bip32';
 import { initEccLib, networks, payments } from 'bitcoinjs-lib';
 import { NetworkType } from '../types/network';
+import { bip32Utils } from '../utils/bip32';
 import { KeystoneTransport } from './types';
 
 export async function getMasterFingerPrintFromKeystone(transport: KeystoneTransport): Promise<string> {
@@ -27,7 +27,7 @@ export const getCoinType = (network: NetworkType) => (network === 'Mainnet' ? 0 
   @returns the public key in compressed format
 **/
 export function getPublicKeyFromXpubAtIndex(xpub: string, index: number): Buffer {
-  const { publicKey } = bip32.HDKey.fromExtendedKey(xpub).derive(`m/0/${index}`);
+  const { publicKey } = bip32Utils.fromExtendedKey(xpub).derive(`m/0/${index}`);
   return Buffer.from(publicKey!);
 }
 
