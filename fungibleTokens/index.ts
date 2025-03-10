@@ -39,14 +39,12 @@ export const getFungibleTokenStates = ({
   const isSpam = showSpamTokens ? false : !!spamTokens?.includes(fungibleToken.principal);
   const isUserEnabled = manageTokens?.[fungibleToken.principal]; // true=enabled, false=disabled, undefined=not set
   const isDefaultEnabled = fungibleToken.supported && hasBalance && !isSpam;
-  const isTopToken = Boolean(fungibleToken.isTopToken);
-  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && (isDefaultEnabled || isTopToken));
-  const showToggle = isEnabled || ((hasBalance || isTopToken) && !isSpam);
+  const isEnabled = isUserEnabled || !!(isUserEnabled === undefined && isDefaultEnabled);
+  const showToggle = isEnabled || (hasBalance && !isSpam);
 
   return {
     isSpam,
     isEnabled,
     showToggle,
-    isTopToken,
   };
 };
