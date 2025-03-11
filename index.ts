@@ -1,4 +1,5 @@
 export * from './account';
+export * as addressBook from './addressBook';
 export * from './api';
 export * from './coins';
 export * from './connect';
