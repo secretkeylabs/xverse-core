@@ -53,18 +53,18 @@ const sortOrdinalsByConfirmationTime = (prev: BtcOrdinal, next: BtcOrdinal) => {
   return 0;
 };
 
-export async function fetchBtcOrdinalsData(
-  btcAddress: string,
+export async function getOrdinalsByAddress(
   esploraProvider: EsploraApiProvider,
   network: NetworkType,
+  address: string,
 ): Promise<BtcOrdinal[]> {
   const xordClient = new OrdinalsApi({
     network,
   });
 
   const [addressUTXOs, inscriptions] = await Promise.all([
-    esploraProvider.getUnspentUtxos(btcAddress),
-    xordClient.getAllInscriptions(btcAddress),
+    esploraProvider.getUnspentUtxos(address),
+    xordClient.getAllInscriptions(address),
   ]);
   const ordinals: BtcOrdinal[] = [];
 

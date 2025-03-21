@@ -1,16 +1,16 @@
-import {
-  fetchFeeEstimateTransaction,
-  estimateTransactionByteLength,
-  getFee,
-  PayloadType,
-  StacksTransactionWire,
-  serializePayloadBytes,
-} from '@stacks/transactions';
-import { FeeEstimation, getMempoolFeePriorities, getXverseApiClient } from '../../api';
+import { bytesToHex } from '@noble/hashes/utils';
 import { StacksNetwork } from '@stacks/network';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
-import { bytesToHex } from '@noble/hashes/utils';
-import { AppInfo, StacksMainnet } from '../../types';
+import {
+  estimateTransactionByteLength,
+  fetchFeeEstimateTransaction,
+  getFee,
+  PayloadType,
+  serializePayloadBytes,
+  StacksTransactionWire,
+} from '@stacks/transactions';
+import { FeeEstimation, getMempoolFeePriorities, XverseApi } from '../../api';
+import { AppInfo } from '../../types';
 
 /**
  * stxFeeReducer - given initialFee, and appInfo (stacks fee multiplier and threshold config),
@@ -60,11 +60,9 @@ export const stxFeeReducer = ({
  */
 export const applyMultiplierAndCapFeeAtThreshold = async (
   unsignedTx: StacksTransactionWire,
-  network: StacksNetwork,
+  xverseApiClient: XverseApi,
 ) => {
-  const appInfo = await getXverseApiClient(
-    network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
-  ).fetchAppInfo();
+  const appInfo = await xverseApiClient.fetchAppInfo();
   const newFee = stxFeeReducer({
     initialFee: getFee(unsignedTx.auth),
     appInfo,

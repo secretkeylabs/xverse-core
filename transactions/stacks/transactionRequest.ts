@@ -1,9 +1,9 @@
 import {
+  ContractCallPayload,
+  ContractDeployPayload,
+  STXTransferPayload,
   TransactionPayload,
   TransactionTypes,
-  ContractCallPayload,
-  STXTransferPayload,
-  ContractDeployPayload,
 } from '@stacks/connect';
 import { StacksNetwork } from '@stacks/network';
 import {
@@ -18,9 +18,9 @@ import {
 } from '@stacks/transactions';
 import { BigNumber } from 'bignumber.js';
 import { extractFromPayload, generateUnsignedTx, getFTInfoFromPostConditions, nextBestNonce } from '..';
-import { Coin, StacksMainnet } from '../../types';
+import { getContractInterface, XverseApi } from '../../api';
 import { STX_DECIMALS } from '../../constant';
-import { getContractInterface, getXverseApiClient } from '../../api';
+import { Coin } from '../../types';
 
 /**
  * processes data for contract call transaction
@@ -34,15 +34,14 @@ export const createContractCallPromises = async (
   payload: ContractCallPayload,
   network: StacksNetwork,
   stxPublicKey: string,
+  xverseApiClient: XverseApi,
   auth?: Authorization,
 ) => {
   const { postConds } = extractFromPayload(payload);
   const nonce = await nextBestNonce(getAddressFromPublicKey(stxPublicKey), network);
   const ftContactAddresses = getFTInfoFromPostConditions(postConds);
 
-  const coinsMetaDataPromise: Coin[] | null = await getXverseApiClient(
-    network.chainId === StacksMainnet.chainId ? 'Mainnet' : 'Testnet',
-  ).getSip10Tokens(ftContactAddresses, 'USD');
+  const coinsMetaDataPromise: Coin[] | null = await xverseApiClient.getSip10Tokens(ftContactAddresses, 'USD');
 
   const unSignedContractCall = await generateUnsignedTx({
     payload: {
@@ -52,6 +51,7 @@ export const createContractCallPromises = async (
     fee: auth?.spendingCondition.fee.toString() || '0',
     nonce: auth?.spendingCondition.nonce || nonce,
     publicKey: stxPublicKey,
+    xverseApiClient,
   });
   if (auth) {
     unSignedContractCall.auth = auth;

@@ -31,6 +31,7 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
+import { XverseApi } from '../../api';
 import { getStxAddressKeyChain } from '../../account';
 import { PostConditionsOptions, StacksMainnet, StacksNetwork, StacksTestnet } from '../../types';
 import { DerivationType } from '../../vaults';
@@ -208,6 +209,7 @@ interface UnsignedTxArgs<TxPayload> {
   fee?: number | string;
   nonce?: number | bigint;
   sponsored?: boolean;
+  xverseApiClient: XverseApi;
 }
 
 export type GenerateUnsignedTransactionOptions = UnsignedTxArgs<
@@ -221,7 +223,7 @@ export function isStacksNetwork(network: ConnectNetwork): network is StacksNetwo
 export const generateUnsignedTx = async (
   options: GenerateUnsignedTransactionOptions,
 ): Promise<StacksTransactionWire> => {
-  const { payload, publicKey, nonce, fee } = options;
+  const { payload, publicKey, nonce, fee, xverseApiClient } = options;
   const { network } = payload;
   let tx: StacksTransactionWire;
   switch (payload.txType) {
@@ -231,6 +233,7 @@ export const generateUnsignedTx = async (
         publicKey,
         nonce,
         fee,
+        xverseApiClient,
       });
       break;
     case TransactionTypes.ContractCall:
@@ -239,6 +242,7 @@ export const generateUnsignedTx = async (
         publicKey,
         nonce,
         fee,
+        xverseApiClient,
       });
       break;
     case TransactionTypes.ContractDeploy:
@@ -247,6 +251,7 @@ export const generateUnsignedTx = async (
         publicKey,
         nonce,
         fee,
+        xverseApiClient,
       });
       break;
     default:
@@ -261,7 +266,7 @@ export const generateUnsignedTx = async (
     const txFee = await estimateStacksTransactionWithFallback(tx, isStacksNetwork(network) ? network : StacksMainnet);
     tx.setFee(txFee[1].fee);
   }
-  await applyMultiplierAndCapFeeAtThreshold(tx, network === 'mainnet' ? StacksMainnet : StacksTestnet);
+  await applyMultiplierAndCapFeeAtThreshold(tx, xverseApiClient);
 
   if (!nonce || nonce === 0) {
     const senderAddress = Address.fromPublicKey(publicKey, isStacksNetwork(network) ? network : StacksMainnet);
@@ -285,6 +290,7 @@ export async function generateUnsignedSip10TransferTransaction(options: {
   senderAddress: string;
   recipientAddress: string;
   memo: string;
+  xverseApiClient: XverseApi;
   sponsored?: boolean;
 }): Promise<StacksTransactionWire> {
   const {
@@ -297,6 +303,7 @@ export async function generateUnsignedSip10TransferTransaction(options: {
     memo,
     publicKey,
     network,
+    xverseApiClient,
     sponsored = false,
   } = options;
 
@@ -328,6 +335,7 @@ export async function generateUnsignedSip10TransferTransaction(options: {
     sponsored,
     nonce: 0,
     fee: 0,
+    xverseApiClient,
     payload: {
       txType: TransactionTypes.ContractCall,
       contractAddress,
@@ -355,6 +363,7 @@ export async function generateUnsignedNftTransferTransaction(options: {
   recipientAddress: string;
   publicKey: string;
   network: StacksNetwork;
+  xverseApiClient: XverseApi;
   sponsored?: boolean;
 }): Promise<StacksTransactionWire> {
   const {
@@ -366,6 +375,7 @@ export async function generateUnsignedNftTransferTransaction(options: {
     recipientAddress,
     publicKey,
     network,
+    xverseApiClient,
     sponsored = false,
   } = options;
 
@@ -392,6 +402,7 @@ export async function generateUnsignedNftTransferTransaction(options: {
     sponsored,
     nonce: 0,
     fee: 0,
+    xverseApiClient,
     payload: {
       txType: TransactionTypes.ContractCall,
       contractAddress,

@@ -1,3 +1,5 @@
+import { TransactionTypes } from '@stacks/connect';
+import { poxAddressToTuple } from '@stacks/stacking';
 import {
   contractPrincipalCV,
   cvToHex,
@@ -8,11 +10,10 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import BigNumber from 'bignumber.js';
+import { XverseApi } from '../../api';
 import { StacksNetwork, StacksTransactionWire } from '../../types';
 import { generateUnsignedTx } from './builders';
-import { poxAddressToTuple } from '@stacks/stacking';
 import { nextBestNonce } from './nonceHelpers';
-import { TransactionTypes } from '@stacks/connect';
 
 export async function generateUnsignedDelegateTransaction(
   amount: BigNumber,
@@ -23,6 +24,7 @@ export async function generateUnsignedDelegateTransaction(
   publicKey: string,
   network: StacksNetwork,
   poolPoxAddress: string,
+  xverseApiClient: XverseApi,
 ): Promise<StacksTransactionWire> {
   const poolRewardAddressTuple = poxAddressToTuple(poolPoxAddress);
   const userRewardAddressTuple = poxAddressToTuple(rewardAddress);
@@ -36,6 +38,7 @@ export async function generateUnsignedDelegateTransaction(
   ];
   const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
+    xverseApiClient,
     payload: {
       txType: TransactionTypes.ContractCall,
       publicKey,
@@ -60,9 +63,11 @@ export async function generateUnsignedAllowContractCallerTransaction(
   network: StacksNetwork,
   poxContractAddress: string,
   poxContractName: string,
+  xverseApiClient: XverseApi,
 ): Promise<StacksTransactionWire> {
   const nonce = await nextBestNonce(getAddressFromPublicKey(publicKey), network);
   const unsignedTx = await generateUnsignedTx({
+    xverseApiClient,
     payload: {
       txType: TransactionTypes.ContractCall,
       publicKey,
@@ -86,8 +91,11 @@ export async function generateUnsignedRevokeTransaction(
   network: StacksNetwork,
   poxContractAddress: string,
   poxContractName: string,
+  xverseApiClient: XverseApi,
 ): Promise<StacksTransactionWire> {
   const unsignedTx = await generateUnsignedTx({
+    publicKey,
+    xverseApiClient,
     payload: {
       txType: TransactionTypes.ContractCall,
       publicKey,
@@ -98,7 +106,6 @@ export async function generateUnsignedRevokeTransaction(
       network,
       postConditions: [],
     },
-    publicKey,
     fee: 0,
     nonce: 0,
   });
