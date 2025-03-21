@@ -21,7 +21,7 @@ export class MasterVault {
 
   private migrationsRan = false;
 
-  static readonly Version = 1;
+  static readonly Version = 2;
 
   get SeedVault() {
     if (!this.migrationsRan) {
@@ -58,7 +58,7 @@ export class MasterVault {
     }
 
     await this.migrationMutex.runExclusive(async () => {
-      await migrationController.runMigrations();
+      await migrationController.runMigrations(this.config);
       this.migrationsRan = true;
     });
   };

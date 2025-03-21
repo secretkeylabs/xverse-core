@@ -7,7 +7,6 @@ import { CryptoUtilsAdapter, VaultConfig } from '../types';
 export type EncryptionVaultData = {
   seedEncryptionKey: string;
   dataEncryptionKey: string;
-  dataSalt: string;
 };
 
 export class EncryptionVault {
@@ -19,10 +18,7 @@ export class EncryptionVault {
 
   private readonly saveMutex = new Mutex();
 
-  private dataEncryptionKeys?: {
-    encryptionKey: string;
-    salt: string;
-  };
+  private dataEncryptionKey?: string;
 
   constructor(config: VaultConfig) {
     this.sessionStorageAdapter = config.sessionStorageAdapter;
@@ -30,12 +26,22 @@ export class EncryptionVault {
     this.encryptedDataStorageAdapter = config.encryptedDataStorageAdapter;
   }
 
-  initialise = async (password: string) => {
+  private generateEncryptionVaultData = async (): Promise<EncryptionVaultData> => {
+    const seedEncryptionBase = await this.cryptoUtilsAdapter.generateRandomBytes(32);
+    const dataEncryptionBase = await this.cryptoUtilsAdapter.generateRandomBytes(32);
+    const saltBase = await this.cryptoUtilsAdapter.generateRandomBytes(32);
+
+    // !Note: Using the cryptoUtilsAdapter.hash method to generate the encryption keys below is not mandatory,
+    // !      but it is used to be compatible with the v1 pre-migration implementation.
     const encryptionVaultData: EncryptionVaultData = {
-      seedEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
-      dataEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
-      dataSalt: await this.cryptoUtilsAdapter.generateRandomBytes(32),
+      seedEncryptionKey: await this.cryptoUtilsAdapter.hash(seedEncryptionBase, saltBase),
+      dataEncryptionKey: await this.cryptoUtilsAdapter.hash(dataEncryptionBase, saltBase),
     };
+    return encryptionVaultData;
+  };
+
+  initialise = async (password: string) => {
+    const encryptionVaultData = await this.generateEncryptionVaultData();
     await this.storeEncryptedKeys(encryptionVaultData, password);
 
     // load data encryption keys into memory
@@ -43,11 +49,7 @@ export class EncryptionVault {
   };
 
   initialiseWithHashAndSalt = async (passwordHash: string, salt: string) => {
-    const encryptionVaultData: EncryptionVaultData = {
-      seedEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
-      dataEncryptionKey: await this.cryptoUtilsAdapter.generateRandomBytes(32),
-      dataSalt: await this.cryptoUtilsAdapter.generateRandomBytes(32),
-    };
+    const encryptionVaultData = await this.generateEncryptionVaultData();
     await this.storeEncryptedKeysWithHashAndSalt(encryptionVaultData, passwordHash, salt);
 
     // load data encryption keys into memory
@@ -108,7 +110,7 @@ export class EncryptionVault {
   lockVault = async () => {
     await this.sessionStorageAdapter.remove(StorageKeys.passwordHash);
     await this.sessionStorageAdapter.remove(StorageKeys.encryptionVaultDataKeys);
-    this.dataEncryptionKeys = undefined;
+    this.dataEncryptionKey = undefined;
   };
 
   isVaultUnlocked = async () => {
@@ -123,11 +125,10 @@ export class EncryptionVault {
   };
 
   encrypt = async <T>(value: JSONCompatible<T>, encryptionKeyType: 'seed' | 'data') => {
-    const { encryptionKey, salt } = await this.getEncryptionKeysForData(encryptionKeyType);
+    const encryptionKey = await this.getEncryptionKeysForData(encryptionKeyType);
 
-    const encryptionHash = await this.cryptoUtilsAdapter.hash(encryptionKey, salt);
     const serialisedValue = JSON.stringify(value);
-    const encryptedValue = await this.cryptoUtilsAdapter.encrypt(serialisedValue, encryptionHash);
+    const encryptedValue = await this.cryptoUtilsAdapter.encrypt(serialisedValue, encryptionKey);
 
     return encryptedValue;
   };
@@ -140,40 +141,24 @@ export class EncryptionVault {
       return undefined;
     }
 
-    const { encryptionKey, salt } = await this.getEncryptionKeysForData(encryptionKeyType);
-
-    const encryptionHash = await this.cryptoUtilsAdapter.hash(encryptionKey, salt);
-    const decryptedValue = await this.cryptoUtilsAdapter.decrypt(encryptedValue, encryptionHash);
+    const encryptionKey = await this.getEncryptionKeysForData(encryptionKeyType);
+    const decryptedValue = await this.cryptoUtilsAdapter.decrypt(encryptedValue, encryptionKey);
 
     return JSON.parse(decryptedValue) as JSONCompatible<T>;
   };
 
   private getEncryptionKeysForData = async (encryptionKeyType: 'seed' | 'data') => {
     if (encryptionKeyType === 'data') {
-      if (!this.dataEncryptionKeys) {
+      if (!this.dataEncryptionKey) {
         // check for cached dataEncryptionKeys in session storage
-        const dataEncryptionKeys = await this.sessionStorageAdapter.get(StorageKeys.encryptionVaultDataKeys);
-        if (dataEncryptionKeys) {
-          try {
-            const parsedEncryptionKeys = JSON.parse(dataEncryptionKeys);
-
-            if (parsedEncryptionKeys.encryptionKey && parsedEncryptionKeys.salt) {
-              this.dataEncryptionKeys = {
-                encryptionKey: parsedEncryptionKeys.encryptionKey,
-                salt: parsedEncryptionKeys.salt,
-              };
-            }
-          } catch {
-            // no-op - parsing failed, so just continue to try to fetch from storage
-          }
+        const dataEncryptionKey = await this.sessionStorageAdapter.get(StorageKeys.encryptionVaultDataKeys);
+        if (dataEncryptionKey) {
+          this.dataEncryptionKey = dataEncryptionKey;
         }
       }
 
-      if (this.dataEncryptionKeys) {
-        return {
-          encryptionKey: this.dataEncryptionKeys.encryptionKey,
-          salt: this.dataEncryptionKeys.salt,
-        };
+      if (this.dataEncryptionKey) {
+        return this.dataEncryptionKey;
       }
     }
 
@@ -181,17 +166,14 @@ export class EncryptionVault {
 
     const encryptionKey =
       encryptionKeyType === 'seed' ? encryptionKeys.seedEncryptionKey : encryptionKeys.dataEncryptionKey;
-    const salt = encryptionKeys.dataSalt;
-
-    const result = { encryptionKey, salt };
 
     if (encryptionKeyType === 'data') {
       // we keep these in memory for faster access for low risk data items
-      this.dataEncryptionKeys = result;
-      await this.sessionStorageAdapter.set(StorageKeys.encryptionVaultDataKeys, JSON.stringify(result));
+      this.dataEncryptionKey = encryptionKey;
+      await this.sessionStorageAdapter.set(StorageKeys.encryptionVaultDataKeys, encryptionKey);
     }
 
-    return result;
+    return encryptionKey;
   };
 
   private getEncryptionKeys = async (): Promise<EncryptionVaultData> => {
@@ -212,12 +194,7 @@ export class EncryptionVault {
 
     const encryptionKeyData = JSON.parse(decryptedKeys) as EncryptionVaultData;
 
-    if (
-      !encryptionKeyData ||
-      !encryptionKeyData.seedEncryptionKey ||
-      !encryptionKeyData.dataEncryptionKey ||
-      !encryptionKeyData.dataSalt
-    ) {
+    if (!encryptionKeyData || !encryptionKeyData.seedEncryptionKey || !encryptionKeyData.dataEncryptionKey) {
       throw new Error('Invalid encryption keys');
     }
     return encryptionKeyData;

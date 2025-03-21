@@ -106,7 +106,7 @@ describe('EncryptionVault', () => {
     );
     expect(encryptedDataStorageAdapter.set).toHaveBeenCalledWith(
       StorageKeys.encryptionVault,
-      'UserPassword:::00000000000000000000000000000003:::{"seedEncryptionKey":"00000000000000000000000000000000","dataEncryptionKey":"00000000000000000000000000000001","dataSalt":"00000000000000000000000000000002"}',
+      'UserPassword:::00000000000000000000000000000003:::{"seedEncryptionKey":"00000000000000000000000000000000:::00000000000000000000000000000002","dataEncryptionKey":"00000000000000000000000000000001:::00000000000000000000000000000002"}',
     );
 
     let isInitialised = await encryptionVault.isInitialised();

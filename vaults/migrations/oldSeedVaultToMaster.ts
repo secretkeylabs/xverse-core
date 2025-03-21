@@ -1,10 +1,10 @@
 import { hex } from '@scure/base';
 import * as bip39 from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english';
-import { EncryptionVault } from './encryptionVault';
-import { MasterVault } from './masterVault';
-import { SeedVault } from './seedVault';
-import { VaultConfig } from './types';
+import { EncryptionVault } from '../encryptionVault';
+import { MasterVault } from '../masterVault';
+import { SeedVault } from '../seedVault';
+import { VaultConfig } from '../types';
 
 enum OldSeedVaultStorageKeys {
   PASSWORD_HASH = 'passwordHash',
@@ -168,14 +168,9 @@ const migrateFromOldSeedVaultWithPassword = async (
   await config.sessionStorageAdapter.remove(OldSeedVaultStorageKeys.PASSWORD_HASH);
 };
 
-const runMigrations = async () => {
-  // !NOTE: Any future migrations of the master vault should go here
-};
-
-export default {
-  runMigrations,
+export {
   hasMigrationFromOldSeedVault,
-  oldSeedVaultIsUnlocked,
-  migrateFromOldSeedVaultWithPassword,
   migrateFromOldSeedVaultFromUnlocked,
+  migrateFromOldSeedVaultWithPassword,
+  oldSeedVaultIsUnlocked,
 };
