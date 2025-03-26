@@ -1,4 +1,5 @@
 export * from './account';
+export * as addressBook from './addressBook';
 export * from './api';
 export * from './coins';
 export * from './connect';
@@ -6,12 +7,13 @@ export {
   API_TIMEOUT_MILLI,
   BTC_BASE_URI_MAINNET,
   BTC_BASE_URI_TESTNET,
-  HIRO_MAINNET_DEFAULT,
-  HIRO_TESTNET_DEFAULT,
   defaultMainnet,
+  defaultRegtest,
   defaultSignet,
   defaultTestnet,
-  defaultRegtest,
+  defaultTestnet4,
+  HIRO_MAINNET_DEFAULT,
+  HIRO_TESTNET_DEFAULT,
   initialNetworksList,
 } from './constant';
 export * from './currency';
@@ -19,20 +21,21 @@ export * from './encryption';
 export * from './fungibleTokens';
 export * from './gaia';
 export * from './hooks';
+export * from './keystone';
 export * from './ledger';
-export * from './seedVault';
+export type * as Permissions from './permissions';
 export * from './stacking';
 export * from './stacksCollectible';
 export * from './transactions';
+export { getBtcNetwork, getBtcNetworkDefinition } from './transactions/btcNetwork';
 export * from './types';
 export * from './utils';
+export * from './vaults';
 export * from './wallet';
-export { getBtcNetwork, getBtcNetworkDefinition } from './transactions/btcNetwork';
 
-import { resources, utils, store } from './permissions';
+import { resources, store, utils } from './permissions';
 export const permissions = {
   resources,
   utils,
   store,
 };
-export type * as Permissions from './permissions';

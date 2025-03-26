@@ -1,6 +1,6 @@
-import { walletFromSeedPhrase } from '../../wallet';
-import { restoreWalletWithAccounts } from '../../account';
-import { StacksMainnet } from '@stacks/network';
+// import { walletFromSeedPhrase } from '../../wallet';
+// import { restoreWalletWithAccounts } from '../../account';
+// import { StacksMainnet } from '@stacks/network';
 import { assert, describe, expect, it } from 'vitest';
 
 describe('bitcoin transactions', () => {

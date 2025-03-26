@@ -8,21 +8,46 @@
  */
 
 const fs = require('fs');
-const packageLock = require('../package-lock.json');
-const packageJson = require('../package.json');
+const path = require('path');
+const { execSync } = require('child_process');
 
-for (const packageName in packageJson.dependencies) {
-  const installedPathKey = `node_modules/${packageName}`;
-  if (packageJson.dependencies.hasOwnProperty(packageName) && packageLock.packages[installedPathKey]) {
-    packageJson.dependencies[packageName] = packageLock.packages[installedPathKey].version;
+const packageJsonPath = path.resolve(__dirname, '../package.json');
+const packageJson = require(packageJsonPath);
+
+const allDependenciesVersions = Object.values(packageJson.dependencies).concat(
+  Object.values(packageJson.devDependencies),
+);
+
+// if any version has a ^ or ~, we need to pin it, otherwise we can skip
+const hasUnpinnedVersions = allDependenciesVersions.some(
+  (version) => version.startsWith('^') || version.startsWith('~'),
+);
+
+if (hasUnpinnedVersions) {
+  const packages = require('../package-lock.json').packages;
+
+  for (const packageName in packageJson.dependencies) {
+    const installedVersion = packages[`node_modules/${packageName}`].version;
+    if (packageJson.dependencies.hasOwnProperty(packageName) && installedVersion) {
+      packageJson.dependencies[packageName] = installedVersion;
+    }
   }
-}
 
-for (const packageName in packageJson.devDependencies) {
-  const installedPathKey = `node_modules/${packageName}`;
-  if (packageJson.devDependencies.hasOwnProperty(packageName) && packageLock.packages[installedPathKey]) {
-    packageJson.devDependencies[packageName] = packageLock.packages[installedPathKey].version;
+  for (const packageName in packageJson.devDependencies) {
+    const installedVersion = packages[`node_modules/${packageName}`].version;
+    if (packageJson.devDependencies.hasOwnProperty(packageName) && installedVersion) {
+      packageJson.devDependencies[packageName] = installedVersion;
+    }
   }
-}
 
-fs.writeFileSync('../package.json', JSON.stringify(packageJson, null, 2));
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8');
+
+  // Run npm install to update package-lock.json
+  console.log('Running npm install to update package-lock.json...');
+  execSync('npm install', { stdio: 'inherit' });
+  // execSync('git add package.json package-lock.json', { stdio: 'inherit' });
+
+  console.log('Successfully pinned all dependency versions');
+} else {
+  console.log('All dependencies are already pinned to exact versions');
+}

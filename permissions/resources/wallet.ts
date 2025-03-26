@@ -7,7 +7,9 @@ export const walletResourceSchema = v.object({
   name: v.literal('Wallet'),
 });
 
-export const walletActionsSchema = v.object({});
+export const walletActionsSchema = v.object({
+  readNetwork: v.optional(v.boolean()),
+});
 export const walletActionsDescriptionSchema = v.record(v.keyof(walletActionsSchema), actionDescriptionSchema);
 export type AccountActionsDescription = v.InferOutput<typeof walletActionsDescriptionSchema>;
 export const walletIdSchema = v.literal('wallet');

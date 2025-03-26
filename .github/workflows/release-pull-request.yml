@@ -16,10 +16,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run lint
@@ -97,10 +97,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: npm
           registry-url: https://npm.pkg.github.com/
 
@@ -119,9 +119,10 @@ jobs:
           CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
 
       - id: publish
-        run: npm publish --tag pr
+        run: npm publish --tag pr-$PR_NUMBER
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          PR_NUMBER: ${{ github.event.number }}
 
       - id: published-version
         run: echo "version=$(npm pkg get version  | tr -d '"')" >> $GITHUB_OUTPUT

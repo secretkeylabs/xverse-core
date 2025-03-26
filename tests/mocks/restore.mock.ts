@@ -1,10 +1,18 @@
+import * as bip32 from '@scure/bip32';
+import * as bip39 from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english';
 import { Account } from '../../types';
+import { WalletId } from '../../vaults';
 
-export const testSeed = 'force kite borrow once shine pluck couch swift crystal swamp crumble essay';
+export const testSeedPhrase = 'force kite borrow once shine pluck couch swift crystal swamp crumble essay';
+export const testSeed = bip39.mnemonicToSeedSync(testSeedPhrase);
+export const testEntropy = bip39.mnemonicToEntropy(testSeedPhrase, wordlist);
+export const testRootNode = bip32.HDKey.fromMasterSeed(testSeed);
 
 export const walletAccounts: Account[] = [
   {
     id: 0,
+    walletId: 'walletId' as WalletId,
     accountType: 'software',
     masterPubKey: '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3',
     stxAddress: 'SP147ST7ESA3RES888QQMV6AK7GZK93ZR74A0GM7V',
@@ -26,6 +34,7 @@ export const walletAccounts: Account[] = [
   },
   {
     id: 1,
+    walletId: 'walletId' as WalletId,
     accountType: 'software',
     masterPubKey: '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3',
     stxAddress: 'SP1BKESAFFV8ACW007HACXB93VHRFHP83BT24Z3NF',

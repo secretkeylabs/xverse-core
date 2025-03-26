@@ -134,6 +134,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -175,6 +176,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -228,6 +230,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -287,6 +290,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -359,6 +363,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -422,6 +427,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -493,6 +499,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -566,6 +573,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -682,6 +690,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -778,6 +787,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -791,6 +801,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -956,6 +967,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -969,6 +981,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -979,6 +992,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1144,6 +1158,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -1156,6 +1171,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -1168,6 +1184,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1360,6 +1377,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -1372,6 +1390,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -1384,6 +1403,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1534,6 +1554,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1630,6 +1651,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1779,6 +1801,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1855,6 +1878,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -1939,6 +1963,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2022,6 +2047,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2106,6 +2132,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2250,6 +2277,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2396,6 +2424,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -2409,6 +2438,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2547,6 +2577,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -2560,6 +2591,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [
@@ -2697,6 +2729,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
         {
           extendedUtxo: {
@@ -2710,6 +2743,7 @@ describe('parseSummaryForRunes', () => {
           inscriptions: [],
           satributes: [],
           walletWillSign: true,
+          isPayToAnchor: false,
         },
       ],
       outputs: [

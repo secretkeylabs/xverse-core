@@ -1,4 +1,3 @@
-import { StacksMainnet } from '@stacks/network';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getNftsData } from '../../api';
 import {
@@ -6,12 +5,12 @@ import {
   getAllNftContracts,
   organizeNftsIntoCollection,
 } from '../../stacksCollectible';
-import { NftCollectionData, NftEventsResponse, NonFungibleToken } from '../../types';
-import mockStacksCollection from '../mocks/stacks.collection.mock.json';
-import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
+import { NftCollectionData, NftEventsResponse, NonFungibleToken, StacksMainnet } from '../../types';
 import mockHiddenStacksCollection from '../mocks/stacks.collection.hidden.mock.json';
-import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
+import mockHiddenShowHiddenOnlyStacksCollection from '../mocks/stacks.collection.hidden.showonly.mock.json';
+import mockStacksCollection from '../mocks/stacks.collection.mock.json';
 import mockStarredItemInACollection from '../mocks/stacks.collection.starred.in.collection.mock.json';
+import mockStarredStacksCollection from '../mocks/stacks.collection.starred.mock.json';
 
 vi.mock('../../api/stacks', () => ({
   getNftsData: vi.fn(() => Promise.resolve({ results: [], total: 0, limit: 0, offset: 0 })),
@@ -26,6 +25,7 @@ describe('getAllNftContracts', () => {
       const results: NonFungibleToken[] = new Array(limit).fill(null).map((_, index) => ({
         asset_identifier: `asset-${offset + index}`,
         block_height: 3333,
+        identifier: { tokenId: `token-id-${offset + index}`, contractName: 'contract', contractAddress: 'conAddress' },
         value: {
           hex: `hex-${offset + index}`,
           repr: `repr-${offset + index}`,
@@ -58,7 +58,7 @@ describe('getAllNftContracts', () => {
     };
 
     const address = 'SP3RW6BW9F5STYG2K8XS5EP5PM33E0DNQT4XEG864';
-    const network = new StacksMainnet();
+    const network = StacksMainnet;
     const maxLimit = 200;
     const totalItems = 3500; // Total should not be a multiple of the limit to test edge cases
     const expectedCalls = Math.ceil(totalItems / maxLimit);

@@ -5,6 +5,7 @@ import {
   Brc20TxHistoryItem,
   BtcTransactionData,
   EsploraTransaction,
+  StacksMainnet,
   StxMempoolTransactionData,
   StxMempoolTransactionDataResponse,
   StxTransactionData,
@@ -383,7 +384,7 @@ export function parseStxTransactionData({
  * @deprecated use StacksNetwork().coreApiURL instead
  */
 export const getNetworkURL = (network: StacksNetwork): string => {
-  return network.isMainnet() ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
+  return network.chainId === StacksMainnet.chainId ? HIRO_MAINNET_DEFAULT : HIRO_TESTNET_DEFAULT;
 };
 
 export function getFetchableUrl(uri: string, protocol: string): string | null {

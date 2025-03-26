@@ -11,6 +11,7 @@ import {
 import { TransactionContext } from '../../../transactions/bitcoin/context';
 import { EnhancedTransaction } from '../../../transactions/bitcoin/enhancedTransaction';
 import { ActionType } from '../../../transactions/bitcoin/types';
+import { WalletId } from '../../../vaults';
 import { TestAddressContext, addresses } from './helpers';
 
 vi.mock('../../../transactions/bitcoin/actionProcessors');
@@ -20,17 +21,22 @@ vi.mock('../../../api/runes/provider');
 describe('EnhancedTransaction constructor', () => {
   const seedVault = vi.fn() as any;
   const utxoCache = vi.fn() as any;
+  const btcClient = vi.fn() as any;
+  const esploraApiProvider = vi.fn() as any;
 
-  const addressContext = new TestAddressContext(
-    'p2wpkh',
-    addresses[0].nativeSegwit,
-    addresses[0].nativeSegwitPubKey,
-    0,
+  const addressContext = new TestAddressContext('p2wpkh', {
+    address: addresses[0].nativeSegwit,
+    publicKey: addresses[0].nativeSegwitPubKey,
+    accountIndex: 0,
     seedVault,
     utxoCache,
-  );
+    network: 'Mainnet',
+    derivationType: 'index',
+    esploraApiProvider,
+    walletId: 'walletId' as WalletId,
+  });
 
-  const ctx = new TransactionContext('Mainnet', addressContext, addressContext);
+  const ctx = new TransactionContext('Mainnet', btcClient, addressContext, addressContext);
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -51,26 +57,34 @@ describe('EnhancedTransaction constructor', () => {
 describe('EnhancedTransaction summary', () => {
   const seedVault = vi.fn() as any;
   const utxoCache = vi.fn() as any;
+  const esploraApiProvider = vi.fn() as any;
+  const btcClient = vi.fn() as any;
 
-  const paymentAddressContext = new TestAddressContext(
-    'p2wpkh',
-    addresses[0].nativeSegwit,
-    addresses[0].nativeSegwitPubKey,
-    0,
+  const paymentAddressContext = new TestAddressContext('p2wpkh', {
+    address: addresses[0].nativeSegwit,
+    publicKey: addresses[0].nativeSegwitPubKey,
+    accountIndex: 0,
     seedVault,
     utxoCache,
-  );
+    network: 'Mainnet',
+    derivationType: 'index',
+    esploraApiProvider,
+    walletId: 'walletId' as WalletId,
+  });
 
-  const ordinalsAddressContext = new TestAddressContext(
-    'p2tr',
-    addresses[0].taproot,
-    addresses[0].taprootPubKey,
-    0,
+  const ordinalsAddressContext = new TestAddressContext('p2tr', {
+    address: addresses[0].taproot,
+    publicKey: addresses[0].taprootPubKey,
+    accountIndex: 0,
     seedVault,
     utxoCache,
-  );
+    network: 'Mainnet',
+    derivationType: 'index',
+    esploraApiProvider,
+    walletId: 'walletId' as WalletId,
+  });
 
-  const ctx = new TransactionContext('Mainnet', paymentAddressContext, ordinalsAddressContext);
+  const ctx = new TransactionContext('Mainnet', btcClient, paymentAddressContext, ordinalsAddressContext);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -351,6 +365,7 @@ describe('EnhancedTransaction summary', () => {
           }))
           .filter((s: any) => s.types.length > 0),
         walletWillSign: true,
+        isPayToAnchor: false,
       })),
       outputs: [
         {

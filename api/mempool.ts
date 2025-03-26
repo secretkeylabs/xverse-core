@@ -7,6 +7,7 @@ const mempoolSuffix = 'api/v1';
 const networkRouteMap: Record<NetworkType, string> = {
   Mainnet: `${mempoolUrl}/${mempoolSuffix}`,
   Testnet: `${mempoolUrl}/testnet/${mempoolSuffix}`,
+  Testnet4: `${mempoolUrl}/testnet4/${mempoolSuffix}`,
   Signet: `${mempoolUrl}/signet/${mempoolSuffix}`,
   Regtest: BTC_BASE_URI_REGTEST,
 };

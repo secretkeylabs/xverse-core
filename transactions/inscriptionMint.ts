@@ -21,7 +21,7 @@ export enum InscriptionErrorCode {
   SERVER_ERROR = 'SERVER_ERROR',
   USER_REJECTED = 'USER_REJECTED',
   DEVICE_LOCKED = 'DEVICE_LOCKED',
-  GENERAL_LEDGER_ERROR = 'GENERAL_LEDGER_ERROR',
+  GENERAL_HARDWARE_WALLET_ERROR = 'GENERAL_HARDWARE_WALLET_ERROR',
 }
 
 type EstimateProps = {
@@ -295,7 +295,10 @@ export async function inscriptionMintExecute(
       throw new CoreError('Ledger device locked', InscriptionErrorCode.DEVICE_LOCKED);
     }
     if (e instanceof Error && e.name === 'TransportStatusError') {
-      throw new CoreError('Ledger error', InscriptionErrorCode.GENERAL_LEDGER_ERROR);
+      throw new CoreError('Hardware wallet error', InscriptionErrorCode.GENERAL_HARDWARE_WALLET_ERROR);
+    }
+    if (e instanceof Error && e.name === 'TransportError') {
+      throw new CoreError('Keystone error', InscriptionErrorCode.GENERAL_HARDWARE_WALLET_ERROR);
     }
     throw e;
   }

@@ -23,9 +23,11 @@ export const BTC_TAPROOT_PATH_WITHOUT_INDEX = `m/86'/0'/0'/0/`;
 
 export const BTC_TAPROOT_TESTNET_PATH_WITHOUT_INDEX = `m/86'/1'/0'/0/`;
 
-export const STX_PATH_WITHOUT_INDEX = `m/44'/5757'/0'/0/`;
+export const STX_PATH_PURPOSE = `m/44'/5757'/`;
 
 export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
+
+export const PAY_TO_ANCHOR_SCRIPT_HEX = '51024e73';
 
 /**
  * Network constants
@@ -33,10 +35,12 @@ export const WALLET_CONFIG_PATH = `m/44/5757'/0'/1`;
 // BTC
 export const XVERSE_BTC_BASE_URI_MAINNET = 'https://btc-1.xverse.app';
 export const XVERSE_BTC_BASE_URI_TESTNET = 'https://btc-testnet.xverse.app';
+export const XVERSE_BTC_BASE_URI_TESTNET4 = 'https://btc-testnet4.xverse.app';
 export const XVERSE_BTC_BASE_URI_SIGNET = 'https://btc-signet.xverse.app';
 export const XVERSE_BTC_BASE_URI_REGTEST = 'https://beta.sbtc-mempool.tech/api/proxy';
 export const BTC_BASE_URI_MAINNET = 'https://mempool.space/api';
 export const BTC_BASE_URI_TESTNET = 'https://mempool.space/testnet/api';
+export const BTC_BASE_URI_TESTNET4 = 'https://mempool.space/testnet4/api';
 export const BTC_BASE_URI_SIGNET = 'https://mempool.space/signet/api';
 export const BTC_BASE_URI_REGTEST = 'https://beta.sbtc-mempool.tech/api/proxy';
 
@@ -57,6 +61,13 @@ export const defaultTestnet: SettingsNetwork = {
   btcApiUrl: XVERSE_BTC_BASE_URI_TESTNET,
   fallbackBtcApiUrl: BTC_BASE_URI_TESTNET,
 };
+
+export const defaultTestnet4: SettingsNetwork = {
+  type: 'Testnet4',
+  address: HIRO_TESTNET_DEFAULT,
+  btcApiUrl: XVERSE_BTC_BASE_URI_TESTNET4,
+  fallbackBtcApiUrl: BTC_BASE_URI_TESTNET4,
+};
 export const defaultSignet: SettingsNetwork = {
   type: 'Signet',
   address: HIRO_TESTNET_DEFAULT,
@@ -72,6 +83,7 @@ export const defaultRegtest: SettingsNetwork = {
 export const initialNetworksList: SettingsNetwork[] = [
   { ...defaultMainnet },
   { ...defaultTestnet },
+  { ...defaultTestnet4 },
   { ...defaultSignet },
   { ...defaultRegtest },
 ];
@@ -84,6 +96,8 @@ const xverseApiNetworkSuffix = (network: NetworkType, mainnetOverride = '') => {
       return `${mainnetOverride}`;
     case 'Testnet':
       return '-testnet';
+    case 'Testnet4':
+      return '-testnet4';
     case 'Signet':
       return '-signet';
     case 'Regtest':

@@ -1,16 +1,19 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { API_TIMEOUT_MILLI, HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../../constant';
-import { StacksNetwork, NftHistoryResponse } from '../../types';
 import {
   AccountDataResponse,
+  AddressBalanceResponse,
   AddressTransaction,
   AddressTransactionEventListResponse,
   AddressTransactionsV2ListResponse,
+  GetRawTransactionResult,
   MempoolTransaction,
   MempoolTransactionListResponse,
   Transaction,
 } from '@stacks/stacks-blockchain-api-types';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import BigNumber from 'bignumber.js';
+import { API_TIMEOUT_MILLI, HIRO_MAINNET_DEFAULT, HIRO_TESTNET_DEFAULT } from '../../constant';
+import { NftHistoryResponse, StacksMainnet, StacksNetwork } from '../../types';
+import { AxiosRateLimit } from '../../utils/axiosRateLimit';
 
 export interface StacksApiProviderOptions {
   network: StacksNetwork;
@@ -22,14 +25,16 @@ const OFFSET = 0;
 export class StacksApiProvider {
   StacksApi: AxiosInstance;
 
+  rateLimiter: AxiosRateLimit;
+
   _network: StacksNetwork;
 
   constructor(options: StacksApiProviderOptions) {
     const { network } = options;
-    let baseURL = network.coreApiUrl;
+    let baseURL = network.client.baseUrl;
 
     if (!baseURL) {
-      if (!network.isMainnet()) {
+      if (!(network.chainId === StacksMainnet.chainId)) {
         baseURL = HIRO_TESTNET_DEFAULT;
       }
       baseURL = HIRO_MAINNET_DEFAULT;
@@ -38,6 +43,11 @@ export class StacksApiProvider {
 
     this._network = network;
     this.StacksApi = axios.create(axiosConfig);
+
+    // hiro has a max RPS of 50
+    this.rateLimiter = new AxiosRateLimit(this.StacksApi, {
+      maxRPS: 50,
+    });
   }
 
   private async httpGet<T>(
@@ -55,16 +65,28 @@ export class StacksApiProvider {
   }
 
   getAddressBalance = async (stxAddress: string) => {
+    const apiUrl = `/extended/v1/address/${stxAddress}/balances`;
+    const response = await this.httpGet<AddressBalanceResponse>(apiUrl);
+    const stacksBalance = response.stx;
+    const balance = new BigNumber(stacksBalance.balance);
+    const lockedBalance = new BigNumber(stacksBalance.locked);
+
+    // @stacks/stacks-blockchain-api-types latest version is missing these two properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unconfirmedInbound = new BigNumber((stacksBalance as any)?.pending_balance_inbound || 0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unconfirmedOutbound = new BigNumber((stacksBalance as any)?.pending_balance_outbound || 0);
+    return {
+      availableBalance: balance.minus(lockedBalance).minus(unconfirmedOutbound),
+      lockedBalance,
+      totalBalance: balance.plus(unconfirmedInbound).minus(unconfirmedOutbound),
+    };
+  };
+
+  getAddressNonce = async (stxAddress: string) => {
     const apiUrl = `/v2/accounts/${stxAddress}?proof=0`;
     const response = await this.httpGet<AccountDataResponse>(apiUrl);
-    const availableBalance = new BigNumber(response.balance);
-    const lockedBalance = new BigNumber(response.locked);
-    return {
-      availableBalance,
-      lockedBalance,
-      totalBalance: availableBalance.plus(lockedBalance),
-      nonce: response.nonce,
-    };
+    return response.nonce;
   };
 
   getAddressTransactions = async ({
@@ -172,6 +194,11 @@ export class StacksApiProvider {
   getTransaction = async (txid: string): Promise<Transaction> => {
     const response = await this.httpGet<Transaction>(`/extended/v1/tx/${txid}`);
     return response;
+  };
+
+  getRawTransaction = async (txid: string): Promise<string> => {
+    const response = await this.httpGet<GetRawTransactionResult>(`/extended/v1/tx/${txid}/raw`);
+    return response.raw_tx;
   };
 
   getNftHistory = async (

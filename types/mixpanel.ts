@@ -21,25 +21,17 @@ export enum AnalyticsEvents {
   SetupWallet = 'setup_wallet',
   BackupWallet = 'backup_wallet',
   BackupWalletLater = 'backup_wallet_later',
+  InitiateBuyFlow = 'initiate_buy_flow',
+  SelectBuyProvider = 'select_buy_provider',
+  InitiateSendFlow = 'initiate_send_flow',
+  InitiateReceiveFlow = 'initiate_receive_flow',
+  VisitCollectiblesTab = 'visit_collectibles_tab',
+  VisitStackingTab = 'visit_stacking_tab',
+  VisitExplorePage = 'visit_explore_page',
 }
 
 type CommonProps = {
   wallet_type: AccountType;
-};
-
-type FromToAmount = { fromAmount: string; toAmount: string };
-
-type FromToToken = { from: string; to: string; fromPrincipal?: string; toPrincipal?: string };
-
-type QuoteSwapProps = FromToToken & {
-  provider: string;
-};
-
-type QuoteSwapAmountProps = QuoteSwapProps & FromToAmount;
-
-type SelectSwapTokenProps = {
-  selectedToken: string;
-  principal?: string;
 };
 
 type WalletBackupType = 'manual' | 'cloud';
@@ -110,4 +102,17 @@ export type AnalyticsEventProperties = {
   [AnalyticsEvents.SetupWallet]: SetupWalletProps;
   [AnalyticsEvents.BackupWallet]: BackupWalletProps;
   [AnalyticsEvents.RestoreWallet]: RestoreWalletProps;
+  [AnalyticsEvents.InitiateBuyFlow]: { source: 'dashboard' | 'token' | 'send_stx' | 'send_btc'; selectedToken: string };
+  [AnalyticsEvents.InitiateSendFlow]: {
+    source: 'dashboard' | 'token' | 'send_stx' | 'send_btc' | 'send_brc20' | 'send_sip10';
+    selectedToken: string;
+  };
+  [AnalyticsEvents.InitiateReceiveFlow]: {
+    source: 'dashboard' | 'token' | 'send_stx' | 'send_btc' | 'collectibles';
+    addressType: 'stx' | 'btc_payment' | 'btc_ordinals';
+    selectedToken?: string;
+  };
+  [AnalyticsEvents.SelectBuyProvider]: {
+    provider: 'xverse_swaps' | 'moonpay' | 'transak' | 'paypal';
+  };
 };

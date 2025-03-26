@@ -1,12 +1,12 @@
-import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import { AddressType, getAddressInfo } from 'bitcoin-address-validation';
 import { Psbt, Transaction } from 'bitcoinjs-lib';
+import AppClient, { DefaultWalletPolicy } from 'ledger-bitcoin';
 import { encode } from 'varuint-bitcoin';
-import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { bip0322Hash } from '../connect';
+import { BTC_SEGWIT_PATH_PURPOSE, BTC_TAPROOT_PATH_PURPOSE } from '../constant';
 import { MessageSigningProtocols, NetworkType, SignedMessage } from '../types';
 import { getCoinType, getNativeSegwitAccountDataFromXpub, getTaprootAccountDataFromXpub } from './helper';
-import { Bip32Derivation, TapBip32Derivation, Transport } from './types';
+import { Bip32Derivation, LedgerTransport, TapBip32Derivation } from './types';
 
 const encodeVarString = (b: Buffer) => Buffer.concat([encode(b.byteLength), b]);
 const DUMMY_INPUT_HASH = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
@@ -144,7 +144,7 @@ export async function createNativeSegwitECDSA({
   message,
   addressIndex,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   networkType: NetworkType;
   message: string;
   addressIndex: number;
@@ -177,7 +177,7 @@ export async function signMessageLedger({
   message,
   protocol,
 }: {
-  transport: Transport;
+  transport: LedgerTransport;
   networkType: NetworkType;
   addressIndex: number;
   address: string;

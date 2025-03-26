@@ -1,11 +1,11 @@
 import { StacksNetwork } from '@stacks/network';
-import type { TokenTransferPayload } from '@stacks/transactions';
+import type { TokenTransferPayloadWire } from '@stacks/transactions';
 import {
   AnchorMode,
   ClarityValue,
   PostCondition,
   PostConditionMode,
-  StacksTransaction,
+  StacksTransactionWire,
   cvToHex,
   uintCV,
 } from '@stacks/transactions';
@@ -13,7 +13,7 @@ import { StxMempoolTransactionData } from '../xverse';
 import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared';
 
 export { cvToHex, uintCV };
-export type { StacksTransaction, TokenTransferPayload };
+export type { StacksTransactionWire, TokenTransferPayloadWire };
 
 export type UnsignedStacksTransation = {
   amount: string;

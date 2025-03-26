@@ -1,15 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import mempool from '../../api/mempool';
 
 vi.mock('axios');
 
 describe('Mempool fees url', () => {
   beforeEach(() => {
-    axios.get.mockReset();
+    vi.mocked(axios.get).mockReset();
   });
+
   it('mainnet', async () => {
-    axios.get.mockResolvedValue({
+    vi.mocked(axios.get).mockResolvedValue({
       data: {
         fastestFee: 1,
         halfHourFee: 2,
@@ -23,7 +24,7 @@ describe('Mempool fees url', () => {
   });
 
   it('signet', async () => {
-    axios.get.mockResolvedValue({
+    vi.mocked(axios.get).mockResolvedValue({
       data: {
         fastestFee: 1,
         halfHourFee: 2,
@@ -37,7 +38,7 @@ describe('Mempool fees url', () => {
   });
 
   it('testnet', async () => {
-    axios.get.mockResolvedValue({
+    vi.mocked(axios.get).mockResolvedValue({
       data: {
         fastestFee: 1,
         halfHourFee: 2,
@@ -50,7 +51,7 @@ describe('Mempool fees url', () => {
   });
 
   it('regtest', async () => {
-    axios.get.mockResolvedValue({
+    vi.mocked(axios.get).mockResolvedValue({
       data: {
         fastestFee: 1,
         halfHourFee: 2,

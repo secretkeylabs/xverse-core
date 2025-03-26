@@ -426,17 +426,22 @@ export const applySendBtcActionsAndFee = async (
         }
       }
 
-      const vSizeNoChange = getTransactionVSize(context, transaction);
+      // it's possible that we have no outputs at this point as this could be something like a recover btc txn
+      // and we'd expect all the funds to be sent as change. In this case, we cannot have a txn with no change,
+      // so the below if statement would not be true and we'd try build it again with change.
+      if (transaction.outputsLength > 0) {
+        const vSizeNoChange = getTransactionVSize(context, transaction);
 
-      if (vSizeNoChange) {
-        const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
+        if (vSizeNoChange) {
+          const feeWithoutChange = BigInt(vSizeNoChange * feeRate);
 
-        if (feeWithoutChange <= currentChange) {
-          actualFee = currentChange;
-          actualFeeRate = Number(actualFee) / vSizeNoChange;
-          effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (vSizeNoChange + unconfirmedVsize);
-          complete = true;
-          break;
+          if (feeWithoutChange <= currentChange) {
+            actualFee = currentChange;
+            actualFeeRate = Number(actualFee) / vSizeNoChange;
+            effectiveFeeRate = (Number(actualFee) + unconfirmedFee) / (vSizeNoChange + unconfirmedVsize);
+            complete = true;
+            break;
+          }
         }
       }
     }

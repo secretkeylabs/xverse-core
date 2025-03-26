@@ -1,5 +1,4 @@
 import BigNumber from 'bignumber.js';
-import { fetchBtcFeeRate } from '../api/xverse';
 
 const satsToBtc = (sats: BigNumber): BigNumber => sats.multipliedBy(0.00000001);
 
@@ -29,7 +28,6 @@ const getBtcEquivalent = (fiatAmount: BigNumber, btcFiatRate: BigNumber): BigNum
 
 export {
   btcToSats,
-  fetchBtcFeeRate,
   getBtcEquivalent,
   getBtcFiatEquivalent,
   getFiatBtcEquivalent,

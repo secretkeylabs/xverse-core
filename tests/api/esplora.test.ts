@@ -25,7 +25,8 @@ describe('BitcoinEsploraApiProvider', () => {
       mockBitcoinApi.onGet().reply(400);
 
       try {
-        await api.httpGet(`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
+        // eslint-disable-next-line @typescript-eslint/dot-notation -- accessing a private method
+        await api['httpGet'](`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
       } catch (error) {
         // expect the bitcoinApi to have been called once
         expect(mockBitcoinApi.history.get.length).toEqual(1);
@@ -66,7 +67,8 @@ describe('BitcoinEsploraApiProvider', () => {
       const mockFallbackBitcoinApi = new MockAdapter(api.fallbackBitcoinApi!);
       mockFallbackBitcoinApi.onGet().reply(200, { test: 'test' });
 
-      const data = await api.httpGet(`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
+      // eslint-disable-next-line @typescript-eslint/dot-notation -- accessing a private method
+      const data = await api['httpGet'](`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
 
       // expect the bitcoinApi to have been called once
       expect(mockBitcoinApi.history.get.length).toEqual(1);
@@ -100,7 +102,8 @@ describe('BitcoinEsploraApiProvider', () => {
       const mockFallbackBitcoinApi = new MockAdapter(api.fallbackBitcoinApi!);
       mockFallbackBitcoinApi.onGet().reply(200, { test: 'test' });
 
-      const data = await api.httpGet(`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
+      // eslint-disable-next-line @typescript-eslint/dot-notation -- accessing a private method
+      const data = await api['httpGet'](`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
 
       // expect the bitcoinApi to have been called once
       expect(mockBitcoinApi.history.get.length).toEqual(2);
@@ -128,7 +131,8 @@ describe('BitcoinEsploraApiProvider', () => {
       const mockFallbackBitcoinApi = new MockAdapter(api.fallbackBitcoinApi!);
       mockFallbackBitcoinApi.onGet().reply(200, { test: 'test' });
 
-      const data = await api.httpGet(`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
+      // eslint-disable-next-line @typescript-eslint/dot-notation -- accessing a private method
+      const data = await api['httpGet'](`/address/mnUu4b2k4RqG3u5NqXgqjYQ3GKJ3XjYj8U/utxo`);
 
       // expect the bitcoinApi to have been called once
       expect(mockBitcoinApi.history.get.length).toEqual(1);

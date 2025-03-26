@@ -1,37 +1,43 @@
 import { describe, expect, it } from 'vitest';
-import { getAccountFromSeedPhrase } from '../../account';
-import { testSeed, walletAccounts } from '../mocks/restore.mock';
+import { getAccountFromRootNode } from '../../account';
+import { WalletId } from '../../vaults';
+import { testRootNode, walletAccounts } from '../mocks/restore.mock';
 
 describe('account from seed phrase', () => {
   it('restores expected account', async () => {
-    const account = await getAccountFromSeedPhrase({
-      mnemonic: testSeed,
+    const account = await getAccountFromRootNode({
+      rootNode: testRootNode,
       network: 'Mainnet',
-      index: 0n,
+      derivationIndex: 0n,
+      derivationType: 'index',
+      walletId: 'walletId' as WalletId,
     });
-
     expect(account).toEqual(walletAccounts[0]);
   });
 
   it('restores expected account at index 1', async () => {
-    const account = await getAccountFromSeedPhrase({
-      mnemonic: testSeed,
+    const account = await getAccountFromRootNode({
+      rootNode: testRootNode,
       network: 'Mainnet',
-      index: 1n,
+      derivationIndex: 1n,
+      derivationType: 'index',
+      walletId: 'walletId' as WalletId,
     });
-
     expect(account).toEqual(walletAccounts[1]);
   });
 
   it('restores expected account at index 4', async () => {
-    const wallet = await getAccountFromSeedPhrase({
-      mnemonic: testSeed,
+    const account = await getAccountFromRootNode({
+      rootNode: testRootNode,
       network: 'Mainnet',
-      index: 4n,
+      derivationIndex: 4n,
+      derivationType: 'index',
+      walletId: 'walletId' as WalletId,
     });
 
-    expect(wallet).toEqual({
+    expect(account).toEqual({
       id: 4,
+      walletId: 'walletId',
       accountType: 'software',
       masterPubKey: '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3',
       stxAddress: 'SP1FWDM2J68TZBYCGR0VRTB3FFDAR5GP19PHB7M3Y',
@@ -53,15 +59,51 @@ describe('account from seed phrase', () => {
     });
   });
 
-  it('restores expected account testnet', async () => {
-    const wallet = await getAccountFromSeedPhrase({
-      mnemonic: testSeed,
-      network: 'Testnet',
-      index: 0n,
+  it('restores expected account at account index 4', async () => {
+    const account = await getAccountFromRootNode({
+      rootNode: testRootNode,
+      network: 'Mainnet',
+      derivationIndex: 4n,
+      derivationType: 'account',
+      walletId: 'walletId' as WalletId,
     });
 
-    expect(wallet).toEqual({
+    expect(account).toEqual({
+      id: 4,
+      walletId: 'walletId',
+      accountType: 'software',
+      masterPubKey: '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3',
+      stxAddress: 'SP27YCF0YG7KRY1X0CFJKYTB3C902ZZ84GS7WJ17G',
+      stxPublicKey: '03d83268738daa68ac4e9b5fc13ef20765c315d1dd1efddf49f8d19c1407fbcbce',
+      btcAddresses: {
+        native: {
+          address: 'bc1qa8wj4fm45llms5ery8zeuylpwlfv0dt0veyxua',
+          publicKey: '0236fd6823db01d7fa2d8306dc693a8caa3353b9025f45481e380d08c0b7766062',
+        },
+        nested: {
+          address: '37Pf81QGHsZJdL5a3zSMSfz9g1f8f1u4z1',
+          publicKey: '023725c60f2689098b0d274b4bc0b619c91582ede1351a4a23676f57e7fb8c1d53',
+        },
+        taproot: {
+          address: 'bc1pgsvake49jefrd0ac0v69293r927ngfgq4r5wu9a5k7syk0avszpqyufg9w',
+          publicKey: 'b479cfcb98eafd40a9c0e1b8effc228001672a0716f64b5cd758886d39f2a387',
+        },
+      },
+    });
+  });
+
+  it('restores expected account testnet', async () => {
+    const account = await getAccountFromRootNode({
+      rootNode: testRootNode,
+      network: 'Testnet',
+      derivationIndex: 0n,
+      derivationType: 'index',
+      walletId: 'walletId' as WalletId,
+    });
+
+    expect(account).toEqual({
       id: 0,
+      walletId: 'walletId',
       accountType: 'software',
       masterPubKey: '024d30279814a0e609534af1d1969b7c24a6918029e1f9cb2134a427ebfb1f17c3',
       stxAddress: 'ST147ST7ESA3RES888QQMV6AK7GZK93ZR75HPGC8G',

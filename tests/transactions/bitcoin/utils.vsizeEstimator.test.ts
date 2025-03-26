@@ -1,6 +1,7 @@
 import * as bip32 from '@scure/bip32';
 import * as bip39 from '@scure/bip39';
 import * as btc from '@scure/btc-signer';
+import { P2Ret } from '@scure/btc-signer/payment';
 import { describe, expect, it } from 'vitest';
 import { estimateVSize } from '../../../transactions/bitcoin/utils/transactionVsizeEstimator';
 
@@ -8,7 +9,7 @@ const dummySeedphrase = 'action action action action action action action action
 const dummySeed = bip39.mnemonicToSeedSync(dummySeedphrase);
 const dummyKeyPair = bip32.HDKey.fromMasterSeed(dummySeed);
 
-const createTransaction = (inputCount: number, outputCount: number, p2: btc.P2Ret, withOpReturn = false) => {
+const createTransaction = (inputCount: number, outputCount: number, p2: P2Ret, withOpReturn = false) => {
   const txn = new btc.Transaction({
     allowLegacyWitnessUtxo: true,
     allowUnknownInputs: true,

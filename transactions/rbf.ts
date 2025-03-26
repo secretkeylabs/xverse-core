@@ -1,7 +1,9 @@
 import { hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
+import { P2Ret } from '@scure/btc-signer/payment';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
-import { Transport } from '../ledger/types';
+import { KeystoneTransport } from '../keystone';
+import { LedgerTransport } from '../ledger';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { TransactionContext } from './bitcoin';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
@@ -81,7 +83,7 @@ const isTransactionRbfEnabled = (transaction: BtcTransactionData, wallet: RBFPro
 
   const btcAddressType = btc.Address(network).decode(wallet.btcAddress).type;
 
-  let p2btc: btc.P2Ret;
+  let p2btc: P2Ret;
   const publicKeyBuff = hex.decode(wallet.btcPublicKey);
   if (btcAddressType === 'sh') {
     const p2wpkh = btc.p2wpkh(publicKeyBuff, network);
@@ -121,7 +123,8 @@ export type TierFees = {
 
 type CompileOptions = {
   feeRate: number;
-  ledgerTransport?: Transport;
+  ledgerTransport?: LedgerTransport;
+  keystoneTransport?: KeystoneTransport;
   context: TransactionContext;
 };
 
@@ -141,7 +144,7 @@ class RbfTransaction {
 
   private transaction!: BtcTransactionData;
 
-  private p2btc!: btc.P2Ret;
+  private p2btc!: P2Ret;
 
   private network!: typeof btc.NETWORK;
 
@@ -163,7 +166,7 @@ class RbfTransaction {
 
     const btcAddressType = btc.Address(network).decode(options.btcAddress).type;
 
-    let p2btc: btc.P2Ret;
+    let p2btc: P2Ret;
     const publicKeyBuff = hex.decode(options.btcPublicKey);
     if (btcAddressType === 'sh') {
       const p2wpkh = btc.p2wpkh(publicKeyBuff, network);

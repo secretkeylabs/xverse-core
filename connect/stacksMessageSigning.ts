@@ -1,11 +1,10 @@
 import { hashMessage } from '@stacks/encryption';
 import {
   ClarityValue,
-  createStacksPrivateKey,
-  getPublicKey,
-  publicKeyToString,
   signMessageHashRsv,
   signStructuredData,
+  privateKeyToPublic,
+  publicKeyToHex,
 } from '@stacks/transactions';
 import { buf2hex } from '../utils/arrayBuffers';
 
@@ -16,13 +15,12 @@ export interface SignatureData {
 
 export function signStacksMessage(message: string, privateKey: string): SignatureData {
   const hash = hashMessage(message);
-  const sk = createStacksPrivateKey(privateKey);
   return {
     signature: signMessageHashRsv({
-      privateKey: sk,
+      privateKey,
       messageHash: buf2hex(hash),
-    }).data,
-    publicKey: publicKeyToString(getPublicKey(sk)),
+    }),
+    publicKey: publicKeyToHex(privateKeyToPublic(privateKey)),
   };
 }
 
@@ -31,15 +29,14 @@ export function signStructuredDataMessage(
   domain: ClarityValue,
   privateKey: string,
 ): SignatureData {
-  const sk = createStacksPrivateKey(privateKey);
   const signature = signStructuredData({
     message,
     domain,
-    privateKey: sk,
-  }).data;
+    privateKey,
+  });
 
   return {
     signature,
-    publicKey: publicKeyToString(getPublicKey(sk)),
+    publicKey: publicKeyToHex(privateKeyToPublic(privateKey)),
   };
 }

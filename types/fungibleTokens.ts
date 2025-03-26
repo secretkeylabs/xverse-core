@@ -24,14 +24,12 @@ export type FungibleToken = BaseToken & {
   protocol?: FungibleTokenProtocol;
   priceChangePercentage24h?: string | null;
   currentPrice?: string | null;
-  isTopToken?: boolean;
 };
 
 export type FungibleTokenStates = {
   isSpam: boolean;
   isEnabled: boolean;
   showToggle: boolean;
-  isTopToken: boolean;
 };
 
 export type FungibleTokenWithStates = FungibleToken & FungibleTokenStates;

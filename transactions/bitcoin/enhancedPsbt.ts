@@ -1,9 +1,11 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { base64, hex } from '@scure/base';
 import * as btc from '@scure/btc-signer';
-import { concatBytes } from 'micro-packed';
+import { utils } from 'micro-packed';
 
+import { TransactionInput } from '@scure/btc-signer/psbt';
 import { getRunesClient } from '../../api';
+import { PAY_TO_ANCHOR_SCRIPT_HEX } from '../../constant';
 import { UTXO } from '../../types';
 import { getBtcNetworkDefinition, isInscriptionsAndRunesCompatible } from '../btcNetwork';
 import { InputToSign, TransactionContext } from './context';
@@ -28,7 +30,7 @@ type ParsedOutputMetadata = { script: string[]; scriptHex: string } & (
   | {
       address?: undefined;
       pubKeys: string[];
-      type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk';
+      type: 'ms' | 'tr_ms' | 'tr_ns' | 'pk' | 'p2a';
       m: number;
     }
 );
@@ -149,6 +151,16 @@ export class EnhancedPsbt {
       };
     }
 
+    if (outputScript.type === 'p2a') {
+      return {
+        type: outputScript.type,
+        pubKeys: [],
+        script,
+        scriptHex,
+        m: 0,
+      };
+    }
+
     return {
       address: btc.Address(btcNetwork).encode(outputScript),
       script,
@@ -176,11 +188,11 @@ export class EnhancedPsbt {
         return undefined;
       }
     }
-    return hex.encode(sha256(sha256(concatBytes(txn.toBytes(false)))).reverse());
+    return hex.encode(sha256(sha256(utils.concatBytes(txn.toBytes(false)))).reverse());
   }
 
   private _getExtendedUtxoForInput = async (
-    inputRaw: btc.TransactionInput,
+    inputRaw: TransactionInput,
     inputTxid: string,
     knownEmptyTxids?: string[],
   ) => {
@@ -209,7 +221,8 @@ export class EnhancedPsbt {
     transaction: btc.Transaction,
     knownEmptyTxids?: string[],
   ): Promise<InputMetadata> {
-    const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash }[] = [];
+    const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash; isPayToAnchor: boolean }[] =
+      [];
 
     let isSigHashAll = this._isSigHashAll ?? false;
     let hasSigHashNone = this._hasSigHashNone ?? false;
@@ -232,10 +245,14 @@ export class EnhancedPsbt {
         throw new Error(`Could not parse input ${inputIndex}`);
       }
 
+      const isPayToAnchor =
+        (inputRaw.witnessUtxo?.script && hex.encode(inputRaw.witnessUtxo.script) === PAY_TO_ANCHOR_SCRIPT_HEX) || false;
+
       const sigHash = inputRaw.sighashType;
       inputs.push({
         extendedUtxo: inputExtendedUtxo,
         sigHash,
+        isPayToAnchor,
       });
 
       inputTotal += inputExtendedUtxo.utxo.value || 0;
@@ -283,19 +300,20 @@ export class EnhancedPsbt {
       const outputRaw = transaction.getOutput(outputIndex);
 
       if (outputMetadata.type === undefined && outputMetadata.address === undefined) {
+        const amount = outputRaw.amount ? Number(outputRaw.amount) : 0;
         outputs.push({
           type: 'script',
           script: outputMetadata.script,
           scriptHex: outputMetadata.scriptHex,
-          amount: outputRaw.amount ? Number(outputRaw.amount) : 0,
+          amount,
         });
         hasScriptOutput = true;
-
+        outputTotal += amount;
+        currentOffset += amount;
         continue;
       }
 
       const amount = Number(outputRaw.amount);
-      outputTotal += amount;
 
       let inscriptions: IOInscription[] = [];
       let satributes: IOSatribute[] = [];
@@ -336,6 +354,7 @@ export class EnhancedPsbt {
         });
       }
 
+      outputTotal += amount;
       currentOffset += Number(amount);
     }
 
@@ -362,6 +381,7 @@ export class EnhancedPsbt {
         mapInputToEnhancedInput(
           input.extendedUtxo,
           !this._inputsToSignMap || idx in this._inputsToSignMap,
+          input.isPayToAnchor,
           input.sigHash,
         ),
       ),
