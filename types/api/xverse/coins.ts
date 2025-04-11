@@ -48,3 +48,13 @@ export type TopTokensResponse = {
   stacks: PrincipalToFungibleToken;
   'brc-20': PrincipalToFungibleToken;
 };
+
+export type TokenStatsAndInfoResponseType = {
+  volume24h?: number;
+  marketCap?: number;
+  holders?: number;
+  divisibility?: number;
+  mintable?: boolean;
+  mintLimit?: number;
+  mintAmount?: number;
+};

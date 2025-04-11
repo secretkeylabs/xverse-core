@@ -28,6 +28,7 @@ import {
   ExecuteStxOrderResponse,
   ExecuteUtxoOrderRequest,
   ExecuteUtxoOrderResponse,
+  FungibleTokenProtocol,
   GetDestinationTokensRequest,
   GetDestinationTokensResponse,
   GetListedUtxosRequest,
@@ -68,6 +69,7 @@ import {
   SupportedCurrency,
   TokenBasic,
   TokenFiatRateResponse,
+  TokenStatsAndInfoResponseType,
   TopTokens,
   TopTokensResponse,
 } from '../types';
@@ -150,6 +152,16 @@ export class XverseApi {
         currency: fiatCurrency,
         tickers: tickers,
       },
+    });
+    return response.data;
+  };
+
+  getTokenStatsAndInfo = async (
+    id: string,
+    protocol: FungibleTokenProtocol,
+  ): Promise<TokenStatsAndInfoResponseType> => {
+    const response = await this.client.get<TokenStatsAndInfoResponseType>('/v2/token-stats-and-info', {
+      params: { id, protocol },
     });
     return response.data;
   };
