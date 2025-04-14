@@ -55,6 +55,6 @@ export type TokenStatsAndInfoResponseType = {
   holders?: number;
   divisibility?: number;
   mintable?: boolean;
-  mintLimit?: number;
-  mintAmount?: number;
+  mintLimit?: string;
+  mintAmount?: string;
 };
