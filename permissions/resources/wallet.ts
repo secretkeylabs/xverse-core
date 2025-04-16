@@ -19,3 +19,4 @@ export const walletPermissionSchema = v.object({
   clientId: v.string(),
   actions: walletActionsSchema,
 });
+export type WalletPermission = v.InferOutput<typeof walletPermissionSchema>;

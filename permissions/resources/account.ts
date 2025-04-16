@@ -53,6 +53,6 @@ export const accountPermissionSchema = v.object({
   type: v.literal('account'),
   resourceId: accountResourceIdSchema,
   clientId: v.string(),
-
   actions: accountActionsSchema,
 });
+export type AccountPermission = v.InferOutput<typeof accountPermissionSchema>;
