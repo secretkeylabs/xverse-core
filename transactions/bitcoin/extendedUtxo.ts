@@ -2,6 +2,7 @@ import BigNumber from 'bignumber.js';
 import { UtxoCache } from '../../api';
 import EsploraProvider from '../../api/esplora/esploraAPiProvider';
 import { UTXO, UtxoOrdinalBundle } from '../../types';
+import { normalizeRuneName } from '../../utils';
 import { getOutpointFromUtxo } from './utils';
 
 export class ExtendedUtxo {
@@ -137,7 +138,9 @@ export class ExtendedUtxo {
       return undefined;
     }
 
-    const runeEntry = bundleData.runes?.find((rune) => rune[0] === runeName.toUpperCase());
+    const normalizedRuneName = normalizeRuneName(runeName);
+
+    const runeEntry = bundleData.runes?.find((rune) => normalizeRuneName(rune[0]) === normalizedRuneName);
     const runeBalance = BigNumber(runeEntry?.[1].amount ?? 0);
 
     return runeBalance;

@@ -3,6 +3,7 @@ import { BigNumber } from 'bignumber.js';
 import { getRunesClient } from '../api';
 import { DEFAULT_DUST_VALUE } from '../constant';
 import { Edict } from '../types';
+import { normalizeRuneName } from '../utils';
 import { processPromisesBatch } from '../utils/promises';
 import { ActionType, EnhancedTransaction, ExtendedUtxo, TransactionContext, TransactionOptions } from './bitcoin';
 import { Action } from './bitcoin/types';
@@ -46,7 +47,8 @@ export const sendManyRunes = async (
   }
 
   const runeTotalsToSend = recipients.reduce((acc, { runeName, amount }) => {
-    acc[runeName] = BigNumber(acc[runeName] ?? 0).plus(amount.toString());
+    const normalizedRuneName = normalizeRuneName(runeName);
+    acc[normalizedRuneName] = BigNumber(acc[normalizedRuneName] ?? 0).plus(amount.toString());
     return acc;
   }, {} as Record<string, BigNumber>);
 
@@ -71,17 +73,20 @@ export const sendManyRunes = async (
       const utxoBundle = await utxo.getBundleData();
 
       for (const [rune, runeDetails] of utxoBundle?.runes ?? []) {
-        allocatedRunes[rune] = BigNumber(allocatedRunes[rune] ?? 0).plus(runeDetails.amount);
+        const normalizedRuneName = normalizeRuneName(rune);
+        allocatedRunes[normalizedRuneName] = BigNumber(allocatedRunes[normalizedRuneName] ?? 0).plus(
+          runeDetails.amount,
+        );
       }
 
       selectedOutpoints.add(utxo.outpoint);
 
-      if (allocatedRunes[runeName].gte(totalToSend)) {
+      if (allocatedRunes[runeName]?.gte(totalToSend)) {
         break;
       }
     }
 
-    if (allocatedRunes[runeName].lt(totalToSend)) {
+    if (!allocatedRunes[runeName] || allocatedRunes[runeName].lt(totalToSend)) {
       throw new Error(`Not enough runes to send for ${runeName}`);
     }
   }

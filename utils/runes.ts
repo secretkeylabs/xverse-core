@@ -88,6 +88,11 @@ const getSpacedName = (name: string, spacerRaw: bigint | BigNumber): string => {
   return nameArr.join('');
 };
 
+export const normalizeRuneName = (name: string): string => {
+  // remove all non-alphanumeric characters
+  return name.replace(/[^a-zA-Z]/g, '').toUpperCase();
+};
+
 const extractRuneInputs = async (context: TransactionContext, summary: TransactionSummary | PsbtSummary) => {
   const userAddresses = new Set([context.paymentAddress.address, context.ordinalsAddress.address]);
 
