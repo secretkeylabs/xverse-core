@@ -16,8 +16,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e #v4.3.0
         with:
           node-version: 23
           cache: npm
@@ -32,7 +32,7 @@ jobs:
           echo "BRANCH_COVERAGE=$(node extractCoverage.js branch)" >> $GITHUB_ENV
           echo "FUNCTION_COVERAGE=$(node extractCoverage.js function)" >> $GITHUB_ENV
       - name: Comment PR and delete old comments
-        uses: actions/github-script@v5
+        uses: actions/github-script@211cb3fefb35a799baa5156f9321bb774fe56294 # v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -97,8 +97,8 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e #v4.3.0
         with:
           node-version: 23
           cache: npm
