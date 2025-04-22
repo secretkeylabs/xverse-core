@@ -188,8 +188,8 @@ export class BitcoinEsploraApiProvider {
     return response.data;
   }
 
-  async getAddressMempoolTransactions(address: string): Promise<BtcAddressMempool[]> {
-    return this.httpGet<BtcAddressMempool[]>(`/address/${address}/txs/mempool`);
+  async getAddressMempoolTransactions(address: string): Promise<EsploraTransaction[]> {
+    return this.httpGet<EsploraTransaction[]>(`/address/${address}/txs/mempool`);
   }
 
   async sendRawTransaction(rawTransaction: string): Promise<BtcTransactionBroadcastResponse> {

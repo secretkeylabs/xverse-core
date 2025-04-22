@@ -14,7 +14,7 @@ const DUMMY_INPUT_INDEX = 0xffffffff;
 const DUMMY_INPUT_SEQUENCE = 0;
 type PsbtInput = Parameters<Psbt['addInput']>[0];
 
-const createMessageSignature = async (
+export const createLedgerBip322Signature = async (
   app: AppClient,
   accountPolicy: DefaultWalletPolicy,
   message: string,
@@ -66,11 +66,13 @@ const createMessageSignature = async (
 const createSegwitBip322Signature = async ({
   message,
   app,
+  accountIndex,
   addressIndex,
   networkType,
 }: {
   message: string;
   app: AppClient;
+  accountIndex: number;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
@@ -79,15 +81,15 @@ const createSegwitBip322Signature = async ({
   const extendedPublicKey = await app.getExtendedPubkey(`${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'`);
   const { publicKey, witnessScript } = getNativeSegwitAccountDataFromXpub(extendedPublicKey, addressIndex, networkType);
   const inputDerivation: Bip32Derivation = {
-    path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+    path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/${accountIndex}'/0/${addressIndex}`,
     pubkey: publicKey,
     masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
   };
   const accountPolicy = new DefaultWalletPolicy(
     'wpkh(@0/**)',
-    `[${masterFingerPrint}/84'/${coinType}'/0']${extendedPublicKey}`,
+    `[${masterFingerPrint}/84'/${coinType}'/${accountIndex}']${extendedPublicKey}`,
   );
-  return createMessageSignature(
+  return createLedgerBip322Signature(
     app,
     accountPolicy,
     message,
@@ -102,11 +104,13 @@ const createSegwitBip322Signature = async ({
 const createTaprootBip322Signature = async ({
   message,
   app,
+  accountIndex,
   addressIndex,
   networkType,
 }: {
   message: string;
   app: AppClient;
+  accountIndex: number;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
@@ -116,16 +120,16 @@ const createTaprootBip322Signature = async ({
   const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(extendedPublicKey, addressIndex, networkType);
   // Need to update input derivation path so the ledger can recognize the inputs to sign
   const inputDerivation: TapBip32Derivation = {
-    path: `${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+    path: `${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/${accountIndex}'/0/${addressIndex}`,
     pubkey: internalPubkey,
     masterFingerprint: Buffer.from(masterFingerPrint, 'hex'),
     leafHashes: [],
   };
   const accountPolicy = new DefaultWalletPolicy(
     'tr(@0/**)',
-    `[${masterFingerPrint}/86'/${coinType}'/0']${extendedPublicKey}`,
+    `[${masterFingerPrint}/86'/${coinType}'/${accountIndex}']${extendedPublicKey}`,
   );
-  return createMessageSignature(
+  return createLedgerBip322Signature(
     app,
     accountPolicy,
     message,
@@ -172,6 +176,7 @@ export async function createNativeSegwitECDSA({
 export async function signMessageLedger({
   transport,
   networkType,
+  accountIndex,
   addressIndex,
   address,
   message,
@@ -179,6 +184,7 @@ export async function signMessageLedger({
 }: {
   transport: LedgerTransport;
   networkType: NetworkType;
+  accountIndex: number;
   addressIndex: number;
   address: string;
   message: string;
@@ -197,9 +203,9 @@ export async function signMessageLedger({
   }
   if (protocolToSign === MessageSigningProtocols.BIP322) {
     if (type === AddressType.p2tr) {
-      return createTaprootBip322Signature({ message, app, addressIndex, networkType });
+      return createTaprootBip322Signature({ message, app, accountIndex, addressIndex, networkType });
     }
-    return createSegwitBip322Signature({ message, app, addressIndex, networkType });
+    return createSegwitBip322Signature({ message, app, accountIndex, addressIndex, networkType });
   }
   throw new Error("Couldn't sign Message");
 }

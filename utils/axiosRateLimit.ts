@@ -3,7 +3,7 @@
  * https://github.com/aishek/axios-rate-limit
  */
 
-import { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { Axios, InternalAxiosRequestConfig } from 'axios';
 
 type RateLimitRequestHandler = {
   resolve: () => boolean;
@@ -33,7 +33,7 @@ export class AxiosRateLimit {
 
   private maxRequests: number;
 
-  constructor(axios: AxiosInstance, options: RateLimitOptions) {
+  constructor(axios: Axios | Axios[], options: RateLimitOptions) {
     this.queue = [];
     this.timeslotRequests = 0;
 
@@ -49,7 +49,8 @@ export class AxiosRateLimit {
       return Promise.reject(error);
     }
 
-    axios.interceptors.request.use(this.handleRequest, handleError);
+    const axiosInstances = Array.isArray(axios) ? axios : [axios];
+    axiosInstances.forEach((axiosInstance) => axiosInstance.interceptors.request.use(this.handleRequest, handleError));
   }
 
   private handleRequest = (request: InternalAxiosRequestConfig<any>) => {

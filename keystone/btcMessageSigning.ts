@@ -67,12 +67,14 @@ const createSegwitBip322Signature = async ({
   message,
   app,
   xpub,
+  accountIndex,
   addressIndex,
   networkType,
 }: {
   message: string;
   app: Bitcoin;
   xpub?: string;
+  accountIndex: number;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
@@ -86,7 +88,7 @@ const createSegwitBip322Signature = async ({
   }
   const { publicKey, witnessScript } = getNativeSegwitAccountDataFromXpub(xpub, addressIndex, networkType);
   const inputDerivation: Bip32Derivation = {
-    path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+    path: `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/${accountIndex}'/0/${addressIndex}`,
     pubkey: publicKey,
     masterFingerprint: Buffer.from(app.mfp, 'hex'),
   };
@@ -105,12 +107,14 @@ const createTaprootBip322Signature = async ({
   message,
   app,
   xpub,
+  accountIndex,
   addressIndex,
   networkType,
 }: {
   message: string;
   app: Bitcoin;
   xpub?: string;
+  accountIndex: number;
   addressIndex: number;
   networkType: NetworkType;
 }): Promise<SignedMessage> => {
@@ -125,7 +129,7 @@ const createTaprootBip322Signature = async ({
 
   const { internalPubkey, taprootScript } = getTaprootAccountDataFromXpub(xpub, addressIndex, networkType);
   const inputDerivation: TapBip32Derivation = {
-    path: `${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`,
+    path: `${BTC_TAPROOT_PATH_PURPOSE}${coinType}'/${accountIndex}'/0/${addressIndex}`,
     pubkey: internalPubkey,
     masterFingerprint: Buffer.from(app.mfp, 'hex'),
     leafHashes: [],
@@ -147,18 +151,23 @@ async function createNativeSegwitECDSA({
   mfp,
   networkType,
   message,
+  accountIndex,
   addressIndex,
 }: {
   transport: KeystoneTransport;
   mfp: string;
   networkType: NetworkType;
   message: string;
+  accountIndex: number;
   addressIndex: number;
 }): Promise<SignedMessage> {
   const app = new Bitcoin(transport, mfp);
 
   const coinType = getCoinType(networkType);
-  const signature = await app.signMessage(message, `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/0'/0/${addressIndex}`);
+  const signature = await app.signMessage(
+    message,
+    `${BTC_SEGWIT_PATH_PURPOSE}${coinType}'/${accountIndex}'/0/${addressIndex}`,
+  );
   return {
     signature,
     protocol: MessageSigningProtocols.ECDSA,
@@ -169,6 +178,7 @@ async function createNativeSegwitECDSA({
  * This function is used to sign an incoming BIP 322 message with the keystone
  * @param transport - the transport object with connected keystone device
  * @param networkType - the network type (Mainnet or Testnet)
+ * @param accountIndex - the index of the account to sign with
  * @param addressIndex - the index of the account address to sign with
  * @param message - the incoming message in string format to sign
  * @returns the signature in string (base64) format
@@ -176,6 +186,7 @@ async function createNativeSegwitECDSA({
 export async function signMessageKeystone({
   transport,
   networkType,
+  accountIndex,
   addressIndex,
   address,
   message,
@@ -185,6 +196,7 @@ export async function signMessageKeystone({
 }: {
   transport: KeystoneTransport;
   networkType: NetworkType;
+  accountIndex: number;
   addressIndex: number;
   address: string;
   message: string;
@@ -204,13 +216,20 @@ export async function signMessageKeystone({
     if (type === AddressType.p2tr) {
       throw new Error('ECDSA is not supported for Taproot Addresses');
     }
-    return createNativeSegwitECDSA({ transport, mfp, networkType, message, addressIndex });
+    return createNativeSegwitECDSA({ transport, mfp, networkType, message, accountIndex, addressIndex });
   }
   if (protocolToSign === MessageSigningProtocols.BIP322) {
     if (type === AddressType.p2tr) {
-      return createTaprootBip322Signature({ message, app, xpub: xpub.ordinals, addressIndex, networkType });
+      return createTaprootBip322Signature({
+        message,
+        app,
+        xpub: xpub.ordinals,
+        accountIndex,
+        addressIndex,
+        networkType,
+      });
     }
-    return createSegwitBip322Signature({ message, app, xpub: xpub.btc, addressIndex, networkType });
+    return createSegwitBip322Signature({ message, app, xpub: xpub.btc, accountIndex, addressIndex, networkType });
   }
   throw new Error("Couldn't sign Message");
 }

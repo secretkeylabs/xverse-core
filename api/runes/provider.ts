@@ -82,7 +82,7 @@ const getMutex = (key: string): Mutex => {
   return mutexStore[key];
 };
 
-class RunesApi {
+export class RunesApi {
   private clientBigNumber: AxiosInstance;
 
   private network: NetworkType;

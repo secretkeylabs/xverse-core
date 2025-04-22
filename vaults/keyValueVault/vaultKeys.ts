@@ -17,6 +17,7 @@ import { NetworkType } from '../../types';
  */
 export const keyValueVaultKeys = {
   addressBook: (network: NetworkType) => `addressBook::${network}` as `addressBook::${NetworkType}`,
+  apiAuthTokens: (network: NetworkType) => `authToken::${network}` as `authToken::${NetworkType}`,
 };
 
 type ExtractKeys<T> = T extends string ? T : T extends (...args: any) => any ? ReturnType<T> : never;

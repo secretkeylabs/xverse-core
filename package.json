@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:prettier": "echo 'TODO: move to lint script' && prettier -c '**/*.{ts,tsx,js,jsx}'",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "ts-check": "tsc --noEmit"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.0.2",

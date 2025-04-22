@@ -1,8 +1,10 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import BigNumber from 'bignumber.js';
-import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../constant';
-import { runeTokenToFungibleToken } from '../fungibleTokens';
+import { API_TIMEOUT_MILLI, XVERSE_API_BASE_URL } from '../../constant';
+import { runeTokenToFungibleToken } from '../../fungibleTokens';
 import {
+  Account,
+  ApiAddressHistoryResult,
   APIGetRunesActivityForAddressResponse,
   AppFeaturesBody,
   AppFeaturesContext,
@@ -72,8 +74,12 @@ import {
   TokenStatsAndInfoResponseType,
   TopTokens,
   TopTokensResponse,
-} from '../types';
-import { getXClientVersion } from '../utils/xClientVersion';
+} from '../../types';
+import { AxiosRateLimit } from '../../utils/axiosRateLimit';
+import { getXClientVersion } from '../../utils/xClientVersion';
+import { MasterVault } from '../../vaults';
+import AddressRegistrars from './addressRegistrar';
+import { AuthenticatedClient } from './authenticatedClient';
 
 const produceHistoricalDataObject = (timestamp: number, price: number) => ({
   x: timestamp,
@@ -91,15 +97,38 @@ const produceHistoricalDataObject = (timestamp: number, price: number) => ({
 export class XverseApi {
   private client: AxiosInstance;
 
+  private authenticatedClient: AuthenticatedClient;
+
   private network: NetworkType;
 
-  constructor(network: NetworkType) {
+  rateLimiter: AxiosRateLimit;
+
+  static readonly addressRegistrars = AddressRegistrars;
+
+  constructor(vault: MasterVault, network: NetworkType) {
     this.client = axios.create({
       baseURL: XVERSE_API_BASE_URL(network),
       headers: {
         'Content-Type': 'application/json',
         'X-Client-Version': getXClientVersion() || undefined,
       },
+    });
+
+    this.authenticatedClient = new AuthenticatedClient(
+      {
+        baseURL: XVERSE_API_BASE_URL(network),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Version': getXClientVersion() || undefined,
+        },
+      },
+      vault,
+      network,
+    );
+
+    // we create a shared rate limiter for the client and the authenticated client
+    this.rateLimiter = new AxiosRateLimit([this.client, this.authenticatedClient], {
+      maxRPS: 10,
     });
 
     this.network = network;
@@ -354,6 +383,53 @@ export class XverseApi {
       AppFeaturesBody
     >('/v1/app-features', { context: { ...context, network: this.network } }, { headers });
     return response.data;
+  };
+
+  auth = {
+    ensureAccountRegistered: async (account: Account) => {
+      const addresses = Object.values(account.btcAddresses).map((a) => a.address);
+      const alreadyAuthorized = await this.authenticatedClient.hasScope(addresses);
+
+      if (alreadyAuthorized) {
+        return;
+      }
+
+      if (account.accountType === 'ledger' || account.accountType === 'keystone') {
+        const addressesToRegister = Object.values(account.btcAddresses).map((a) => a.address);
+        return this.authenticatedClient.extend(addressesToRegister);
+      }
+
+      return this.authenticatedClient.extendSoftwareAccountScope(account);
+    },
+  };
+
+  account = {
+    fetchAddressBtcHistory: async (
+      addresses: string[],
+      options?: {
+        offset?: number;
+        limit?: number;
+      },
+    ): Promise<ApiAddressHistoryResult> => {
+      const response = await this.authenticatedClient.get<ApiAddressHistoryResult>(`/v1/account/history`, {
+        params: {
+          addresses,
+          ...options,
+        },
+      });
+      return response.data;
+    },
+
+    fetchAccountBtcHistory: async (
+      account: Account,
+      options?: {
+        offset?: number;
+        limit?: number;
+      },
+    ): Promise<ApiAddressHistoryResult> => {
+      const addresses = Object.values(account.btcAddresses).map((a) => a.address);
+      return this.account.fetchAddressBtcHistory(addresses, options);
+    },
   };
 
   listings = {
