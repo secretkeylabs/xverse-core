@@ -25,6 +25,7 @@ import {
 import { ECPair, ECPairInterface } from '../utils/ecpair';
 import { DerivationType, WalletId } from '../vaults';
 import { GAIA_HUB_URL } from './../constant';
+import { getAccountStrkAddresses } from './starknet';
 
 function getStxDerivationPath(derivationType: DerivationType, index: bigint) {
   let accountIndex = 0n;
@@ -127,12 +128,12 @@ export async function getAccountFromRootNode({
   walletId: WalletId;
 }): Promise<Account> {
   let accountIndex = 0n;
-  let index = 0n;
+  let addressIndex = 0n;
 
   if (derivationType === 'account') {
     accountIndex = derivationIndex;
   } else {
-    index = derivationIndex;
+    addressIndex = derivationIndex;
   }
 
   // STX =================================================
@@ -155,7 +156,7 @@ export async function getAccountFromRootNode({
   const btcNetwork = getBtcNetworkDefinition(network);
 
   // derive nested segwit btc address
-  const nestedKeyPair = rootNode.derive(getNestedSegwitDerivationPath({ accountIndex, index, network }));
+  const nestedKeyPair = rootNode.derive(getNestedSegwitDerivationPath({ accountIndex, index: addressIndex, network }));
   const nestedP2wpkh = btc.p2wpkh(nestedKeyPair.publicKey!, btcNetwork);
   const nestedP2 = btc.p2sh(nestedP2wpkh, btcNetwork);
 
@@ -163,21 +164,28 @@ export async function getAccountFromRootNode({
   const nestedPublicKey = hex.encode(nestedKeyPair.publicKey!);
 
   // derive native segwit btc address
-  const nativeKeyPair = rootNode.derive(getNativeSegwitDerivationPath({ accountIndex, index, network }));
+  const nativeKeyPair = rootNode.derive(getNativeSegwitDerivationPath({ accountIndex, index: addressIndex, network }));
   const nativeP2 = btc.p2wpkh(nativeKeyPair.publicKey!, btcNetwork);
 
   const nativeAddress = nativeP2.address!;
   const nativePublicKey = hex.encode(nativeKeyPair.publicKey!);
 
   // derive taproot btc address
-  const taprootKeyPair = rootNode.derive(getTaprootDerivationPath({ accountIndex, index, network }));
+  const taprootKeyPair = rootNode.derive(getTaprootDerivationPath({ accountIndex, index: addressIndex, network }));
   const xOnlyPubKey = taprootKeyPair.publicKey!.subarray(1);
   const taprootP2 = btc.p2tr(xOnlyPubKey, undefined, btcNetwork);
 
   const taprootAddress = taprootP2.address!;
   const taprootPublicKey = hex.encode(taprootP2.tapInternalKey);
 
-  const id = Math.max(Number(accountIndex), Number(index));
+  const id = Math.max(Number(accountIndex), Number(addressIndex));
+
+  // STRK ================================================
+  const strkAddresses = await getAccountStrkAddresses({
+    rootNode,
+    network,
+    accountIndex: derivationIndex,
+  });
 
   return {
     id,
@@ -200,6 +208,7 @@ export async function getAccountFromRootNode({
         publicKey: taprootPublicKey,
       },
     },
+    strkAddresses,
   };
 }
 

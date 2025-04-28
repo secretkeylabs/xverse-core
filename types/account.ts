@@ -1,3 +1,4 @@
+import { contractType } from '../starknet/utils';
 import { WalletId } from '../vaults';
 
 export type AccountType = 'ledger' | 'keystone' | 'software';
@@ -18,6 +19,10 @@ export type AccountBtcAddresses = {
   taproot: BtcAddress;
 };
 
+export type AccountStrkAddresses = {
+  [contractType.AX040W0G]: { address: string };
+};
+
 export type Account = {
   id: number;
   deviceAccountIndex?: number;
@@ -28,16 +33,17 @@ export type Account = {
   stxAddress: string;
   stxPublicKey: string;
   bnsName?: string;
-
   btcAddresses: AccountBtcAddresses;
 } & (
   | {
       accountType: 'software';
       walletId: WalletId;
+      strkAddresses?: AccountStrkAddresses;
     }
   | {
       accountType: Exclude<AccountType, 'software'>;
       walletId?: never;
+      strkAddresses?: never;
     }
 );
 

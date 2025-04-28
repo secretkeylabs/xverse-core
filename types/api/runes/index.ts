@@ -1,4 +1,4 @@
-import { BigNumber } from '../../../utils/bignumber';
+import { type BigNumber } from 'bignumber.js';
 
 type BigNullable = BigNumber | null;
 

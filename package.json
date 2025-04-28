@@ -25,6 +25,7 @@
     "@scure/base": "1.2.4",
     "@scure/bip39": "1.5.4",
     "@scure/btc-signer": "1.6.0",
+    "@scure/starknet": "1.1.0",
     "@stacks/auth": "7.0.2",
     "@stacks/connect": "7.9.0",
     "@stacks/encryption": "7.0.2",
@@ -75,7 +76,7 @@
     "@types/react": "18.2.18",
     "@typescript-eslint/eslint-plugin": "5.58.0",
     "@typescript-eslint/parser": "5.58.0",
-    "@vitest/coverage-v8": "1.6.0",
+    "@vitest/coverage-v8": "1.6.1",
     "axios-mock-adapter": "1.22.0",
     "bip322-js": "1.1.0",
     "eslint": "8.38.0",
@@ -85,7 +86,7 @@
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-prettier": "4.2.1",
     "husky": "8.0.3",
-    "lint-staged": "13.3.0",
+    "lint-staged": "15.5.1",
     "mockdate": "3.0.5",
     "nock": "13.5.4",
     "prettier": "2.8.7",
@@ -93,7 +94,7 @@
     "rimraf": "3.0.2",
     "ts-loader": "9.4.2",
     "typescript": "5.6.2",
-    "vitest": "1.6.0"
+    "vitest": "1.6.1"
   },
   "peerDependencies": {
     "@keystonehq/hw-transport-webusb": "0.5.1",
@@ -101,6 +102,7 @@
     "@scure/bip32": "1.6.2",
     "bignumber.js": "9.1.2",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "starknet": "7.1.0"
   }
 }

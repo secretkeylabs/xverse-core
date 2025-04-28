@@ -80,6 +80,12 @@ import { getXClientVersion } from '../../utils/xClientVersion';
 import { MasterVault } from '../../vaults';
 import AddressRegistrars from './addressRegistrar';
 import { AuthenticatedClient } from './authenticatedClient';
+import {
+  StarknetTransactionListRequest,
+  StarknetTransactionListResponse,
+  StarknetTokenBalancesRequest,
+  StarknetTokenBalancesResponse,
+} from '../../types/api/xverse/starknet';
 
 const produceHistoricalDataObject = (timestamp: number, price: number) => ({
   x: timestamp,
@@ -465,6 +471,21 @@ export class XverseApi {
         '/v1/listings/runes/submit-cancellation',
         body,
       );
+      return response.data;
+    },
+  };
+
+  starknet = {
+    getTransactionList: async (body: StarknetTransactionListRequest): Promise<StarknetTransactionListResponse> => {
+      const response = await this.client.get<StarknetTransactionListResponse>(`/starknet/v1/listTransactions`, {
+        params: body,
+      });
+      return response.data;
+    },
+    getTokenBalances: async (body: StarknetTokenBalancesRequest): Promise<StarknetTokenBalancesResponse> => {
+      const response = await this.client.get<StarknetTokenBalancesResponse>('/starknet/v1/tokenBalances', {
+        params: body,
+      });
       return response.data;
     },
   };

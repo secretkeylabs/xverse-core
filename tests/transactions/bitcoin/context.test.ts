@@ -496,6 +496,11 @@ describe('createTransactionContext', () => {
             publicKey: addresses[0].taprootPubKey,
           },
         },
+        strkAddresses: {
+          'argent-x-v0_4_0-with-0-guardians': {
+            address: '0x06462ab7c0b54be2a4efa89fa94b4becfc33c78bb96949e83c9f35a07c488396',
+          },
+        },
       },
       walletId: 'walletId' as WalletId,
       network: 'Mainnet',
@@ -532,6 +537,11 @@ describe('createTransactionContext', () => {
           taproot: {
             address: addresses[0].taproot,
             publicKey: addresses[0].taprootPubKey,
+          },
+        },
+        strkAddresses: {
+          'argent-x-v0_4_0-with-0-guardians': {
+            address: '0x06462ab7c0b54be2a4efa89fa94b4becfc33c78bb96949e83c9f35a07c488396',
           },
         },
       },

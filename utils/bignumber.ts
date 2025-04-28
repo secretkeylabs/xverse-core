@@ -5,7 +5,10 @@ import JSONBigBase from 'json-bigint';
 const bigNumberPrecisionConfig = {
   EXPONENTIAL_AT: 1e9,
 };
-BigNumber.config(bigNumberPrecisionConfig);
+
+// Avoid mutating the "global" BigNumber class.
+const BN = BigNumber.clone();
+BN.config(bigNumberPrecisionConfig);
 
 // this is a workaround for json-bigint not having a way to set the exponential limit
 // it's hacky but it's the only way to access the internal BigNumber instance
@@ -27,10 +30,10 @@ forceBigNumberExponentialForJsonBig(JSONBigOnDemand);
 const bigMinMax =
   (isMax: boolean) =>
   (first: BigNumber | bigint | number, ...args: (BigNumber | bigint | number)[]): BigNumber => {
-    let best = BigNumber.isBigNumber(first) ? first : new BigNumber(first.toString());
+    let best = BN.isBigNumber(first) ? first : new BN(first.toString());
 
     for (const arg of args) {
-      const big = BigNumber.isBigNumber(arg) ? arg : new BigNumber(arg.toString());
+      const big = BN.isBigNumber(arg) ? arg : new BN(arg.toString());
 
       if (best === undefined || (isMax && big.gt(best)) || (!isMax && big.lt(best))) {
         best = big;
@@ -45,4 +48,4 @@ const bigUtils = {
   max: bigMinMax(true),
 };
 
-export { BigNumber, JSONBig, JSONBigOnDemand, bigUtils };
+export { BN as BigNumber, JSONBig, JSONBigOnDemand, bigUtils };
