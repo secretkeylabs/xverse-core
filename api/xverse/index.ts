@@ -75,18 +75,26 @@ import {
   TopTokens,
   TopTokensResponse,
 } from '../../types';
+import {
+  StarknetTokenBalancesRequest,
+  StarknetTokenBalancesResponse,
+  StarknetTransactionListRequest,
+  StarknetTransactionListResponse,
+} from '../../types/api/xverse/starknet';
+import {
+  GetBrc20BalanceBody,
+  GetBrc20MarketDataBody,
+  GetRuneBalanceBody,
+  GetRunesMarketDataBody,
+  GetSip10MarketDataBody,
+  TokenBalanceV3,
+  TokenMarketDataV3,
+} from '../../types/api/xverse/v3';
 import { AxiosRateLimit } from '../../utils/axiosRateLimit';
 import { getXClientVersion } from '../../utils/xClientVersion';
 import { MasterVault } from '../../vaults';
 import AddressRegistrars from './addressRegistrar';
 import { AuthenticatedClient } from './authenticatedClient';
-import {
-  StarknetTransactionListRequest,
-  StarknetTransactionListResponse,
-  StarknetTokenBalancesRequest,
-  StarknetTokenBalancesResponse,
-} from '../../types/api/xverse/starknet';
-
 const produceHistoricalDataObject = (timestamp: number, price: number) => ({
   x: timestamp,
   y: price,
@@ -549,6 +557,31 @@ export class XverseApi {
     /** Gets order history. This is for XC providers. */
     getOrderHistory: async (body: GetOrderHistoryRequest): Promise<GetOrderHistoryResponse> => {
       const response = await this.client.post<GetOrderHistoryResponse>('/v1/swaps/get-order-history', body);
+      return response.data;
+    },
+  };
+
+  v3 = {
+    getRunesBalance: async (body: GetRuneBalanceBody): Promise<TokenBalanceV3> => {
+      const response = await this.client.get<TokenBalanceV3>(
+        `/v3/address/${body.address}/runes/balance?includeUnconfirmed=${body.includeUnconfirmed}`,
+      );
+      return response.data;
+    },
+    getRunesMarketData: async (body: GetRunesMarketDataBody): Promise<TokenMarketDataV3> => {
+      const response = await this.client.post<TokenMarketDataV3>('/v3/runes/market-data', body);
+      return response.data;
+    },
+    getBrc20Balance: async (body: GetBrc20BalanceBody): Promise<TokenBalanceV3> => {
+      const response = await this.client.get<TokenBalanceV3>(`/v3/address/${body.address}/brc20/balance`);
+      return response.data;
+    },
+    getBrc20MarketData: async (body: GetBrc20MarketDataBody): Promise<TokenMarketDataV3> => {
+      const response = await this.client.post<TokenMarketDataV3>('/v3/brc20/market-data', body);
+      return response.data;
+    },
+    getSip10MarketData: async (body: GetSip10MarketDataBody): Promise<TokenMarketDataV3> => {
+      const response = await this.client.post<TokenMarketDataV3>('/v3/sip10/market-data', body);
       return response.data;
     },
   };
