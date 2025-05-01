@@ -3,7 +3,7 @@
  * @module encryption/aes
  */
 
-import { str2buf, buf2hex, concatBuffers } from '../utils/arrayBuffers';
+import { buf2hex, concatBuffers, str2buf } from '../utils/arrayBuffers';
 
 export const IV_SIZE = 16;
 
@@ -13,7 +13,7 @@ export const IV_SIZE = 16;
  * @returns {string}
  */
 export function generateRandomKey(bytesCount: number): string {
-  return buf2hex(window.crypto.getRandomValues(new Uint8Array(bytesCount)));
+  return buf2hex(crypto.getRandomValues(new Uint8Array(bytesCount)));
 }
 
 /**
@@ -22,11 +22,11 @@ export function generateRandomKey(bytesCount: number): string {
  * @returns {String} Encrypted cipherText.
  */
 export async function aesGcmEncrypt(plaintext: string, passwordHash: string): Promise<string> {
-  const iv = window.crypto.getRandomValues(new Uint8Array(IV_SIZE));
+  const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
   const data = Buffer.from(plaintext, 'utf-8');
   const alg = { name: 'AES-GCM', iv };
-  const key = await window.crypto.subtle.importKey('raw', str2buf(passwordHash), alg, false, ['encrypt', 'decrypt']);
-  const encrypted = await window.crypto.subtle.encrypt(alg, key, data);
+  const key = await crypto.subtle.importKey('raw', str2buf(passwordHash), alg, false, ['encrypt', 'decrypt']);
+  const encrypted = await crypto.subtle.encrypt(alg, key, data);
   const buffer = new Uint8Array(encrypted);
   const cipherIv = concatBuffers(iv, buffer);
   return buf2hex(cipherIv);
@@ -42,8 +42,8 @@ export async function aesGcmDecrypt(cipherText: string, passwordHash: string): P
   const data = cipher.subarray(IV_SIZE);
   const iv = cipher.subarray(0, IV_SIZE);
   const alg = { name: 'AES-GCM', iv };
-  const key = await window.crypto.subtle.importKey('raw', str2buf(passwordHash), alg, false, ['encrypt', 'decrypt']);
-  const plainBuffer = await window.crypto.subtle.decrypt(alg, key, data);
+  const key = await crypto.subtle.importKey('raw', str2buf(passwordHash), alg, false, ['encrypt', 'decrypt']);
+  const plainBuffer = await crypto.subtle.decrypt(alg, key, data);
   const plaintext = new TextDecoder().decode(plainBuffer);
   return plaintext;
 }

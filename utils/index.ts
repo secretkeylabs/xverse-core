@@ -5,8 +5,8 @@ export * from './coreError';
 export * from './ecpair';
 export * from './numbersFormatting';
 export * from './runes';
-export * from './transactionSummary';
-export * from './xClientVersion';
-
 export * from './safe';
+export * from './shallowCompare';
+export * from './transactionSummary';
 export * from './typing';
+export * from './xClientVersion';

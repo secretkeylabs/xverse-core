@@ -53,6 +53,7 @@ describe('UtxoCache', () => {
     };
     mockStorageAdapter = {
       get: vi.fn(),
+      getMany: vi.fn(),
       set: vi.fn(),
       remove: vi.fn(),
       getAllKeys: vi.fn().mockResolvedValue([]),

@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getRuneInfoMock, ownBtcAddresses, runeBurnMinted, runeBurnPartial } from '../../../mocks/btc.indexer.txs';
 import BigNumber from 'bignumber.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchPastBtcTransactions, mapRuneToRuneInfo } from '../../../../api/btc';
 import { getRunesClient } from '../../../../api/runes/provider';
 import { XverseApi } from '../../../../api/xverse';
+import { RuneInfo } from '../../../../types';
+import { Account } from '../../../../types/account';
 import { MasterVault } from '../../../../vaults/masterVault';
 import { VaultConfig } from '../../../../vaults/types';
-import { Account } from '../../../../types/account';
-import { RuneInfo } from '../../../../types';
+import { getRuneInfoMock, ownBtcAddresses, runeBurnMinted, runeBurnPartial } from '../../../mocks/btc.indexer.txs';
 
 const mockGetPastBtcTransactions = vi.fn();
 
@@ -27,18 +27,21 @@ vi.mock('../../../../api/runes/provider', () => ({
 
 const sessionStorageAdapter = {
   get: vi.fn(),
+  getMany: vi.fn(),
   set: vi.fn(),
   remove: vi.fn(),
   getAllKeys: vi.fn(),
 };
 const encryptedDataStorageAdapter = {
   get: vi.fn(),
+  getMany: vi.fn(),
   set: vi.fn(),
   remove: vi.fn(),
   getAllKeys: vi.fn(),
 };
 const commonStorageAdapter = {
   get: vi.fn(),
+  getMany: vi.fn(),
   set: vi.fn(),
   remove: vi.fn(),
   getAllKeys: vi.fn(),

@@ -9,18 +9,21 @@ import { testRootNode, testSeed, testSeedPhrase } from '../mocks/restore.mock';
 describe('SeedVault', () => {
   const sessionStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),
   };
   const encryptedDataStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),
   };
   const commonStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),

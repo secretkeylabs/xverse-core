@@ -1,6 +1,6 @@
 type JSONPrimitive = string | number | boolean | null | undefined;
 
-type JSONValue =
+export type JSONValue =
   | JSONPrimitive
   | JSONValue[]
   | {

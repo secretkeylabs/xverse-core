@@ -6,18 +6,21 @@ import { KeyValueVault } from '../../vaults/keyValueVault';
 describe('KeyValueVault', () => {
   const sessionStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),
   };
   const encryptedDataStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),
   };
   const commonStorageAdapter = {
     get: vi.fn(),
+    getMany: vi.fn(),
     set: vi.fn(),
     remove: vi.fn(),
     getAllKeys: vi.fn(),

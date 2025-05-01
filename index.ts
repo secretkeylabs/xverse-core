@@ -24,6 +24,7 @@ export * from './gaia';
 export * from './hooks';
 export * from './keystone';
 export * from './ledger';
+export * from './persistentStoreManager';
 export * from './stacking';
 export * from './stacksCollectible';
 export * from './starknet';
