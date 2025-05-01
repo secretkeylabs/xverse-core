@@ -12,3 +12,4 @@ export * from './stacksApi';
 export * from './stacksSponsor';
 export * from './utxoCache';
 export * from './xverse';
+export * from './avnu';
