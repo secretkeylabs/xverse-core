@@ -28,6 +28,19 @@ export enum AnalyticsEvents {
   VisitCollectiblesTab = 'visit_collectibles_tab',
   VisitStackingTab = 'visit_stacking_tab',
   VisitExplorePage = 'visit_explore_page',
+
+  // Fiat on-ramp flow events
+  ClickBuyButton = 'click_buy_button',
+  SelectCryptoToBuy = 'select_crypto_to_buy',
+  CurrencySelected = 'currency_selected',
+  InputFiatAmount = 'input_fiat_amount',
+  ClickQuickAmountButton = 'click_quick_amount_button',
+  PaymentMethodSelected = 'payment_method_selected',
+  ClickPayWithCryptoTokens = 'click_pay_with_crypto_tokens',
+  ClickGetQuotes = 'click_get_quotes',
+  ClickQuoteOption = 'click_quote_option',
+  OnrampSuccessful = 'onramp_successful',
+  OnrampFailure = 'onramp_failure',
 }
 
 type CommonProps = {
@@ -114,5 +127,28 @@ export type AnalyticsEventProperties = {
   };
   [AnalyticsEvents.SelectBuyProvider]: {
     provider: 'xverse_swaps' | 'moonpay' | 'transak' | 'paypal';
+  };
+  [AnalyticsEvents.SelectCryptoToBuy]: {
+    crypto: string;
+  };
+  [AnalyticsEvents.CurrencySelected]: {
+    currency: string;
+  };
+  [AnalyticsEvents.InputFiatAmount]: {
+    amount: number;
+    currency: string;
+  };
+  [AnalyticsEvents.ClickQuickAmountButton]: {
+    amount: number;
+  };
+  [AnalyticsEvents.PaymentMethodSelected]: {
+    method: string;
+  };
+  [AnalyticsEvents.ClickPayWithCryptoTokens]: {
+    token: string;
+  };
+  [AnalyticsEvents.ClickQuoteOption]: {
+    provider: string;
+    tags: string[];
   };
 };
