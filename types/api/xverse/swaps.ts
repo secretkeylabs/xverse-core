@@ -76,6 +76,7 @@ export type XcQuote = {
   from: TokenBasic;
   to: TokenBasic;
   slippageSupported: boolean;
+  slippageThreshold: number;
   feeFlat: string;
   feePercentage: string;
   receiveAmount: string;
