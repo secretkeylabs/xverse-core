@@ -1,4 +1,4 @@
-import { StacksNetwork } from '@stacks/network';
+import { type StacksNetwork } from '@stacks/network';
 import BigNumber from 'bignumber.js';
 import {
   Brc20HistoryTransactionData,

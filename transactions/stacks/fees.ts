@@ -1,5 +1,5 @@
 import { bytesToHex } from '@noble/hashes/utils';
-import { StacksNetwork } from '@stacks/network';
+import { type StacksNetwork } from '@stacks/network';
 import { MempoolFeePriorities } from '@stacks/stacks-blockchain-api-types';
 import {
   estimateTransactionByteLength,

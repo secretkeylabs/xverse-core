@@ -1,4 +1,4 @@
-import { StacksNetwork } from '@stacks/network';
+import { type StacksNetwork } from '@stacks/network';
 import { fetchCoinMetaData } from '../api';
 import { supportedCoins } from '../constant';
 import { Coin, CoinMetaData, CoinsResponse } from '../types/index';

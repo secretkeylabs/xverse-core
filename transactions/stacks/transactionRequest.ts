@@ -5,7 +5,7 @@ import {
   TransactionPayload,
   TransactionTypes,
 } from '@stacks/connect';
-import { StacksNetwork } from '@stacks/network';
+import { type StacksNetwork } from '@stacks/network';
 import {
   addressToString,
   Authorization,

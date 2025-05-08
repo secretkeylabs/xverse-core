@@ -1,4 +1,4 @@
-import { StacksNetworkName } from '@stacks/network';
+import { type StacksNetworkName } from '@stacks/network';
 import { NetworkType, StacksMainnet, StacksTestnet } from '../../types';
 import { StacksApiProvider } from './provider';
 

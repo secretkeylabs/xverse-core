@@ -1,4 +1,4 @@
-import { StacksNetwork } from '@stacks/network';
+import { type StacksNetwork } from '@stacks/network';
 import type { TokenTransferPayloadWire } from '@stacks/transactions';
 import {
   AnchorMode,
