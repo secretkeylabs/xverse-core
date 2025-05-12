@@ -85,7 +85,7 @@ const getStxAddressBalanceAndHistory = async (stxClient: StacksApiProvider, addr
     stxClient.getAddressNonce(address),
   ]);
   const hasHistory = balance.totalBalance.gt(0) || nonce > 0;
-  return { balance: BigInt(balance.totalBalance.toString()), hasHistory };
+  return { balance: BigInt(balance.totalBalance.toFixed()), hasHistory };
 };
 
 const getBalancesAtIndex = async (options: {

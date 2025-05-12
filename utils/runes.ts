@@ -134,11 +134,11 @@ const parseSummaryWithBurnRuneScript = async (
       if (acc[addressRuneKey] === undefined) {
         acc[addressRuneKey] = {
           runeName,
-          amount: BigInt(inputBalances[runeName].toString()),
+          amount: BigInt(inputBalances[runeName].toFixed()),
           sourceAddresses: [inputAddress],
         };
       } else {
-        acc[addressRuneKey].amount += BigInt(inputBalances[runeName].toString());
+        acc[addressRuneKey].amount += BigInt(inputBalances[runeName].toFixed());
       }
     }
 
@@ -186,7 +186,7 @@ const parseSummaryWithRuneScript = async (
   // calculate initial unallocated balance without mint
   const unallocatedBalance = runeInputs.reduce((acc, input) => {
     for (const runeName in input.balances) {
-      const amount = BigInt(input.balances[runeName].toString());
+      const amount = BigInt(input.balances[runeName].toFixed());
       const sourceAddress = input.input.extendedUtxo.address;
       if (runeName in acc) {
         acc[runeName].amount += amount;
@@ -260,7 +260,7 @@ const parseSummaryWithRuneScript = async (
       const inputAddress = input.input.extendedUtxo.address;
 
       for (const runeName in input.balances) {
-        const balance = BigInt(input.balances[runeName].toString());
+        const balance = BigInt(input.balances[runeName].toFixed());
 
         acc[runeName] ||= {};
 

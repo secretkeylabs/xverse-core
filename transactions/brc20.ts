@@ -130,7 +130,7 @@ export const brc20TransferEstimateFees = async (
       {
         type: ActionType.SEND_BTC,
         toAddress: dummyAddress,
-        amount: BigInt(commitValue.toString()),
+        amount: BigInt(commitValue.toFixed()),
         combinable: true,
       },
     ],
@@ -200,7 +200,7 @@ export async function* brc20TransferExecute(
   context.ordinalsAddress.addInput(tx, dummyUtxo);
   tx.addOutputAddress(
     recipientAddress,
-    BigInt(finalRecipientUtxoValue.toString()),
+    BigInt(finalRecipientUtxoValue.toFixed()),
     getBtcNetworkDefinition(context.network),
   );
 
@@ -281,7 +281,7 @@ export async function* brc20TransferExecute(
 
   const transferTransaction = new btc.Transaction();
   await context.ordinalsAddress.addInput(transferTransaction, transferUtxo, { rbfEnabled: true });
-  context.addOutputAddress(transferTransaction, recipientAddress, BigInt(finalRecipientUtxoValue.toString()));
+  context.addOutputAddress(transferTransaction, recipientAddress, BigInt(finalRecipientUtxoValue.toFixed()));
 
   try {
     await context.signTransaction(transferTransaction, options);

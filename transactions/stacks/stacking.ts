@@ -29,7 +29,7 @@ export async function generateUnsignedDelegateTransaction(
   const poolRewardAddressTuple = poxAddressToTuple(poolPoxAddress);
   const userRewardAddressTuple = poxAddressToTuple(rewardAddress);
   const funcArgs = [
-    uintCV(amount.toString()),
+    uintCV(amount.toFixed()),
     standardPrincipalCV(poolAddress),
     noneCV(),
     someCV(poolRewardAddressTuple),

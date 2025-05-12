@@ -126,7 +126,7 @@ export async function inscriptionMintFeeEstimate(
     {
       type: ActionType.SEND_BTC,
       toAddress: dummyAddress,
-      amount: BigInt(commitValue.toString()),
+      amount: BigInt(commitValue.toFixed()),
       combinable: true,
     },
   ];
@@ -135,7 +135,7 @@ export async function inscriptionMintFeeEstimate(
     actions.push({
       type: ActionType.SEND_BTC,
       toAddress: serviceFeeAddress,
-      amount: BigInt(serviceFee.toString()),
+      amount: BigInt(serviceFee.toFixed()),
       combinable: true,
     });
   }

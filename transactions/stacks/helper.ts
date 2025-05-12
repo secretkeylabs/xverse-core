@@ -43,16 +43,12 @@ export function getFiatEquivalent(
   if (!value) return '0';
   switch (currencyType) {
     case 'STX':
-      return getStxFiatEquivalent(stxToMicrostacks(new BigNumber(value)), stxBtcRate, btcFiatRate)
-        .toFixed(2)
-        .toString();
+      return getStxFiatEquivalent(stxToMicrostacks(new BigNumber(value)), stxBtcRate, btcFiatRate).toFixed(2);
     case 'BTC':
-      return getBtcFiatEquivalent(btcToSats(new BigNumber(value)), btcFiatRate)
-        .toFixed(2)
-        .toString();
+      return getBtcFiatEquivalent(btcToSats(new BigNumber(value)), btcFiatRate).toFixed(2);
     case 'FT':
       if (fungibleToken?.tokenFiatRate) {
-        return new BigNumber(value).multipliedBy(fungibleToken.tokenFiatRate).toFixed(2).toString();
+        return new BigNumber(value).multipliedBy(fungibleToken.tokenFiatRate).toFixed(2);
       }
       break;
     default:

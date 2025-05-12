@@ -100,7 +100,7 @@
     "@stacks/storage": "7.0.6",
     "@stacks/transactions": "7.0.6",
     "@stacks/wallet-sdk": "7.0.6",
-    "bignumber.js": "9.1.2",
+    "bignumber.js": "9.3.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "starknet": "7.2.0"

@@ -5,7 +5,7 @@ export const runeTokenToFungibleToken = (runeBalance: RuneBalance): FungibleToke
   name: runeBalance.runeName,
   decimals: runeBalance.divisibility,
   principal: runeBalance.id,
-  balance: runeBalance.amount.toString(),
+  balance: runeBalance.amount.toFixed(),
   total_sent: '',
   total_received: '',
   assetName: runeBalance.runeName,

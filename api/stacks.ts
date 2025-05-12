@@ -439,7 +439,7 @@ export async function fetchDelegationState(stxAddress: string, network: StacksNe
 
     const delegationInfo = {
       delegated: true,
-      amount: delegatedAmount.toString(),
+      amount: delegatedAmount.toFixed(),
       delegatedTo: cvToString(delegatedTo),
       untilBurnHeight: untilBurnHeight,
     };
