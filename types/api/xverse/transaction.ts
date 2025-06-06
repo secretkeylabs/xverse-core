@@ -1,11 +1,5 @@
 import BigNumber from 'bignumber.js';
-import {
-  TokenType,
-  TransactionType,
-  TransactionStatus,
-  ContractCall,
-  TransactionPostCondition,
-} from '../shared/transaction';
+import { TokenType, TransactionType, TransactionStatus, ContractCall, TransactionPostCondition } from '../shared';
 
 export type TransactionData = {
   txid: string;
@@ -94,4 +88,13 @@ export interface FeesMultipliers {
   stxSendTxMultiplier: number;
   poolStackingTxMultiplier: number;
   otherTxMultiplier: number;
+}
+
+export interface AppInfo {
+  stxSendTxMultiplier: number;
+  poolStackingTxMultiplier: number;
+  otherTxMultiplier: number;
+  thresholdHighSatsFee: number;
+  thresholdHighSatsPerByteRatio: number;
+  thresholdHighStacksFee: number;
 }

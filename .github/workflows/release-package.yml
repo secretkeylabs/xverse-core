@@ -1,34 +1,72 @@
-name: Release & Publish Package
+name: Publish to GPR & Publish Github Release
 
 on:
-  release:
-    types: [created]
+  pull_request:
+    branches:
+      - develop
+    types: [closed]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-      - run: npm ci
-      - run: npm test
-
   publish-gpr:
-    needs: build
+    if: ${{ github.event.pull_request.merged == true && startsWith(github.head_ref, 'release/')}}
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e #v4.3.0
         with:
-          node-version: 16
+          node-version: 23
           registry-url: https://npm.pkg.github.com/
-      - run: npm ci
-      - run: npm run build:esm
+      - run: |
+          npm ci
+          npm test
+          npm run build:esm
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  publish-github-release:
+    needs: publish-gpr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - id: publish-linked-draft-release
+        name: Publish linked draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_ID: ${{ github.event.pull_request.number }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
+        run: |
+          # find the target commitish of the latest release matching our tag
+          TAG=$(echo $SOURCE_BRANCH | sed 's/release\/\(.*\)/\1/')
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/{owner}/{repo}/releases > releases.json
+          TAG_RC=$(cat releases.json | jq -r ".[] | select(.tag_name | match(\"$TAG\")) | .tag_name" | head -1)
+          RELEASE_ID=$(cat releases.json | jq -r ".[] | select(.tag_name==\"$TAG_RC\") | .id")
+          # publish the github release
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID \
+            -f target_commitish="develop" \
+            -F draft=false \
+            -F prerelease=false \
+            -F make_latest=true > release.json
+          # update PR description
+          cat release.json | jq -r .body > body.md
+          echo -e "\n\nPublished release: $(cat release.json | jq -r .html_url)" >> body.md
+          echo -e "\nTo install: \`npm i --save-exact @secretkeylabs/xverse-core@$(cat release.json | jq -r .tag_name | sed 's/v//')\`" >> body.md
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$GITHUB_REPOSITORY/pulls/$PR_ID \
+            -F 'body=@body.md'

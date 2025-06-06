@@ -1,41 +1,48 @@
+import { type StacksNetwork } from '@stacks/network';
+import type { TokenTransferPayloadWire } from '@stacks/transactions';
 import {
-  TransactionType,
-  TransactionStatus,
-  TransactionPostCondition,
-  ContractCall,
-} from '../shared/transaction';
-import { AnchorMode, ClarityValue, cvToHex, PostCondition, PostConditionMode, StacksTransaction, TokenTransferPayload, uintCV } from '@stacks/transactions';
-import { StxMempoolTransactionData } from 'types/network';
-import { StacksNetwork } from '@stacks/network';
-export { cvToHex, uintCV, StacksTransaction, TokenTransferPayload };
+  AnchorMode,
+  ClarityValue,
+  PostCondition,
+  PostConditionMode,
+  StacksTransactionWire,
+  cvToHex,
+  uintCV,
+} from '@stacks/transactions';
+import { StxMempoolTransactionData } from '../xverse';
+import { ContractCall, TransactionPostCondition, TransactionStatus, TransactionType } from '../shared';
+
+export { cvToHex, uintCV };
+export type { StacksTransactionWire, TokenTransferPayloadWire };
 
 export type UnsignedStacksTransation = {
-  amount: string,
-  senderAddress: string,
-  recipientAddress: string,
-  contractAddress: string,
-  contractName: string,
-  assetName: string,
-  publicKey: string,
-  network: StacksNetwork,
-  pendingTxs: StxMempoolTransactionData[],
-  memo?: string,
-  isNFT?: boolean,
-}
+  amount: string;
+  senderAddress: string;
+  recipientAddress: string;
+  contractAddress: string;
+  contractName: string;
+  assetName: string;
+  publicKey: string;
+  network: StacksNetwork;
+  pendingTxs: StxMempoolTransactionData[];
+  memo?: string;
+  isNFT?: boolean;
+  sponsored?: boolean;
+};
 
 export type UnsignedContractCallTransaction = {
-  publicKey: string,
-  contractAddress: string,
-  contractName: string,
-  functionName: string,
-  functionArgs: ClarityValue[],
-  network: StacksNetwork,
-  nonce?: bigint,
-  postConditions: PostCondition[],
-  sponsored?: boolean,
-  postConditionMode?: number,
-  anchorMode?: AnchorMode,
-}
+  publicKey: string;
+  contractAddress: string;
+  contractName: string;
+  functionName: string;
+  functionArgs: ClarityValue[];
+  network: StacksNetwork;
+  nonce?: bigint;
+  postConditions: PostCondition[];
+  sponsored?: boolean;
+  postConditionMode?: number;
+  anchorMode?: AnchorMode;
+};
 
 export type StxMempoolResponse = {
   limit: number;
@@ -123,21 +130,6 @@ export type Transfer = {
   recipient: string;
 };
 
-export type FungibleToken = {
-  name: string;
-  balance: string;
-  total_sent: string;
-  total_received: string;
-  principal: string;
-  assetName: string;
-  ticker?: string;
-  decimals?: number;
-  image?: string;
-  visible?: boolean;
-  supported?: boolean;
-  tokenFiatRate?: number | null;
-};
-
 export type StxBalance = {
   balance: string;
   total_sent: string;
@@ -192,14 +184,12 @@ export interface Args {
   name: string;
   type: string;
 }
-export interface Output {
-  type: Output;
-}
+
 export interface ContractFunction {
   name: string;
   access: string;
   args: Args[];
-  output: Output;
+  output: any;
 }
 
 export interface ContractInterfaceResponse {
@@ -217,4 +207,15 @@ export interface UnsignedContractDeployOptions {
   postConditions?: PostCondition[];
   sponsored?: boolean;
   publicKey: string;
+}
+
+export interface LatestNonceResponse {
+  last_mempool_tx_nonce: number;
+  last_executed_tx_nonce: number;
+  possible_next_nonce: number;
+  detected_missing_nonces: Array<number>;
+}
+
+export interface RawTransactionResponse {
+  raw_tx: string;
 }

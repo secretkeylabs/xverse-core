@@ -1,0 +1,163 @@
+name: Release & Publish Package for PR
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  fork-check:
+    runs-on: ubuntu-latest
+    outputs:
+      is-not-fork: ${{ steps.check.outputs.is_not_fork }}
+    steps:
+      - id: check
+        run: echo "::set-output name=is_not_fork::${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e #v4.3.0
+        with:
+          node-version: 23
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Extract Coverage and Set Environment Variables
+        id: get-coverage
+        run: |
+          echo "LINE_COVERAGE=$(node extractCoverage.js line)" >> $GITHUB_ENV
+          echo "STATEMENT_COVERAGE=$(node extractCoverage.js statement)" >> $GITHUB_ENV
+          echo "BRANCH_COVERAGE=$(node extractCoverage.js branch)" >> $GITHUB_ENV
+          echo "FUNCTION_COVERAGE=$(node extractCoverage.js function)" >> $GITHUB_ENV
+      - name: Comment PR and delete old comments
+        uses: actions/github-script@211cb3fefb35a799baa5156f9321bb774fe56294 # v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Fetch all comments in the PR
+            try {
+              const comments = await github.rest.issues.listComments({
+                owner,
+                repo,
+                issue_number,
+              });
+
+              // Find the existing coverage comment
+              const coverageComment = comments.data.find(comment => comment.body.includes('<!-- coverage-comment -->'));
+
+              // Attempt to delete the existing coverage comment if found
+              if (coverageComment) {
+                try {
+                  await github.rest.issues.deleteComment({
+                    owner,
+                    repo,
+                    comment_id: coverageComment.id,
+                  });
+                } catch (error) {
+                  console.error('Error deleting previous coverage comment:', error);
+                  // Continue execution even if deletion fails
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching comments:', error);
+            }
+
+            // Prepare the coverage comment body
+            const body = `<!-- coverage-comment -->\n📊 **Test Coverage**\n\n` +
+                        `- Line Coverage: ${process.env.LINE_COVERAGE}%\n` +
+                        `- Statement Coverage: ${process.env.STATEMENT_COVERAGE}%\n` +
+                        `- Branch Coverage: ${process.env.BRANCH_COVERAGE}%\n` +
+                        `- Function Coverage: ${process.env.FUNCTION_COVERAGE}%`;
+
+            // Post the new coverage comment
+            try {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            } catch (error) {
+              console.error('Failed to post new coverage comment:', error);
+            }
+  publish-beta:
+    needs:
+      - test
+      - fork-check
+    if: needs.fork-check.outputs.is-not-fork == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e #v4.3.0
+        with:
+          node-version: 23
+          cache: npm
+          registry-url: https://npm.pkg.github.com/
+
+      - id: git-commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - run: npm ci
+      - run: npm run build:esm
+
+      - id: current-version
+        run: echo "version=$(npm pkg get version  | tr -d '"')" >> $GITHUB_OUTPUT
+      - id: tag-version
+        run: npm version --no-git-tag-version $CURRENT_VERSION-$SHA
+        env:
+          SHA: ${{ steps.git-commit.outputs.sha }}
+          CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+
+      - id: publish
+        run: npm publish --tag pr-$PR_NUMBER
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          PR_NUMBER: ${{ github.event.number }}
+
+      - id: published-version
+        run: echo "version=$(npm pkg get version  | tr -d '"')" >> $GITHUB_OUTPUT
+      - run: echo published version $VERSION
+        env:
+          VERSION: ${{ steps.published-version.outputs.version }}
+
+      - name: Delete old bot comments
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          curl \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/$REPO/issues/$PR_ID/comments \
+          | jq ".[] | select(.user.login==\"github-actions[bot]\")  | select(.body | match(\"npm i\")) | .id" \
+          | xargs -I %q curl \
+            -L \
+            -X DELETE \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN"\
+            https://api.github.com/repos/$REPO/issues/comments/%q
+      - name: Post test package PR comment
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          VERSION: ${{ steps.published-version.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_URL: ${{ github.event.pull_request.comments_url }}
+        run: |
+          curl \
+            -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            $GITHUB_URL \
+            -d "{\"body\":\"> Test this PR with \`npm i --save-exact @secretkeylabs/xverse-core@$VERSION\`\"}"

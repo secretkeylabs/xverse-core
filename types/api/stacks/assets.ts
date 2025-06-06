@@ -1,13 +1,12 @@
-import { cvToJSON, hexToCV } from "@stacks/transactions";
-import { hexToString } from "../../helper";
-import { BtcOrdinal } from "../blockcypher/wallet";
+import { cvToJSON, hexToCV } from '@stacks/transactions';
+import { hexToString } from '../../helper';
 
-export interface Attribute {
+export type Attribute = {
   value: string;
   trait_type: string;
-}
+};
 
-export interface TokenMetaData {
+export type TokenMetaData = {
   image_url: string;
   image_type: string;
   image_protocol: string;
@@ -17,9 +16,9 @@ export interface TokenMetaData {
   asset_id: string;
   name: string;
   contract_id: string;
-}
+};
 
-export interface NftData {
+export type NftData = {
   asset_id: string;
   collection_contract_id: string;
   token_id: number;
@@ -29,20 +28,33 @@ export interface NftData {
   rarity_rank: string;
   collection_count: number;
   rarity_score: string;
-}
+};
 
-interface NftIdValue {
+export type NftIdValue = {
   hex: string;
   repr: string;
-}
+};
 
-export interface NonFungibleToken {
+export type NonFungibleTokenApiResponse = {
   asset_identifier: string;
   value: NftIdValue;
   tx_id: string;
+  block_height: number;
+};
+
+export type NonFungibleTokenOld = NonFungibleTokenApiResponse & {
   data?: NftData | null;
   name?: string;
-}
+};
+
+export type NonFungibleToken = NonFungibleTokenApiResponse & {
+  name?: string;
+  identifier: {
+    tokenId: string;
+    contractName: string;
+    contractAddress: string;
+  };
+};
 
 export type AccountAssetsListData = {
   assetsList: Array<NonFungibleToken>;
@@ -50,19 +62,21 @@ export type AccountAssetsListData = {
 };
 
 export type NftsListData = {
-  nftsList: Array<NonFungibleToken>;
+  nftsList: Array<NonFungibleTokenOld>;
   total: number;
 };
 
 export interface NftEventsResponse {
-  results: NonFungibleToken[];
+  results: NonFungibleTokenApiResponse[];
   total: number;
   limit: number;
   offset: number;
 }
+
 export interface AddressToBnsResponse {
   names: string[];
 }
+
 export interface PoxData {
   contract_id: string;
   first_burnchain_block_height: number;
@@ -74,6 +88,7 @@ export interface PoxData {
   total_liquid_supply_ustx: string;
   next_reward_cycle_in: number;
 }
+
 export interface DelegationInfo {
   delegated: boolean;
   amount?: string;
@@ -86,7 +101,50 @@ export interface CoreInfo {
   stable_burn_block_height: number;
   stacks_tip_height: number;
   stacks_tip: string;
+  network_id: number;
 }
+
+export interface CoinMetaData {
+  name: string;
+  symbol: string;
+  decimals: number;
+  total_supply: string;
+  token_uri: string;
+  description: string;
+  image_uri: string;
+  image_canonical_uri: string;
+  tx_id: string;
+  sender_address: string;
+  metadata: {
+    sip: number;
+    name: string;
+    description: string;
+    image: string;
+    cached_image: string;
+  };
+}
+
+export type NftDetailResponse = {
+  result: boolean;
+  data: NftData;
+  isCompliant?: boolean;
+};
+
+export type NftCollectionData = {
+  collection: {
+    id: string;
+    contractId: string;
+    name: string;
+    description: string;
+    image: string;
+    verified: false;
+    link: string;
+    floorItem: {
+      nftId: string;
+      price: string;
+    };
+  };
+};
 
 export function getBnsNftName(nft: NonFungibleToken) {
   const hex = nft.value.hex;
@@ -94,7 +152,5 @@ export function getBnsNftName(nft: NonFungibleToken) {
   const nameValue = cv.value?.name?.value ?? '';
   const nameSpaceValue = cv.value?.namespace?.value ?? '';
 
-  return nameValue && nameSpaceValue
-    ? `${hexToString(nameValue)}.${hexToString(nameSpaceValue)}`
-    : '';
+  return nameValue && nameSpaceValue ? `${hexToString(nameValue)}.${hexToString(nameSpaceValue)}` : '';
 }

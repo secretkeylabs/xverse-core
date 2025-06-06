@@ -1,23 +1,14 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "target": "es2020",
+    "target": "es2022",
     "module": "ES6",
     "moduleResolution": "node",
-    "baseUrl": ".",
-    "paths": {
-      "types/*": ["./types"],
-      "currency/*": ["./currency"],
-      "transactions/*": ["./transactions"],
-      "wallet/*": ["./wallet"],
-      "stacking/*": ["./stacking"],
-      "account/*": ["./account"],
-      "gaia/*": ["./gaia"],
-    },
     "declaration": true,
     "sourceMap": true,
     "outDir": "dist",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "useUnknownInCatchVariables": false,
@@ -25,7 +16,5 @@
     "allowUnreachableCode": false,
     "skipLibCheck": true
   },
-  "exclude": [
-    "./tests",
-  ],
+  "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

@@ -1,44 +1,32 @@
 {
-  "env": {
-    "browser": true,
-    "es2021": true
-  },
+  "root": true,
+  "plugins": ["@typescript-eslint", "import", "prettier"],
   "extends": [
-    "plugin:react/recommended",
-    "airbnb",
-    "airbnb-typescript",
-    "airbnb/hooks",
-    "prettier"
+    "airbnb-typescript/base",
+    "prettier",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:import/typescript"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaFeatures": {
-      "jsx": true
-    },
-    "ecmaVersion": "latest",
-    "sourceType": "module",
     "project": "./tsconfig.json"
   },
-  "plugins": ["react", "react-native", "@calm/react-intl", "eslint-plugin-no-inline-styles"],
   "rules": {
-    "no-inline-styles/no-inline-styles": 2,
-    "@calm/react-intl/missing-formatted-message": [
-      2,
+    "max-len": [
+      "error",
       {
-        "noTrailingWhitespace": true,
-        "ignoreLinks": true,
-        "enforceLabels": false,
-        "enforceImageAlts": false,
-        "enforceInputProps": false
+        "code": 120
+      }
+    ],
+    "@typescript-eslint/no-loop-func": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "args": "after-used",
+        "ignoreRestSiblings": true,
+        "argsIgnorePattern": "^_"
       }
     ]
-  },
-  "settings": {
-    "import/resolver": {
-      "node": {
-        "extensions": [".js", ".jsx", ".ts", ".tsx"],
-        "moduleDirectory": ["node_modules", "src/"]
-      }
-    }
   }
 }

@@ -1,4 +1,4 @@
-import { NetworkType } from "types/network";
+import { NetworkType } from '../types/network';
 
 export interface BitcoinNetwork {
   bech32: string;
@@ -21,12 +21,41 @@ const bitcoinTestnet: BitcoinNetwork = {
   wif: 0xef,
 };
 
-const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
+const bitcoinRegtest: BitcoinNetwork = {
+  bech32: 'bcrt',
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0x80,
+};
+
+export const bitcoinNetworks: Record<NetworkType, BitcoinNetwork> = {
   Mainnet: bitcoinMainnet,
   Testnet: bitcoinTestnet,
+  Testnet4: bitcoinTestnet,
+  Signet: bitcoinTestnet,
+  Regtest: bitcoinRegtest,
 };
 
 export const getBtcNetwork = (networkType: NetworkType) => {
   return bitcoinNetworks[networkType];
 };
 
+export const getBtcNetworkDefinition = (networkType?: NetworkType) => {
+  switch (networkType) {
+    case 'Mainnet':
+      return bitcoinMainnet;
+    case 'Testnet':
+    case 'Testnet4':
+    case 'Signet':
+    case undefined:
+      return bitcoinTestnet;
+    case 'Regtest':
+      return bitcoinRegtest;
+    default:
+      throw new Error('Invalid network type');
+  }
+};
+
+export const isInscriptionsAndRunesCompatible = (networkType: NetworkType) => {
+  return networkType !== 'Regtest';
+};

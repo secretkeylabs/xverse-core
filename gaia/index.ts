@@ -1,6 +1,5 @@
-import { getPublicKeyFromPrivate, publicKeyToBtcAddress, randomBytes } from "@stacks/encryption";
-import { createFetchFn } from "@stacks/network";
-import { GaiaHubConfig } from "@stacks/storage";
+import { getPublicKeyFromPrivate, publicKeyToBtcAddress, randomBytes } from '@stacks/encryption';
+import { GaiaHubConfig } from '@stacks/storage';
 import { Json, TokenSigner } from 'jsontokens';
 
 interface HubInfo {
@@ -8,15 +7,13 @@ interface HubInfo {
   read_url_prefix: string;
 }
 
-
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
-export const getHubInfo = async (gaiaHubUrl: string, fetchFn: FetchFn = createFetchFn()) => {
-  const response = await fetchFn(`${gaiaHubUrl}/hub_info`);
+export const getHubInfo = async (gaiaHubUrl: string) => {
+  const response = await fetch(`${gaiaHubUrl}/hub_info`);
   const data: HubInfo = await response.json();
   return data;
 };
-
 
 interface GaiaAuthPayload {
   gaiaHubUrl: string;
@@ -50,7 +47,6 @@ const makeGaiaAuthToken = ({
   return `v1:${token}`;
 };
 
-
 interface ConnectToGaiaOptions {
   hubInfo: HubInfo;
   privateKey: string;
@@ -73,6 +69,5 @@ export const connectToGaiaHubWithConfig = ({
     server: gaiaHubUrl,
   };
 };
-
 
 export * from './walletConfig';
