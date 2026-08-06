@@ -30,6 +30,7 @@ import {
   getTransactionVSize,
   mapInputToEnhancedInput,
 } from './utils';
+import { assertValidFeeRate } from './utils/feeRate';
 
 const defaultCompilationOptions: CompilationOptions = {
   rbfEnabled: false,
@@ -63,6 +64,7 @@ export class EnhancedTransaction {
   }
 
   constructor(context: TransactionContext, actions: Action[], feeRate: number, options?: TransactionOptions) {
+    assertValidFeeRate(feeRate);
     this._context = context;
     this._feeRate = feeRate;
     this._options = { ...defaultTransactionOptions, ...options };
