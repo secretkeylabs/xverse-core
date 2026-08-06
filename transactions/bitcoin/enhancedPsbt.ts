@@ -22,6 +22,7 @@ import {
   TransactionFeeOutput,
 } from './types';
 import { extractOutputInscriptionsAndSatributes, getTransactionTotals, mapInputToEnhancedInput } from './utils';
+import { classifySighash, isFullyBoundSighashFlags, mergeSighashFlags, type SighashFlags } from './utils/sighashFlags';
 import { estimateVSize } from './utils/transactionVsizeEstimator';
 
 type ParsedOutputMetadata = { script: string[]; scriptHex: string } & (
@@ -51,6 +52,8 @@ export class EnhancedPsbt {
 
   private readonly _hasSigHashSingle?: boolean;
 
+  private readonly _hasAnyoneCanPay?: boolean;
+
   constructor(context: TransactionContext, psbtBase64: string, inputsToSign?: InputToSign[]) {
     this._context = context;
     this._psbt = base64.decode(psbtBase64);
@@ -60,9 +63,12 @@ export class EnhancedPsbt {
 
     if (inputsToSign) {
       this._inputsToSignMap = {};
-      let hasSigHashNone = false;
-      let hasSigHashSingle = false;
-      let isSigHashAll = false;
+      let flags: SighashFlags = {
+        isSigHashAll: false,
+        hasSigHashNone: false,
+        hasSigHashSingle: false,
+        hasAnyoneCanPay: false,
+      };
 
       for (const input of inputsToSign) {
         for (const inputIndex of input.signingIndexes) {
@@ -73,28 +79,15 @@ export class EnhancedPsbt {
           this._inputsToSignMap[inputIndex].push({ address: input.address });
 
           const txnInput = txn.getInput(inputIndex);
-          const sigHashToCheck = txnInput.sighashType ?? btc.SigHash.DEFAULT;
-
-          // we need to do check for single first as it's value is 3 while none is 2 and all is 1
-          if ((sigHashToCheck & btc.SigHash.SINGLE) === btc.SigHash.SINGLE) {
-            hasSigHashSingle = true;
-            continue;
-          }
-
-          if (sigHashToCheck === btc.SigHash.DEFAULT || (sigHashToCheck & btc.SigHash.ALL) === btc.SigHash.ALL) {
-            isSigHashAll = true;
-            continue;
-          }
-
-          if ((sigHashToCheck & btc.SigHash.NONE) === btc.SigHash.NONE) {
-            hasSigHashNone = true;
-          }
+          // Match prior behavior: missing sighash on the input defaults to DEFAULT for pre-scan.
+          flags = mergeSighashFlags(flags, classifySighash(txnInput.sighashType ?? btc.SigHash.DEFAULT));
         }
       }
 
-      this._isSigHashAll = isSigHashAll;
-      this._hasSigHashNone = hasSigHashNone;
-      this._hasSigHashSingle = hasSigHashSingle;
+      this._isSigHashAll = flags.isSigHashAll;
+      this._hasSigHashNone = flags.hasSigHashNone;
+      this._hasSigHashSingle = flags.hasSigHashSingle;
+      this._hasAnyoneCanPay = flags.hasAnyoneCanPay;
     }
   }
 
@@ -224,9 +217,12 @@ export class EnhancedPsbt {
     const inputs: { extendedUtxo: ExtendedUtxo | ExtendedDummyUtxo; sigHash?: btc.SigHash; isPayToAnchor: boolean }[] =
       [];
 
-    let isSigHashAll = this._isSigHashAll ?? false;
-    let hasSigHashNone = this._hasSigHashNone ?? false;
-    let hasSigHashSingle = this._hasSigHashSingle ?? false;
+    let flags: SighashFlags = {
+      isSigHashAll: this._isSigHashAll ?? false,
+      hasSigHashNone: this._hasSigHashNone ?? false,
+      hasSigHashSingle: this._hasSigHashSingle ?? false,
+      hasAnyoneCanPay: this._hasAnyoneCanPay ?? false,
+    };
 
     let inputTotal = 0;
 
@@ -258,38 +254,27 @@ export class EnhancedPsbt {
       inputTotal += inputExtendedUtxo.utxo.value || 0;
 
       if (!this._inputsToSignMap || inputIndex in this._inputsToSignMap) {
-        // sighash single value is 3 while sighash none is 2 and sighash all is 1, so we need to ensure we
-        // don't have a single before we do the bitwise or for all and none
-        const isSigHashSingle = (sigHash && sigHash & btc.SigHash.SINGLE) === btc.SigHash.SINGLE;
-
-        isSigHashAll =
-          // if already true, we don't need to check again
-          isSigHashAll ||
-          // if we have a single, we can't have all as their bit-wise values overlap
-          (!isSigHashSingle &&
-            // if the sigHash is undefined, it will be signed as ALL/DEFAULT, so mark it as ALL
-            (sigHash === undefined ||
-              // if the sigHash is ALL or DEFAULT(for taproot), we can mark it as ALL
-              sigHash === btc.SigHash.DEFAULT ||
-              (sigHash & btc.SigHash.ALL) === btc.SigHash.ALL));
-
-        hasSigHashNone =
-          hasSigHashNone || (!isSigHashSingle && (sigHash && sigHash & btc.SigHash.NONE) === btc.SigHash.NONE);
-        hasSigHashSingle = hasSigHashSingle || isSigHashSingle;
+        // undefined sighash is signed as ALL/DEFAULT
+        flags = mergeSighashFlags(flags, classifySighash(sigHash));
       }
     }
 
-    return { inputs, isSigHashAll, hasSigHashNone, hasSigHashSingle, inputTotal };
+    return { inputs, ...flags, inputTotal };
   }
 
   async getSummary(options?: GetPSBTSummaryOptions): Promise<PsbtSummary> {
     const transaction = btc.Transaction.fromPSBT(this._psbt);
 
-    const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle } = await this._extractInputMetadata(
-      transaction,
-      options?.knownEmptyTxids,
-    );
+    const { inputs, inputTotal, isSigHashAll, hasSigHashNone, hasSigHashSingle, hasAnyoneCanPay } =
+      await this._extractInputMetadata(transaction, options?.knownEmptyTxids);
     const outputs: EnhancedOutput[] = [];
+
+    const isFinal = isFullyBoundSighashFlags({
+      isSigHashAll,
+      hasSigHashNone,
+      hasSigHashSingle,
+      hasAnyoneCanPay,
+    });
 
     let hasScriptOutput = false;
     let outputTotal = 0;
@@ -318,7 +303,7 @@ export class EnhancedPsbt {
       let inscriptions: IOInscription[] = [];
       let satributes: IOSatribute[] = [];
 
-      if (isSigHashAll) {
+      if (isFinal) {
         if (isInscriptionsAndRunesCompatible(this._context.network)) {
           const extractedAssets = await extractOutputInscriptionsAndSatributes(
             inputsExtendedUtxos,
@@ -358,7 +343,8 @@ export class EnhancedPsbt {
       currentOffset += Number(amount);
     }
 
-    const fee = isSigHashAll ? inputTotal - outputTotal : undefined;
+    // Fee is only trustworthy when the PSBT is fully bound (no SINGLE/NONE/ACP on signed inputs).
+    const fee = isFinal ? inputTotal - outputTotal : undefined;
     let feeOutput: TransactionFeeOutput | undefined = undefined;
 
     if (fee) {
@@ -390,7 +376,6 @@ export class EnhancedPsbt {
     const runesClient = getRunesClient(this._context.network);
     const runeOp = hasScriptOutput ? await runesClient.getDecodedRuneScript(transaction.hex) : undefined;
 
-    const isFinal = isSigHashAll;
     let feeRate: number | undefined = undefined;
 
     if (isFinal && feeOutput) {
@@ -409,6 +394,7 @@ export class EnhancedPsbt {
       feeOutput,
       hasSigHashNone,
       hasSigHashSingle,
+      hasAnyoneCanPay,
       isFinal,
       runeOp,
       feeRate,

@@ -25,6 +25,7 @@ export type BaseSummary = {
   isFinal: boolean;
   hasSigHashNone: boolean;
   hasSigHashSingle: boolean;
+  hasAnyoneCanPay: boolean;
 };
 
 export type IORune = RuneBase & {

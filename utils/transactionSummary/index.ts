@@ -40,6 +40,7 @@ export const extractViewSummary = async (
     isFinal: isPsbtSummary(summary) ? summary.isFinal : true, // internal transactions are always final
     hasSigHashNone: isPsbtSummary(summary) ? summary.hasSigHashNone : false,
     hasSigHashSingle: isPsbtSummary(summary) ? summary.hasSigHashSingle : false,
+    hasAnyoneCanPay: isPsbtSummary(summary) ? summary.hasAnyoneCanPay : false,
     hasExternalInputs: summary.inputs.some((input) => !userAddresses.has(input.extendedUtxo.address)),
     hasOutputScript: summary.outputs.some((output) => output.type === 'script'),
     hasUnconfirmedInputs: summary.inputs.some(

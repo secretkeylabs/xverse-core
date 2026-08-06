@@ -167,6 +167,7 @@ export type PsbtSummary = {
   feeOutput?: TransactionFeeOutput;
   hasSigHashNone: boolean;
   hasSigHashSingle: boolean;
+  hasAnyoneCanPay: boolean;
   isFinal: boolean;
   runeOp?: Artifact;
   feeRate?: number;
@@ -181,5 +182,6 @@ export type InputMetadata = {
   isSigHashAll: boolean;
   hasSigHashNone: boolean;
   hasSigHashSingle: boolean;
+  hasAnyoneCanPay: boolean;
   inputTotal: number;
 };
