@@ -4,6 +4,7 @@ import { groupBtcTxsByDate } from './history';
 import { EnhancedPsbt } from './enhancedPsbt';
 import { EnhancedTransaction } from './enhancedTransaction';
 import { ExtendedUtxo } from './extendedUtxo';
+import { isSafePaymentUtxo } from './utils';
 import { estimateVSize } from './utils/transactionVsizeEstimator';
 import {
   ActionType,
@@ -75,6 +76,22 @@ export const sendMaxBtc = async (
     throw new Error('No utxos found');
   }
 
+  // Never sweep inscriptions / runes / unindexed bundles as "max BTC".
+  const safePaymentUtxos: typeof paymentUtxos = [];
+  for (const utxo of paymentUtxos) {
+    if (await isSafePaymentUtxo(utxo)) {
+      safePaymentUtxos.push(utxo);
+    }
+  }
+  if (safePaymentUtxos.length !== paymentUtxos.length) {
+    dustFiltered = true; // reused UX flag: some UTXOs skipped (dust and/or protected)
+  }
+  paymentUtxos = safePaymentUtxos;
+
+  if (paymentUtxos.length === 0) {
+    throw new Error('No spendable payment UTXOs (dust or protected assets only)');
+  }
+
   if (skipDust) {
     const testTransaction = new EnhancedTransaction(context, [], feeRate, {
       ...options,
@@ -84,7 +101,7 @@ export const sendMaxBtc = async (
     const { dustValue } = await testTransaction.getSummary();
 
     const filteredPaymentUtxos = paymentUtxos.filter((utxo) => utxo.utxo.value > dustValue);
-    dustFiltered = filteredPaymentUtxos.length !== paymentUtxos.length;
+    dustFiltered = dustFiltered || filteredPaymentUtxos.length !== paymentUtxos.length;
     paymentUtxos = filteredPaymentUtxos;
 
     if (paymentUtxos.length === 0) {

@@ -24,6 +24,13 @@ describe('sendMaxBtc', () => {
     },
   } as any;
 
+  const safeUtxo = (outpoint: string, value: number) => ({
+    outpoint,
+    utxo: { value },
+    isEmbellished: async () => false,
+    hasRunes: async () => false,
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     vi.clearAllMocks();
@@ -36,20 +43,7 @@ describe('sendMaxBtc', () => {
   });
 
   it('should use all UTXOs if dust is not skipped', async () => {
-    const dummyUtxos = [
-      {
-        outpoint: 'out1',
-        utxo: {
-          value: 1000,
-        },
-      },
-      {
-        outpoint: 'out2',
-        utxo: {
-          value: 2000,
-        },
-      },
-    ];
+    const dummyUtxos = [safeUtxo('out1', 1000), safeUtxo('out2', 2000)];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
     const { transaction, dustFiltered } = await sendMaxBtc(contextMock, recipientAddress, 2, false);
@@ -64,20 +58,7 @@ describe('sendMaxBtc', () => {
   });
 
   it('should filter UTXOs if dust is skipped', async () => {
-    const dummyUtxos = [
-      {
-        outpoint: 'out1',
-        utxo: {
-          value: 1000,
-        },
-      },
-      {
-        outpoint: 'out2',
-        utxo: {
-          value: 2000,
-        },
-      },
-    ];
+    const dummyUtxos = [safeUtxo('out1', 1000), safeUtxo('out2', 2000)];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
     vi.mocked(EnhancedTransaction).mockImplementationOnce(
@@ -103,20 +84,7 @@ describe('sendMaxBtc', () => {
   });
 
   it('should not filter UTXOs if all are above dust', async () => {
-    const dummyUtxos = [
-      {
-        outpoint: 'out1',
-        utxo: {
-          value: 1000,
-        },
-      },
-      {
-        outpoint: 'out2',
-        utxo: {
-          value: 2000,
-        },
-      },
-    ];
+    const dummyUtxos = [safeUtxo('out1', 1000), safeUtxo('out2', 2000)];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
     vi.mocked(EnhancedTransaction).mockImplementationOnce(
@@ -142,20 +110,7 @@ describe('sendMaxBtc', () => {
   });
 
   it('should throw if all utxos below dust', async () => {
-    const dummyUtxos = [
-      {
-        outpoint: 'out1',
-        utxo: {
-          value: 1000,
-        },
-      },
-      {
-        outpoint: 'out2',
-        utxo: {
-          value: 2000,
-        },
-      },
-    ];
+    const dummyUtxos = [safeUtxo('out1', 1000), safeUtxo('out2', 2000)];
     contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
 
     vi.mocked(EnhancedTransaction).mockImplementationOnce(
@@ -172,6 +127,33 @@ describe('sendMaxBtc', () => {
 
     expect(EnhancedTransaction).toHaveBeenCalledTimes(1);
     expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, { forceIncludeOutpointList: ['out1'] });
+  });
+
+  it('should skip embellished and rune UTXOs', async () => {
+    const dummyUtxos = [
+      safeUtxo('out1', 5000),
+      {
+        outpoint: 'out-inscribed',
+        utxo: { value: 10000 },
+        isEmbellished: async () => true,
+        hasRunes: async () => false,
+      },
+      {
+        outpoint: 'out-rune',
+        utxo: { value: 8000 },
+        isEmbellished: async () => false,
+        hasRunes: async () => true,
+      },
+    ];
+    contextMock.paymentAddress.getUtxos.mockResolvedValueOnce(dummyUtxos);
+
+    const { dustFiltered } = await sendMaxBtc(contextMock, recipientAddress, 2, false);
+
+    expect(dustFiltered).toEqual(true);
+    expect(EnhancedTransaction).toHaveBeenCalledWith(contextMock, [], 2, {
+      forceIncludeOutpointList: ['out1'],
+      overrideChangeAddress: recipientAddress,
+    });
   });
 });
 

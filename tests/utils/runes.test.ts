@@ -150,6 +150,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
     };
 
@@ -192,6 +193,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -246,6 +248,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -312,6 +315,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
     };
 
@@ -385,6 +389,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Cenotaph: {
@@ -449,6 +454,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -521,6 +527,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -604,6 +611,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -712,6 +720,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -841,6 +850,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1032,6 +1042,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1233,6 +1244,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1443,6 +1455,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1576,6 +1589,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1682,6 +1696,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1823,6 +1838,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1900,6 +1916,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -1985,6 +2002,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2069,6 +2087,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2181,6 +2200,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2326,6 +2346,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2478,6 +2499,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2631,6 +2653,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {
@@ -2756,6 +2779,7 @@ describe('parseSummaryForRunes', () => {
       ],
       hasSigHashNone: false,
       hasSigHashSingle: false,
+      hasAnyoneCanPay: false,
       isFinal: true,
       runeOp: {
         Runestone: {

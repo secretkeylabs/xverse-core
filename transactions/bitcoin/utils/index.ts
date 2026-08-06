@@ -61,18 +61,37 @@ export const extractActionMap = (actions: Action[]): ActionMap => {
   return actionMap;
 };
 
+/**
+ * Payment UTXOs safe for automatic fee / send coin-select.
+ * Fail closed when inscription/rune metadata is unknown (unindexed).
+ */
+export const isSafePaymentUtxo = async (utxo: ExtendedUtxo | ExtendedDummyUtxo): Promise<boolean> => {
+  const [embellished, hasRunes] = await Promise.all([utxo.isEmbellished(), utxo.hasRunes()]);
+  if (embellished === undefined || hasRunes === undefined) {
+    return false;
+  }
+  return !embellished && !hasRunes;
+};
+
 export const getSortedAvailablePaymentUtxos = async (
   context: TransactionContext,
   excludeOutpointList: Set<string>,
   confirmedOnly: boolean,
   dustThreshold = 0,
 ) => {
-  const unusedPaymentUtxos = (await context.paymentAddress.getUtxos()).filter(
+  const candidates = (await context.paymentAddress.getUtxos()).filter(
     (utxoData) =>
       !excludeOutpointList.has(utxoData.outpoint) &&
       (!confirmedOnly || utxoData.utxo.status.confirmed) &&
       utxoData.utxo.value > dustThreshold,
   );
+
+  const unusedPaymentUtxos: ExtendedUtxo[] = [];
+  for (const utxoData of candidates) {
+    if (await isSafePaymentUtxo(utxoData)) {
+      unusedPaymentUtxos.push(utxoData);
+    }
+  }
 
   // sort smallest to biggest as we'll be popping off the end
   unusedPaymentUtxos.sort((a, b) => {

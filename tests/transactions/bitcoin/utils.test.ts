@@ -12,6 +12,7 @@ import {
   getOutpointFromUtxo,
   getSortedAvailablePaymentUtxos,
   getTransactionTotals,
+  isSafePaymentUtxo,
 } from '../../../transactions/bitcoin/utils';
 
 describe('areByteArraysEqual', () => {
@@ -268,12 +269,57 @@ describe('extractActionMap', () => {
   });
 });
 
+describe('isSafePaymentUtxo', () => {
+  it('fail-closes when embellished metadata is undefined', async () => {
+    await expect(
+      isSafePaymentUtxo({
+        isEmbellished: async () => undefined,
+        hasRunes: async () => false,
+      } as any),
+    ).resolves.toBe(false);
+  });
+
+  it('fail-closes when hasRunes metadata is undefined', async () => {
+    await expect(
+      isSafePaymentUtxo({
+        isEmbellished: async () => false,
+        hasRunes: async () => undefined,
+      } as any),
+    ).resolves.toBe(false);
+  });
+
+  it('rejects embellished and rune-bearing utxos', async () => {
+    await expect(
+      isSafePaymentUtxo({
+        isEmbellished: async () => true,
+        hasRunes: async () => false,
+      } as any),
+    ).resolves.toBe(false);
+    await expect(
+      isSafePaymentUtxo({
+        isEmbellished: async () => false,
+        hasRunes: async () => true,
+      } as any),
+    ).resolves.toBe(false);
+  });
+
+  it('accepts plain confirmed payment utxos', async () => {
+    await expect(
+      isSafePaymentUtxo({
+        isEmbellished: async () => false,
+        hasRunes: async () => false,
+      } as any),
+    ).resolves.toBe(true);
+  });
+});
+
 describe('getSortedAvailablePaymentUtxos', () => {
   const utxoMap = {
     embellished500: {
       outpoint: '1234:6',
       utxo: { value: 500, status: { confirmed: true } },
-      isEmbellished: () => true,
+      isEmbellished: async () => true,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -281,7 +327,8 @@ describe('getSortedAvailablePaymentUtxos', () => {
     embellished1500: {
       outpoint: '1234:4',
       utxo: { value: 1500, status: { confirmed: true } },
-      isEmbellished: () => true,
+      isEmbellished: async () => true,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -289,15 +336,24 @@ describe('getSortedAvailablePaymentUtxos', () => {
     withRunes1000: {
       outpoint: '1234:41',
       utxo: { value: 1000, status: { confirmed: true } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => true,
       getBundleData: () => ({
         runes: [['MYRUNE', { amount: BigNumber(123), divisibility: 0, symbol: 'M' }]],
       }),
     },
+    unindexed2000: {
+      outpoint: '1234:9',
+      utxo: { value: 2000, status: { confirmed: true } },
+      isEmbellished: async () => undefined,
+      hasRunes: async () => false,
+      getBundleData: () => undefined,
+    },
     unconfirmed500: {
       outpoint: '1234:5',
       utxo: { value: 500, status: { confirmed: false } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -305,7 +361,8 @@ describe('getSortedAvailablePaymentUtxos', () => {
     unconfirmed2500: {
       outpoint: '1234:3',
       utxo: { value: 2500, status: { confirmed: false } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -313,7 +370,8 @@ describe('getSortedAvailablePaymentUtxos', () => {
     confirmed1000: {
       outpoint: '1234:0',
       utxo: { value: 1000, status: { confirmed: true } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -321,7 +379,8 @@ describe('getSortedAvailablePaymentUtxos', () => {
     confirmed2000: {
       outpoint: '1234:1',
       utxo: { value: 2000, status: { confirmed: true } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
@@ -329,14 +388,15 @@ describe('getSortedAvailablePaymentUtxos', () => {
     confirmed3000: {
       outpoint: '1234:2',
       utxo: { value: 3000, status: { confirmed: true } },
-      isEmbellished: () => false,
+      isEmbellished: async () => false,
+      hasRunes: async () => false,
       getBundleData: () => ({
         runes: [],
       }),
     },
   };
 
-  it('should get the utxos in correct order', async () => {
+  it('should get safe payment utxos in correct order (exclude embellished/runes/unindexed)', async () => {
     const testUtxos = [
       utxoMap.confirmed1000,
       utxoMap.embellished1500,
@@ -346,6 +406,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       utxoMap.withRunes1000,
       utxoMap.unconfirmed500,
       utxoMap.confirmed2000,
+      utxoMap.unindexed2000,
     ];
     const addressContext = {
       getUtxos: async () => testUtxos,
@@ -356,14 +417,9 @@ describe('getSortedAvailablePaymentUtxos', () => {
 
     const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), false);
 
-    // order should be: embellished, unconfirmed, confirmed
-    // and internally by value
     expect(utxos).toEqual([
       utxoMap.unconfirmed500,
-      utxoMap.embellished500,
       utxoMap.confirmed1000,
-      utxoMap.withRunes1000,
-      utxoMap.embellished1500,
       utxoMap.confirmed2000,
       utxoMap.unconfirmed2500,
       utxoMap.confirmed3000,
@@ -390,16 +446,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
 
     const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), true);
 
-    // order should be: embellished, unconfirmed, confirmed
-    // and internally by value
-    expect(utxos).toEqual([
-      utxoMap.embellished500,
-      utxoMap.confirmed1000,
-      utxoMap.withRunes1000,
-      utxoMap.embellished1500,
-      utxoMap.confirmed2000,
-      utxoMap.confirmed3000,
-    ]);
+    expect(utxos).toEqual([utxoMap.confirmed1000, utxoMap.confirmed2000, utxoMap.confirmed3000]);
   });
 
   it('should skip at or below dust value', async () => {
@@ -422,14 +469,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
 
     const utxos = await getSortedAvailablePaymentUtxos(context, new Set(), false, 1000);
 
-    // order should be: embellished, unconfirmed, confirmed
-    // and internally by value
-    expect(utxos).toEqual([
-      utxoMap.embellished1500,
-      utxoMap.confirmed2000,
-      utxoMap.unconfirmed2500,
-      utxoMap.confirmed3000,
-    ]);
+    expect(utxos).toEqual([utxoMap.confirmed2000, utxoMap.unconfirmed2500, utxoMap.confirmed3000]);
   });
 
   it('should not include utxos in excludeOutpointList', async () => {
@@ -456,7 +496,7 @@ describe('getSortedAvailablePaymentUtxos', () => {
       true,
     );
 
-    expect(utxos).toEqual([utxoMap.withRunes1000, utxoMap.embellished1500, utxoMap.confirmed2000]);
+    expect(utxos).toEqual([utxoMap.confirmed2000]);
   });
 });
 
