@@ -4,10 +4,16 @@ import { P2Ret } from '@scure/btc-signer/payment';
 import EsploraProvider from '../api/esplora/esploraAPiProvider';
 import { KeystoneTransport } from '../keystone';
 import { LedgerTransport } from '../ledger';
+import { DEFAULT_DUST_VALUE } from '../constant';
 import { AccountType, BtcTransactionData, NetworkType, RecommendedFeeResponse, UTXO } from '../types';
 import { TransactionContext } from './bitcoin';
+import { getOutpoint, getSortedAvailablePaymentUtxos } from './bitcoin/utils';
+import { assertValidFeeRate } from './bitcoin/utils/feeRate';
 import { estimateVSize } from './bitcoin/utils/transactionVsizeEstimator';
 import { getBtcNetworkDefinition } from './btcNetwork';
+
+/** Policy dust for RBF change outputs (aligned with send-path DEFAULT_DUST_VALUE). */
+const RBF_CHANGE_DUST_SATS = Number(DEFAULT_DUST_VALUE);
 
 const areByteArraysEqual = (a: undefined | Uint8Array, b: undefined | Uint8Array): boolean => {
   if (!a || !b || a.length !== b.length) {
@@ -113,6 +119,8 @@ export type RBFProps = {
   network: NetworkType;
   accountType: AccountType;
   esploraProvider: EsploraProvider;
+  /** When set, extra RBF inputs use safe payment coin-select (excludes inscriptions/runes). */
+  transactionContext?: TransactionContext;
 };
 
 export type TierFees = {
@@ -152,7 +160,13 @@ class RbfTransaction {
 
   private _paymentUtxos?: UTXO[];
 
+  /** Whether cached payment UTXOs were selected via the safe (context) path. */
+  private _paymentUtxosSafe?: boolean;
+
   private _minimumRbfFeeRate?: number;
+
+  /** Package absolute fee (root + unconfirmed descendants) for BIP125 floor. */
+  private _packageFee?: number;
 
   constructor(transaction: BtcTransactionData, options: RBFProps) {
     if (transaction.confirmed) {
@@ -218,25 +232,12 @@ class RbfTransaction {
       }
     }
 
-    const outputs = transaction.outputs.map((output) => ({
-      value: output.value,
-      address: output.scriptpubkey_address,
-      script: output.scriptpubkey,
-    }));
-
-    // we'll keep the same outputs as the original transaction
-    // and we assume that any change that would have been returned was going to the payments address if the last
-    // output is not the payments address, we'll add it as a normal output, assuming that there was no change
-    while (outputs.length > 1 || (outputs[0] && outputs[0].address !== options.btcAddress)) {
-      const prevOutput = outputs.shift();
-
-      if (!prevOutput) {
-        // this should never happen
-        throw new Error('Something went wrong when processing the outputs of the original transaction');
-      }
-
-      tx.addOutput({ script: prevOutput.script, amount: BigInt(prevOutput.value) });
-      outputsTotal += prevOutput.value;
+    // Preserve ALL original outputs at their original amounts.
+    // Fee bumps are funded only by additional inputs (+ optional new change), never by
+    // shrinking a heuristically inferred "last payment-address output".
+    for (const output of transaction.outputs) {
+      tx.addOutput({ script: output.scriptpubkey, amount: BigInt(output.value) });
+      outputsTotal += output.value;
     }
 
     this.options = options;
@@ -248,18 +249,54 @@ class RbfTransaction {
     this.p2btc = p2btc;
   }
 
-  private getMinimumRbfFeeRate = async () => {
-    if (!this._minimumRbfFeeRate) {
-      const { minimumRbfFeeRate } = await getRbfTransactionSummary(this.options.esploraProvider, this.transaction.txid);
-      this._minimumRbfFeeRate = minimumRbfFeeRate;
+  private getRbfPackageSummary = async () => {
+    if (this._minimumRbfFeeRate === undefined || this._packageFee === undefined) {
+      const summary = await getRbfTransactionSummary(this.options.esploraProvider, this.transaction.txid);
+      this._minimumRbfFeeRate = summary.minimumRbfFeeRate;
+      this._packageFee = summary.currentFee;
     }
 
-    return this._minimumRbfFeeRate;
+    return { minimumRbfFeeRate: this._minimumRbfFeeRate, packageFee: this._packageFee };
   };
 
-  private getPaymentUtxos = async () => {
-    if (!this._paymentUtxos) {
-      this._paymentUtxos = await this.options.esploraProvider.getUnspentUtxos(this.options.btcAddress);
+  private getMinimumRbfFeeRate = async () => {
+    const { minimumRbfFeeRate } = await this.getRbfPackageSummary();
+    return minimumRbfFeeRate;
+  };
+
+  /**
+   * BIP125-style absolute fee floor for a replacement of the given vsize:
+   * packageFee (root + descendants) + 1 sat/vB * replacementVsize.
+   */
+  private getBip125MinFee = async (replacementVsize: number) => {
+    const { packageFee } = await this.getRbfPackageSummary();
+    return packageFee + replacementVsize;
+  };
+
+  private getPaymentUtxos = async (runtimeContext?: TransactionContext) => {
+    const ctx = runtimeContext ?? this.options.transactionContext;
+    const wantSafe = !!ctx;
+
+    // Recompute if cache missing or was built with a different safety mode (legacy vs safe).
+    if (!this._paymentUtxos || this._paymentUtxosSafe !== wantSafe) {
+      if (ctx) {
+        const usedOutpoints = new Set(
+          Array.from({ length: this.baseTx.inputsLength }, (_, i) => {
+            const input = this.baseTx.getInput(i);
+            if (!input.txid || input.index == null) {
+              return '';
+            }
+            return getOutpoint(hex.encode(input.txid), input.index);
+          }).filter(Boolean),
+        );
+        const safe = await getSortedAvailablePaymentUtxos(ctx, usedOutpoints, false);
+        this._paymentUtxos = safe.map((u) => u.utxo);
+      } else {
+        // Legacy path (unit tests / callers without context): raw esplora list.
+        this._paymentUtxos = await this.options.esploraProvider.getUnspentUtxos(this.options.btcAddress);
+      }
+
+      this._paymentUtxosSafe = wantSafe;
 
       this._paymentUtxos.sort((a, b) => {
         const aConfirmed = a.status.confirmed;
@@ -284,20 +321,29 @@ class RbfTransaction {
       throw new Error('Options are required for signing RBF transactions');
     }
 
+    assertValidFeeRate(desiredFeeRate);
+
+    // Signing must use context-aware safe coin-select (no raw esplora spend of inscriptions/runes).
+    const runtimeContext = options?.context ?? this.options.transactionContext;
+    if (sign && !runtimeContext) {
+      throw new Error('Transaction context required for RBF signing');
+    }
+
     const tx = btc.Transaction.fromPSBT(this.baseTx.toPSBT(0));
 
-    const paymentUtxos = await this.getPaymentUtxos();
+    const paymentUtxos = await this.getPaymentUtxos(runtimeContext);
 
     let done = false;
     let actualFee = 0;
     let inputsTotal = this.initialInputTotal;
     let outputsTotal = this.initialOutputTotal;
-    // ensure inputs can cover new fee rate
+    // ensure inputs can cover new fee rate without mutating preserved recipient outputs
     while (!done) {
       const size = estimateVSize(tx, { network: this.options.network });
 
       const change = inputsTotal - outputsTotal;
-      const newFee = Math.max(size * desiredFeeRate, this.transaction.fees + size);
+      const bip125Min = await this.getBip125MinFee(size);
+      const newFee = Math.max(Math.ceil(size * desiredFeeRate), bip125Min);
       if (newFee > change) {
         const utxo = paymentUtxos.shift();
 
@@ -318,15 +364,15 @@ class RbfTransaction {
         });
         inputsTotal += utxo.value;
       } else {
-        // check if we can add change output
+        // check if we can add an *additional* change output (original outs stay intact)
         const txWithChange = btc.Transaction.fromPSBT(tx.toPSBT(0));
         actualFee = change;
         txWithChange.addOutputAddress(this.options.btcAddress, BigInt(change), this.network);
         const sizeWithChange = estimateVSize(txWithChange, { network: this.options.network });
-        const newFeeWithChange = Math.max(sizeWithChange * desiredFeeRate, this.transaction.fees + sizeWithChange);
+        const bip125MinWithChange = await this.getBip125MinFee(sizeWithChange);
+        const newFeeWithChange = Math.max(Math.ceil(sizeWithChange * desiredFeeRate), bip125MinWithChange);
 
-        if (newFeeWithChange + 1000 < change) {
-          // add change output
+        if (change - newFeeWithChange > RBF_CHANGE_DUST_SATS) {
           actualFee = Math.ceil(newFeeWithChange);
           const actualChange = change - actualFee;
           tx.addOutputAddress(this.options.btcAddress, BigInt(actualChange), this.network);

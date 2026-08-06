@@ -122,8 +122,9 @@ export abstract class AddressContext {
     const commonUtxos: ExtendedUtxo[] = [];
 
     for (const utxo of utxos) {
-      const isEmbellished = await utxo.isEmbellished();
-      if (!isEmbellished && isEmbellished !== undefined) {
+      const [isEmbellished, hasRunes] = await Promise.all([utxo.isEmbellished(), utxo.hasRunes()]);
+      // Fail closed when metadata unknown; also exclude rune-bearing UTXOs.
+      if (isEmbellished === false && hasRunes === false) {
         commonUtxos.push(utxo);
       }
     }
