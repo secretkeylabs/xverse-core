@@ -46,7 +46,6 @@ Impact:
 Please ensure the following are true before merging:
 
 - [ ] Code Style is consistent with the project guidelines.
-- [ ] Code is readable and well-commented.
 - [ ] No unnecessary or debugging code has been added.
 - [ ] Security considerations have been taken into account.
 - [ ] The change has been manually tested and works as expected.
